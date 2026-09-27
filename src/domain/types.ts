@@ -336,6 +336,13 @@ export interface Team {
   slots: TeamSlots;
   createdAt: number;
   updatedAt: number;
+  /**
+   * Id of the top-level team this is a variation of. Absent means this team IS a top-level
+   * group (its `name` is the group's name; it may have zero or more variations pointing at it).
+   */
+  groupId?: string;
+  /** Short label for a variation within its group (e.g. "vs Rain", "Variation 2"). */
+  variationLabel?: string;
 }
 
 export type SpriteSetId =

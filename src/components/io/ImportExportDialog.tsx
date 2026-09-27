@@ -11,6 +11,7 @@ import {
   normalizeReplicaCode,
   parseBackup,
 } from '@/domain/codecs';
+import { teamVariations } from '@/domain/team';
 import type { FormatRules, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
 import { Modal } from '../ui/Modal';
@@ -76,7 +77,9 @@ export function ImportExportDialog({
       case 'share':
         return encodeShareString(team);
       case 'json':
-        return exportBackup(order.map((id) => allTeams[id]).filter(Boolean));
+        // Export every team, not just top-level groups — otherwise variations would silently
+        // vanish from the backup, since they're intentionally left out of `order`.
+        return exportBackup(order.flatMap((id) => [allTeams[id], ...teamVariations(allTeams, id)]).filter((t): t is Team => !!t));
       default:
         return '';
     }
