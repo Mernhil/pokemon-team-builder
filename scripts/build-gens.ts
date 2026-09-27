@@ -114,14 +114,12 @@ async function buildGen(gen: number) {
       requiredItem: mega && s.requiredItem ? toID(s.requiredItem) : undefined,
       megaForms: [] as string[],
       legalIn: [regId],
-      prevo: s.prevo && inGen.has(toID(s.prevo)) ? toID(s.prevo) : undefined,
+      // How it evolves from its pre-evolution — only when that pre-evolution exists in this
+      // generation (Gen 1 Pikachu has no Pichu).
+      ...(s.prevo && inGen.has(toID(s.prevo))
+        ? { prevo: toID(s.prevo), evoLevel: s.evoLevel, evoType: s.evoType, evoItem: s.evoItem, evoMove: s.evoMove, evoCondition: s.evoCondition }
+        : {}),
       evos: s.evos?.map(toID).filter((e) => inGen.has(e)),
-      evoLevel: s.evoLevel,
-      evoType: s.evoType,
-      evoItem: s.evoItem,
-      evoMove: s.evoMove,
-      evoCondition: s.evoCondition,
-      heightm: (s as unknown as { heightm: number }).heightm,
       eggGroups: gen >= 2 ? s.eggGroups : undefined,
       genderRatio: gen >= 2 ? (s.gender ? s.gender : s.genderRatio) : undefined,
     };

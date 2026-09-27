@@ -70,7 +70,6 @@ export interface Pokemon {
   evoItem?: string;
   evoMove?: string;
   evoCondition?: string;
-  heightm?: number;
   eggGroups?: string[];
   /** 'M' | 'F' | 'N' for single-gender species, else the ratio. */
   genderRatio?: string | { M: number; F: number };

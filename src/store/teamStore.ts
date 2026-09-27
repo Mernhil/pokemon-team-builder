@@ -8,7 +8,7 @@ import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import type { FieldConditions, SideConditions } from '@/domain/battle/conditions';
 
 export type Theme = 'dark' | 'light';
-export type View = 'builder' | 'calc';
+export type View = 'builder' | 'calc' | 'dex';
 
 /** Advanced-details state for one team member (keyed by set uid). */
 export interface SlotBattleState {

@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, Calculator, ChevronDown, FolderOpen, Moon, Sun, Users } from 'lucide-react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeftRight, BookOpen, Calculator, ChevronDown, FolderOpen, Moon, Sun, Users } from 'lucide-react';
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
@@ -20,6 +20,7 @@ import { Button, Select, cn } from './components/ui/primitives';
 
 // The damage calculator engine is sizeable; load it only when the tab is opened.
 const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').then((m) => ({ default: m.DamageCalcView })));
+const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -30,17 +31,23 @@ export default function App() {
   const view = useTeamStore((s) => s.view);
   const setView = useTeamStore((s) => s.setView);
 
-  // Deep link: #calc opens the calculator, #builder the team builder.
+  // Deep link: #calc opens the calculator, #dex the Pokédex, #builder the team builder.
   useEffect(() => {
     const fromHash = () => {
       const h = location.hash.replace('#', '');
-      if (h === 'calc' || h === 'builder') setView(h);
+      if (h === 'calc' || h === 'builder' || h === 'dex') setView(h);
     };
     fromHash();
     window.addEventListener('hashchange', fromHash);
     return () => window.removeEventListener('hashchange', fromHash);
   }, [setView]);
+  // Mirror the view into the hash — but not on mount, when the hash is the input (a deep link).
+  const mounted = useRef(false);
   useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
     try {
       history.replaceState(null, '', `#${view}`);
     } catch {
@@ -57,7 +64,13 @@ export default function App() {
     <div className="flex min-h-full flex-col">
       <DesktopUpdater />
       <Header team={team} format={format} dex={dexState.status === 'ready' ? dexState.dex : undefined} />
-      {dexState.status === 'ready' ? (
+      {view === 'dex' ? (
+        <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">
+          <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading Pokédex…</p>}>
+            <PokedexView format={format} />
+          </Suspense>
+        </main>
+      ) : dexState.status === 'ready' ? (
         view === 'calc' ? (
           <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">
             <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading damage calculator…</p>}>
@@ -82,6 +95,7 @@ function ViewTabs() {
   const tabs = [
     { id: 'builder' as const, label: 'Builder', icon: Users },
     { id: 'calc' as const, label: 'Damage Calc', icon: Calculator },
+    { id: 'dex' as const, label: 'Pokédex', icon: BookOpen },
   ];
   return (
     <nav className="flex rounded-lg bg-surface-2 p-0.5" aria-label="Sections">
