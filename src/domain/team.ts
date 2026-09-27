@@ -43,15 +43,28 @@ export function createSet(dex: Dex, speciesId: string, format: FormatRules): Pok
   };
 }
 
-/** Deep-clone a team with a fresh id (used by "Duplicate"). */
-export function cloneTeam(team: Team, name = `${team.name} (copy)`): Team {
+/**
+ * Deep-clone a team with a fresh id (used by "Duplicate", "Save as…" and "Add variation").
+ * Clones are top-level groups by default — pass `overrides` to nest the copy as a variation.
+ */
+export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: Partial<Pick<Team, 'groupId' | 'variationLabel'>>): Team {
   const now = Date.now();
   return {
     ...structuredClone(team),
     id: uid(),
     name,
+    groupId: undefined,
+    variationLabel: undefined,
+    ...overrides,
     slots: team.slots.map((s) => (s ? { ...structuredClone(s), uid: uid() } : null)) as TeamSlots,
     createdAt: now,
     updatedAt: now,
   };
+}
+
+/** Teams whose `groupId` points at `groupId`, most recently edited first. */
+export function teamVariations(teams: Record<string, Team>, groupId: string): Team[] {
+  return Object.values(teams)
+    .filter((t) => t.groupId === groupId)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }

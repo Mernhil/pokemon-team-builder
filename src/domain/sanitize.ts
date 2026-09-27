@@ -57,8 +57,12 @@ export function sanitizeTeam(v: unknown): Team | null {
   if (!isObj(v) || !Array.isArray(v.slots)) return null;
   const now = Date.now();
   const slots = Array.from({ length: 6 }, (_, i) => sanitizeSet((v.slots as unknown[])[i])) as TeamSlots;
+  // Only a genuine reference (self-refs are dropped) — group-existence is checked by the caller,
+  // which has visibility into the rest of the batch/store.
+  const id = safeId(v.id);
+  const groupId = typeof v.groupId === 'string' && ID_RE.test(v.groupId) && v.groupId !== id ? v.groupId : undefined;
   return {
-    id: safeId(v.id),
+    id,
     name: str(v.name, MAX_NAME) ?? 'Imported Team',
     formatId: str(v.formatId, MAX_ID) ?? '',
     category: str(v.category, MAX_NAME),
@@ -67,6 +71,8 @@ export function sanitizeTeam(v: unknown): Team | null {
     slots,
     createdAt: int(v.createdAt, 0, Number.MAX_SAFE_INTEGER, now),
     updatedAt: int(v.updatedAt, 0, Number.MAX_SAFE_INTEGER, now),
+    groupId,
+    variationLabel: str(v.variationLabel, MAX_NAME),
   };
 }
 

@@ -19,7 +19,7 @@ export interface SlotBattleState {
   crit: boolean;
 }
 
-interface TeamState {
+export interface TeamState {
   teams: Record<string, Team>;
   /** Display order of saved teams (most recent first). */
   order: string[];
@@ -32,8 +32,12 @@ interface TeamState {
   // teams
   newTeam: (formatId?: string) => string;
   selectTeam: (id: string) => void;
-  updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'replicaCode' | 'formatId'>>) => void;
+  updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'replicaCode' | 'formatId' | 'variationLabel'>>) => void;
   duplicateTeam: (id: string) => string;
+  /** Explicitly commits the current in-progress build as a new, distinctly-named top-level entry. */
+  saveAsNew: (name: string) => string;
+  /** Duplicates `id` (or its group) and nests the copy as a variation under the same group. */
+  addVariation: (id: string) => string;
   deleteTeam: (id: string) => void;
   addTeams: (teams: Team[], activate?: boolean) => void;
 
@@ -53,6 +57,44 @@ interface TeamState {
 
 
 const firstTeam = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team');
+
+/**
+ * v1 stored teams as a flat list. v2 adds optional `groupId`/`variationLabel` for folder-style
+ * grouping; a flat v1 team has neither, which already reads as a top-level group with no
+ * variations, so there is nothing to transform here — `mergeTeamState` below (re)normalises
+ * `order` and drops any dangling `groupId` regardless of the stored version.
+ */
+export function migrateTeamState(persisted: unknown, _version: number): TeamState {
+  return persisted as TeamState;
+}
+
+// Stored state may be stale or corrupted: never let it leave the app without a valid active team.
+export function mergeTeamState(persisted: unknown, current: TeamState): TeamState {
+  const p = (persisted ?? {}) as Partial<TeamState>;
+  const teams: Record<string, Team> = {};
+  for (const raw of Object.values(p.teams && typeof p.teams === 'object' ? p.teams : {})) {
+    const t = sanitizeTeam(raw);
+    if (t) teams[t.id] = t;
+  }
+  const ids = Object.keys(teams);
+  if (ids.length === 0) return current;
+  // A variation whose parent group didn't survive sanitising becomes a top-level group itself,
+  // rather than silently disappearing from the saved-teams list.
+  for (const t of Object.values(teams)) {
+    if (t.groupId && !Object.hasOwn(teams, t.groupId)) t.groupId = undefined;
+  }
+  const topLevelIds = ids.filter((id) => !teams[id].groupId);
+  const order = [...new Set([...(Array.isArray(p.order) ? p.order : []), ...topLevelIds])].filter((id) => topLevelIds.includes(id));
+  return {
+    ...current,
+    teams,
+    order,
+    activeTeamId: typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0],
+    theme: p.theme === 'light' ? 'light' : 'dark',
+    view: p.view === 'calc' || p.view === 'dex' || p.view === 'matches' || p.view === 'meta' ? p.view : 'builder',
+    battle: p.battle && typeof p.battle === 'object' ? p.battle : {},
+  };
+}
 
 export const useTeamStore = create<TeamState>()(
   persist(
@@ -93,34 +135,73 @@ export const useTeamStore = create<TeamState>()(
         duplicateTeam: (id) => {
           const src = get().teams[id];
           if (!src) return id;
-          const t = cloneTeam(src);
+          const t = cloneTeam(src); // always a new top-level group, even if `src` was a variation
           set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order], activeTeamId: t.id, activeSlot: 0 }));
+          return t.id;
+        },
+        saveAsNew: (name) => {
+          const src = get().teams[get().activeTeamId];
+          if (!src) return get().activeTeamId;
+          const t = cloneTeam(src, name.trim() || src.name);
+          set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order], activeTeamId: t.id, activeSlot: 0 }));
+          return t.id;
+        },
+        addVariation: (id) => {
+          const src = get().teams[id];
+          if (!src) return id;
+          const groupId = src.groupId ?? src.id;
+          const siblings = Object.values(get().teams).filter((t) => t.groupId === groupId).length;
+          const t = cloneTeam(src, src.name, { groupId, variationLabel: `Variation ${siblings + 2}` });
+          set((s) => ({ teams: { ...s.teams, [t.id]: t }, activeTeamId: t.id, activeSlot: 0 }));
           return t.id;
         },
         deleteTeam: (id) =>
           set((s) => {
+            const target = s.teams[id];
+            if (!target) return s;
             const teams = { ...s.teams };
             delete teams[id];
+            // Deleting a top-level group takes its variations with it; deleting a variation only removes itself.
+            if (!target.groupId) {
+              for (const t of Object.values(s.teams)) if (t.groupId === id) delete teams[t.id];
+            }
             let order = s.order.filter((x) => x !== id);
             if (order.length === 0) {
               const t = createTeam(getFormat(DEFAULT_FORMAT_ID));
               teams[t.id] = t;
               order = [t.id];
             }
-            return { teams, order, activeTeamId: s.activeTeamId === id ? order[0] : s.activeTeamId, activeSlot: 0 };
+            const activeTeamId = teams[s.activeTeamId] ? s.activeTeamId : order[0];
+            return { teams, order, activeTeamId, activeSlot: 0 };
           }),
         addTeams: (incoming, activate = true) =>
           set((s) => {
             const teams = { ...s.teams };
+            const idMap = new Map<string, string>(); // original incoming id -> id actually used, when remapped to avoid a collision
+            const prepared = incoming.map((t) => {
+              if (teams[t.id]) {
+                const copy = cloneTeam(t, t.name, { groupId: t.groupId, variationLabel: t.variationLabel });
+                idMap.set(t.id, copy.id);
+                return copy;
+              }
+              return { ...t };
+            });
+            // A variation's groupId must resolve to another team in this same import (or the existing
+            // store) — anything else (missing parent, self-reference) is promoted to a top-level group.
+            const validGroupIds = new Set([...Object.keys(s.teams), ...prepared.map((p) => p.id)]);
             const ids: string[] = [];
-            for (const t of incoming) {
-              const copy = teams[t.id] ? cloneTeam(t, t.name) : t; // never overwrite silently
+            const orderAdds: string[] = [];
+            for (const t of prepared) {
+              const mapped = t.groupId ? (idMap.get(t.groupId) ?? t.groupId) : undefined;
+              const groupId = mapped && mapped !== t.id && validGroupIds.has(mapped) ? mapped : undefined;
+              const copy = { ...t, groupId };
               teams[copy.id] = copy;
               ids.push(copy.id);
+              if (!groupId) orderAdds.push(copy.id);
             }
             return {
               teams,
-              order: [...ids, ...s.order.filter((x) => !ids.includes(x))],
+              order: [...orderAdds, ...s.order.filter((x) => !orderAdds.includes(x))],
               ...(activate && ids[0] ? { activeTeamId: ids[0], activeSlot: 0 } : {}),
             };
           }),
@@ -161,30 +242,11 @@ export const useTeamStore = create<TeamState>()(
     },
     {
       name: 'ptb:v1',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, theme: s.theme, view: s.view, battle: s.battle }),
-      // Stored state may be stale or corrupted: never let it leave the app without a valid active team.
-      merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<TeamState>;
-        const teams: Record<string, Team> = {};
-        for (const raw of Object.values(p.teams && typeof p.teams === 'object' ? p.teams : {})) {
-          const t = sanitizeTeam(raw);
-          if (t) teams[t.id] = t;
-        }
-        const ids = Object.keys(teams);
-        if (ids.length === 0) return current;
-        const order = [...new Set([...(Array.isArray(p.order) ? p.order : []), ...ids])].filter((id) => Object.hasOwn(teams, id));
-        return {
-          ...current,
-          teams,
-          order,
-          activeTeamId: typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0],
-          theme: p.theme === 'light' ? 'light' : 'dark',
-          view: p.view === 'calc' || p.view === 'dex' || p.view === 'matches' || p.view === 'meta' ? p.view : 'builder',
-          battle: p.battle && typeof p.battle === 'object' ? p.battle : {},
-        };
-      },
+      migrate: migrateTeamState,
+      merge: mergeTeamState,
     },
   ),
 );

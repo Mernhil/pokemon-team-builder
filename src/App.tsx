@@ -16,6 +16,7 @@ import { GenBadge } from './components/ui/GenBadge';
 import { ValidationPanel } from './components/analysis/ValidationPanel';
 import { SetEditor } from './components/editor/SetEditor';
 import { ImportExportDialog } from './components/io/ImportExportDialog';
+import { SaveTeamDialog } from './components/io/SaveTeamDialog';
 import { TeamsDialog } from './components/io/TeamsDialog';
 import { TeamSlots } from './components/team/TeamSlots';
 import { Button, Select, cn } from './components/ui/primitives';
@@ -139,8 +140,9 @@ function ViewTabs() {
 
 function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: Dex }) {
   const theme = useTeamStore((s) => s.theme);
-  const { updateTeam, setTheme } = useTeamStore.getState();
+  const { updateTeam, setTheme, saveAsNew } = useTeamStore.getState();
   const [teamsOpen, setTeamsOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [ioOpen, setIoOpen] = useState(false);
   const liveRegId = currentRegulation()?.id;
@@ -198,13 +200,7 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           ))}
         </Select>
         <div className="ml-auto flex items-center gap-1.5">
-          <Button
-            onClick={() => {
-              updateTeam(team.id, {});
-              setJustSaved(true);
-              window.setTimeout(() => setJustSaved(false), 1500);
-            }}
-          >
+          <Button onClick={() => setSaveOpen(true)}>
             {justSaved ? <Check size={14} /> : <Save size={14} />}
             <span className="hidden sm:inline">{justSaved ? 'Saved' : 'Save'}</span>
           </Button>
@@ -226,6 +222,16 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
         </div>
       </div>
       <TeamsDialog open={teamsOpen} onOpenChange={setTeamsOpen} dex={dex} />
+      <SaveTeamDialog
+        open={saveOpen}
+        onOpenChange={setSaveOpen}
+        currentName={team.name}
+        onSave={(name) => {
+          saveAsNew(name);
+          setJustSaved(true);
+          window.setTimeout(() => setJustSaved(false), 1500);
+        }}
+      />
       {dex && <ImportExportDialog open={ioOpen} onOpenChange={setIoOpen} team={team} dex={dex} format={format} />}
     </header>
   );
