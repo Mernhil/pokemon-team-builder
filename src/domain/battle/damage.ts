@@ -17,6 +17,8 @@ export interface CalcSideInput {
 }
 
 export interface MoveResult {
+  /** Position of the move in the attacker's moveset (0–3), for the per-move crit toggle. */
+  index: number;
   moveId: string;
   name: string;
   type: string;
@@ -129,6 +131,7 @@ export function calcMoves(
       desc = `${mv.name}: no damage`;
     }
     out.push({
+      index: i,
       moveId,
       name: mv.name,
       type: move.type,

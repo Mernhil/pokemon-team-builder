@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Dex } from '@/data/dex';
-import type { FormatRules, PokemonSet } from '@/domain/types';
+import { TYPE_NAMES, type FormatRules, type PokemonSet } from '@/domain/types';
 import type { ComboOption } from '../ui/Combobox';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
@@ -36,7 +36,11 @@ export function useMoveOptions(dex: Dex, format: FormatRules, set: PokemonSet | 
   return useMemo(() => {
     if (!speciesId) return [];
     const moves = movesKey.split(',');
-    return dex.learnset(speciesId, format.regulationId).map((m) => ({
+    // Grouped by type (canonical Normal → Fairy order), alphabetical within each type.
+    return dex
+      .learnset(speciesId, format.regulationId)
+      .sort((a, b) => TYPE_NAMES.indexOf(a.type) - TYPE_NAMES.indexOf(b.type) || a.name.localeCompare(b.name))
+      .map((m) => ({
       id: m.id,
       label: m.name,
       keywords: `${m.type} ${m.category}`,

@@ -245,6 +245,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                     onSpread={(stat, v) => patchSet(role, { sp: setSpreadValue(set.sp, stat, v, sys.totalCap, sys.perStatCap) })}
                     onReplaceSpread={(sp) => patchSet(role, { sp })}
                     onNature={(nature) => patchSet(role, { nature })}
+                    megaActive={side.cond.mega}
+                    onMegaActive={(mega) => patchCond(role, { mega })}
                   />
                 </div>
               </details>

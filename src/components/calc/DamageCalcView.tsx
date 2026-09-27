@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeftRight, Check, Copy, Timer } from 'lucide-react';
+import { ArrowLeftRight, Check, Copy, Crosshair, Timer } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { calcMoves, calcSpeed, type MoveResult } from '@/domain/battle/damage';
 import type { FormatRules, Team } from '@/domain/types';
-import { useCalcStore, type CalcSide } from '@/store/calcStore';
+import { useCalcStore, type CalcSide, type SideKey } from '@/store/calcStore';
 import { FieldControls } from '../battle/Controls';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
@@ -18,7 +18,7 @@ export function DamageCalcView({ dex, format, team }: { dex: Dex; format: Format
   const attacker = useCalcStore((s) => s.attacker);
   const defender = useCalcStore((s) => s.defender);
   const field = useCalcStore((s) => s.field);
-  const { setField, swap } = useCalcStore.getState();
+  const { setField, swap, patchSide } = useCalcStore.getState();
 
   const ready = !!attacker.set && !!defender.set && !!dex.species(attacker.set.speciesId) && !!dex.species(defender.set.speciesId);
 
@@ -39,44 +39,54 @@ export function DamageCalcView({ dex, format, team }: { dex: Dex; format: Format
     }
   }, [ready, attacker, defender, field, dex]);
 
+  const toggleCrit = (role: SideKey, i: number) => {
+    const crits = [...useCalcStore.getState()[role].crits] as CalcSide['crits'];
+    crits[i] = !crits[i];
+    patchSide(role, { crits });
+  };
+
+  // Wide screens: Attacker | Field + Results | Defender side by side, the middle column sticky so the
+  // numbers stay in view while editing either side. Narrower: results on top, sides below.
   return (
     <div className="space-y-4">
-      <Panel
-        title="Field"
-        actions={
-          <Button size="sm" onClick={swap} disabled={!attacker.set && !defender.set}>
-            <ArrowLeftRight size={13} /> Swap sides
-          </Button>
-        }
-      >
-        <FieldControls field={field} onChange={setField} />
-      </Panel>
+      <div className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
+        <div className="scrollbar-thin space-y-4 lg:col-span-2 xl:sticky xl:top-[68px] xl:order-2 xl:col-span-1 xl:max-h-[calc(100dvh-84px)] xl:overflow-y-auto">
+          <Panel
+            title="Field"
+            actions={
+              <Button size="sm" onClick={swap} disabled={!attacker.set && !defender.set}>
+                <ArrowLeftRight size={13} /> Swap sides
+              </Button>
+            }
+          >
+            <FieldControls field={field} onChange={setField} />
+          </Panel>
 
-      {results ? (
-        <Panel title="Results">
-          {results.error ? (
-            <p className="text-sm text-bad">The calculator couldn't handle this matchup: {results.error}</p>
-          ) : (
-            <div className="space-y-4">
-              <TurnOrder attacker={attacker} defender={defender} speedA={results.speedA} speedD={results.speedD} trickRoom={field.trickRoom} dex={dex} format={format} />
-              <div className="grid gap-4 lg:grid-cols-2">
-                <ResultList title="Attacker → Defender" tone="bad" results={results.forward} dex={dex} />
-                <ResultList title="Defender → Attacker" tone="accent" results={results.backward} dex={dex} />
+          <Panel title="Results">
+            {!results ? (
+              <p className="text-sm text-muted">
+                Pick an attacker and a defender. Load them from your team with one click, or search any Pokémon legal in {format.shortName}.
+              </p>
+            ) : results.error ? (
+              <p className="text-sm text-bad">The calculator couldn't handle this matchup: {results.error}</p>
+            ) : (
+              <div className="@container space-y-4">
+                <TurnOrder attacker={attacker} defender={defender} speedA={results.speedA} speedD={results.speedD} trickRoom={field.trickRoom} dex={dex} format={format} />
+                <div className="grid gap-4 @2xl:grid-cols-2">
+                  <ResultList title="Attacker → Defender" tone="bad" results={results.forward} dex={dex} onToggleCrit={(i) => toggleCrit('attacker', i)} />
+                  <ResultList title="Defender → Attacker" tone="accent" results={results.backward} dex={dex} onToggleCrit={(i) => toggleCrit('defender', i)} />
+                </div>
               </div>
-            </div>
-          )}
-        </Panel>
-      ) : (
-        <Panel title="Results">
-          <p className="text-sm text-muted">
-            Pick an attacker and a defender below. Load them from your team with one click, or search any Pokémon legal in {format.shortName}.
-          </p>
-        </Panel>
-      )}
+            )}
+          </Panel>
+        </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <CalcSideEditor role="attacker" dex={dex} format={format} team={team} />
-        <CalcSideEditor role="defender" dex={dex} format={format} team={team} />
+        <div className="xl:order-1">
+          <CalcSideEditor role="attacker" dex={dex} format={format} team={team} />
+        </div>
+        <div className="xl:order-3">
+          <CalcSideEditor role="defender" dex={dex} format={format} team={team} />
+        </div>
       </div>
       <p className="text-center text-[11px] text-muted">
         Damage engine: @smogon/calc (Pokémon Showdown), Pokémon Champions mechanics · Lv 50 · 31 IVs · Stat Points
@@ -128,7 +138,19 @@ function TurnOrder({
   );
 }
 
-function ResultList({ title, tone, results, dex }: { title: string; tone: 'bad' | 'accent'; results: MoveResult[]; dex: Dex }) {
+function ResultList({
+  title,
+  tone,
+  results,
+  dex,
+  onToggleCrit,
+}: {
+  title: string;
+  tone: 'bad' | 'accent';
+  results: MoveResult[];
+  dex: Dex;
+  onToggleCrit: (moveIndex: number) => void;
+}) {
   return (
     <div>
       <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
@@ -140,7 +162,7 @@ function ResultList({ title, tone, results, dex }: { title: string; tone: 'bad' 
       ) : (
         <ul className="space-y-2">
           {results.map((r) => (
-            <ResultRow key={r.moveId} r={r} dex={dex} />
+            <ResultRow key={r.index} r={r} dex={dex} onToggleCrit={() => onToggleCrit(r.index)} />
           ))}
         </ul>
       )}
@@ -148,7 +170,7 @@ function ResultList({ title, tone, results, dex }: { title: string; tone: 'bad' 
   );
 }
 
-function ResultRow({ r, dex }: { r: MoveResult; dex: Dex }) {
+function ResultRow({ r, dex, onToggleCrit }: { r: MoveResult; dex: Dex; onToggleCrit: () => void }) {
   const [copied, setCopied] = useState(false);
   const status = r.category === 'Status';
   const [lo, hi] = r.percent;
@@ -171,14 +193,26 @@ function ResultRow({ r, dex }: { r: MoveResult; dex: Dex }) {
         <MoveTooltip move={dex.move(r.moveId)}>
           <TypeBadge type={r.type as never} size="xs" />
         </MoveTooltip>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-          {r.name}
-          {r.crit && <span className="ml-1.5 text-[10px] font-bold text-warn">CRIT</span>}
-        </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{r.name}</span>
         {!status && (
-          <span className={cn('font-mono text-sm font-bold tabular-nums', koColor)}>
-            {lo}–{hi}%
-          </span>
+          <>
+            <span className={cn('font-mono text-sm font-bold tabular-nums', koColor)}>
+              {lo}–{hi}%
+            </span>
+            <button
+              type="button"
+              aria-pressed={r.crit}
+              aria-label={`Critical hit: ${r.name}`}
+              title={r.crit ? 'Critical hit on: click for a normal hit' : 'Calculate as a critical hit'}
+              onClick={onToggleCrit}
+              className={cn(
+                'flex h-6 shrink-0 items-center gap-1 rounded-md border px-1.5 text-[10px] font-bold transition-colors',
+                r.crit ? 'border-warn bg-warn/15 text-warn' : 'border-border text-muted hover:border-muted/60 hover:text-fg',
+              )}
+            >
+              <Crosshair size={11} /> CRIT
+            </button>
+          </>
         )}
       </div>
       {!status && (

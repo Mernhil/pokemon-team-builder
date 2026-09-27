@@ -1,9 +1,10 @@
+import type { ComponentProps } from 'react';
 import { Sparkles, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { createSet } from '@/domain/team';
 import { STAT_LABELS, TYPE_NAMES, type FormatRules, type PokemonSet, type TeraType } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
-import { useTeamStore } from '@/store/teamStore';
+import { useSlotBattle, useTeamStore } from '@/store/teamStore';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { ItemSprite } from '../ui/ItemSprite';
@@ -208,7 +209,7 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
       </Panel>
 
       <Panel title="Stat Point Calculator" actions={<span className="text-[11px] text-muted">Lv 50 · 31 IVs · 1 SP = +1 stat</span>}>
-        <StatDistributor
+        <SlotStatDistributor
           set={set}
           species={species}
           mega={mega}
@@ -222,5 +223,17 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
 
       <AdvancedDetails set={set} species={species} dex={dex} format={format} />
     </div>
+  );
+}
+
+/** Stat distributor whose Base/Mega switch drives the same Mega toggle as Advanced details. */
+function SlotStatDistributor(props: Omit<ComponentProps<typeof StatDistributor>, 'megaActive' | 'onMegaActive'>) {
+  const [battle, updateBattle] = useSlotBattle(props.set.uid, !!props.mega);
+  return (
+    <StatDistributor
+      {...props}
+      megaActive={battle.side.mega}
+      onMegaActive={(mega) => updateBattle({ side: { ...battle.side, mega } })}
+    />
   );
 }

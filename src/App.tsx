@@ -58,7 +58,7 @@ export default function App() {
       <Header team={team} format={format} dex={dexState.status === 'ready' ? dexState.dex : undefined} />
       {dexState.status === 'ready' ? (
         view === 'calc' ? (
-          <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">
+          <main className="mx-auto w-full max-w-[1800px] flex-1 p-4">
             <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading damage calculator…</p>}>
               <DamageCalcView dex={dexState.dex} format={format} team={team} />
             </Suspense>

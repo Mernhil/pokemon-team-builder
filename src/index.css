@@ -79,6 +79,11 @@ input[type='range'].stat-range::-moz-range-thumb {
   background: var(--color-surface);
   border: 3px solid var(--fill);
 }
+/* Dragging a slider past its ends must not start selecting the text around it. */
+.slider-dragging {
+  -webkit-user-select: none;
+  user-select: none;
+}
 input[type='range'].stat-range:focus-visible {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 40%, transparent);
 }

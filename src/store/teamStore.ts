@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from './storage';
@@ -6,7 +7,7 @@ import { setSpreadValue } from '@/domain/stats';
 import { sanitizeTeam } from '@/domain/sanitize';
 import { cloneTeam, createTeam } from '@/domain/team';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
-import type { FieldConditions, SideConditions } from '@/domain/battle/conditions';
+import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
 export type Theme = 'dark' | 'light';
 export type View = 'builder' | 'calc';
@@ -196,3 +197,16 @@ export const useTeamStore = create<TeamState>()(
 );
 
 export const useActiveTeam = () => useTeamStore((s) => s.teams[s.activeTeamId]);
+
+export const defaultSlotBattle = (hasMega: boolean): SlotBattleState => ({ side: defaultSide(hasMega), field: defaultField(), crit: false });
+
+/**
+ * Battle state of one team member (Mega on/off, conditions, crits), shared by the Stat Point
+ * calculator's Base/Mega switch and Advanced details so the two never disagree.
+ */
+export function useSlotBattle(uid: string, hasMega: boolean) {
+  const saved = useTeamStore((s) => s.battle[uid]);
+  const state = useMemo(() => saved ?? defaultSlotBattle(hasMega), [saved, hasMega]);
+  const update = (p: Partial<SlotBattleState>) => useTeamStore.getState().setBattle(uid, { ...state, ...p });
+  return [state, update] as const;
+}
