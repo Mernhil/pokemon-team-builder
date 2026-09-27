@@ -60,6 +60,9 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  // The per-generation datasets are lazy-loaded JSON chunks of up to ~1 MB by design; warn only
+  // when something is far larger than that.
+  build: { chunkSizeWarningLimit: 1500 },
   // Fixed port so the Tauri desktop shell (src-tauri/tauri.conf.json's devUrl) always finds the dev server.
   server: { port: 1420, strictPort: true },
   test: { environment: 'node' },

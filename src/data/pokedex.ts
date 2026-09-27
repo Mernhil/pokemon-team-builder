@@ -19,6 +19,7 @@ function load<T>(name: string, files: Record<string, () => Promise<unknown>>): P
     p = SIDE_LOADED_DATA
       ? fetchGenerated(name)
       : (files[`./generated/${name}.json`]?.() ?? Promise.reject(new Error(`No data file ${name}`))).then((m) => (m as { default: unknown }).default);
+    p.catch(() => cache.delete(name));
     cache.set(name, p);
   }
   return p as Promise<T>;
@@ -32,7 +33,12 @@ export function usePokedexData(book: string): { dex: PokedexData; learn: LearnDa
   const [state, setState] = useState<{ book: string; dex: PokedexData; learn: LearnData } | null>(null);
   useEffect(() => {
     let alive = true;
-    Promise.all([loadPokedex(book), loadLearnData(book)]).then(([dex, learn]) => alive && setState({ book, dex, learn }));
+    Promise.all([loadPokedex(book), loadLearnData(book)]).then(
+      ([dex, learn]) => alive && setState({ book, dex, learn }),
+      () => {
+        /* stays "loading"; the failed file isn't cached, so reopening the book retries */
+      },
+    );
     return () => {
       alive = false;
     };

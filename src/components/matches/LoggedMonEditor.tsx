@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import type { LoggedMon } from '@/domain/matches';
@@ -20,18 +20,32 @@ export function LoggedMonEditor({ dex, format, mon, onChange, onRemove }: { dex:
   const [expanded, setExpanded] = useState(false);
   const species = dex.species(mon.speciesId);
 
-  const itemOptions: ComboOption[] = dex.items().map((i) => ({
-    id: i.id,
-    label: i.name,
-    render: (
-      <span className="flex items-center gap-2">
-        <ItemSprite itemId={i.id} name={i.name} size={18} />
-        {i.name}
-      </span>
-    ),
-  }));
-  const abilityOptions: ComboOption[] = Object.values(dex.data.abilities).map((a) => ({ id: a.id, label: a.name }));
-  const moveOptions: ComboOption[] = (mon.speciesId ? dex.learnset(mon.speciesId) : []).map((m) => ({ id: m.id, label: m.name }));
+  // Only built once the details are open (a Team Preview has up to 12 of these editors), and kept
+  // stable across renders so the comboboxes' filtering memo isn't invalidated on every keystroke.
+  const itemOptions = useMemo<ComboOption[]>(
+    () =>
+      expanded
+        ? dex.items().map((i) => ({
+            id: i.id,
+            label: i.name,
+            render: (
+              <span className="flex items-center gap-2">
+                <ItemSprite itemId={i.id} name={i.name} size={18} />
+                {i.name}
+              </span>
+            ),
+          }))
+        : [],
+    [dex, expanded],
+  );
+  const abilityOptions = useMemo<ComboOption[]>(
+    () => (expanded ? Object.values(dex.data.abilities).map((a) => ({ id: a.id, label: a.name })) : []),
+    [dex, expanded],
+  );
+  const moveOptions = useMemo<ComboOption[]>(
+    () => (expanded && mon.speciesId ? dex.learnset(mon.speciesId).map((m) => ({ id: m.id, label: m.name })) : []),
+    [dex, expanded, mon.speciesId],
+  );
 
   const moves = mon.moves ?? [];
   const setMove = (i: number, id: string) => {

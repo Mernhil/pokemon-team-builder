@@ -3,10 +3,12 @@ name: Desktop release
 # Builds native installers for Windows (.exe/.msi), macOS (.dmg) and Linux (.deb/.rpm/.AppImage)
 # on each platform's own runner (Tauri apps aren't reliably cross-compiled).
 #
-# - push a `v*` tag (e.g. `git tag v0.2.0 && git push origin v0.2.0`): builds, signs, and publishes
-#   a GitHub Release with the installers *and* the signed `latest.json` manifest the in-app
-#   updater polls (src-tauri/tauri.conf.json's plugins.updater.endpoints). This is what makes
-#   "check for updates" inside the app find and install the new version.
+# - a new `v*` tag — either published from GitHub's web UI (Releases → Draft a new release → new
+#   tag `vX.Y.Z` → Publish) or pushed with `git tag vX.Y.Z && git push origin vX.Y.Z`: first checks
+#   the tag matches the app version and that typecheck + tests pass, then builds, signs, and attaches
+#   the installers *and* the signed `latest.json` manifest the in-app updater polls
+#   (src-tauri/tauri.conf.json's plugins.updater.endpoints) to that tag's GitHub Release (created if
+#   it doesn't exist yet). This is what makes "check for updates" inside the app find the new version.
 # - "Run workflow" from the Actions tab: build-only smoke test, no release, no signing. Installers
 #   are attached to the run as downloadable artifacts (Summary tab) so it also works before the
 #   signing secrets below are configured.
@@ -26,10 +28,53 @@ on:
 permissions:
   contents: read
 
+# Never run two release builds for the same tag at once (they'd race on the release's assets).
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  # Tag push: refuse to ship if the tag doesn't match the app version or the checks fail — a
+  # mismatched tag would publish a latest.json advertising the wrong version to every installed app.
+  verify:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Tag matches the app version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          tauri=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          pkg=$(node -p "require('./package.json').version")
+          cargo=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)
+          echo "tag=$TAG tauri.conf.json=$tauri Cargo.toml=$cargo package.json=$pkg"
+          if [ "$TAG" != "v$tauri" ] || [ "$cargo" != "$tauri" ] || [ "$pkg" != "$tauri" ]; then
+            echo "::error::Tag $TAG doesn't match the app version ($tauri). Run 'npm run bump -- <version>', commit, and tag that commit."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
   # Tag push: build, sign, and publish/update the GitHub Release the updater polls.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify
     permissions:
       contents: write
     strategy:

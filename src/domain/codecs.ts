@@ -335,8 +335,12 @@ export interface Backup {
 export const exportBackup = (teams: Team[]): string =>
   JSON.stringify({ app: 'pokemon-team-builder', version: 1, exportedAt: new Date().toISOString(), teams } satisfies Backup, null, 2);
 
+/** More than any real collection; restored teams are persisted, and localStorage holds only ~5 MB. */
+export const MAX_BACKUP_TEAMS = 1000;
+
 export function parseBackup(json: string): Team[] {
   const data = JSON.parse(json) as Partial<Backup> | null;
   if (!data || data.app !== 'pokemon-team-builder' || !Array.isArray(data.teams)) throw new Error('Not a Team Builder backup file.');
+  if (data.teams.length > MAX_BACKUP_TEAMS) throw new Error(`That backup holds ${data.teams.length} teams; at most ${MAX_BACKUP_TEAMS} can be restored at once.`);
   return data.teams.map(sanitizeTeam).filter((t): t is Team => !!t);
 }

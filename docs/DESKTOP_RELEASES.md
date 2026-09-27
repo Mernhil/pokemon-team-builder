@@ -31,18 +31,27 @@ installers themselves build fine, only the auto-updater manifest can't be produc
 
 ## Cutting a release
 
-1. Bump the version in **both** `src-tauri/tauri.conf.json` (`"version"`) and
-   `src-tauri/Cargo.toml` (`[package] version`) — keep them equal.
-2. Commit that on `main`.
-3. Tag and push:
+1. Bump the version everywhere at once (tauri.conf.json, Cargo.toml/.lock, package.json/-lock):
    ```bash
-   git tag v0.2.0
-   git push origin v0.2.0
+   npm run bump -- 0.6.0
    ```
-4. The workflow builds all three platforms and publishes a **public** GitHub Release named after
-   the tag, with the installers and `latest.json` attached. Apps already installed will offer the
-   update next time they're launched (already-running instances: at the next 4-hourly check, or
-   right away from the header's "Check for updates" button).
+2. Run `npm run typecheck && npm test`, commit, and push it to the branch you'll release from
+   (normally the default branch).
+3. Publish the release — either:
+   - **GitHub web:** Releases → **Draft a new release** → *Choose a tag* → type `v0.6.0` →
+     *Create new tag on publish* → set **Target** to the branch from step 2 → add notes (or
+     *Generate release notes*) → **Publish release**; or
+   - **CLI:** `git tag v0.6.0 && git push origin v0.6.0`.
+4. The workflow first checks that the tag matches the version from step 1 (a mismatch fails the run
+   before anything is built or uploaded) and that typecheck + tests pass, then builds all three
+   platforms and attaches the installers and `latest.json` to that tag's **public** Release (creating
+   it when the tag was pushed from the CLI). Watch it under the Actions tab; the assets appear on the
+   release after ~15–20 minutes. Apps already installed will offer the update next time they're
+   launched (already-running instances: at the next 4-hourly check, or right away from the header's
+   "Check for updates" button).
+
+If a run fails after the release was published, fix the cause, then delete the release **and** its
+tag on GitHub and publish it again (or bump to the next patch version).
 
 ## Manual test build (no release, no signing needed)
 

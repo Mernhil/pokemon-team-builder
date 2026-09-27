@@ -71,6 +71,11 @@ describe('match tracker domain', () => {
     expect(lines[0]).toContain('Result');
     expect(lines[1]).toContain('"Locals, ""Round 1"""');
   });
+
+  it('quotes a CSV cell containing a bare carriage return', () => {
+    const csv = matchesToCSV([mkMatch({ notes: 'a\rb' })], (id) => id, (id) => id);
+    expect(csv.split('\n')[1]).toContain('"a\rb"');
+  });
 });
 
 describe('match sanitising', () => {

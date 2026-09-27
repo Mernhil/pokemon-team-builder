@@ -166,7 +166,7 @@ function csvCell(v: string): string {
   // Notes/event-name are free text a user could paste from anywhere; a leading =/+/-/@/tab/CR is how
   // spreadsheet apps trigger formula evaluation on open (CSV injection), so neutralise it defensively.
   const escaped = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-  return /[",\n]/.test(escaped) ? `"${escaped.replace(/"/g, '""')}"` : escaped;
+  return /[",\r\n]/.test(escaped) ? `"${escaped.replace(/"/g, '""')}"` : escaped;
 }
 
 const monLabel = (m: LoggedMon, speciesName: (id: string) => string) =>

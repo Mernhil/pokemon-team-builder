@@ -180,6 +180,8 @@ export function loadDex(datasetId: string): Promise<Dex> {
     const loader = loaders[datasetId];
     if (!loader) return Promise.reject(new Error(`No dataset "${datasetId}"`));
     p = loader().then((d) => new Dex(d));
+    // A failed load (offline, stale chunk after a deploy) must be retried next time, not cached.
+    p.catch(() => cache.delete(datasetId));
     cache.set(datasetId, p);
   }
   return p;

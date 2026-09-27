@@ -83,6 +83,15 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
   for (const t of Object.values(teams)) {
     if (t.groupId && !Object.hasOwn(teams, t.groupId)) t.groupId = undefined;
   }
+  // Battle state is keyed by set uid and never pruned when a set is removed: drop entries whose set
+  // no longer exists (and anything malformed) so it doesn't grow in localStorage forever.
+  const liveUids = new Set(Object.values(teams).flatMap((t) => t.slots.map((s) => s?.uid)));
+  const battle: Record<string, SlotBattleState> = {};
+  if (p.battle && typeof p.battle === 'object') {
+    for (const [uid, b] of Object.entries(p.battle)) {
+      if (liveUids.has(uid) && b && typeof b === 'object' && b.side && b.field) battle[uid] = b;
+    }
+  }
   const topLevelIds = ids.filter((id) => !teams[id].groupId);
   const order = [...new Set([...(Array.isArray(p.order) ? p.order : []), ...topLevelIds])].filter((id) => topLevelIds.includes(id));
   return {
@@ -92,7 +101,7 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
     activeTeamId: typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0],
     theme: p.theme === 'light' ? 'light' : 'dark',
     view: p.view === 'calc' || p.view === 'dex' || p.view === 'matches' || p.view === 'meta' ? p.view : 'builder',
-    battle: p.battle && typeof p.battle === 'object' ? p.battle : {},
+    battle,
   };
 }
 
