@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Search } from 'lucide-react';
 import { toID, type Dex } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
@@ -63,7 +63,7 @@ function PokedexBody({ gen, dex, data, learn, format }: { gen: number; dex: Dex;
   const spriteSet = `gen${gen}` as SpriteSetId;
 
   const all = useMemo(() => dex.selectableSpecies(), [dex]);
-  const number = (s: Pokemon) => (order === 'national' ? s.num : data.entries[s.num]?.dex?.[order]);
+  const number = useCallback((s: Pokemon) => (order === 'national' ? s.num : data.entries[s.num]?.dex?.[order]), [order, data]);
   const list = useMemo(() => {
     const q = toID(query);
     return all
@@ -72,7 +72,7 @@ function PokedexBody({ gen, dex, data, learn, format }: { gen: number; dex: Dex;
       .filter((s) => !wildOnly || data.encounters[s.id]?.length)
       .filter((s) => !q || s.id.includes(q) || String(s.num) === q || toID(data.entries[s.num]?.genus).includes(q))
       .sort((a, b) => number(a)! - number(b)! || a.name.localeCompare(b.name));
-  }, [all, query, type, order, wildOnly, data]);
+  }, [all, query, type, number, wildOnly, data]);
 
   const current = (selected && dex.species(selected)) || undefined;
   const listRef = useRef<HTMLDivElement>(null);

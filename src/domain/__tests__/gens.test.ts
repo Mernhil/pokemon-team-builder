@@ -162,3 +162,25 @@ describe('damage calc per generation', () => {
     expect(blizzard.category).toBe('Special');
   });
 });
+
+describe('Pokédex Area maps', () => {
+  /** Locations without a fixed spot on the region map: roaming, event islands, Mirage spots, Ultra Space… */
+  const OFF_MAP = /^(roaming-|unknown-|.*-pokemart$|.*-pokecenter$)|^(terra-cave|marine-cave|navel-rock|birth-island|faraway-island|southern-island|crescent-isle|trackless-forest|nameless-cavern|soaring-in-the-sky|pathless-plain|fabled-cave|gnarled-den|mirage-spot-.*|new-mauville|ultra-.*|team-flare-secret-hq)$/;
+
+  it.each([1, 2, 3, 4, 5, 6, 7, 8])('gen %i: every wild location is on its game’s map', async (g) => {
+    const { default: maps } = (await import('@/data/generated/maps.json')) as unknown as {
+      default: { maps: Record<string, { places: Record<string, unknown> }>; games: Record<string, string[]> };
+    };
+    const { default: dex } = (await import(`@/data/generated/pokedex-gen${g}.json`)) as {
+      default: { games: { id: string }[]; areas: { loc: string }[]; encounters: Record<string, number[][]> };
+    };
+    const missing = new Set<string>();
+    for (const rows of Object.values(dex.encounters))
+      for (const [game, area] of rows) {
+        const loc = dex.areas[area].loc;
+        const onMap = (maps.games[dex.games[game].id] ?? []).some((m) => maps.maps[m].places[loc]);
+        if (!onMap && !OFF_MAP.test(loc)) missing.add(`${dex.games[game].id}:${loc}`);
+      }
+    expect([...missing]).toEqual([]);
+  });
+});

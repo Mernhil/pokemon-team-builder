@@ -97,3 +97,26 @@ input[type='number'].no-spin {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
+
+/* Pokédex Area maps: blinking nest icons (Gen 1–2) and glowing areas (Gen 3+), like the games. */
+@keyframes nest-blink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+@keyframes area-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+}
+.nest-blink { animation: nest-blink 0.9s steps(1) infinite; }
+.area-glow { animation: area-glow 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .nest-blink, .area-glow { animation: none; opacity: 0.8; }
+}
+@keyframes area-ring {
+  0% { opacity: 0.9; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+.area-ring { animation: area-ring 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .area-ring { animation: none; opacity: 0.9; }
+}

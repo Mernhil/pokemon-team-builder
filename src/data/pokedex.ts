@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LearnData, PokedexData } from '@/domain/pokedex';
+import { SIDE_LOADED_DATA, fetchGenerated } from './generated-loader';
 
 /**
  * Lazy loaders for the Pokédex files (src/data/generated/pokedex-gen<N>.json from `npm run pokedex`,
@@ -38,8 +39,9 @@ function load<T>(key: string, loader: () => Promise<{ default: unknown }>): Prom
   return p as Promise<T>;
 }
 
-export const loadPokedex = (gen: number) => load<PokedexData>(`dex${gen}`, pokedexLoaders[gen]);
-export const loadLearnData = (gen: number) => load<LearnData>(`learn${gen}`, learnLoaders[gen]);
+const side = (name: string) => () => fetchGenerated<unknown>(name).then((d) => ({ default: d }));
+export const loadPokedex = (gen: number) => load<PokedexData>(`dex${gen}`, SIDE_LOADED_DATA ? side(`pokedex-gen${gen}`) : pokedexLoaders[gen]);
+export const loadLearnData = (gen: number) => load<LearnData>(`learn${gen}`, SIDE_LOADED_DATA ? side(`gen${gen}-learn`) : learnLoaders[gen]);
 
 /** Pokédex text/encounters and learn methods for a generation; null while loading. */
 export function usePokedexData(gen: number): { dex: PokedexData; learn: LearnData } | null {
