@@ -1,4 +1,4 @@
-# Desktop releases (Windows/macOS/Linux, with auto-update)
+# Desktop releases (Windows/Linux, with auto-update)
 
 The app ships as a Tauri desktop app. `.github/workflows/desktop-release.yml` builds native
 installers on each OS's own GitHub-hosted runner and, on a version tag, publishes them to a
@@ -43,7 +43,7 @@ installers themselves build fine, only the auto-updater manifest can't be produc
      *Generate release notes*) → **Publish release**; or
    - **CLI:** `git tag v0.6.0 && git push origin v0.6.0`.
 4. The workflow first checks that the tag matches the version from step 1 (a mismatch fails the run
-   before anything is built or uploaded) and that typecheck + tests pass, then builds all three
+   before anything is built or uploaded) and that typecheck + tests pass, then builds both
    platforms and attaches the installers and `latest.json` to that tag's **public** Release (creating
    it when the tag was pushed from the CLI). Watch it under the Actions tab; the assets appear on the
    release after ~15–20 minutes. Apps already installed will offer the update next time they're
@@ -56,7 +56,7 @@ tag on GitHub and publish it again (or bump to the next patch version).
 ## Manual test build (no release, no signing needed)
 
 GitHub → Actions tab → "Desktop release" → **Run workflow** (no tag needed). This just builds the
-installers on all three OSes and attaches them to that run (Summary tab → Artifacts) — useful to
+installers on Windows and Linux and attaches them to that run (Summary tab → Artifacts) — useful to
 confirm the pipeline still builds before secrets are configured, or to grab an unsigned build to
 test manually.
 
@@ -68,4 +68,5 @@ npm run desktop:build       # runs `tauri build`; installer lands in src-tauri/t
 ```
 
 Needs a Rust toolchain (rustup.rs) and, on Linux, `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev
-patchelf libayatana-appindicator3-dev`. Windows and macOS need nothing extra beyond Rust + Node.
+patchelf libayatana-appindicator3-dev`. Windows needs nothing extra beyond Rust + Node. macOS isn't a release target (phones and
+Macs can use the web app — see IPHONE_APP.md).

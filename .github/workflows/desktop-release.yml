@@ -1,7 +1,8 @@
 name: Desktop release
 
-# Builds native installers for Windows (.exe/.msi), macOS (.dmg) and Linux (.deb/.rpm/.AppImage)
-# on each platform's own runner (Tauri apps aren't reliably cross-compiled).
+# Builds native installers for Windows (.exe/.msi) and Linux (.deb/.rpm/.AppImage) on each platform's
+# own runner (Tauri apps aren't reliably cross-compiled). macOS isn't shipped; phones use the PWA
+# (docs/IPHONE_APP.md).
 #
 # - a new `v*` tag — either published from GitHub's web UI (Releases → Draft a new release → new
 #   tag `vX.Y.Z` → Publish) or pushed with `git tag vX.Y.Z && git push origin vX.Y.Z`: first checks
@@ -82,7 +83,6 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
-          - platform: macos-latest
           - platform: ubuntu-latest
     runs-on: ${{ matrix.platform }}
     steps:
@@ -128,7 +128,6 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
-          - platform: macos-latest
           - platform: ubuntu-latest
     runs-on: ${{ matrix.platform }}
     steps:
@@ -164,7 +163,6 @@ jobs:
           path: |
             src-tauri/target/release/bundle/**/*.exe
             src-tauri/target/release/bundle/**/*.msi
-            src-tauri/target/release/bundle/**/*.dmg
             src-tauri/target/release/bundle/**/*.AppImage
             src-tauri/target/release/bundle/**/*.deb
             src-tauri/target/release/bundle/**/*.rpm
