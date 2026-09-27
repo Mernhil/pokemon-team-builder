@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BarChart3, BookOpen, Calculator, ChevronDown, FolderOpen, Moon, Sun, Swords, Users } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, BookOpen, Calculator, Check, ChevronDown, FolderOpen, Moon, Save, Sun, Swords, Users } from 'lucide-react';
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
@@ -141,6 +141,7 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
   const theme = useTeamStore((s) => s.theme);
   const { updateTeam, setTheme } = useTeamStore.getState();
   const [teamsOpen, setTeamsOpen] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [ioOpen, setIoOpen] = useState(false);
   const liveRegId = currentRegulation()?.id;
 
@@ -197,6 +198,16 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           ))}
         </Select>
         <div className="ml-auto flex items-center gap-1.5">
+          <Button
+            onClick={() => {
+              updateTeam(team.id, {});
+              setJustSaved(true);
+              window.setTimeout(() => setJustSaved(false), 1500);
+            }}
+          >
+            {justSaved ? <Check size={14} /> : <Save size={14} />}
+            <span className="hidden sm:inline">{justSaved ? 'Saved' : 'Save'}</span>
+          </Button>
           <Button onClick={() => setTeamsOpen(true)}>
             <FolderOpen size={14} /> <span className="hidden sm:inline">Teams</span>
           </Button>
