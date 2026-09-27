@@ -3,6 +3,7 @@ import { ArrowLeftRight, BookOpen, Calculator, ChevronDown, FolderOpen, Moon, Su
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
+import { gameInfo } from '@/domain/games';
 import { GEN_GAMES } from '@/domain/generations';
 import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
@@ -145,7 +146,11 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           className="h-9 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 text-base font-semibold outline-none hover:border-border focus:border-accent sm:max-w-xs"
         />
         <span className="hidden sm:inline-flex">
-          {format.datasetId === 'champions' ? (
+          {format.game ? (
+            <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white" style={{ background: gameInfo(format.game)!.color }} title={gameInfo(format.game)!.name}>
+              {gameInfo(format.game)!.shortName.toUpperCase()}
+            </span>
+          ) : format.datasetId === 'champions' ? (
             <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-accent-fg" title="Pokémon Champions">
               CHAMPIONS
             </span>
@@ -161,7 +166,8 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
         >
           {[
             { label: 'Pokémon Champions', formats: FORMATS.filter((f) => f.datasetId === 'champions') },
-            { label: 'Main series · Gen 1–9', formats: FORMATS.filter((f) => f.datasetId !== 'champions') },
+            { label: 'Main series · Gen 1–9', formats: FORMATS.filter((f) => f.datasetId !== 'champions' && !f.game) },
+            { label: "Main series · Let's Go, BDSP, Legends", formats: FORMATS.filter((f) => f.game) },
           ].map((g) => (
             <optgroup key={g.label} label={g.label}>
               {g.formats.map((f) => (
@@ -248,7 +254,9 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
         </div>
         <DefenseMatrix team={team} dex={dex} format={format} />
         <p className="pb-2 text-center text-[11px] text-muted">
-          {dex.data.generation
+          {format.game
+            ? `Data: ${dex.data.source} · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
+            : dex.data.generation
             ? `Data: Pokémon Showdown's Gen ${dex.data.generation} data (${GEN_GAMES[dex.data.generation]}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
             : `Data: Pokémon Showdown + official regulation announcements (${dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`}
         </p>

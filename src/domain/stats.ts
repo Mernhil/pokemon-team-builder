@@ -76,12 +76,53 @@ export function gbStat(statId: StatId, base: number, dv: number, statExp: number
 }
 
 // ---------------------------------------------------------------------------
+// Let's Go, Pikachu! / Eevee! (PKHeX PB7.LoadStats)
+//   HP    = AV + floor((2B + IV) × L / 100) + L + 10
+//   Other = AV + floor(friendship% × floor((floor((2B + IV) × L / 100) + 5) × nature) / 100)
+//   friendship% = ⌊(friendship / 255 / 10 + 1) × 100⌋  (100–110), computed in 32-bit floats
+// ---------------------------------------------------------------------------
+
+export function lgpeFriendshipPercent(friendship: number): number {
+  const f = Math.fround;
+  return Math.trunc(f(f(f(f(Math.max(0, Math.min(255, friendship)) / 255) / 10) + 1) * 100));
+}
+
+export function lgpeStat(statId: StatId, base: number, iv: number, av: number, level: number, friendship: number, nature?: Nature): number {
+  const core = Math.floor(((2 * base + iv) * level) / 100);
+  if (statId === 'hp') return av + core + 10 + level;
+  return av + Math.floor((lgpeFriendshipPercent(friendship) * applyNature(core + 5, statId, nature)) / 100);
+}
+
+// ---------------------------------------------------------------------------
+// Legends: Arceus (PKHeX PA8.LoadStats, GanbaruExtensions), in the game's 32-bit float arithmetic
+//   bonus = round((√B × M[EL] + L) / 2.5)          M = 0, 2, 3, 4, 7, 8, 9, 14, 15, 16, 25
+//   HP    = bonus + ⌊(L/100 + 1) × B + L⌋
+//   Other = bonus + ⌊⌊(L/50 + 1) × B / 1.5⌋ × nature⌋
+// ---------------------------------------------------------------------------
+
+const EFFORT_MULTIPLIER = [0, 2, 3, 4, 7, 8, 9, 14, 15, 16, 25];
+
+export function plaEffortBonus(base: number, effortLevel: number, level: number): number {
+  const f = Math.fround;
+  const mul = EFFORT_MULTIPLIER[Math.max(0, Math.min(10, Math.round(effortLevel)))];
+  const v = f(f(f(Math.sqrt(base) * mul) + level) / 2.5);
+  return Math.sign(v) * Math.round(Math.abs(v)); // MidpointRounding.AwayFromZero
+}
+
+export function plaStat(statId: StatId, base: number, effortLevel: number, level: number, nature?: Nature): number {
+  const f = Math.fround;
+  const bonus = plaEffortBonus(base, effortLevel, level);
+  if (statId === 'hp') return bonus + Math.trunc(f(f(f(f(level / 100) + 1) * base) + level));
+  return bonus + applyNature(Math.trunc(f(f(f(f(level / 50) + 1) * base) / 1.5)), statId, nature);
+}
+
+// ---------------------------------------------------------------------------
 // Unified entry point
 // ---------------------------------------------------------------------------
 
 export function calcStats(
   baseStats: StatTable,
-  set: Pick<PokemonSet, 'sp' | 'evs' | 'ivs' | 'level'>,
+  set: Pick<PokemonSet, 'sp' | 'evs' | 'ivs' | 'level' | 'friendship'>,
   format: FormatRules,
   nature?: Nature,
 ): StatTable {
@@ -106,6 +147,12 @@ export function calcStats(
         out[s] = gbStat(s, baseStats[s], dv, exp, level);
         break;
       }
+      case 'lgpe-av':
+        out[s] = lgpeStat(s, baseStats[s], set.ivs[s], set.evs[s], level, set.friendship ?? 255, nature);
+        break;
+      case 'pla-effort':
+        out[s] = plaStat(s, baseStats[s], set.evs[s], level, nature);
+        break;
     }
   }
   return out;
@@ -126,7 +173,7 @@ export interface Budget {
 }
 
 export function spendBudget(sys: StatSystem, spread: StatTable): Budget | null {
-  if (sys.kind === 'gb-statexp') return null;
+  if (sys.kind !== 'champions-sp' && sys.kind !== 'modern-ev') return null;
   const used = sumStats(spread);
   const remaining = sys.totalCap - used;
   return {
@@ -183,6 +230,8 @@ export const spreadKey = (sys: StatSystem): 'sp' | 'evs' => (sys.kind === 'champ
 export function investRange(sys: StatSystem): { max: number; step: number } {
   if (sys.kind === 'champions-sp') return { max: sys.perStatCap, step: 1 };
   if (sys.kind === 'modern-ev') return { max: sys.perStatCap, step: 4 };
+  if (sys.kind === 'lgpe-av') return { max: sys.avMax, step: 1 };
+  if (sys.kind === 'pla-effort') return { max: sys.levelMax, step: 1 };
   return { max: sys.statExpMax, step: 1 };
 }
 
@@ -194,7 +243,7 @@ export function investmentForTarget(
   statId: StatId,
   baseStats: StatTable,
   target: number,
-  set: Pick<PokemonSet, 'sp' | 'evs' | 'ivs' | 'level'>,
+  set: Pick<PokemonSet, 'sp' | 'evs' | 'ivs' | 'level' | 'friendship'>,
   format: FormatRules,
   nature?: Nature,
 ): number | null {
@@ -234,11 +283,16 @@ export function withSpreadValue<T extends Pick<PokemonSet, 'sp' | 'evs' | 'ivs'>
   const n = Math.round(Number.isFinite(value) ? value : 0) || 0;
   if (kind === 'ivs') {
     const v = Math.max(0, Math.min(sys.kind === 'gb-statexp' ? sys.dvMax : 31, n));
+    if (sys.kind === 'pla-effort') return p; // Legends: Arceus shows Effort Levels, which already include IVs
     return { ...p, ivs: { ...p.ivs, [stat]: v, ...(special ? { spd: v } : {}) } };
   }
   if (sys.kind === 'gb-statexp') {
     const v = Math.max(0, Math.min(sys.statExpMax, n));
     return { ...p, evs: { ...p.evs, [stat]: v, ...(special ? { spd: v } : {}) } };
+  }
+  if (sys.kind === 'lgpe-av' || sys.kind === 'pla-effort') {
+    // No shared cap: each stat trains on its own.
+    return { ...p, evs: { ...p.evs, [stat]: Math.max(0, Math.min(sys.kind === 'lgpe-av' ? sys.avMax : sys.levelMax, n)) } };
   }
   return { ...p, [kind]: setSpreadValue(p[kind], stat, value, sys.totalCap, sys.perStatCap) };
 }

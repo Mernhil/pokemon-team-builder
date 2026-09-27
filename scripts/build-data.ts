@@ -6,6 +6,7 @@
  *   src/data/generated/champions.json    full dataset (lazy-loaded by the app)
  *   src/data/generated/regulations.json  tiny manifest (bundled; drives the format list + banners)
  *   src/data/generated/gen<N>.json       Gen 1–9 datasets, as each generation's games had them (build-gens.ts)
+ *   src/data/generated/{lgpe,bdsp,pla,za}.json  Let's Go, BDSP, Legends: Arceus, Legends: Z-A (build-games.ts)
  *
  *   npm run data
  *
@@ -20,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { Dex, type ModData } from '@pkmn/dex';
 import * as ChampionsMod from '@pkmn/mods/champions';
 import * as RegMAMod from '@pkmn/mods/championsregma';
+import { buildGames } from './build-games.js';
 import { buildGenerations } from './build-gens.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -397,6 +399,7 @@ async function main() {
   );
 
   await buildGenerations(OUT);
+  await buildGames(OUT);
 }
 
 main();

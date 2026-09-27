@@ -1,5 +1,5 @@
 import type { Dex } from '@/data/dex';
-import { mechanics } from './generations';
+import { formatMechanics } from './games';
 import { sumStats } from './stats';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type Team } from './types';
 
@@ -20,7 +20,7 @@ export interface Issue {
 export function validateTeam(team: Team, format: FormatRules, dex: Dex): Issue[] {
   const issues: Issue[] = [];
   const reg = format.regulationId;
-  const mech = mechanics(format.generation);
+  const mech = formatMechanics(format);
   const champions = format.statSystem.kind === 'champions-sp';
   const where = champions ? format.shortName : `${format.shortName} (${format.name.replace(/^Gen \d+ · /, '')})`;
   const filled = team.slots.map((s, i) => [s, i] as const).filter(([s]) => s);
@@ -91,7 +91,9 @@ export function validateTeam(team: Team, format: FormatRules, dex: Dex): Issue[]
       push('error', 'level-range', `level ${s.level} is outside ${format.level.min}–${format.level.max}.`);
 
     // Item (held items arrived in Gen 2)
-    if (s.itemId && !mech.heldItems) push('error', 'item-illegal', `Pokémon can't hold items in Gen ${format.generation}.`);
+    const where2 = format.game ? format.shortName : `Gen ${format.generation}`;
+    if (s.itemId && !mech.heldItems && !(mech.megaStoneOnly && dex.item(s.itemId)?.megaStone))
+      push('error', 'item-illegal', mech.megaStoneOnly ? `only a Mega Stone can be chosen in ${where2}.` : `Pokémon can't hold items in ${where2}.`);
     else if (s.itemId) {
       const item = dex.item(s.itemId);
       if (!item) push('error', 'unknown-item', `unknown item "${s.itemId}".`);
@@ -140,6 +142,15 @@ export function validateTeam(team: Team, format: FormatRules, dex: Dex): Issue[]
     if (sys.kind === 'modern-ev') {
       for (const k of STAT_IDS)
         if (s.ivs[k] < 0 || s.ivs[k] > sys.ivMax) push('error', 'iv-range', `${STAT_LABELS[k]} IV ${s.ivs[k]} is outside 0–${sys.ivMax}.`);
+    }
+    if (sys.kind === 'lgpe-av' || sys.kind === 'pla-effort') {
+      const max = sys.kind === 'lgpe-av' ? sys.avMax : sys.levelMax;
+      const unit = sys.kind === 'lgpe-av' ? 'AVs' : 'Effort Level';
+      for (const k of STAT_IDS)
+        if (s.evs[k] < 0 || s.evs[k] > max) push('error', 'stat-over', `${STAT_LABELS[k]} ${unit} ${s.evs[k]} is outside 0–${max}.`);
+      if (sys.kind === 'lgpe-av')
+        for (const k of STAT_IDS)
+          if (s.ivs[k] < 0 || s.ivs[k] > sys.ivMax) push('error', 'iv-range', `${STAT_LABELS[k]} IV ${s.ivs[k]} is outside 0–${sys.ivMax}.`);
     }
     if (sys.kind === 'gb-statexp') {
       for (const k of STAT_IDS) {

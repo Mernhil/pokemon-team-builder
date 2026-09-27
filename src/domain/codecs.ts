@@ -1,5 +1,5 @@
 import { toID, type Dex } from '@/data/dex';
-import { mechanics } from './generations';
+import { formatMechanics } from './games';
 import { calcStats, evToStatExp, statExpToEV } from './stats';
 import { createSet, createTeam, emptySlots } from './team';
 import {
@@ -21,6 +21,8 @@ import {
 //   so Champions teams round-trip with Showdown unchanged.
 //   Gen 1–2: Showdown writes Stat Exp as EVs (⌈√StatExp⌉, 252 = max, the default) and
 //   DVs as IVs (IV = 2 × DV, 30 = max, the default).
+//   Let's Go: Showdown's "EVs:" line holds AVs and "Happiness:" the friendship.
+//   Legends: Arceus has no Showdown format; its Effort Levels get their own line.
 // ===========================================================================
 
 const mapStats = (t: StatTable, f: (v: number) => number): StatTable =>
@@ -39,7 +41,7 @@ export function exportSetShowdown(set: PokemonSet, dex: Dex, format: FormatRules
   const gender = set.gender ? ` (${set.gender})` : '';
   const item = dex.item(set.itemId);
   lines.push(`${head}${gender}${item ? ` @ ${item.name}` : ''}`);
-  const mech = mechanics(format.generation);
+  const mech = formatMechanics(format);
   const ab = mech.abilities ? dex.ability(set.abilityId) : undefined;
   if (ab) lines.push(`Ability: ${ab.name}`);
   if (!format.level.fixed && set.level !== 100) lines.push(`Level: ${set.level}`);
@@ -52,7 +54,12 @@ export function exportSetShowdown(set: PokemonSet, dex: Dex, format: FormatRules
     if (ev) lines.push(`EVs: ${ev}`);
     const iv = spreadLine(mapStats({ ...set.ivs, hp: 15 }, (d) => Math.min(15, d) * 2), 30);
     if (iv) lines.push(`IVs: ${iv}`);
+  } else if (sys.kind === 'pla-effort') {
+    const el = spreadLine(set.evs, 0);
+    if (el) lines.push(`Effort Levels: ${el}`);
+    if (set.nature && mech.natures) lines.push(`${set.nature} Nature`);
   } else {
+    if (sys.kind === 'lgpe-av' && (set.friendship ?? 255) !== 255) lines.push(`Happiness: ${set.friendship ?? 255}`);
     const spread = sys.kind === 'champions-sp' ? set.sp : set.evs;
     const ev = spreadLine(spread, 0);
     if (ev) lines.push(`EVs: ${ev}`);
@@ -167,6 +174,12 @@ export function importShowdown(text: string, dex: Dex, format: FormatRules, name
           if (t) set.teraType = t as TeraType;
           break;
         }
+        case 'happiness':
+        case 'friendship':
+          if (format.statSystem.kind === 'lgpe-av') set.friendship = Math.max(0, Math.min(255, parseInt(v, 10) || 0));
+          break;
+        case 'effortlevels':
+        case 'avs':
         case 'evs':
         case 'sp':
         case 'statpoints': {

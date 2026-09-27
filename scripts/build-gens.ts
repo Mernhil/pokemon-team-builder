@@ -24,41 +24,76 @@ const SPREAD_TARGETS = new Set(['allAdjacent', 'allAdjacentFoes', 'all', 'foeSid
 /** Learn-method letters in Showdown learnset sources ("9L24", "3M", "4E", "2S0"…). V = transfer-only. */
 const METHODS = new Set(['L', 'M', 'T', 'E', 'S', 'D', 'R']);
 
-type GenDex = ReturnType<typeof Dex.forGen>;
+export type AnyDex = ReturnType<typeof Dex.forGen>;
+type Item = ReturnType<AnyDex['items']['get']>;
+
+/** How one game (or generation) differs from the defaults its generation implies. */
+export interface DatasetSpec {
+  id: string;
+  generation: number;
+  dex: AnyDex;
+  source: string;
+  /** Learnset sources to keep, by leading generation digit (Let's Go's live under "7", BDSP's under "8"…). */
+  learnGen?: number;
+  /** 'none' (Gen 1–2, Let's Go, Legends), 'noHidden' (Gen 3–4) or 'all'. */
+  abilities?: 'none' | 'noHidden' | 'all';
+  /** Which items can be held; default: every legal non-Poké Ball item from Gen 2 on. */
+  heldItem?: (item: Item) => boolean;
+  natures?: boolean;
+  /** Keep Mega formes (Gen 6–7, Let's Go, Z-A). */
+  megas?: boolean;
+  /** Game mods: the species the game has (its mod's FormatsData), instead of "not nonstandard". */
+  roster?: (id: string) => boolean;
+  /** Game mods: learnsets from the mod alone, so the base generation's (e.g. Sword/Shield's) never leak in. */
+  learnsets?: Record<string, { learnset?: Record<string, string[]> }>;
+}
+
+export async function writeDataset(outDir: string, spec: DatasetSpec) {
+  const { dataset, learn } = await buildDataset(spec);
+  writeFileSync(resolve(outDir, `${spec.id}.json`), JSON.stringify(dataset));
+  writeFileSync(resolve(outDir, `${spec.id}-learn.json`), JSON.stringify(learn));
+  console.log(
+    `wrote ${spec.id}.json: ${Object.keys(dataset.species).length} species, ${Object.keys(dataset.moves).length} moves, ` +
+      `${Object.keys(dataset.items).length} items, ${Object.keys(dataset.abilities).length} abilities`,
+  );
+}
 
 export async function buildGenerations(outDir: string) {
   for (let gen = 1; gen <= 9; gen++) {
-    const { dataset, learn } = await buildGen(gen);
-    writeFileSync(resolve(outDir, `gen${gen}.json`), JSON.stringify(dataset));
-    writeFileSync(resolve(outDir, `gen${gen}-learn.json`), JSON.stringify(learn));
-    console.log(
-      `wrote gen${gen}.json: ${Object.keys(dataset.species).length} species, ${Object.keys(dataset.moves).length} moves, ` +
-        `${Object.keys(dataset.items).length} items, ${Object.keys(dataset.abilities).length} abilities`,
-    );
+    await writeDataset(outDir, {
+      id: `gen${gen}`,
+      generation: gen,
+      dex: Dex.forGen(gen as 1) as AnyDex,
+      source: `@pkmn/dex Gen ${gen} (Pokémon Showdown)`,
+      abilities: gen < 3 ? 'none' : gen < 5 ? 'noHidden' : 'all',
+      heldItem: gen < 2 ? () => false : undefined,
+      natures: gen >= 3,
+      megas: gen === 6 || gen === 7,
+    });
   }
 }
 
-async function buildGen(gen: number) {
-  const dex = Dex.forGen(gen as 1) as GenDex;
-  const regId = `gen${gen}`;
+export async function buildDataset(spec: DatasetSpec) {
+  const { dex, generation: gen, id: regId } = spec;
+  const learnGen = spec.learnGen ?? gen;
   const legal = (x: { exists: boolean; isNonstandard?: string | null }) => x.exists && !x.isNonstandard;
 
   // ---------- Species ----------
   const isMega = (s: Species) => /^(Mega)/.test(s.forme);
   const pool = dex.species
     .all()
-    .filter((s) => legal(s) && (!s.battleOnly || isMega(s)))
+    .filter((s) => (spec.roster ? s.exists && spec.roster(s.id) : legal(s)) && (!s.battleOnly || (isMega(s) && spec.megas)))
     .sort((a, b) => a.num - b.num || a.name.localeCompare(b.name));
   const inGen = new Set<string>(pool.map((s) => s.id));
 
   /** Own learn sources for this generation: moveId → method codes without the gen digit ("L24", "M"). */
   const ownSources = async (id: string): Promise<Record<string, string[]> | undefined> => {
-    const ls = (await dex.learnsets.get(id))?.learnset;
+    const ls = spec.learnsets ? spec.learnsets[id]?.learnset : (await dex.learnsets.get(id))?.learnset;
     if (!ls) return undefined;
     const out: Record<string, string[]> = {};
     for (const [move, sources] of Object.entries(ls)) {
-      const codes = sources.filter((c) => c.startsWith(String(gen)) && METHODS.has(c[1])).map((c) => c.slice(1));
-      if (codes.length && legal(dex.moves.get(move))) out[move] = [...new Set(codes.map((c) => (c[0] === 'S' ? 'S' : c)))];
+      const codes = sources.filter((c) => c.startsWith(String(learnGen)) && METHODS.has(c[1])).map((c) => c.slice(1));
+      if (codes.length && dex.moves.get(move).exists && (spec.roster || legal(dex.moves.get(move)))) out[move] = [...new Set(codes.map((c) => (c[0] === 'S' ? 'S' : c)))];
     }
     return out;
   };
@@ -95,8 +130,10 @@ async function buildGen(gen: number) {
     }
 
     let abilities: Record<string, string> = {};
-    if (gen >= 3) {
-      abilities = Object.fromEntries(Object.entries(s.abilities).filter(([slot, name]) => name && (gen >= 5 || slot !== 'H')));
+    if (spec.abilities !== 'none') {
+      abilities = Object.fromEntries(
+        Object.entries(s.abilities).filter(([slot, name]) => name && name !== 'No Ability' && (spec.abilities !== 'noHidden' || slot !== 'H')),
+      );
     }
     species[s.id] = {
       id: s.id,
@@ -130,14 +167,15 @@ async function buildGen(gen: number) {
 
   // ---------- Items (held items arrived in Gen 2) ----------
   const items: Record<string, unknown> = {};
-  if (gen >= 2) {
-    for (const it of dex.items.all().filter((i) => legal(i) && !i.isPokeball).sort((a, b) => a.name.localeCompare(b.name))) {
+  const holdable = spec.heldItem ?? ((i: Item) => legal(i) && !i.isPokeball);
+  {
+    for (const it of dex.items.all().filter(holdable).sort((a, b) => a.name.localeCompare(b.name))) {
       items[it.id] = {
         id: it.id,
         name: it.name,
         shortDesc: it.shortDesc || it.desc,
         megaStone:
-          gen >= 6 && it.megaStone
+          spec.megas && it.megaStone
             ? Object.fromEntries(
                 Object.entries(it.megaStone)
                   .map(([b, m]) => [toID(b), toID(m as string)])
@@ -215,7 +253,7 @@ async function buildGen(gen: number) {
     );
   }
   const TYPE_ORDER = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy'];
-  const natures = gen >= 3 ? dex.natures.all().map((n) => ({ name: n.name, plus: n.plus, minus: n.minus })) : [];
+  const natures = (spec.natures ?? gen >= 3) ? dex.natures.all().map((n) => ({ name: n.name, plus: n.plus, minus: n.minus })) : [];
 
   // Learnsets are stored as indices into the (sorted) move list to keep the files small;
   // src/data/dex.ts expands them on load.
@@ -233,7 +271,7 @@ async function buildGen(gen: number) {
     id: regId,
     generation: gen,
     generatedAt: new Date().toISOString(),
-    source: `@pkmn/dex Gen ${gen} (Pokémon Showdown)`,
+    source: spec.source,
     regulations: [],
     species,
     moveIndex,

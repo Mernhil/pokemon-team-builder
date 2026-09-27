@@ -1,6 +1,6 @@
 import { Sparkles, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { mechanics } from '@/domain/generations';
+import { formatMechanics } from '@/domain/games';
 import { spreadKey } from '@/domain/stats';
 import { createSet } from '@/domain/team';
 import { STAT_LABELS, type FormatRules, type PokemonSet, type TeraType } from '@/domain/types';
@@ -28,7 +28,7 @@ interface Props {
 
 export function SetEditor({ slot, set, dex, format, issues }: Props) {
   const { setSlot, updateSet, setMove, setSpread } = useTeamStore.getState();
-  const mech = mechanics(format.generation);
+  const mech = formatMechanics(format);
   const champions = format.statSystem.kind === 'champions-sp';
 
   const itemOptions = useItemOptions(dex, format, set?.speciesId);
@@ -121,8 +121,8 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
             <Field label="Nickname">
               <Input value={set.nickname ?? ''} placeholder={species.name} maxLength={12} onChange={(e) => updateSet(slot, { nickname: e.target.value || undefined })} />
             </Field>
-            {mech.heldItems && (
-            <Field label="Held item">
+            {(mech.heldItems || mech.megaStoneOnly) && (
+            <Field label={mech.megaStoneOnly ? 'Mega Stone (in the Bag)' : 'Held item'}>
               <Combobox
                 aria-label="Held item"
                 options={itemOptions}
@@ -229,10 +229,10 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
       </Panel>
 
       <Panel
-        title={champions ? 'Stat Point Calculator' : format.statSystem.kind === 'modern-ev' ? 'EVs & IVs' : 'Stat Exp & DVs'}
+        title={{ 'champions-sp': 'Stat Point Calculator', 'modern-ev': 'EVs & IVs', 'gb-statexp': 'Stat Exp & DVs', 'lgpe-av': 'AVs, IVs & Friendship', 'pla-effort': 'Effort Levels' }[format.statSystem.kind]}
         actions={
           <span className="text-[11px] text-muted">
-            {champions ? 'Lv 50 · 31 IVs · 1 SP = +1 stat' : `Lv ${set.level} · Gen ${format.generation} stat formula`}
+            {champions ? 'Lv 50 · 31 IVs · 1 SP = +1 stat' : `Lv ${set.level} · ${format.game ? format.shortName : `Gen ${format.generation}`} stat formula`}
           </span>
         }
       >
@@ -246,6 +246,7 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
           onReplaceSpread={(spread) => updateSet(slot, { [spreadKey(format.statSystem)]: spread })}
           onIV={format.fixedIVs ? undefined : (stat, v) => setSpread(slot, 'ivs', stat, v)}
           onNature={(nature) => updateSet(slot, { nature })}
+          onFriendship={format.statSystem.kind === 'lgpe-av' ? (friendship) => updateSet(slot, { friendship }) : undefined}
         />
       </Panel>
 

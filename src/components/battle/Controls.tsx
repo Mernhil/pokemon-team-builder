@@ -11,7 +11,7 @@ import {
   type FieldConditions,
   type SideConditions,
 } from '@/domain/battle/conditions';
-import { mechanics } from '@/domain/generations';
+import { formatMechanics } from '@/domain/games';
 import { STAT_LABELS } from '@/domain/types';
 import { STAT_COLOR_VAR, Select, cn } from '../ui/primitives';
 
@@ -65,8 +65,8 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
 // ---------------------------------------------------------------------------
 
 /** Field controls; `gen` hides what that generation didn't have (terrain, Trick Room, doubles…). */
-export function FieldControls({ field, onChange, compact, gen = 9 }: { field: FieldConditions; onChange: (p: Partial<FieldConditions>) => void; compact?: boolean; gen?: number }) {
-  const mech = mechanics(gen);
+export function FieldControls({ field, onChange, compact, gen = 9, game }: { field: FieldConditions; onChange: (p: Partial<FieldConditions>) => void; compact?: boolean; gen?: number; game?: string }) {
+  const mech = formatMechanics({ generation: gen, game });
   const weathers = WEATHERS.map((w) => (w.id === 'Snow' ? { ...w, label: mech.snowName } : w));
   const terrains = TERRAINS.filter((t) => t.id !== 'Psychic' || mech.psychicTerrain);
   return (
@@ -122,8 +122,10 @@ export function SideControls({
   canTera,
   teraType,
   gen = 9,
+  game,
 }: {
   gen?: number;
+  game?: string;
   cond: SideConditions;
   onChange: (p: Partial<SideConditions>) => void;
   ability?: string;
@@ -131,7 +133,7 @@ export function SideControls({
   canTera: boolean;
   teraType?: string;
 }) {
-  const mech = mechanics(gen);
+  const mech = formatMechanics({ generation: gen, game });
   const abLabel = mech.abilities ? abilityToggleLabel(ability) : null;
   return (
     <div className="space-y-2.5">

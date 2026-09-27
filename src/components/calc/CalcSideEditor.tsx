@@ -14,7 +14,7 @@ import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
 import { Field, Input, Panel, Select, TypeBadge, cn } from '../ui/primitives';
-import { mechanics } from '@/domain/generations';
+import { formatMechanics } from '@/domain/games';
 import { spreadKey, sumStats, withSpreadValue } from '@/domain/stats';
 
 interface Props {
@@ -49,7 +49,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
 
   const title = role === 'attacker' ? 'Attacker' : 'Defender';
   const sys = format.statSystem;
-  const mech = mechanics(format.generation);
+  const mech = formatMechanics(format);
 
   return (
     <Panel
@@ -129,8 +129,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
         {set && species && (
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {mech.heldItems && (
-              <Field label="Held item">
+              {(mech.heldItems || mech.megaStoneOnly) && (
+              <Field label={mech.megaStoneOnly ? 'Mega Stone' : 'Held item'}>
                 <Combobox
                   aria-label={`${title} item`}
                   options={itemOptions}
@@ -249,6 +249,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
               canTera={format.gimmicks.tera && !!set.teraType}
               teraType={set.teraType}
               gen={dex.generation}
+              game={format.game}
             />
 
             {(
@@ -258,7 +259,11 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                     ? `Stat Points · ${sumStats(set.sp)}/${sys.totalCap}`
                     : sys.kind === 'modern-ev'
                       ? `EVs · ${sumStats(set.evs)}/${sys.totalCap} · Lv ${set.level}`
-                      : `Stat Exp & DVs · Lv ${set.level}`}
+                      : sys.kind === 'lgpe-av'
+                        ? `AVs & IVs · Lv ${set.level}`
+                        : sys.kind === 'pla-effort'
+                          ? `Effort Levels · Lv ${set.level}`
+                          : `Stat Exp & DVs · Lv ${set.level}`}
                 </summary>
                 <div className="p-3">
                   <StatDistributor
@@ -270,6 +275,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                     onSpread={(stat, v) => patchSet(role, withSpreadValue(set, sys, spreadKey(sys), stat, v))}
                     onReplaceSpread={(spread) => patchSet(role, { [spreadKey(sys)]: spread })}
                     onIV={format.fixedIVs ? undefined : (stat, v) => patchSet(role, withSpreadValue(set, sys, 'ivs', stat, v))}
+                    onFriendship={sys.kind === 'lgpe-av' ? (friendship) => patchSet(role, { friendship }) : undefined}
                     onNature={(nature) => patchSet(role, { nature })}
                   />
                 </div>

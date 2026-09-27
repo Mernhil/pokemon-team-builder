@@ -166,6 +166,10 @@ const loaders: Record<string, () => Promise<Dataset>> = {
   gen7: () => (SIDE_LOADED_DATA ? fetchGenerated('gen7').then(unpackDataset) : import('./generated/gen7.json').then(unpack)),
   gen8: () => (SIDE_LOADED_DATA ? fetchGenerated('gen8').then(unpackDataset) : import('./generated/gen8.json').then(unpack)),
   gen9: () => (SIDE_LOADED_DATA ? fetchGenerated('gen9').then(unpackDataset) : import('./generated/gen9.json').then(unpack)),
+  lgpe: () => (SIDE_LOADED_DATA ? fetchGenerated('lgpe').then(unpackDataset) : import('./generated/lgpe.json').then(unpack)),
+  bdsp: () => (SIDE_LOADED_DATA ? fetchGenerated('bdsp').then(unpackDataset) : import('./generated/bdsp.json').then(unpack)),
+  pla: () => (SIDE_LOADED_DATA ? fetchGenerated('pla').then(unpackDataset) : import('./generated/pla.json').then(unpack)),
+  za: () => (SIDE_LOADED_DATA ? fetchGenerated('za').then(unpackDataset) : import('./generated/za.json').then(unpack)),
 };
 
 const cache = new Map<string, Promise<Dex>>();

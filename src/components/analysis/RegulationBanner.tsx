@@ -2,7 +2,8 @@ import { CalendarClock, RadioTower } from 'lucide-react';
 import { REGULATION_MANIFEST, currentRegulation, formatForRegulation, regulationInfo } from '@/domain/formats';
 import type { FormatRules, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
-import { GEN_GAMES, genInfo, mechanics } from '@/domain/generations';
+import { formatMechanics, gameInfo } from '@/domain/games';
+import { GEN_GAMES, genInfo } from '@/domain/generations';
 import { GenBadge } from '../ui/GenBadge';
 import { Button } from '../ui/primitives';
 
@@ -21,7 +22,22 @@ export function RegulationBanner({ team, format }: { team: Team; format: FormatR
 /** Main-series formats: which games the data follows and what that generation had. */
 function GenerationStrip({ format }: { format: FormatRules }) {
   const g = genInfo(format.generation);
-  const m = mechanics(format.generation);
+  const m = formatMechanics(format);
+  const game = gameInfo(format.game);
+  if (game)
+    return (
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs">
+        <span className="flex items-center gap-1.5">
+          <GenBadge gen={g.gen} />
+          <b className="text-fg">{game.name}</b>
+          <span className="text-muted">· {game.region}</span>
+        </span>
+        <span className="text-muted">
+          {game.summary}
+          {!game.battleSim && ' · the damage calculator can’t model these battles'}
+        </span>
+      </div>
+    );
   const missing = [!m.abilities && 'abilities', !m.natures && 'natures', !m.heldItems && 'held items', !m.splitSpecial && 'a split Special stat'].filter(Boolean);
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs">

@@ -39,6 +39,7 @@ export function createSet(dex: Dex, speciesId: string, format: FormatRules): Pok
     // Gen 1–2: max DVs and Stat Exp, as trained cartridge Pokémon (and Showdown) default to.
     evs: emptyStats(gb ? 65535 : 0),
     ivs: emptyStats(format.fixedIVs ?? (gb ? 15 : 31)),
+    friendship: format.statSystem.kind === 'lgpe-av' ? 255 : undefined,
   };
 }
 

@@ -1,4 +1,5 @@
 import manifestJson from '@/data/generated/regulations.json';
+import { GAMES } from './games';
 import { GEN_GAMES, GENERATIONS } from './generations';
 import type { FormatRules, RegulationInfo, RegulationManifest, StatSystem } from './types';
 
@@ -55,10 +56,30 @@ const genFormats: FormatRules[] = GENERATIONS.map((g) => ({
   available: true,
 }));
 
+/** One format per remaining main-series game (Let's Go, BDSP, Legends): its roster, movepools and rules. */
+const gameFormats: FormatRules[] = GAMES.map((g) => ({
+  id: g.id,
+  name: `${g.name} (Gen ${g.generation})`,
+  shortName: g.shortName,
+  generation: g.generation,
+  datasetId: g.id,
+  spriteSet: g.spriteSet,
+  regulationId: g.id,
+  statSystem: g.statSystem,
+  level: { min: 1, max: 100, default: 100 },
+  teamSize: 6,
+  gameType: 'singles',
+  clauses: { species: false, item: false },
+  gimmicks: { mega: g.mega, tera: false },
+  openTeamList: false,
+  available: true,
+  game: g.id,
+}));
+
 /** Ids of the placeholder formats earlier versions declared, mapped to their generation. */
 const LEGACY_IDS: Record<string, string> = { 'gen9-vgc': 'gen9', 'gen4-playthrough': 'gen4', 'gen1-playthrough': 'gen1' };
 
-export const FORMATS: FormatRules[] = [...championsFormats, ...genFormats];
+export const FORMATS: FormatRules[] = [...championsFormats, ...genFormats, ...gameFormats];
 
 /** The regulation live right now (latest one whose start date has passed). */
 export function currentRegulation(now = new Date()): RegulationInfo | undefined {

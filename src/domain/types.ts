@@ -240,6 +240,17 @@ export type StatSystem =
       kind: 'gb-statexp';
       statExpMax: number; // 65535
       dvMax: number; // 15
+    }
+  | {
+      /** Let's Go: Awakening Values 0–200 per stat (no shared cap), IVs 0–31, and a friendship bonus of up to +10%. */
+      kind: 'lgpe-av';
+      avMax: number; // 200
+      ivMax: number; // 31
+    }
+  | {
+      /** Legends: Arceus: Effort Levels 0–10 per stat (they already include the IV's head start). */
+      kind: 'pla-effort';
+      levelMax: number; // 10
     };
 
 export interface FormatRules {
@@ -273,6 +284,8 @@ export interface FormatRules {
   openTeamList: boolean;
   /** Formats not yet backed by data are listed but disabled in the UI. */
   available: boolean;
+  /** Game-specific formats (Let's Go, BDSP, Legends): the game id in src/domain/games.ts. */
+  game?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -292,11 +305,14 @@ export interface PokemonSet {
   level: number;
   /** Champions SP (used when statSystem.kind === 'champions-sp'). */
   sp: StatPoints;
-  /** Legacy spreads (Gen 1–9). Kept alongside so switching formats is lossless. */
+  /** Legacy spreads (Gen 1–9). Kept alongside so switching formats is lossless. evs also holds Stat Exp
+   *  (Gen 1–2), AVs (Let's Go) and Effort Levels (Legends: Arceus). */
   evs: EVSpread;
   ivs: IVSpread;
   gender?: 'M' | 'F';
   shiny?: boolean;
+  /** Let's Go: friendship 0–255 (stats get up to +10% at 255). */
+  friendship?: number;
 }
 
 export type TeamSlots = [

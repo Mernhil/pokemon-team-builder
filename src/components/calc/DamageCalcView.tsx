@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeftRight, Check, Copy, Timer } from 'lucide-react';
 import type { Dex } from '@/data/dex';
+import { gameInfo } from '@/domain/games';
 import { GEN_GAMES } from '@/domain/generations';
 import { calcMoves, calcSpeed, type MoveResult } from '@/domain/battle/damage';
 import type { FormatRules, Team } from '@/domain/types';
@@ -16,7 +17,23 @@ import { CalcSideEditor } from './CalcSideEditor';
  * with results for both directions and turn order on top. Engine: @smogon/calc (Champions mechanics,
  * or the format's generation).
  */
-export function DamageCalcView({ dex, format, team }: { dex: Dex; format: FormatRules; team: Team }) {
+export function DamageCalcView(props: { dex: Dex; format: FormatRules; team: Team }) {
+  const game = gameInfo(props.format.game);
+  if (game && !game.battleSim)
+    return (
+      <Panel title="Damage Calc">
+        <p className="text-sm text-muted">
+          {game.name} battles aren&apos;t turn-based Pokémon Showdown mechanics
+          {game.id === 'pla' ? ' (Agile and Strong Styles, action order)' : ' (real-time battles)'}, so the damage calculator can&apos;t model them.
+          Switch the team to another format to use it.
+        </p>
+      </Panel>
+    );
+  return <DamageCalcBody {...props} />;
+}
+
+function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; team: Team }) {
+  const game = gameInfo(format.game);
   const attacker = useCalcStore((s) => s.attacker);
   const defender = useCalcStore((s) => s.defender);
   const field = useCalcStore((s) => s.field);
@@ -51,7 +68,7 @@ export function DamageCalcView({ dex, format, team }: { dex: Dex; format: Format
           </Button>
         }
       >
-        <FieldControls field={field} onChange={setField} gen={dex.generation} />
+        <FieldControls field={field} onChange={setField} gen={dex.generation} game={format.game} />
       </Panel>
 
       {results ? (
@@ -82,7 +99,9 @@ export function DamageCalcView({ dex, format, team }: { dex: Dex; format: Format
       </div>
       <p className="text-center text-[11px] text-muted">
         Damage engine: @smogon/calc (Pokémon Showdown),{' '}
-        {dex.data.generation
+        {game
+          ? `${game.name}: Gen ${game.generation} mechanics with the game's own stats (AVs, friendship)`
+          : dex.data.generation
           ? `Gen ${dex.data.generation} mechanics (${GEN_GAMES[dex.data.generation]}) · ${dex.data.generation <= 2 ? 'DVs / Stat Exp' : 'IVs / EVs'}`
           : 'Pokémon Champions mechanics · Lv 50 · 31 IVs · Stat Points'}
       </p>

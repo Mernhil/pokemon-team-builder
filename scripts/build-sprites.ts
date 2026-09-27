@@ -161,7 +161,7 @@ function speciesFor(set: SetDef): SpeciesLite[] {
     return Object.values(data.species as Record<string, SpeciesLite>);
   }
   const gen = set.species;
-  return Dex.forGen(gen)
+  const list: SpeciesLite[] = Dex.forGen(gen)
     .species.all()
     .filter(
       (s) =>
@@ -172,7 +172,29 @@ function speciesFor(set: SetDef): SpeciesLite[] {
         !/Gmax|Totem|Mega|Primal/.test(s.forme),
     )
     .map((s) => ({ id: s.id, name: s.name, num: s.num, forme: s.forme || undefined }));
+  // Plus everything the datasets drawn with this set contain: Megas (Gen 6–7, Let's Go, Z-A),
+  // Let's Go's partner Pikachu/Eevee, Hisuian and other game-only forms.
+  const have = new Set<string>(list.map((s) => s.id));
+  for (const ds of DATASETS_BY_SET[set.id] ?? []) {
+    const file = resolve(ROOT, `src/data/generated/${ds}.json`);
+    if (!existsSync(file)) continue;
+    for (const s of Object.values(JSON.parse(readFileSync(file, 'utf8')).species as Record<string, SpeciesLite>)) {
+      if (!have.has(s.id)) {
+        have.add(s.id);
+        list.push({ id: s.id, name: s.name, num: s.num, forme: s.forme || undefined });
+      }
+    }
+  }
+  return list;
 }
+
+/** Datasets whose species are drawn with each sprite set (see src/domain/formats.ts, games.ts). */
+const DATASETS_BY_SET: Record<string, string[]> = {
+  gen6: ['gen6'],
+  gen7: ['gen7', 'lgpe'],
+  gen8: ['gen8', 'bdsp', 'pla'],
+  gen9: ['gen9', 'za'],
+};
 
 async function buildSet(set: SetDef, ids: Awaited<ReturnType<typeof loadPokeApiIds>>) {
   const species = speciesFor(set);

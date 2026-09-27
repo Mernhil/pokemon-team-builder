@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { Generations, Pokemon as CalcPokemon } from '@smogon/calc';
 import { loadDex, type Dex } from '@/data/dex';
 import { exportTeamShowdown, importShowdown } from '@/domain/codecs';
-import { calcMoves } from '@/domain/battle/damage';
+import { calcMoves, calcSpeed } from '@/domain/battle/damage';
 import { defaultField, defaultSide } from '@/domain/battle/conditions';
 import { getFormat } from '@/domain/formats';
-import { calcStats, gbStatExpBonus, investmentForTarget, statExpToEV, withSpreadValue } from '@/domain/stats';
+import { calcStats, gbStatExpBonus, investmentForTarget, lgpeFriendshipPercent, plaEffortBonus, plaStat, statExpToEV, withSpreadValue } from '@/domain/stats';
 import { createSet, createTeam } from '@/domain/team';
 import { STAT_IDS, type PokemonSet, type StatId, type StatTable } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
@@ -182,5 +182,48 @@ describe('Pokédex Area maps', () => {
         if (!onMap && !OFF_MAP.test(loc)) missing.add(`${dex.games[game].id}:${loc}`);
       }
     expect([...missing]).toEqual([]);
+  });
+});
+
+describe("Let's Go, BDSP and Legends formats", () => {
+  it("computes Let's Go stats with AVs and friendship (PKHeX PB7)", async () => {
+    const dex = await loadDex('lgpe');
+    const f = getFormat('lgpe');
+    const set = { ...createSet(dex, 'pikachu', f), level: 50, nature: 'Hardy' };
+    expect(lgpeFriendshipPercent(255)).toBe(110);
+    expect(lgpeFriendshipPercent(70)).toBe(102);
+    // HP = ⌊(2×35 + 31) × 50/100⌋ + 50 + 10 = 110; Atk = ⌊110 × ⌊(2×55 + 31)/2 + 5⌋ / 100⌋ = ⌊110 × 75 / 100⌋ = 82
+    const st = calcStats(dex.species('pikachu')!.baseStats, set, f, dex.nature('Hardy'));
+    expect([st.hp, st.atk]).toEqual([110, 82]);
+    const trained = calcStats(dex.species('pikachu')!.baseStats, { ...set, evs: stats(() => 200) }, f, dex.nature('Hardy'));
+    expect([trained.hp, trained.atk]).toEqual([310, 282]);
+    // The damage calculator uses these stats, not its own EV formula.
+    const cond = defaultSide();
+    expect(calcSpeed(dex, { set: { ...set, evs: stats(() => 200) }, cond }, defaultField())).toBe(trained.spe);
+  });
+
+  it('computes Legends: Arceus stats from Effort Levels (PKHeX PA8)', () => {
+    expect(plaEffortBonus(100, 0, 50)).toBe(20); // (0 + 50) / 2.5
+    expect(plaEffortBonus(100, 10, 50)).toBe(120); // (10 × 25 + 50) / 2.5
+    expect(plaStat('hp', 100, 0, 50)).toBe(20 + 200); // ⌊(0.5 + 1) × 100 + 50⌋
+    expect(plaStat('atk', 100, 0, 50)).toBe(20 + 133); // ⌊(50/50 + 1) × 100 / 1.5⌋ = 133
+    expect(plaStat('atk', 100, 0, 50, { name: 'Adamant', plus: 'atk', minus: 'spa' })).toBe(20 + 146); // ⌊133 × 1.1⌋
+  });
+
+  it('builds each game from its own roster and movepools', async () => {
+    const lgpe = await loadDex('lgpe');
+    expect(lgpe.selectableSpecies().filter((s) => s.num > 151).map((s) => s.id).sort()).toEqual(['melmetal', 'meltan']);
+    expect(lgpe.canLearn('pikachustarter', 'zippyzap')).toBe(true);
+    expect(Object.keys(lgpe.data.abilities)).toHaveLength(0);
+    expect(lgpe.items().every((i) => i.megaStone)).toBe(true);
+    const bdsp = await loadDex('bdsp');
+    expect(bdsp.species('sylveon')).toBeUndefined();
+    expect(bdsp.species('arceus')).toBeDefined();
+    const pla = await loadDex('pla');
+    expect(pla.canLearn('kleavor', 'stoneaxe')).toBe(true);
+    expect(pla.items()).toHaveLength(0);
+    const za = await loadDex('za');
+    expect(za.species('starmiemega')?.baseStats).toEqual({ hp: 60, atk: 140, def: 105, spa: 130, spd: 105, spe: 120 });
+    expect(za.megaFor('starmie', 'starminite')?.id).toBe('starmiemega');
   });
 });

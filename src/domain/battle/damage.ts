@@ -9,8 +9,10 @@
 import { Field, Generations, Move as CalcMove, Pokemon as CalcPokemon, Side, calculate } from '@smogon/calc';
 import { getFinalSpeed } from '@smogon/calc/dist/mechanics/util';
 import type { Dex } from '@/data/dex';
+import { datasetMechanics } from '../games';
 import { mechanics } from '../generations';
-import { statExpToEV } from '../stats';
+import { FORMATS } from '../formats';
+import { calcStats, statExpToEV } from '../stats';
 import { STAT_IDS, type PokemonSet, type StatTable, type TypeName } from '../types';
 import type { FieldConditions, SideConditions } from './conditions';
 
@@ -58,10 +60,27 @@ export function battleForme(dex: Dex, set: PokemonSet, cond: SideConditions) {
   return mega ?? base;
 }
 
+/**
+ * A calculator Pokémon whose stats are given rather than computed — for games whose stat formula
+ * @smogon/calc doesn't know (Let's Go's AVs and friendship). Clones keep the given stats.
+ */
+class FixedStatsPokemon extends CalcPokemon {
+  fixedStats?: StatTable;
+  clone(): CalcPokemon {
+    const c = super.clone();
+    if (this.fixedStats) {
+      c.rawStats = { ...this.fixedStats };
+      c.stats = { ...this.fixedStats };
+      c.originalCurHP = Math.min(this.originalCurHP, this.fixedStats.hp);
+    }
+    return c;
+  }
+}
+
 export function toCalcPokemon(dex: Dex, set: PokemonSet, cond: SideConditions): CalcPokemon {
   const gen = calcGen(dex);
   const g = dex.data.generation;
-  const mech = mechanics(g ?? 9);
+  const mech = datasetMechanics(dex.data.id, g ?? 9);
   const forme = battleForme(dex, set, cond)!;
   const isMega = forme.id !== set.speciesId;
   const ability = !mech.abilities ? undefined : isMega ? Object.values(forme.abilities)[0] : dex.ability(set.abilityId)?.name;
@@ -71,7 +90,9 @@ export function toCalcPokemon(dex: Dex, set: PokemonSet, cond: SideConditions): 
     : g <= 2
       ? { evs: mapStats(set.evs, statExpToEV), ivs: mapStats(set.ivs, (dv) => Math.min(15, dv) * 2), level: set.level }
       : { evs: { ...set.evs }, ivs: { ...set.ivs }, level: set.level };
-  const p = new CalcPokemon(gen, calcSpeciesName(dex, gen, forme.id), {
+  const game = FORMATS.find((f) => f.game && f.datasetId === dex.data.id);
+  const fixed = game?.statSystem.kind === 'lgpe-av' ? calcStats(forme.baseStats, set, game, dex.nature(set.nature)) : undefined;
+  const p = new (fixed ? FixedStatsPokemon : CalcPokemon)(gen, calcSpeciesName(dex, gen, forme.id), {
     level: spread.level,
     nature: (mech.natures ? set.nature : undefined) as never,
     ability: ability as never,
@@ -85,6 +106,11 @@ export function toCalcPokemon(dex: Dex, set: PokemonSet, cond: SideConditions): 
     // Keep our (announcement-patched) typing and stats authoritative.
     overrides: { types: forme.types as [TypeName] | [TypeName, TypeName], baseStats: forme.baseStats } as never,
   });
+  if (fixed) {
+    (p as FixedStatsPokemon).fixedStats = fixed;
+    p.rawStats = { ...fixed };
+    p.stats = { ...fixed };
+  }
   const max = p.maxHP();
   p.originalCurHP = Math.max(1, Math.round((max * Math.max(1, Math.min(100, cond.hpPercent))) / 100));
   return p;

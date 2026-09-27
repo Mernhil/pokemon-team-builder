@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Minus, Plus, RotateCcw, Target } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { mechanics } from '@/domain/generations';
-import { calcStats, gbHpDV, investRange, investmentForTarget, natureModifier, spendBudget, spreadKey, sumStats } from '@/domain/stats';
+import { formatMechanics } from '@/domain/games';
+import { calcStats, gbHpDV, investRange, investmentForTarget, lgpeFriendshipPercent, natureModifier, spendBudget, spreadKey, sumStats } from '@/domain/stats';
 import {
   STAT_IDS,
   STAT_LABELS,
@@ -10,6 +10,7 @@ import {
   type Pokemon,
   type PokemonSet,
   type StatId,
+  type StatSystem,
   type StatTable,
 } from '@/domain/types';
 import { Button, STAT_COLOR_VAR, cn } from '../ui/primitives';
@@ -25,12 +26,14 @@ interface Props {
   onReplaceSpread: (spread: StatTable) => void;
   /** Edit one IV (Gen 3+) or DV (Gen 1–2). Omitted when IVs are fixed (Champions). */
   onIV?: (stat: StatId, value: number) => void;
+  /** Let's Go: friendship (0–255) scales every stat but HP by up to +10%. */
+  onFriendship?: (value: number) => void;
   onNature: (nature: string) => void;
 }
 
 type Preset = { label: string; spread: Partial<StatTable> };
 
-const PRESETS: Record<'champions-sp' | 'modern-ev' | 'gb-statexp', Preset[]> = {
+const PRESETS: Record<StatSystem['kind'], Preset[]> = {
   'champions-sp': [
     { label: 'Physical sweeper', spread: { hp: 2, atk: 32, spe: 32 } },
     { label: 'Special sweeper', spread: { hp: 2, spa: 32, spe: 32 } },
@@ -48,6 +51,8 @@ const PRESETS: Record<'champions-sp' | 'modern-ev' | 'gb-statexp', Preset[]> = {
     { label: 'Specially defensive', spread: { hp: 252, def: 4, spd: 252 } },
   ],
   'gb-statexp': [{ label: 'Max all (trained)', spread: { hp: 65535, atk: 65535, def: 65535, spa: 65535, spd: 65535, spe: 65535 } }],
+  'lgpe-av': [{ label: 'Max all AVs (200)', spread: { hp: 200, atk: 200, def: 200, spa: 200, spd: 200, spe: 200 } }],
+  'pla-effort': [{ label: 'Max all Effort Levels (10)', spread: { hp: 10, atk: 10, def: 10, spa: 10, spd: 10, spe: 10 } }],
 };
 
 const BASE_BAR_MAX = 200;
@@ -59,24 +64,26 @@ const zero = (): StatTable => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
  *  - Gen 3–9 EVs (0–252, 510 total) + IVs (0–31) at any level
  *  - Gen 1–2 Stat Exp (0–65535 each) + DVs (0–15; the HP DV follows from the others), with one
  *    Special stat in Gen 1 and a shared Special DV / Stat Exp in Gen 2
+ *  - Let's Go AVs (0–200 each, added after friendship) + IVs
+ *  - Legends: Arceus Effort Levels (0–10 each; IVs are folded into them)
  * Inline +/− buttons on each stat set the nature Showdown-style (Gen 3+).
  */
-export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onIV, onNature }: Props) {
+export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature }: Props) {
   const sys = format.statSystem;
-  const mech = mechanics(format.generation);
+  const mech = formatMechanics(format);
   const key = spreadKey(sys);
   const spread = set[key];
   const { max: perStat, step } = investRange(sys);
   const gb = sys.kind === 'gb-statexp';
-  const ivMax = sys.kind === 'gb-statexp' ? sys.dvMax : sys.kind === 'modern-ev' ? sys.ivMax : 31;
-  const showIV = !format.fixedIVs && !!onIV;
+  const ivMax = sys.kind === 'gb-statexp' ? sys.dvMax : sys.kind === 'modern-ev' || sys.kind === 'lgpe-av' ? sys.ivMax : 31;
+  const showIV = !format.fixedIVs && !!onIV && sys.kind !== 'pla-effort';
   const nature = mech.natures ? dex.nature(set.nature) : undefined;
   const level = format.level.fixed ?? set.level;
   const stats = calcStats(species.baseStats, set, format, nature);
   const megaStats = mega ? calcStats(mega.baseStats, set, format, nature) : undefined;
   const budget = spendBudget(sys, spread);
   const pct = budget ? Math.min(100, (budget.used / budget.cap) * 100) : 0;
-  const unit = sys.kind === 'champions-sp' ? 'SP' : sys.kind === 'modern-ev' ? 'EVs' : 'Stat Exp';
+  const unit = { 'champions-sp': 'SP', 'modern-ev': 'EVs', 'gb-statexp': 'Stat Exp', 'lgpe-av': 'AVs', 'pla-effort': 'Effort Lv' }[sys.kind];
   const ivUnit = gb ? 'DV' : 'IV';
   const hpDV = gb ? gbHpDV({ atk: set.ivs.atk, def: set.ivs.def, spe: set.ivs.spe, spa: set.ivs.spa }) : 0;
   // Gen 1 shows one Special stat; Gen 2 splits the stat but keeps one Special DV / Stat Exp.
@@ -133,6 +140,31 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
             />
           </div>
         </div>
+      ) : sys.kind === 'lgpe-av' ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+          <p>AVs: 0–200 per stat from Candies, no shared cap, added straight onto the stat. Friendship adds up to +10% to every stat but HP.</p>
+          {onFriendship && (
+            <label className="flex items-center gap-1.5">
+              <span className="font-semibold uppercase tracking-wider">Friendship</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={255}
+                value={set.friendship ?? 255}
+                onChange={(e) => onFriendship(Math.max(0, Math.min(255, Math.round(Number(e.target.value)) || 0)))}
+                onFocus={(e) => e.target.select()}
+                aria-label="Friendship"
+                className="no-spin h-7 w-14 rounded border border-border bg-surface-2 text-center font-mono text-sm tabular-nums text-fg outline-none focus:border-accent"
+              />
+              <span className="font-mono">+{lgpeFriendshipPercent(set.friendship ?? 255) - 100}%</span>
+            </label>
+          )}
+        </div>
+      ) : sys.kind === 'pla-effort' ? (
+        <p className="text-xs text-muted">
+          Effort Levels 0–10 per stat, raised with Grit items; the level shown in-game already includes the IV&apos;s head start (IV 20+ starts at 1, 26+ at 2, 31 at 3).
+        </p>
       ) : (
         <p className="text-xs text-muted">
           Stat Exp: 0–65,535 per stat, no shared cap (max gives +63 at Lv 100). DVs: 0–15; the HP DV comes from the odd/even bits of the others.
@@ -347,7 +379,7 @@ function SpeedBenchmark({
   unit: string;
 }) {
   const [target, setTarget] = useState('');
-  const mech = mechanics(format.generation);
+  const mech = formatMechanics(format);
   const nature = mech.natures ? dex.nature(set.nature) : undefined;
   const t = parseInt(target, 10);
   const need = Number.isFinite(t) ? investmentForTarget('spe', species.baseStats, t, set, format, nature) : undefined;
@@ -356,13 +388,13 @@ function SpeedBenchmark({
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-surface-2 px-3 py-2 text-xs">
       <span className="font-mono tabular-nums">
         <span className="text-muted">{mega ? 'Mega Spe' : 'Spe'}</span> <b>{speed}</b>
-        {mech.tailwind && (
+        {mech.tailwind && mech.battleSim && (
           <>
             <span className="text-muted"> · Tailwind </span>
             <b>{speed * 2}</b>
           </>
         )}
-        {mech.gen >= 4 && (
+        {mech.gen >= 4 && mech.heldItems && (
           <>
             <span className="text-muted"> · Scarf </span>
             <b>{Math.floor(speed * 1.5)}</b>
@@ -370,7 +402,7 @@ function SpeedBenchmark({
         )}
         <span className="text-muted"> · −1 </span>
         <b>{Math.floor((speed * 2) / 3)}</b>
-        {mech.gen < 7 && (
+        {mech.gen < 7 && mech.battleSim && (
           <>
             <span className="text-muted"> · Paralyzed </span>
             <b>{Math.floor(speed / 4)}</b>
