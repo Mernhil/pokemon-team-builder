@@ -7,7 +7,7 @@
  * modifier is returned with a label so the UI can explain the result.
  */
 import { toID } from '@/data/dex';
-import type { Move, Pokemon, StatTable, TypeName } from '../types';
+import type { Move, MoveType, Pokemon, StatTable, TypeName } from '../types';
 import type { BoostStat, FieldConditions, SideConditions } from './conditions';
 
 export interface Mod {
@@ -29,7 +29,7 @@ export interface StatLine {
 export interface MovePower {
   moveId: string;
   name: string;
-  type: TypeName;
+  type: MoveType;
   category: Move['category'];
   basePower: number;
   /** Base power after ability/item/field power modifiers. */
@@ -116,6 +116,8 @@ export interface EffectiveInput {
   crit?: boolean;
   side: SideConditions;
   field: FieldConditions;
+  /** Generation whose mechanics apply (default 9). Changes paralysis, crit, Snow/Sand boosts. */
+  gen?: number;
 }
 
 /** Protosynthesis / Quark Drive boost the highest non-HP stat (ties → Atk > Def > SpA > SpD > Spe). */
@@ -129,6 +131,7 @@ function qpBoostedStat(stats: StatTable, boosts: Record<BoostStat, number>): Boo
 
 export function effectiveStats(input: EffectiveInput): EffectiveResult {
   const { species, stats, side, field } = input;
+  const gen = input.gen ?? 9;
   const ab = toID(input.ability);
   const it = toID(input.item);
   const w = field.weather;
@@ -164,7 +167,7 @@ export function effectiveStats(input: EffectiveInput): EffectiveResult {
   if (ab === 'marvelscale' && statused) def.push({ label: 'Marvel Scale', factor: 1.5 });
   if (ab === 'grasspelt' && field.terrain === 'Grassy') def.push({ label: 'Grass Pelt', factor: 1.5 });
   if (it === 'eviolite') def.push({ label: 'Eviolite', factor: 1.5 });
-  if (w === 'Snow' && types.includes('Ice')) def.push({ label: 'Snow (Ice type)', factor: 1.5 });
+  if (w === 'Snow' && gen >= 9 && types.includes('Ice')) def.push({ label: 'Snow (Ice type)', factor: 1.5 });
   if (qpStat === 'def') def.push({ label: input.ability, factor: 1.3 });
 
   // ---- Sp. Atk ----
@@ -178,7 +181,7 @@ export function effectiveStats(input: EffectiveInput): EffectiveResult {
   const spd: Mod[] = [];
   if (it === 'assaultvest') spd.push({ label: 'Assault Vest', factor: 1.5 });
   if (it === 'eviolite') spd.push({ label: 'Eviolite', factor: 1.5 });
-  if (w === 'Sand' && types.includes('Rock')) spd.push({ label: 'Sand (Rock type)', factor: 1.5 });
+  if (w === 'Sand' && gen >= 4 && types.includes('Rock')) spd.push({ label: 'Sand (Rock type)', factor: 1.5 });
   if (qpStat === 'spd') spd.push({ label: input.ability, factor: 1.3 });
 
   // ---- Speed (order and arithmetic match the damage calculator exactly) ----
@@ -197,8 +200,10 @@ export function effectiveStats(input: EffectiveInput): EffectiveResult {
   }
   const speLine = line('spe', spe, 131172);
   if (side.status === 'par' && ab !== 'quickfeet') {
-    speLine.final = Math.floor((speLine.final * 50) / 100);
-    speLine.mods = [...spe, { label: 'Paralysis', factor: 0.5 }];
+    // Paralysis quartered Speed until Gen 7 halved it.
+    const pct = gen >= 7 ? 50 : 25;
+    speLine.final = Math.floor((speLine.final * pct) / 100);
+    speLine.mods = [...spe, { label: 'Paralysis', factor: pct / 100 }];
   }
 
   const result: Record<BoostStat, StatLine> = {
@@ -245,6 +250,7 @@ export function effectiveStats(input: EffectiveInput): EffectiveResult {
       spa: input.crit ? critStat('spa', spa) : result.spa.final,
       originalTypes: species.types,
       crit: !!input.crit,
+      gen,
     }),
   );
 
@@ -280,22 +286,24 @@ interface PowerCtx {
   atk: number;
   spa: number;
   crit: boolean;
+  gen: number;
 }
 
 export function movePower(m: Move, c: PowerCtx): MovePower {
   const bpMods: Mod[] = [];
   const dmgMods: Mod[] = [];
-  let type = m.type;
   let bp = m.basePower;
   const physical = m.category === 'Physical';
   let note: string | undefined;
 
   if (m.category === 'Status') {
     return {
-      moveId: m.id, name: m.name, type, category: m.category, basePower: 0, effectivePower: 0, multiplier: 0,
+      moveId: m.id, name: m.name, type: m.type, category: m.category, basePower: 0, effectivePower: 0, multiplier: 0,
       mods: [], stat: 'atk', statValue: 0, index: 0, note: 'Status move',
     };
   }
+  // Only status moves (Curse in Gen 2–4) are typeless.
+  let type = m.type as TypeName;
 
   // -ate abilities: Normal moves change type and gain 1.2×
   if (ATE[c.ab] && type === 'Normal') {
@@ -366,7 +374,11 @@ export function movePower(m: Move, c: PowerCtx): MovePower {
     dmgMods.push({ label: adapt ? 'STAB (Adaptability)' : teraBoosted ? 'STAB (Tera)' : 'STAB', factor: stab });
   }
   if (c.side.status === 'brn' && physical && c.ab !== 'guts' && m.id !== 'facade') dmgMods.push({ label: 'Burn', factor: 0.5 });
-  if (c.crit) dmgMods.push(c.ab === 'sniper' ? { label: 'Critical hit (Sniper)', factor: 2.25 } : CRIT);
+  if (c.crit) {
+    // Critical hits did 2× before Gen 6 (Gen 1's level-based crit is approximated as 2×).
+    const base = c.gen >= 6 ? 1.5 : 2;
+    dmgMods.push(c.ab === 'sniper' ? { label: 'Critical hit (Sniper)', factor: base * 1.5 } : { label: 'Critical hit', factor: base });
+  }
   if (c.it === 'lifeorb') dmgMods.push({ label: 'Life Orb', factor: 1.3 });
   if (c.it === 'expertbelt') note = 'Expert Belt: ×1.2 on super-effective hits';
   if (c.ab === 'tintedlens') note = 'Tinted Lens: not-very-effective hits deal ×2';

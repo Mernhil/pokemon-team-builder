@@ -5,6 +5,7 @@ import { defaultField, defaultSide, type FieldConditions, type SideConditions } 
 import { effectiveStats, stageMultiplier, type StatLine } from '@/domain/battle/effective';
 import { calcStats } from '@/domain/stats';
 import { STAT_LABELS, type FormatRules, type Pokemon, type PokemonSet } from '@/domain/types';
+import { gameInfo } from '@/domain/games';
 import { useCalcStore } from '@/store/calcStore';
 import { useTeamStore, type SlotBattleState } from '@/store/teamStore';
 import { FieldControls, ModChip, SideControls, Toggle } from '../battle/Controls';
@@ -23,7 +24,22 @@ interface Props {
  * Advanced details: "what are my stats under Tailwind / Trick Room / Aurora Veil / −2 Atk…",
  * plus a move-power breakdown (Sharpness, STAB, crits, weather…). State is kept per team member.
  */
-export function AdvancedDetails({ set, species, dex, format }: Props) {
+export function AdvancedDetails(props: Props) {
+  const game = gameInfo(props.format.game);
+  if (game && !game.battleSim)
+    return (
+      <Panel title="Advanced details">
+        <p className="text-sm text-muted">
+          {game.name} doesn&apos;t use turn-based battles
+          {game.id === 'pla' ? ' (Agile and Strong Styles change power and turn order)' : ' (battles run in real time)'}, so in-battle stats and move
+          power aren&apos;t modelled here. The stats above are exact.
+        </p>
+      </Panel>
+    );
+  return <AdvancedDetailsPanel {...props} />;
+}
+
+function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
   const [open, setOpen] = useState(true);
   const mega = dex.megaFor(species.id, set.itemId);
   const saved = useTeamStore((s) => s.battle[set.uid]);
@@ -49,6 +65,7 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
         side: state.side,
         field: state.field,
         crit: state.crit,
+        gen: format.generation,
       }),
     [forme, set, format, dex, ability, state],
   );
@@ -87,7 +104,7 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
           {/* Controls */}
           <div className="space-y-4">
-            <FieldControls field={state.field} onChange={patchField} compact />
+            <FieldControls field={state.field} onChange={patchField} compact gen={format.generation} game={format.game} />
             <div className="h-px bg-border" />
             <SideControls
               cond={state.side}
@@ -96,6 +113,8 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
               canMega={!!mega && format.gimmicks.mega}
               canTera={format.gimmicks.tera && !!set.teraType}
               teraType={set.teraType}
+              gen={format.generation}
+              game={format.game}
             />
             <div className="flex items-center gap-2">
               <Toggle on={state.crit} onChange={(crit) => update({ crit })}>
@@ -126,7 +145,7 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
                   <thead>
                     <tr className="text-left text-[10px] uppercase tracking-wider text-muted">
                       <th className="py-1 font-semibold">Stat</th>
-                      <th className="text-right font-semibold">Lv 50</th>
+                      <th className="text-right font-semibold">Lv {format.level.fixed ?? set.level}</th>
                       <th className="text-center font-semibold">Stage</th>
                       <th className="text-right font-semibold">Final</th>
                       <th className="pl-3 font-semibold">Modifiers</th>

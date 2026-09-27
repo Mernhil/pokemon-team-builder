@@ -1,0 +1,29 @@
+{
+  "id": "paldea-kitakami",
+  "name": "Kitakami",
+  "width": 30,
+  "height": 26,
+  "versions": ["scarlet", "violet"],
+  "order": 1,
+  "land": ["M2 6 L6 2 L14 1 L22 2 L27 5 L29 11 L28 18 L25 23 L17 25 L9 25 L4 22 L1 15 Z"],
+  "places": {
+    "kitakami-wilds": [1, 1, 28, 24, "zone", "Kitakami Wilds"],
+    "mossui-town": [14, 19, 2, 2, "town", "Mossui Town"],
+    "kitakami-road": [9, 22, 12, 1, "route", "Kitakami Road"],
+    "apple-hills": [6, 17, 4, 3, "route", "Apple Hills"],
+    "revelers-road": [17, 17, 4, 1, "route", "Reveler's Road"],
+    "loyalty-plaza": [21, 15, 2, 2, "town", "Loyalty Plaza"],
+    "kitakami-hall": [24, 13, 2, 2, "town", "Kitakami Hall"],
+    "oni-mountain": [11, 7, 6, 6, "mountain", "Oni Mountain"],
+    "onis-maw": [13, 9, 2, 2, "cave", "Oni's Maw"],
+    "chilling-waterhead": [10, 3, 3, 2, "lake", "Chilling Waterhead"],
+    "crystal-pool": [19, 4, 2, 2, "lake", "Crystal Pool"],
+    "mossfell-confluence": [6, 13, 3, 2, "lake", "Mossfell Confluence"],
+    "fellhorn-gorge": [22, 6, 3, 3, "mountain", "Fellhorn Gorge"],
+    "paradise-barrens": [24, 18, 3, 3, "landmark", "Paradise Barrens"],
+    "infernal-pass": [19, 10, 2, 2, "route", "Infernal Pass"],
+    "timeless-woods": [3, 6, 5, 5, "forest", "Timeless Woods"],
+    "wistful-fields": [4, 20, 4, 3, "route", "Wistful Fields"],
+    "dreaded-den": [26, 10, 1, 1, "cave", "Dreaded Den"]
+  }
+}

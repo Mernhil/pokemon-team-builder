@@ -1,0 +1,23 @@
+{
+  "id": "paldea-terarium",
+  "name": "Blueberry Academy Terarium",
+  "width": 30,
+  "height": 30,
+  "versions": ["scarlet", "violet"],
+  "order": 2,
+  "land": ["M15 0 A15 15 0 1 1 14.99 0 Z"],
+  "places": {
+    "paldea-terarium": [0, 0, 30, 30, "zone", "Terarium"],
+    "savanna-biome": [2, 9, 9, 12, "route", "Savanna Biome"],
+    "coastal-biome": [9, 20, 12, 8, "sea", "Coastal Biome"],
+    "canyon-biome": [19, 9, 9, 12, "mountain", "Canyon Biome"],
+    "polar-biome": [9, 2, 12, 8, "snow", "Polar Biome"],
+    "central-plaza": [13, 13, 4, 4, "town", "Central Plaza"],
+    "savanna-plaza": [10, 14, 2, 2, "town", "Savanna Plaza"],
+    "coastal-plaza": [14, 18, 2, 2, "town", "Coastal Plaza"],
+    "canyon-plaza": [18, 14, 2, 2, "town", "Canyon Plaza"],
+    "polar-plaza": [14, 10, 2, 2, "town", "Polar Plaza"],
+    "torchlit-labyrinth": [4, 13, 2, 2, "cave", "Torchlit Labyrinth"],
+    "chargestone-cavern": [24, 13, 2, 2, "cave", "Chargestone Cavern"]
+  }
+}

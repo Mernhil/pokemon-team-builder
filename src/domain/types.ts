@@ -28,6 +28,8 @@ export const TYPE_NAMES = [
 ] as const;
 export type TypeName = (typeof TYPE_NAMES)[number];
 export type TeraType = TypeName | 'Stellar';
+/** Move types: Curse was the typeless "???" type in Gen 2–4. */
+export type MoveType = TypeName | '???';
 
 // ---------------------------------------------------------------------------
 // Static data
@@ -59,6 +61,18 @@ export interface Pokemon {
   legalIn: string[];
   /** True when the learnset fell back to Scarlet/Violet data (Showdown hasn't covered it yet). */
   provisionalLearnset?: boolean;
+
+  // Gen 1–9 datasets only (Pokédex): evolution data restricted to species in that generation.
+  prevo?: string;
+  evos?: string[];
+  evoLevel?: number;
+  evoType?: string;
+  evoItem?: string;
+  evoMove?: string;
+  evoCondition?: string;
+  eggGroups?: string[];
+  /** 'M' | 'F' | 'N' for single-gender species, else the ratio. */
+  genderRatio?: string | { M: number; F: number };
 }
 
 export type MoveCategory = 'Physical' | 'Special' | 'Status';
@@ -82,7 +96,7 @@ export interface MoveSecondaryEffect {
 export interface Move {
   id: string;
   name: string;
-  type: TypeName;
+  type: MoveType;
   category: MoveCategory;
   basePower: number;
   accuracy: number | true;
@@ -90,6 +104,8 @@ export interface Move {
   priority: number;
   target: string;
   shortDesc: string;
+  /** Full effect text, when it says more than shortDesc. */
+  desc?: string;
   contact: boolean;
   /** Move flags that abilities/items key off (Sharpness, Iron Fist, Strong Jaw, Mega Launcher, Punk Rock…). */
   flags: Partial<Record<'slicing' | 'punch' | 'bite' | 'pulse' | 'sound' | 'wind', true>>;
@@ -173,6 +189,10 @@ export interface RegulationManifest {
 
 export interface Dataset {
   id: string;
+  /** Gen 1–9 datasets: the generation whose games they describe (absent for Champions). */
+  generation?: number;
+  /** Types that exist in this dataset's generation (Gen 1: no Dark/Steel/Fairy). Defaults to all 18. */
+  types?: TypeName[];
   generatedAt: string;
   source: string;
   regulations: RegulationInfo[];
@@ -220,6 +240,17 @@ export type StatSystem =
       kind: 'gb-statexp';
       statExpMax: number; // 65535
       dvMax: number; // 15
+    }
+  | {
+      /** Let's Go: Awakening Values 0–200 per stat (no shared cap), IVs 0–31, and a friendship bonus of up to +10%. */
+      kind: 'lgpe-av';
+      avMax: number; // 200
+      ivMax: number; // 31
+    }
+  | {
+      /** Legends: Arceus: Effort Levels 0–10 per stat (they already include the IV's head start). */
+      kind: 'pla-effort';
+      levelMax: number; // 10
     };
 
 export interface FormatRules {
@@ -253,6 +284,8 @@ export interface FormatRules {
   openTeamList: boolean;
   /** Formats not yet backed by data are listed but disabled in the UI. */
   available: boolean;
+  /** Game-specific formats (Let's Go, BDSP, Legends): the game id in src/domain/games.ts. */
+  game?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -272,11 +305,14 @@ export interface PokemonSet {
   level: number;
   /** Champions SP (used when statSystem.kind === 'champions-sp'). */
   sp: StatPoints;
-  /** Legacy spreads (Gen 1–9). Kept alongside so switching formats is lossless. */
+  /** Legacy spreads (Gen 1–9). Kept alongside so switching formats is lossless. evs also holds Stat Exp
+   *  (Gen 1–2), AVs (Let's Go) and Effort Levels (Legends: Arceus). */
   evs: EVSpread;
   ivs: IVSpread;
   gender?: 'M' | 'F';
   shiny?: boolean;
+  /** Let's Go: friendship 0–255 (stats get up to +10% at 255). */
+  friendship?: number;
 }
 
 export type TeamSlots = [

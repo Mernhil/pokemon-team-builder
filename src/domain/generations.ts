@@ -26,3 +26,64 @@ export const genInfo = (gen: number): GenerationInfo => GENERATIONS[Math.max(1, 
 
 /** Generation that introduced a National Dex number (ignores later formes). */
 export const genOfDexNum = (num: number): number => GENERATIONS.find((g) => num <= g.lastDexNum)?.gen ?? 9;
+
+/** What a generation's battles had. Champions uses Gen 9 mechanics. */
+export interface Mechanics {
+  gen: number;
+  abilities: boolean;
+  natures: boolean;
+  heldItems: boolean;
+  /** Separate Sp. Atk / Sp. Def base stats (Gen 1 had one Special stat). */
+  splitSpecial: boolean;
+  /** Physical/special decided per move (Gen 4+) instead of by type. */
+  moveCategorySplit: boolean;
+  doubles: boolean;
+  weather: boolean;
+  /** Hail until Gen 8; Snow from Gen 9. */
+  snowName: 'Hail' | 'Snow';
+  terrain: boolean;
+  psychicTerrain: boolean;
+  trickRoom: boolean;
+  gravity: boolean;
+  tailwind: boolean;
+  auroraVeil: boolean;
+  helpingHand: boolean;
+  friendGuard: boolean;
+  hiddenAbilities: boolean;
+}
+
+export function mechanics(gen: number): Mechanics {
+  return {
+    gen,
+    abilities: gen >= 3,
+    natures: gen >= 3,
+    heldItems: gen >= 2,
+    splitSpecial: gen >= 2,
+    moveCategorySplit: gen >= 4,
+    doubles: gen >= 3,
+    weather: gen >= 2,
+    snowName: gen >= 9 ? 'Snow' : 'Hail',
+    terrain: gen >= 6,
+    psychicTerrain: gen >= 7,
+    trickRoom: gen >= 4,
+    gravity: gen >= 4,
+    tailwind: gen >= 4,
+    auroraVeil: gen >= 7,
+    helpingHand: gen >= 3,
+    friendGuard: gen >= 5,
+    hiddenAbilities: gen >= 5,
+  };
+}
+
+/** Main-series games each Gen format covers (the Pokédex and Area maps use these). */
+export const GEN_GAMES: Record<number, string> = {
+  1: 'Red · Blue · Yellow',
+  2: 'Gold · Silver · Crystal',
+  3: 'Ruby · Sapphire · Emerald · FireRed · LeafGreen',
+  4: 'Diamond · Pearl · Platinum · HeartGold · SoulSilver',
+  5: 'Black · White · Black 2 · White 2',
+  6: 'X · Y · Omega Ruby · Alpha Sapphire',
+  7: 'Sun · Moon · Ultra Sun · Ultra Moon',
+  8: 'Sword · Shield (+ Isle of Armor, Crown Tundra)',
+  9: 'Scarlet · Violet (+ Teal Mask, Indigo Disk)',
+};

@@ -1,7 +1,9 @@
 import { Sparkles, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
+import { formatMechanics } from '@/domain/games';
+import { spreadKey } from '@/domain/stats';
 import { createSet } from '@/domain/team';
-import { STAT_LABELS, TYPE_NAMES, type FormatRules, type PokemonSet, type TeraType } from '@/domain/types';
+import { STAT_LABELS, type FormatRules, type PokemonSet, type TeraType } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
 import { useTeamStore } from '@/store/teamStore';
 import { Combobox } from '../ui/Combobox';
@@ -26,6 +28,8 @@ interface Props {
 
 export function SetEditor({ slot, set, dex, format, issues }: Props) {
   const { setSlot, updateSet, setMove, setSpread } = useTeamStore.getState();
+  const mech = formatMechanics(format);
+  const champions = format.statSystem.kind === 'champions-sp';
 
   const itemOptions = useItemOptions(dex, format, set?.speciesId);
   const moveOptions = useMoveOptions(dex, format, set);
@@ -34,7 +38,7 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
     return (
       <Panel title={`Slot ${slot + 1}`}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <p className="text-sm text-muted">Empty slot. Pick a Pokémon legal in {format.shortName}, or filter by generation.</p>
+          <p className="text-sm text-muted">Empty slot. Pick a Pokémon {champions ? 'legal in' : 'from'} {format.shortName}, or filter by generation.</p>
           <SpeciesPicker
             className="w-full max-w-md text-left"
             dex={dex}
@@ -117,7 +121,8 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
             <Field label="Nickname">
               <Input value={set.nickname ?? ''} placeholder={species.name} maxLength={12} onChange={(e) => updateSet(slot, { nickname: e.target.value || undefined })} />
             </Field>
-            <Field label="Held item">
+            {(mech.heldItems || mech.megaStoneOnly) && (
+            <Field label={mech.megaStoneOnly ? 'Mega Stone (in the Bag)' : 'Held item'}>
               <Combobox
                 aria-label="Held item"
                 options={itemOptions}
@@ -129,6 +134,8 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
                 onChange={(id) => updateSet(slot, { itemId: id || undefined })}
               />
             </Field>
+            )}
+            {mech.abilities && (
             <Field label="Ability" hint={ability?.shortDesc && <span className="truncate" title={ability.shortDesc}>ⓘ</span>}>
               <Select value={set.abilityId ?? ''} onChange={(e) => updateSet(slot, { abilityId: e.target.value })}>
                 {dex.abilitiesOf(species.id).map(({ slot: s, ability: a }) => (
@@ -139,7 +146,9 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
                 ))}
               </Select>
             </Field>
-            <Field label="Stat Alignment (Nature)">
+            )}
+            {mech.natures && (
+            <Field label={champions ? 'Stat Alignment (Nature)' : 'Nature'}>
               <Select value={set.nature} onChange={(e) => updateSet(slot, { nature: e.target.value })}>
                 {dex.natures.map((n) => (
                   <option key={n.name} value={n.name}>
@@ -149,11 +158,12 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
                 ))}
               </Select>
             </Field>
+            )}
             {format.gimmicks.tera && (
               <Field label="Tera Type">
                 <Select value={set.teraType ?? ''} onChange={(e) => updateSet(slot, { teraType: (e.target.value || undefined) as TeraType | undefined })}>
                   <option value="">—</option>
-                  {[...TYPE_NAMES, 'Stellar'].map((t) => (
+                  {[...dex.types, 'Stellar'].map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
@@ -162,7 +172,18 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
               </Field>
             )}
             <Field label="Level">
-              <Input value={format.level.fixed ?? set.level} disabled readOnly title="Champions: fixed Lv 50, 31 IVs" />
+              {format.level.fixed ? (
+                <Input value={format.level.fixed} disabled readOnly title="Champions: fixed Lv 50, 31 IVs" />
+              ) : (
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={format.level.min}
+                  max={format.level.max}
+                  value={set.level}
+                  onChange={(e) => updateSet(slot, { level: Math.max(format.level.min, Math.min(format.level.max, Math.round(Number(e.target.value)) || format.level.min)) })}
+                />
+              )}
             </Field>
           </div>
         </div>
@@ -207,16 +228,25 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
         </div>
       </Panel>
 
-      <Panel title="Stat Point Calculator" actions={<span className="text-[11px] text-muted">Lv 50 · 31 IVs · 1 SP = +1 stat</span>}>
+      <Panel
+        title={{ 'champions-sp': 'Stat Point Calculator', 'modern-ev': 'EVs & IVs', 'gb-statexp': 'Stat Exp & DVs', 'lgpe-av': 'AVs, IVs & Friendship', 'pla-effort': 'Effort Levels' }[format.statSystem.kind]}
+        actions={
+          <span className="text-[11px] text-muted">
+            {champions ? 'Lv 50 · 31 IVs · 1 SP = +1 stat' : `Lv ${set.level} · ${format.game ? format.shortName : `Gen ${format.generation}`} stat formula`}
+          </span>
+        }
+      >
         <StatDistributor
           set={set}
           species={species}
           mega={mega}
           format={format}
           dex={dex}
-          onSpread={(stat, v) => setSpread(slot, 'sp', stat, v)}
-          onReplaceSpread={(sp) => updateSet(slot, { sp })}
+          onSpread={(stat, v) => setSpread(slot, spreadKey(format.statSystem), stat, v)}
+          onReplaceSpread={(spread) => updateSet(slot, { [spreadKey(format.statSystem)]: spread })}
+          onIV={format.fixedIVs ? undefined : (stat, v) => setSpread(slot, 'ivs', stat, v)}
           onNature={(nature) => updateSet(slot, { nature })}
+          onFriendship={format.statSystem.kind === 'lgpe-av' ? (friendship) => updateSet(slot, { friendship }) : undefined}
         />
       </Panel>
 

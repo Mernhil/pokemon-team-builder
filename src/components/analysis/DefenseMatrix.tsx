@@ -1,5 +1,5 @@
 import type { Dex } from '@/data/dex';
-import { TYPE_NAMES, type FormatRules, type Team } from '@/domain/types';
+import type { FormatRules, Team, TypeName } from '@/domain/types';
 import { Panel, TYPE_COLORS, cn } from '../ui/primitives';
 
 /**
@@ -14,14 +14,14 @@ export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; for
       const mega = format.gimmicks.mega ? dex.megaFor(s.speciesId, s.itemId) : undefined;
       return sp ? { name: (mega ?? sp).name, types: (mega ?? sp).types } : null;
     })
-    .filter((x): x is { name: string; types: typeof TYPE_NAMES[number][] } => !!x);
+    .filter((x): x is { name: string; types: TypeName[] } => !!x);
 
   if (!mons.length) return null;
 
   return (
     <Panel title="Defensive Type Matrix">
       <div className="grid grid-cols-6 gap-1 sm:grid-cols-9">
-        {TYPE_NAMES.map((atk) => {
+        {dex.types.map((atk) => {
           const mults = mons.map((m) => dex.effectiveness(atk, m.types));
           const weak = mults.filter((m) => m > 1).length;
           const resist = mults.filter((m) => m < 1).length;

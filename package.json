@@ -9,6 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "data": "tsx scripts/build-data.ts",
+    "pokedex": "tsx scripts/build-pokedex.ts",
+    "maps": "tsx scripts/build-maps.ts",
     "sprites": "tsx scripts/build-sprites.ts",
     "sprites:items": "tsx scripts/build-items.ts",
     "icons": "node scripts/build-icons.mjs",

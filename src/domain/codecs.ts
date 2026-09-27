@@ -1,10 +1,10 @@
 import { toID, type Dex } from '@/data/dex';
-import { calcStats } from './stats';
+import { formatMechanics } from './games';
+import { calcStats, evToStatExp, statExpToEV } from './stats';
 import { createSet, createTeam, emptySlots } from './team';
 import {
   STAT_IDS,
   STAT_LABELS,
-  TYPE_NAMES,
   emptyStats,
   type FormatRules,
   type PokemonSet,
@@ -19,7 +19,14 @@ import {
 // Showdown export / import
 //   In Showdown's Champions mod, the "EVs:" line carries Stat Points directly,
 //   so Champions teams round-trip with Showdown unchanged.
+//   Gen 1–2: Showdown writes Stat Exp as EVs (⌈√StatExp⌉, 252 = max, the default) and
+//   DVs as IVs (IV = 2 × DV, 30 = max, the default).
+//   Let's Go: Showdown's "EVs:" line holds AVs and "Happiness:" the friendship.
+//   Legends: Arceus has no Showdown format; its Effort Levels get their own line.
 // ===========================================================================
+
+const mapStats = (t: StatTable, f: (v: number) => number): StatTable =>
+  Object.fromEntries(STAT_IDS.map((s) => [s, f(t[s])])) as StatTable;
 
 const spreadLine = (t: StatTable, skipValue: number) =>
   STAT_IDS.filter((s) => t[s] !== skipValue)
@@ -34,20 +41,33 @@ export function exportSetShowdown(set: PokemonSet, dex: Dex, format: FormatRules
   const gender = set.gender ? ` (${set.gender})` : '';
   const item = dex.item(set.itemId);
   lines.push(`${head}${gender}${item ? ` @ ${item.name}` : ''}`);
-  const ab = dex.ability(set.abilityId);
+  const mech = formatMechanics(format);
+  const ab = mech.abilities ? dex.ability(set.abilityId) : undefined;
   if (ab) lines.push(`Ability: ${ab.name}`);
   if (!format.level.fixed && set.level !== 100) lines.push(`Level: ${set.level}`);
   if (set.shiny) lines.push('Shiny: Yes');
   if (format.gimmicks.tera && set.teraType) lines.push(`Tera Type: ${set.teraType}`);
 
   const sys = format.statSystem;
-  const spread = sys.kind === 'champions-sp' ? set.sp : set.evs;
-  const ev = spreadLine(spread, 0);
-  if (ev) lines.push(`EVs: ${ev}`);
-  if (set.nature) lines.push(`${set.nature} Nature`);
-  if (!format.fixedIVs) {
-    const iv = spreadLine(set.ivs, sys.kind === 'gb-statexp' ? 15 : 31);
+  if (sys.kind === 'gb-statexp') {
+    const ev = spreadLine(mapStats(set.evs, statExpToEV), 252);
+    if (ev) lines.push(`EVs: ${ev}`);
+    const iv = spreadLine(mapStats({ ...set.ivs, hp: 15 }, (d) => Math.min(15, d) * 2), 30);
     if (iv) lines.push(`IVs: ${iv}`);
+  } else if (sys.kind === 'pla-effort') {
+    const el = spreadLine(set.evs, 0);
+    if (el) lines.push(`Effort Levels: ${el}`);
+    if (set.nature && mech.natures) lines.push(`${set.nature} Nature`);
+  } else {
+    if (sys.kind === 'lgpe-av' && (set.friendship ?? 255) !== 255) lines.push(`Happiness: ${set.friendship ?? 255}`);
+    const spread = sys.kind === 'champions-sp' ? set.sp : set.evs;
+    const ev = spreadLine(spread, 0);
+    if (ev) lines.push(`EVs: ${ev}`);
+    if (set.nature && mech.natures) lines.push(`${set.nature} Nature`);
+    if (!format.fixedIVs) {
+      const iv = spreadLine(set.ivs, 31);
+      if (iv) lines.push(`IVs: ${iv}`);
+    }
   }
   for (const m of set.moves) if (m) lines.push(`- ${dex.move(m)?.name ?? m}`);
   return lines.join('\n');
@@ -150,20 +170,34 @@ export function importShowdown(text: string, dex: Dex, format: FormatRules, name
           set.shiny = /yes/i.test(v);
           break;
         case 'teratype': {
-          const t = [...TYPE_NAMES, 'Stellar'].find((x) => toID(x) === toID(v));
+          const t = [...dex.types, 'Stellar'].find((x) => toID(x) === toID(v));
           if (t) set.teraType = t as TeraType;
           break;
         }
+        case 'happiness':
+        case 'friendship':
+          if (format.statSystem.kind === 'lgpe-av') set.friendship = Math.max(0, Math.min(255, parseInt(v, 10) || 0));
+          break;
+        case 'effortlevels':
+        case 'avs':
         case 'evs':
         case 'sp':
         case 'statpoints': {
+          if (format.statSystem.kind === 'gb-statexp') {
+            const parsed = mapStats(parseSpread(v, emptyStats(252)), evToStatExp);
+            set.evs = { ...parsed, spd: parsed.spa };
+            break;
+          }
           const parsed = parseSpread(v, emptyStats(0));
           if (format.statSystem.kind === 'champions-sp') set.sp = parsed;
           else set.evs = parsed;
           break;
         }
         case 'ivs':
-          if (!format.fixedIVs) set.ivs = parseSpread(v, set.ivs);
+          if (format.statSystem.kind === 'gb-statexp') {
+            const dvs = mapStats(parseSpread(v, emptyStats(30)), (iv) => Math.min(15, Math.floor(iv / 2)));
+            set.ivs = { ...dvs, spd: dvs.spa };
+          } else if (!format.fixedIVs) set.ivs = parseSpread(v, set.ivs);
           break;
         default: {
           const nat = line.match(/^(\w+)\s+Nature$/i);

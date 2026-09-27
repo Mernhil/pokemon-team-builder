@@ -1,8 +1,10 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, Calculator, ChevronDown, FolderOpen, Moon, Sun, Users } from 'lucide-react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeftRight, BookOpen, Calculator, ChevronDown, FolderOpen, Moon, Sun, Users } from 'lucide-react';
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
+import { gameInfo } from '@/domain/games';
+import { GEN_GAMES } from '@/domain/generations';
 import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
@@ -19,6 +21,7 @@ import { Button, Select, cn } from './components/ui/primitives';
 
 // The damage calculator engine is sizeable; load it only when the tab is opened.
 const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').then((m) => ({ default: m.DamageCalcView })));
+const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -29,17 +32,23 @@ export default function App() {
   const view = useTeamStore((s) => s.view);
   const setView = useTeamStore((s) => s.setView);
 
-  // Deep link: #calc opens the calculator, #builder the team builder.
+  // Deep link: #calc opens the calculator, #dex the Pokédex, #builder the team builder.
   useEffect(() => {
     const fromHash = () => {
       const h = location.hash.replace('#', '');
-      if (h === 'calc' || h === 'builder') setView(h);
+      if (h === 'calc' || h === 'builder' || h === 'dex') setView(h);
     };
     fromHash();
     window.addEventListener('hashchange', fromHash);
     return () => window.removeEventListener('hashchange', fromHash);
   }, [setView]);
+  // Mirror the view into the hash — but not on mount, when the hash is the input (a deep link).
+  const mounted = useRef(false);
   useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
     try {
       history.replaceState(null, '', `#${view}`);
     } catch {
@@ -56,7 +65,13 @@ export default function App() {
     <div className="flex min-h-full flex-col">
       <DesktopUpdater />
       <Header team={team} format={format} dex={dexState.status === 'ready' ? dexState.dex : undefined} />
-      {dexState.status === 'ready' ? (
+      {view === 'dex' ? (
+        <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">
+          <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading Pokédex…</p>}>
+            <PokedexView format={format} />
+          </Suspense>
+        </main>
+      ) : dexState.status === 'ready' ? (
         view === 'calc' ? (
           <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">
             <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading damage calculator…</p>}>
@@ -81,6 +96,7 @@ function ViewTabs() {
   const tabs = [
     { id: 'builder' as const, label: 'Builder', icon: Users },
     { id: 'calc' as const, label: 'Damage Calc', icon: Calculator },
+    { id: 'dex' as const, label: 'Pokédex', icon: BookOpen },
   ];
   return (
     <nav className="flex rounded-lg bg-surface-2 p-0.5" aria-label="Sections">
@@ -130,7 +146,11 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           className="h-9 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 text-base font-semibold outline-none hover:border-border focus:border-accent sm:max-w-xs"
         />
         <span className="hidden sm:inline-flex">
-          {format.datasetId === 'champions' ? (
+          {format.game ? (
+            <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white" style={{ background: gameInfo(format.game)!.color }} title={gameInfo(format.game)!.name}>
+              {gameInfo(format.game)!.shortName.toUpperCase()}
+            </span>
+          ) : format.datasetId === 'champions' ? (
             <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-accent-fg" title="Pokémon Champions">
               CHAMPIONS
             </span>
@@ -144,12 +164,19 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           value={format.id}
           onChange={(e) => updateTeam(team.id, { formatId: e.target.value, category: getFormat(e.target.value).shortName })}
         >
-          {FORMATS.map((f) => (
-            <option key={f.id} value={f.id} disabled={!f.available}>
-              {f.name}
-              {f.regulationId && f.regulationId === liveRegId ? ' (live)' : ''}
-              {f.available ? '' : ' (Phase 2)'}
-            </option>
+          {[
+            { label: 'Pokémon Champions', formats: FORMATS.filter((f) => f.datasetId === 'champions') },
+            { label: 'Main series · Gen 1–9', formats: FORMATS.filter((f) => f.datasetId !== 'champions' && !f.game) },
+            { label: "Main series · Let's Go, BDSP, Legends", formats: FORMATS.filter((f) => f.game) },
+          ].map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.formats.map((f) => (
+                <option key={f.id} value={f.id} disabled={!f.available}>
+                  {f.name}
+                  {f.regulationId && f.regulationId === liveRegId ? ' (live)' : ''}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </Select>
         <div className="ml-auto flex items-center gap-1.5">
@@ -227,7 +254,11 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
         </div>
         <DefenseMatrix team={team} dex={dex} format={format} />
         <p className="pb-2 text-center text-[11px] text-muted">
-          Data: Pokémon Showdown + official regulation announcements ({dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated {dex.data.generatedAt.slice(0, 10)}
+          {format.game
+            ? `Data: ${dex.data.source} · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
+            : dex.data.generation
+            ? `Data: Pokémon Showdown's Gen ${dex.data.generation} data (${GEN_GAMES[dex.data.generation]}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
+            : `Data: Pokémon Showdown + official regulation announcements (${dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`}
         </p>
       </div>
     </main>

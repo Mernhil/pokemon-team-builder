@@ -1,0 +1,41 @@
+import { useEffect, useState } from 'react';
+import type { LearnData, PokedexData } from '@/domain/pokedex';
+import { SIDE_LOADED_DATA, fetchGenerated } from './generated-loader';
+
+/**
+ * Lazy loaders for a Pokédex book's files: src/data/generated/pokedex-<book>.json (`npm run pokedex`)
+ * and <book>-learn.json (`npm run data`), where book is gen1…gen9, lgpe, bdsp, pla or za. Each file is
+ * its own chunk, fetched on first use.
+ */
+// The mode check is written out here, not via SIDE_LOADED_DATA, so the single-file build drops the
+// globs entirely instead of inlining every file it then fetches from data/ anyway.
+const pokedexFiles = import.meta.env.MODE === 'singlefile' ? {} : import.meta.glob('./generated/pokedex-*.json');
+const learnFiles = import.meta.env.MODE === 'singlefile' ? {} : import.meta.glob('./generated/*-learn.json');
+
+const cache = new Map<string, Promise<unknown>>();
+function load<T>(name: string, files: Record<string, () => Promise<unknown>>): Promise<T> {
+  let p = cache.get(name);
+  if (!p) {
+    p = SIDE_LOADED_DATA
+      ? fetchGenerated(name)
+      : (files[`./generated/${name}.json`]?.() ?? Promise.reject(new Error(`No data file ${name}`))).then((m) => (m as { default: unknown }).default);
+    cache.set(name, p);
+  }
+  return p as Promise<T>;
+}
+
+export const loadPokedex = (book: string) => load<PokedexData>(`pokedex-${book}`, pokedexFiles);
+export const loadLearnData = (book: string) => load<LearnData>(`${book}-learn`, learnFiles);
+
+/** Pokédex text/encounters and learn methods for a book; null while loading. */
+export function usePokedexData(book: string): { dex: PokedexData; learn: LearnData } | null {
+  const [state, setState] = useState<{ book: string; dex: PokedexData; learn: LearnData } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([loadPokedex(book), loadLearnData(book)]).then(([dex, learn]) => alive && setState({ book, dex, learn }));
+    return () => {
+      alive = false;
+    };
+  }, [book]);
+  return state && state.book === book ? state : null;
+}

@@ -1,0 +1,33 @@
+{
+  "id": "galar-isle-of-armor",
+  "name": "Isle of Armor",
+  "width": 36,
+  "height": 28,
+  "versions": ["the-isle-of-armor-sword", "the-isle-of-armor-shield"],
+  "games": ["sword", "shield"],
+  "order": 1,
+  "land": [
+    "M6 5 L13 2 L22 2 L29 5 L32 11 L31 18 L27 23 L20 25 L12 24 L6 20 L4 13 Z",
+    "M31 21 L35 21 L35 25 L31 25 Z"
+  ],
+  "places": {
+    "fields-of-honor": [8, 14, 5, 4, "landmark", "Fields of Honor"],
+    "master-dojo": [8, 11, 2, 2, "town", "Master Dojo"],
+    "soothing-wetlands": [9, 18, 5, 3, "landmark", "Soothing Wetlands"],
+    "forest-of-focus": [14, 17, 5, 4, "forest", "Forest of Focus"],
+    "challenge-beach": [19, 19, 5, 3, "landmark", "Challenge Beach"],
+    "brawlers-cave": [22, 16, 2, 2, "cave", "Brawlers' Cave"],
+    "challenge-road": [23, 13, 3, 3, "route", "Challenge Road"],
+    "courageous-cavern": [26, 9, 2, 2, "cave", "Courageous Cavern"],
+    "loop-lagoon": [25, 5, 4, 3, "lake", "Loop Lagoon"],
+    "training-lowlands": [15, 9, 6, 5, "landmark", "Training Lowlands"],
+    "potbottom-desert": [15, 3, 4, 3, "landmark", "Potbottom Desert"],
+    "warm-up-tunnel": [12, 13, 2, 1, "cave", "Warm-Up Tunnel"],
+    "isle-of-armor-caves": [20, 7, 2, 2, "cave", "Tower of Waters / caves"],
+    "workout-sea": [2, 10, 2, 8, "sea", "Workout Sea"],
+    "stepping-stone-sea": [14, 25, 8, 2, "sea", "Stepping-Stone Sea"],
+    "insular-sea": [30, 11, 3, 6, "sea", "Insular Sea"],
+    "honeycalm-sea": [28, 19, 3, 3, "sea", "Honeycalm Sea"],
+    "honeycalm-island": [32, 22, 2, 2, "landmark", "Honeycalm Island"]
+  }
+}

@@ -1,10 +1,12 @@
 /**
  * Builds the portable single-file app and strips the document skeleton so the page can be
  * published as a claude.ai Artifact (the host adds its own <html>/<head>/<body>).
- * Output: dist/artifact.html + dist/sprites/* (publish both).
+ * Output: dist/artifact.html + dist/sprites/*, dist/maps/* and dist/data/* (publish all of them).
+ * The Gen 1–9 datasets, Pokédex files and map layouts are too big to inline, so the single-file
+ * build fetches them from data/ (src/data/generated-loader.ts); they're copied there below.
  */
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 
 execSync('npx vite build --mode singlefile', { stdio: 'inherit' });
 const html = readFileSync('dist/index.html', 'utf8');
@@ -17,4 +19,8 @@ const rest = head
   .replace(/<link rel="(icon|apple-touch-icon)"[^>]*>\s*/g, '')
   .trim();
 writeFileSync('dist/artifact.html', `${title}\n${rest}\n${body.trim()}\n`);
-console.log('wrote dist/artifact.html');
+mkdirSync('dist/data', { recursive: true });
+// Everything but the Champions dataset and the regulation manifest, which stay inlined.
+const side = readdirSync('src/data/generated').filter((f) => f.endsWith('.json') && !['champions.json', 'regulations.json'].includes(f));
+for (const f of side) copyFileSync(`src/data/generated/${f}`, `dist/data/${f}`);
+console.log(`wrote dist/artifact.html (+ ${side.length} files in dist/data/)`);

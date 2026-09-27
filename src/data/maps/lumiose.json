@@ -1,0 +1,798 @@
+{
+ "id": "lumiose",
+ "name": "Lumiose City",
+ "width": 64,
+ "height": 64,
+ "versions": [
+  "legends-za"
+ ],
+ "land": [
+  "M32 1 A31 31 0 1 1 31.99 1 Z"
+ ],
+ "places": {
+  "kalos-centrico-plaza": [
+   29,
+   29,
+   6,
+   6,
+   "town",
+   "Centrico Plaza"
+  ],
+  "kalos-the-sewers": [
+   31,
+   35.5,
+   2,
+   1,
+   "cave",
+   "The Sewers"
+  ],
+  "kalos-saison-canal": [
+   23,
+   37,
+   18,
+   1,
+   "sea",
+   "Saison Canal"
+  ],
+  "kalos-saison-canalside": [
+   41,
+   37,
+   2,
+   1,
+   "route",
+   "Saison Canalside"
+  ],
+  "kalos-vernal-avenue": [
+   31.5,
+   18,
+   1,
+   11,
+   "route",
+   "Vernal Avenue"
+  ],
+  "kalos-estival-avenue": [
+   35,
+   31.5,
+   11,
+   1,
+   "route",
+   "Estival Avenue"
+  ],
+  "kalos-autumnal-avenue": [
+   31.5,
+   38,
+   1,
+   8,
+   "route",
+   "Autumnal Avenue"
+  ],
+  "kalos-hibernal-avenue": [
+   18,
+   31.5,
+   11,
+   1,
+   "route",
+   "Hibernal Avenue"
+  ],
+  "kalos-north-boulevard": [
+   31,
+   1,
+   2,
+   8,
+   "route",
+   "North Boulevard"
+  ],
+  "kalos-south-boulevard": [
+   31,
+   55,
+   2,
+   8,
+   "route",
+   "South Boulevard"
+  ],
+  "kalos-vert-sector-1": [
+   26.1,
+   18.3,
+   3,
+   3,
+   "route",
+   "Vert Sector 1"
+  ],
+  "kalos-vert-sector-2": [
+   30.5,
+   17.5,
+   3,
+   3,
+   "route",
+   "Vert Sector 2"
+  ],
+  "kalos-vert-sector-3": [
+   34.9,
+   18.3,
+   3,
+   3,
+   "route",
+   "Vert Sector 3"
+  ],
+  "kalos-vert-sector-4": [
+   24.3,
+   13.6,
+   3,
+   3,
+   "route",
+   "Vert Sector 4"
+  ],
+  "kalos-vert-sector-5": [
+   30.5,
+   12.5,
+   3,
+   3,
+   "route",
+   "Vert Sector 5"
+  ],
+  "kalos-vert-sector-6": [
+   36.7,
+   13.6,
+   3,
+   3,
+   "route",
+   "Vert Sector 6"
+  ],
+  "kalos-vert-sector-7": [
+   22.6,
+   8.9,
+   3,
+   3,
+   "route",
+   "Vert Sector 7"
+  ],
+  "kalos-vert-sector-8": [
+   30.5,
+   7.5,
+   3,
+   3,
+   "route",
+   "Vert Sector 8"
+  ],
+  "kalos-vert-sector-9": [
+   38.4,
+   8.9,
+   3,
+   3,
+   "route",
+   "Vert Sector 9"
+  ],
+  "kalos-vert-street": [
+   31.0,
+   22.0,
+   2,
+   2,
+   "route",
+   "Vert Street"
+  ],
+  "kalos-vert-plaza": [
+   30.5,
+   0.5,
+   3,
+   3,
+   "town",
+   "Vert Plaza"
+  ],
+  "kalos-vert-district": [
+   22.1,
+   7.0,
+   19.73292659298076,
+   14.783995929783192,
+   "zone",
+   "Vert District"
+  ],
+  "kalos-bleu-sector-1": [
+   40.7,
+   22.5,
+   3,
+   3,
+   "route",
+   "Bleu Sector 1"
+  ],
+  "kalos-bleu-sector-2": [
+   42.9,
+   26.5,
+   3,
+   3,
+   "route",
+   "Bleu Sector 2"
+  ],
+  "kalos-bleu-sector-3": [
+   43.5,
+   31.0,
+   3,
+   3,
+   "route",
+   "Bleu Sector 3"
+  ],
+  "kalos-bleu-sector-4": [
+   44.7,
+   19.4,
+   3,
+   3,
+   "route",
+   "Bleu Sector 4"
+  ],
+  "kalos-bleu-sector-5": [
+   47.6,
+   24.9,
+   3,
+   3,
+   "route",
+   "Bleu Sector 5"
+  ],
+  "kalos-bleu-sector-6": [
+   48.5,
+   31.1,
+   3,
+   3,
+   "route",
+   "Bleu Sector 6"
+  ],
+  "kalos-bleu-sector-7": [
+   48.6,
+   16.3,
+   3,
+   3,
+   "route",
+   "Bleu Sector 7"
+  ],
+  "kalos-bleu-sector-8": [
+   52.4,
+   23.4,
+   3,
+   3,
+   "route",
+   "Bleu Sector 8"
+  ],
+  "kalos-bleu-sector-9": [
+   53.5,
+   31.3,
+   3,
+   3,
+   "route",
+   "Bleu Sector 9"
+  ],
+  "kalos-bleu-street": [
+   39.6,
+   28.2,
+   2,
+   2,
+   "route",
+   "Bleu Street"
+  ],
+  "kalos-bleu-plaza": [
+   59.0,
+   21.2,
+   3,
+   3,
+   "town",
+   "Bleu Plaza"
+  ],
+  "kalos-bleu-district": [
+   40.2,
+   15.8,
+   16.74184922455182,
+   18.962902356647664,
+   "zone",
+   "Bleu District"
+  ],
+  "kalos-magenta-sector-1": [
+   41.3,
+   37.8,
+   3,
+   3,
+   "route",
+   "Magenta Sector 1"
+  ],
+  "kalos-magenta-sector-2": [
+   38.1,
+   41.0,
+   3,
+   3,
+   "route",
+   "Magenta Sector 2"
+  ],
+  "kalos-magenta-sector-3": [
+   34.1,
+   43.0,
+   3,
+   3,
+   "route",
+   "Magenta Sector 3"
+  ],
+  "kalos-magenta-sector-4": [
+   45.4,
+   40.6,
+   3,
+   3,
+   "route",
+   "Magenta Sector 4"
+  ],
+  "kalos-magenta-sector-5": [
+   41.1,
+   45.1,
+   3,
+   3,
+   "route",
+   "Magenta Sector 5"
+  ],
+  "kalos-magenta-sector-6": [
+   35.5,
+   47.8,
+   3,
+   3,
+   "route",
+   "Magenta Sector 6"
+  ],
+  "kalos-magenta-sector-7": [
+   49.6,
+   43.4,
+   3,
+   3,
+   "route",
+   "Magenta Sector 7"
+  ],
+  "kalos-magenta-sector-8": [
+   44.0,
+   49.1,
+   3,
+   3,
+   "route",
+   "Magenta Sector 8"
+  ],
+  "kalos-magenta-sector-9": [
+   36.8,
+   52.6,
+   3,
+   3,
+   "route",
+   "Magenta Sector 9"
+  ],
+  "kalos-magenta-street": [
+   36.3,
+   38.3,
+   2,
+   2,
+   "route",
+   "Magenta Street"
+  ],
+  "kalos-magenta-plaza": [
+   48.1,
+   54.8,
+   3,
+   3,
+   "town",
+   "Magenta Plaza"
+  ],
+  "kalos-magenta-district": [
+   33.6,
+   37.3,
+   19.48457854314497,
+   18.839511261461624,
+   "zone",
+   "Magenta District"
+  ],
+  "kalos-rouge-sector-1": [
+   26.9,
+   43.0,
+   3,
+   3,
+   "route",
+   "Rouge Sector 1"
+  ],
+  "kalos-rouge-sector-2": [
+   22.9,
+   41.0,
+   3,
+   3,
+   "route",
+   "Rouge Sector 2"
+  ],
+  "kalos-rouge-sector-3": [
+   19.7,
+   37.8,
+   3,
+   3,
+   "route",
+   "Rouge Sector 3"
+  ],
+  "kalos-rouge-sector-4": [
+   25.5,
+   47.8,
+   3,
+   3,
+   "route",
+   "Rouge Sector 4"
+  ],
+  "kalos-rouge-sector-5": [
+   19.9,
+   45.1,
+   3,
+   3,
+   "route",
+   "Rouge Sector 5"
+  ],
+  "kalos-rouge-sector-6": [
+   15.6,
+   40.6,
+   3,
+   3,
+   "route",
+   "Rouge Sector 6"
+  ],
+  "kalos-rouge-sector-7": [
+   24.2,
+   52.6,
+   3,
+   3,
+   "route",
+   "Rouge Sector 7"
+  ],
+  "kalos-rouge-sector-8": [
+   17.0,
+   49.1,
+   3,
+   3,
+   "route",
+   "Rouge Sector 8"
+  ],
+  "kalos-rouge-street": [
+   25.7,
+   38.3,
+   2,
+   2,
+   "route",
+   "Rouge Street"
+  ],
+  "kalos-rouge-plaza": [
+   12.9,
+   54.8,
+   3,
+   3,
+   "town",
+   "Rouge Plaza"
+  ],
+  "kalos-rouge-district": [
+   15.1,
+   37.3,
+   15.33939068036976,
+   18.839511261461624,
+   "zone",
+   "Rouge District"
+  ],
+  "kalos-jaune-sector-1": [
+   17.5,
+   31.0,
+   3,
+   3,
+   "route",
+   "Jaune Sector 1"
+  ],
+  "kalos-jaune-sector-2": [
+   18.1,
+   26.5,
+   3,
+   3,
+   "route",
+   "Jaune Sector 2"
+  ],
+  "kalos-jaune-sector-3": [
+   20.3,
+   22.5,
+   3,
+   3,
+   "route",
+   "Jaune Sector 3"
+  ],
+  "kalos-jaune-sector-4": [
+   12.5,
+   31.1,
+   3,
+   3,
+   "route",
+   "Jaune Sector 4"
+  ],
+  "kalos-jaune-sector-5": [
+   13.4,
+   24.9,
+   3,
+   3,
+   "route",
+   "Jaune Sector 5"
+  ],
+  "kalos-jaune-sector-6": [
+   16.3,
+   19.4,
+   3,
+   3,
+   "route",
+   "Jaune Sector 6"
+  ],
+  "kalos-jaune-sector-7": [
+   7.5,
+   31.3,
+   3,
+   3,
+   "route",
+   "Jaune Sector 7"
+  ],
+  "kalos-jaune-sector-8": [
+   8.6,
+   23.4,
+   3,
+   3,
+   "route",
+   "Jaune Sector 8"
+  ],
+  "kalos-jaune-sector-9": [
+   12.4,
+   16.3,
+   3,
+   3,
+   "route",
+   "Jaune Sector 9"
+  ],
+  "kalos-jaune-sector-10": [
+   3.6,
+   27.7,
+   3,
+   3,
+   "route",
+   "Jaune Sector 10"
+  ],
+  "kalos-jaune-sector-11": [
+   7.1,
+   17.0,
+   3,
+   3,
+   "route",
+   "Jaune Sector 11"
+  ],
+  "kalos-jaune-street": [
+   22.4,
+   28.2,
+   2,
+   2,
+   "route",
+   "Jaune Street"
+  ],
+  "kalos-jaune-plaza": [
+   2.0,
+   21.2,
+   3,
+   3,
+   "town",
+   "Jaune Plaza"
+  ],
+  "kalos-jaune-district": [
+   3.1,
+   15.8,
+   20.60795137805599,
+   18.96290235664766,
+   "zone",
+   "Jaune District"
+  ],
+  "kalos-coulant-waterway": [
+   24.2,
+   10.7,
+   2,
+   5,
+   "sea",
+   "Coulant Waterway"
+  ],
+  "kalos-aymlis-park": [
+   42.8,
+   20.2,
+   3,
+   3,
+   "forest",
+   "Aymlis Park"
+  ],
+  "kalos-espace-vide": [
+   50.4,
+   32.7,
+   3,
+   2,
+   "landmark",
+   "Espace Vide"
+  ],
+  "kalos-academie-etoile": [
+   15.9,
+   42.7,
+   3,
+   3,
+   "landmark",
+   "Académie Étoile"
+  ],
+  "lysandre-labs": [
+   36.5,
+   46.0,
+   2,
+   2,
+   "dungeon",
+   "Lysandre Labs"
+  ],
+  "kalos-wild-zone-1": [
+   35.7,
+   0,
+   3,
+   3,
+   "forest",
+   "Wild Zone 1"
+  ],
+  "kalos-wild-zone-2": [
+   46.4,
+   0,
+   3,
+   3,
+   "forest",
+   "Wild Zone 2"
+  ],
+  "kalos-wild-zone-3": [
+   53.8,
+   7.2,
+   3,
+   3,
+   "forest",
+   "Wild Zone 3"
+  ],
+  "kalos-wild-zone-4": [
+   61,
+   14.6,
+   3,
+   3,
+   "forest",
+   "Wild Zone 4"
+  ],
+  "kalos-wild-zone-5": [
+   61,
+   25.3,
+   3,
+   3,
+   "forest",
+   "Wild Zone 5"
+  ],
+  "kalos-wild-zone-6": [
+   61,
+   36.0,
+   3,
+   3,
+   "forest",
+   "Wild Zone 6"
+  ],
+  "kalos-wild-zone-7": [
+   59.9,
+   45.5,
+   3,
+   3,
+   "forest",
+   "Wild Zone 7"
+  ],
+  "kalos-wild-zone-8": [
+   55.2,
+   55.2,
+   3,
+   3,
+   "forest",
+   "Wild Zone 8"
+  ],
+  "kalos-wild-zone-9": [
+   45.5,
+   59.9,
+   3,
+   3,
+   "forest",
+   "Wild Zone 9"
+  ],
+  "kalos-wild-zone-10": [
+   36.0,
+   61,
+   3,
+   3,
+   "forest",
+   "Wild Zone 10"
+  ],
+  "kalos-wild-zone-11": [
+   25.3,
+   61,
+   3,
+   3,
+   "forest",
+   "Wild Zone 11"
+  ],
+  "kalos-wild-zone-12": [
+   14.6,
+   61,
+   3,
+   3,
+   "forest",
+   "Wild Zone 12"
+  ],
+  "kalos-wild-zone-13": [
+   7.2,
+   53.8,
+   3,
+   3,
+   "forest",
+   "Wild Zone 13"
+  ],
+  "kalos-wild-zone-14": [
+   0,
+   46.4,
+   3,
+   3,
+   "forest",
+   "Wild Zone 14"
+  ],
+  "kalos-wild-zone-15": [
+   0,
+   35.7,
+   3,
+   3,
+   "forest",
+   "Wild Zone 15"
+  ],
+  "kalos-wild-zone-16": [
+   0,
+   25.0,
+   3,
+   3,
+   "forest",
+   "Wild Zone 16"
+  ],
+  "kalos-wild-zone-17": [
+   1.1,
+   15.5,
+   3,
+   3,
+   "forest",
+   "Wild Zone 17"
+  ],
+  "kalos-wild-zone-18": [
+   5.8,
+   5.8,
+   3,
+   3,
+   "forest",
+   "Wild Zone 18"
+  ],
+  "kalos-wild-zone-19": [
+   15.5,
+   1.1,
+   3,
+   3,
+   "forest",
+   "Wild Zone 19"
+  ],
+  "kalos-wild-zone-20": [
+   25.0,
+   0,
+   3,
+   3,
+   "forest",
+   "Wild Zone 20"
+  ],
+  "kalos-hyperspace-lumiose": [
+   57,
+   58,
+   6,
+   5,
+   "landmark",
+   "Hyperspace Lumiose (Mega Dimension)"
+  ],
+  "kalos-jaune-sector-12": [
+   3.6,
+   17.0,
+   3,
+   3,
+   "route",
+   "Jaune Sector 12"
+  ]
+ }
+}

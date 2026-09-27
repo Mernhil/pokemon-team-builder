@@ -1,0 +1,33 @@
+{
+  "id": "galar-crown-tundra",
+  "name": "Crown Tundra",
+  "width": 36,
+  "height": 36,
+  "versions": ["the-crown-tundra-sword", "the-crown-tundra-shield"],
+  "games": ["sword", "shield"],
+  "order": 2,
+  "land": ["M4 6 L11 2 L22 1 L30 4 L33 11 L33 21 L30 29 L22 34 L12 34 L5 29 L2 20 L2 12 Z"],
+  "places": {
+    "slippery-slope": [14, 29, 5, 4, "landmark", "Slippery Slope"],
+    "freezington": [9, 26, 3, 3, "town", "Freezington"],
+    "frostpoint-field": [18, 24, 5, 4, "landmark", "Frostpoint Field"],
+    "old-cemetery": [5, 23, 3, 3, "landmark", "Old Cemetery"],
+    "giants-bed": [11, 16, 8, 7, "landmark", "Giant's Bed"],
+    "snowslide-slope": [6, 11, 4, 5, "landmark", "Snowslide Slope"],
+    "tunnel-to-the-top": [11, 8, 3, 2, "cave", "Tunnel to the Top"],
+    "path-to-the-peak": [14, 5, 3, 3, "route", "Path to the Peak"],
+    "crown-shrine": [15, 2, 3, 2, "landmark", "Crown Shrine"],
+    "giants-foot": [20, 14, 4, 4, "landmark", "Giant's Foot"],
+    "roaring-sea-caves": [25, 11, 2, 2, "cave", "Roaring-Sea Caves"],
+    "frigid-sea": [29, 11, 3, 8, "sea", "Frigid Sea"],
+    "three-point-pass": [24, 19, 3, 3, "route", "Three-Point Pass"],
+    "ballimere-lake": [24, 24, 5, 4, "lake", "Ballimere Lake"],
+    "lakeside-cave": [29, 24, 2, 2, "cave", "Lakeside Cave"],
+    "dyna-tree-hill": [20, 20, 2, 2, "landmark", "Dyna Tree Hill"],
+    "split-decision-ruins": [19, 8, 5, 4, "landmark", "Split-Decision Ruins"],
+    "galar-rock-peak-ruins": [3, 17, 2, 2, "landmark", "Rock Peak Ruins"],
+    "galar-iceberg-ruins": [8, 6, 2, 2, "landmark", "Iceberg Ruins"],
+    "galar-iron-ruins": [25, 28, 2, 2, "landmark", "Iron Ruins"],
+    "max-lair": [26, 5, 3, 3, "cave", "Max Lair"]
+  }
+}
