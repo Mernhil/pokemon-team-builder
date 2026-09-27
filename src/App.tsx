@@ -8,7 +8,7 @@ import { validateTeam } from '@/domain/validation';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
 import { OffenseMatrix } from './components/analysis/OffenseMatrix';
-import { DesktopUpdater } from './components/DesktopUpdater';
+import { DesktopUpdater, UpdateCheckButton } from './components/DesktopUpdater';
 import { RegulationBanner } from './components/analysis/RegulationBanner';
 import { GenBadge } from './components/ui/GenBadge';
 import { ValidationPanel } from './components/analysis/ValidationPanel';
@@ -160,6 +160,7 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           <Button onClick={() => setIoOpen(true)} disabled={!dex}>
             <ArrowLeftRight size={14} /> <span className="hidden sm:inline">Import / Export</span>
           </Button>
+          <UpdateCheckButton />
           <Button
             size="icon"
             variant="ghost"

@@ -3,7 +3,12 @@
 The app ships as a Tauri desktop app. `.github/workflows/desktop-release.yml` builds native
 installers on each OS's own GitHub-hosted runner and, on a version tag, publishes them to a
 GitHub Release together with a signed `latest.json` — that's what the in-app "Install & Restart"
-banner (`src/components/DesktopUpdater.tsx`) polls on launch.
+banner (`src/components/DesktopUpdater.tsx`) checks on launch, every 4 hours while the app is open,
+and on demand from the header's refresh button (which also flags a failed background check).
+
+The updater downloads `latest.json` and the installers **without authentication**, so the
+repository (or wherever releases are published) must be **public** — on a private repo GitHub
+answers 404 and no update is ever found.
 
 ## One-time setup: signing secrets
 
@@ -36,7 +41,8 @@ installers themselves build fine, only the auto-updater manifest can't be produc
    ```
 4. The workflow builds all three platforms and publishes a **public** GitHub Release named after
    the tag, with the installers and `latest.json` attached. Apps already installed will offer the
-   update next time they're launched (or already-running instances, next periodic check).
+   update next time they're launched (already-running instances: at the next 4-hourly check, or
+   right away from the header's "Check for updates" button).
 
 ## Manual test build (no release, no signing needed)
 
