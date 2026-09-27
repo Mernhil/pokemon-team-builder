@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import type { MoveType, StatId, TeraType } from '@/domain/types';
 
 export const cn = clsx;
@@ -90,6 +90,19 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
     <input
       className={cn(
         'h-9 w-full rounded-md border border-border bg-surface-2 px-2.5 text-sm outline-none placeholder:text-muted',
+        'focus:border-accent focus:ring-2 focus:ring-accent/25',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function TextArea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        'w-full resize-none rounded-md border border-border bg-surface-2 px-2.5 py-2 text-sm outline-none placeholder:text-muted',
         'focus:border-accent focus:ring-2 focus:ring-accent/25',
         className,
       )}

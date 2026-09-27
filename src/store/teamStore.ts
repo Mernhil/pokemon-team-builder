@@ -10,7 +10,7 @@ import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
 export type Theme = 'dark' | 'light';
-export type View = 'builder' | 'calc' | 'dex';
+export type View = 'builder' | 'calc' | 'dex' | 'matches' | 'meta';
 
 /** Advanced-details state for one team member (keyed by set uid). */
 export interface SlotBattleState {
@@ -181,7 +181,7 @@ export const useTeamStore = create<TeamState>()(
           order,
           activeTeamId: typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0],
           theme: p.theme === 'light' ? 'light' : 'dark',
-          view: p.view === 'calc' ? 'calc' : 'builder',
+          view: p.view === 'calc' || p.view === 'dex' || p.view === 'matches' || p.view === 'meta' ? p.view : 'builder',
           battle: p.battle && typeof p.battle === 'object' ? p.battle : {},
         };
       },

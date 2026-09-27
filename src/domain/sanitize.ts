@@ -1,3 +1,4 @@
+import type { LoggedMon, Match, MatchResult } from './matches';
 import { uid } from './team';
 import { STAT_IDS, type PokemonSet, type StatTable, type Team, type TeamSlots, type TeraType } from './types';
 
@@ -64,6 +65,50 @@ export function sanitizeTeam(v: unknown): Team | null {
     notes: str(v.notes, MAX_NOTES),
     replicaCode: str(v.replicaCode, 16),
     slots,
+    createdAt: int(v.createdAt, 0, Number.MAX_SAFE_INTEGER, now),
+    updatedAt: int(v.updatedAt, 0, Number.MAX_SAFE_INTEGER, now),
+  };
+}
+
+function sanitizeLoggedMon(v: unknown): LoggedMon | null {
+  if (!isObj(v)) return null;
+  const speciesId = str(v.speciesId, MAX_ID);
+  if (!speciesId) return null;
+  const moves = Array.isArray(v.moves) ? v.moves.map((m) => str(m, MAX_ID)).filter((m): m is string => !!m).slice(0, 4) : undefined;
+  return {
+    speciesId,
+    itemId: str(v.itemId, MAX_ID),
+    abilityId: str(v.abilityId, MAX_ID),
+    moves: moves && moves.length ? moves : undefined,
+    teraType: str(v.teraType, MAX_ID) as TeraType | undefined,
+  };
+}
+
+/** Returns a well-formed copy of `v`, or null when it isn't recognisably a match. */
+export function sanitizeMatch(v: unknown): Match | null {
+  if (!isObj(v)) return null;
+  const date = str(v.date, 10);
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const now = Date.now();
+  const opponentTeam = Array.isArray(v.opponentTeam)
+    ? v.opponentTeam.map(sanitizeLoggedMon).filter((m): m is LoggedMon => !!m).slice(0, 6)
+    : [];
+  const myTeam = Array.isArray(v.myTeam)
+    ? v.myTeam.map(sanitizeLoggedMon).filter((m): m is LoggedMon => !!m).slice(0, 6)
+    : undefined;
+  return {
+    id: safeId(v.id),
+    date,
+    result: v.result === 'loss' ? 'loss' : ('win' as MatchResult),
+    regulationId: str(v.regulationId, MAX_ID),
+    category: str(v.category, MAX_NAME),
+    eventName: str(v.eventName, MAX_NAME),
+    myTeamId: str(v.myTeamId, MAX_ID),
+    myTeam: myTeam && myTeam.length ? myTeam : undefined,
+    myArchetype: str(v.myArchetype, MAX_NAME),
+    opponentTeam,
+    opponentArchetype: str(v.opponentArchetype, MAX_NAME),
+    notes: str(v.notes, MAX_NOTES),
     createdAt: int(v.createdAt, 0, Number.MAX_SAFE_INTEGER, now),
     updatedAt: int(v.updatedAt, 0, Number.MAX_SAFE_INTEGER, now),
   };

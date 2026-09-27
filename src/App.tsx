@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BookOpen, Calculator, ChevronDown, FolderOpen, Moon, Sun, Users } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, BookOpen, Calculator, ChevronDown, FolderOpen, Moon, Sun, Swords, Users } from 'lucide-react';
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
@@ -23,6 +23,8 @@ import { Button, Select, cn } from './components/ui/primitives';
 // The damage calculator engine is sizeable; load it only when the tab is opened.
 const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').then((m) => ({ default: m.DamageCalcView })));
 const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
+const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
+const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -37,7 +39,7 @@ export default function App() {
   useEffect(() => {
     const fromHash = () => {
       const h = location.hash.replace('#', '');
-      if (h === 'calc' || h === 'builder' || h === 'dex') setView(h);
+      if (h === 'calc' || h === 'builder' || h === 'dex' || h === 'matches' || h === 'meta') setView(h);
     };
     fromHash();
     window.addEventListener('hashchange', fromHash);
@@ -79,6 +81,18 @@ export default function App() {
               <DamageCalcView dex={dexState.dex} format={format} team={team} />
             </Suspense>
           </main>
+        ) : view === 'matches' ? (
+          <main className="mx-auto w-full max-w-[1600px] flex-1 p-4">
+            <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading match log…</p>}>
+              <MatchesView dex={dexState.dex} format={format} />
+            </Suspense>
+          </main>
+        ) : view === 'meta' ? (
+          <main className="mx-auto w-full max-w-[1600px] flex-1 p-4">
+            <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading meta data…</p>}>
+              <MetaView dex={dexState.dex} format={format} />
+            </Suspense>
+          </main>
         ) : (
           <Builder team={team} format={format} dex={dexState.dex} />
         )
@@ -98,6 +112,8 @@ function ViewTabs() {
     { id: 'builder' as const, label: 'Builder', icon: Users },
     { id: 'calc' as const, label: 'Damage Calc', icon: Calculator },
     { id: 'dex' as const, label: 'Pokédex', icon: BookOpen },
+    { id: 'matches' as const, label: 'Matches', icon: Swords },
+    { id: 'meta' as const, label: 'Meta', icon: BarChart3 },
   ];
   return (
     <nav className="flex rounded-lg bg-surface-2 p-0.5" aria-label="Sections">
