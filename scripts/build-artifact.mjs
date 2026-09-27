@@ -20,6 +20,7 @@ const rest = head
   .trim();
 writeFileSync('dist/artifact.html', `${title}\n${rest}\n${body.trim()}\n`);
 mkdirSync('dist/data', { recursive: true });
-const side = readdirSync('src/data/generated').filter((f) => /^(gen\d|pokedex-gen\d|maps)[\w-]*\.json$/.test(f));
+// Everything but the Champions dataset and the regulation manifest, which stay inlined.
+const side = readdirSync('src/data/generated').filter((f) => f.endsWith('.json') && !['champions.json', 'regulations.json'].includes(f));
 for (const f of side) copyFileSync(`src/data/generated/${f}`, `dist/data/${f}`);
 console.log(`wrote dist/artifact.html (+ ${side.length} files in dist/data/)`);

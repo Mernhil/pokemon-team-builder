@@ -2,7 +2,7 @@
  * Main-series games that aren't their generation's "main" pair. Each has its own dataset (roster,
  * movepools; scripts/build-games.ts), its own Pokédex book and, where it differs, its own rules.
  */
-import { mechanics, type Mechanics } from './generations';
+import { GEN_GAMES, GENERATIONS, mechanics, type Mechanics } from './generations';
 import type { FormatRules, SpriteSetId, StatSystem } from './types';
 
 export interface GameInfo {
@@ -104,3 +104,39 @@ export function formatMechanics(format: Pick<FormatRules, 'generation' | 'game'>
 export function datasetMechanics(datasetId: string, generation: number) {
   return formatMechanics({ generation, game: gameInfo(datasetId)?.id });
 }
+
+/**
+ * Pokédex books: one per generation (its main games) and one per other main-series game, each with its
+ * own dataset (roster, movepools), Pokédex file and sprite style.
+ */
+export interface DexBook {
+  /** Dataset / Pokédex file id: gen1…gen9, lgpe, bdsp, pla, za. */
+  id: string;
+  gen: number;
+  /** Short chip label ("Kanto", "Let's Go"). */
+  label: string;
+  region: string;
+  games: string;
+  spriteSet: SpriteSetId;
+  color: string;
+  game?: GameInfo['id'];
+}
+
+export const BOOKS: DexBook[] = [
+  ...GENERATIONS.map((g) => ({
+    id: `gen${g.gen}`,
+    gen: g.gen,
+    label: g.region,
+    region: g.region,
+    games: GEN_GAMES[g.gen],
+    spriteSet: `gen${g.gen}` as SpriteSetId,
+    color: g.color,
+  })),
+  ...GAMES.map((g) => ({ id: g.id, gen: g.generation, label: g.shortName, region: g.region, games: g.name, spriteSet: g.spriteSet, color: g.color, game: g.id })),
+];
+
+export const bookInfo = (id?: string): DexBook => BOOKS.find((b) => b.id === id) ?? BOOKS[8];
+
+/** The book that matches a format (Champions reads the Scarlet/Violet book). */
+export const bookForFormat = (format: Pick<FormatRules, 'datasetId' | 'generation' | 'game'>): DexBook =>
+  bookInfo(format.game ?? (format.datasetId === 'champions' ? 'gen9' : `gen${format.generation}`));

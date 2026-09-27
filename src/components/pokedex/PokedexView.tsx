@@ -3,9 +3,9 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { toID, type Dex } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
-import { GENERATIONS, genInfo } from '@/domain/generations';
+import { BOOKS, bookForFormat, bookInfo, type DexBook } from '@/domain/games';
 import type { PokedexData } from '@/domain/pokedex';
-import type { FormatRules, Pokemon, SpriteSetId, TypeName } from '@/domain/types';
+import type { FormatRules, Pokemon, TypeName } from '@/domain/types';
 import { usePokedexStore } from '@/store/pokedexStore';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
@@ -17,50 +17,57 @@ import { PokedexDetail } from './PokedexDetail';
  * regional Pokédexes numbered them, with entries, stats, learnsets and where to find it (Area).
  */
 export function PokedexView({ format }: { format: FormatRules }) {
-  const storedGen = usePokedexStore((s) => s.gen);
-  const gen = storedGen ?? (format.datasetId === 'champions' ? 9 : format.generation);
-  const { setGen } = usePokedexStore.getState();
-  const dexState = useDex(`gen${gen}`);
-  const data = usePokedexData(gen);
+  const stored = usePokedexStore((s) => s.book);
+  const book = stored ? bookInfo(stored) : bookForFormat(format);
+  const { setBook } = usePokedexStore.getState();
+  const dexState = useDex(book.id);
+  const data = usePokedexData(book.id);
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2" role="group" aria-label="Generation">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2" role="group" aria-label="Pokédex">
         <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Pokédex</span>
-        {GENERATIONS.map((g) => (
+        {BOOKS.map((b) => (
           <button
-            key={g.gen}
+            key={b.id}
             type="button"
-            aria-pressed={g.gen === gen}
-            onClick={() => setGen(g.gen)}
-            title={`${g.region} · ${g.games}`}
+            aria-pressed={b.id === book.id}
+            onClick={() => setBook(b.id)}
+            title={`${b.region} · ${b.games}`}
             className={cn(
               'flex items-center gap-1 rounded-md px-1.5 py-1 transition-colors',
-              g.gen === gen ? 'bg-surface-2 ring-1 ring-border' : 'opacity-50 hover:opacity-100',
+              b.id === book.id ? 'bg-surface-2 ring-1 ring-border' : 'opacity-50 hover:opacity-100',
+              b.game && b.gen === 7 && 'ml-2 border-l border-border pl-2.5',
             )}
           >
-            <GenBadge gen={g.gen} size="xs" />
-            <span className="hidden text-xs font-medium md:inline">{g.region}</span>
+            <GenBadge gen={b.gen} size="xs" />
+            {b.game ? (
+              <span className="text-xs font-semibold" style={{ color: b.color }}>
+                {b.label}
+              </span>
+            ) : (
+              <span className="hidden text-xs font-medium md:inline">{b.label}</span>
+            )}
           </button>
         ))}
       </div>
       {dexState.status === 'ready' && data ? (
-        <PokedexBody key={gen} gen={gen} dex={dexState.dex} data={data.dex} learn={data.learn} format={format} />
+        <PokedexBody key={book.id} book={book} dex={dexState.dex} data={data.dex} learn={data.learn} format={format} />
       ) : (
-        <p className="p-10 text-center text-sm text-muted">{dexState.status === 'error' ? dexState.error : `Loading the ${genInfo(gen).region} Pokédex…`}</p>
+        <p className="p-10 text-center text-sm text-muted">{dexState.status === 'error' ? dexState.error : `Loading the ${book.region} Pokédex…`}</p>
       )}
     </div>
   );
 }
 
-function PokedexBody({ gen, dex, data, learn, format }: { gen: number; dex: Dex; data: PokedexData; learn: Parameters<typeof PokedexDetail>[0]['learn']; format: FormatRules }) {
-  const selected = usePokedexStore((s) => s.species[gen]);
+function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: Dex; data: PokedexData; learn: Parameters<typeof PokedexDetail>[0]['learn']; format: FormatRules }) {
+  const selected = usePokedexStore((s) => s.species[book.id]);
   const { select } = usePokedexStore.getState();
   const [query, setQuery] = useState('');
   const [type, setType] = useState<TypeName | ''>('');
   const [order, setOrder] = useState<string>('national');
   const [wildOnly, setWildOnly] = useState(false);
-  const spriteSet = `gen${gen}` as SpriteSetId;
+  const spriteSet = book.spriteSet;
 
   const all = useMemo(() => dex.selectableSpecies(), [dex]);
   const number = useCallback((s: Pokemon) => (order === 'national' ? s.num : data.entries[s.num]?.dex?.[order]), [order, data]);
@@ -114,7 +121,7 @@ function PokedexBody({ gen, dex, data, learn, format }: { gen: number; dex: Dex;
           </div>
           <label className="flex items-center gap-2 text-xs text-muted">
             <input type="checkbox" checked={wildOnly} onChange={(e) => setWildOnly(e.target.checked)} className="accent-[var(--color-accent)]" />
-            Found in the wild in {genInfo(gen).games.split(' · ').length > 1 ? 'these games' : 'this game'}
+            Found in the wild in {book.games.split(' · ').length > 1 ? 'these games' : 'this game'}
             <span className="ml-auto font-mono">{list.length}</span>
           </label>
         </div>
@@ -126,7 +133,7 @@ function PokedexBody({ gen, dex, data, learn, format }: { gen: number; dex: Dex;
               role="option"
               aria-selected={s.id === current?.id}
               aria-current={s.id === current?.id}
-              onClick={() => select(gen, s.id)}
+              onClick={() => select(book.id, s.id)}
               className={cn(
                 'flex w-full items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-sm',
                 s.id === current?.id ? 'bg-accent/15 text-fg' : 'hover:bg-surface-2',
@@ -149,10 +156,10 @@ function PokedexBody({ gen, dex, data, learn, format }: { gen: number; dex: Dex;
       <div className={cn('min-w-0', !current && 'hidden lg:block')}>
         {current ? (
           <>
-            <button type="button" onClick={() => select(gen, undefined)} className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted hover:text-fg lg:hidden">
+            <button type="button" onClick={() => select(book.id, undefined)} className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted hover:text-fg lg:hidden">
               <ArrowLeft size={14} /> All Pokémon
             </button>
-            <PokedexDetail key={current.id} species={current} dex={dex} data={data} learn={learn} gen={gen} format={format} onSelect={(id) => select(gen, id)} />
+            <PokedexDetail key={current.id} species={current} dex={dex} data={data} learn={learn} book={book} format={format} onSelect={(id) => select(book.id, id)} />
           </>
         ) : (
           <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted">

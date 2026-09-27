@@ -309,6 +309,8 @@ const ANCHORS: Record<string, [string, string, number, number][]> = {
   ],
   'kanto-frlg': [
     ['ss-anne', 'vermilion-city', 0, 0],
+    // Let's Go names Victory Road by its Gen 1 id.
+    ['kanto-victory-road-1', 'kanto-victory-road-2', 0, 0],
     ['kanto-underground-path', 'saffron-city', 0, 0],
   ],
   'sevii-67': ['monean-chamber', 'liptoo-chamber', 'weepth-chamber', 'dilford-chamber', 'scufib-chamber', 'rixy-chamber', 'viapos-chamber'].map(
@@ -571,6 +573,8 @@ export const GAME_MAPS: Record<string, string[]> = {
   firered: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], leafgreen: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'],
   heartgold: ['johto-gsc', 'kanto-gsc'], soulsilver: ['johto-gsc', 'kanto-gsc'],
   'omega-ruby': ['hoenn-rse'], 'alpha-sapphire': ['hoenn-rse'],
+  // Let's Go's Kanto is Red/Blue's; FireRed/LeafGreen's map has every place it uses.
+  'lets-go-pikachu': ['kanto-frlg'], 'lets-go-eevee': ['kanto-frlg'],
 };
 
 async function main() {

@@ -5,17 +5,17 @@ import { safeStorage } from './storage';
 export type PokedexTab = 'info' | 'moves' | 'area';
 
 interface PokedexState {
-  /** Generation shown; undefined = follow the active team's format. */
-  gen?: number;
-  /** Selected species per generation. */
-  species: Record<number, string | undefined>;
+  /** Book shown (gen1…gen9, lgpe, bdsp, pla, za); undefined = follow the active team's format. */
+  book?: string;
+  /** Selected species per book. */
+  species: Record<string, string | undefined>;
   tab: PokedexTab;
-  /** Game picked on the Area tab, per generation (PokeAPI version id). */
-  game: Record<number, string | undefined>;
-  setGen: (gen: number) => void;
-  select: (gen: number, speciesId: string | undefined) => void;
+  /** Game picked on the Area tab, per book (PokeAPI version id). */
+  game: Record<string, string | undefined>;
+  setBook: (book: string) => void;
+  select: (book: string, speciesId: string | undefined) => void;
   setTab: (tab: PokedexTab) => void;
-  setGame: (gen: number, game: string) => void;
+  setGame: (book: string, game: string) => void;
 }
 
 export const usePokedexStore = create<PokedexState>()(
@@ -24,11 +24,17 @@ export const usePokedexStore = create<PokedexState>()(
       species: {},
       tab: 'info',
       game: {},
-      setGen: (gen) => set({ gen }),
-      select: (gen, speciesId) => set((s) => ({ species: { ...s.species, [gen]: speciesId } })),
+      setBook: (book) => set({ book }),
+      select: (book, speciesId) => set((s) => ({ species: { ...s.species, [book]: speciesId } })),
       setTab: (tab) => set({ tab }),
-      setGame: (gen, game) => set((s) => ({ game: { ...s.game, [gen]: game } })),
+      setGame: (book, game) => set((s) => ({ game: { ...s.game, [book]: game } })),
     }),
-    { name: 'ptb:dex:v1', version: 1, storage: createJSONStorage(() => safeStorage) },
+    {
+      name: 'ptb:dex:v1',
+      version: 2,
+      storage: createJSONStorage(() => safeStorage),
+      // v1 keyed everything by generation number; start fresh.
+      migrate: () => ({ species: {}, tab: 'info', game: {} }) as unknown as PokedexState,
+    },
   ),
 );

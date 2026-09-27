@@ -43,7 +43,7 @@ const SOURCE_LABEL: Record<string, string> = {
  * Pokédex marked them — blinking nest icons in Gen 1–2, glowing squares from Gen 3 — or, for regions
  * without a disassembled map, a schematic of the region with its locations highlighted.
  */
-export function RegionMaps({ game, encounters }: { gen: number; game: string; encounters: Encounter[] }) {
+export function RegionMaps({ game, encounters }: { game: string; encounters: Encounter[] }) {
   const [file, setFile] = useState<MapsFile | null>(null);
   useEffect(() => {
     let alive = true;
@@ -102,7 +102,7 @@ function MapCanvas({ map, found }: { map: RegionMapData; found: Set<string> }) {
   const lit = Object.entries(map.places).filter(([loc]) => found.has(loc));
 
   if (map.style === 'schematic') {
-    const order = ['sea', 'route', 'forest', 'lake', 'mountain', 'landmark', 'cave', 'dungeon', 'town'];
+    const order = ['zone', 'sea', 'snow', 'route', 'forest', 'lake', 'mountain', 'landmark', 'cave', 'dungeon', 'town'];
     const entries = Object.entries(map.places).sort(([a], [b]) => order.indexOf(map.kinds?.[a] ?? 'route') - order.indexOf(map.kinds?.[b] ?? 'route'));
     return (
       <svg viewBox={`-1 -1 ${map.width + 2} ${map.height + 2}`} className="h-auto max-h-[70vh] w-full max-w-3xl" role="img" aria-label={`${map.name} map`}>
@@ -112,6 +112,13 @@ function MapCanvas({ map, found }: { map: RegionMapData; found: Set<string> }) {
           rects.map(([x, y, w, h], i) => {
             const kind = map.kinds?.[loc] ?? 'route';
             const on = found.has(loc);
+            if (kind === 'zone')
+              // Whole areas (Obsidian Fieldlands, a Lumiose district…): an outline, lit as an outline.
+              return (
+                <rect key={loc + i} x={x} y={y} width={w} height={h} rx={0.6} fill={on ? '#ff5d5d18' : 'none'} stroke={on ? '#ff5d5d' : '#ffffff55'} strokeWidth={on ? 0.35 : 0.18} strokeDasharray={on ? undefined : '0.6 0.5'} className={on ? 'area-glow' : undefined}>
+                  <title>{label(loc)}</title>
+                </rect>
+              );
             return (
               <g key={loc + i}>
                 <title>{label(loc)}</title>
@@ -129,7 +136,7 @@ function MapCanvas({ map, found }: { map: RegionMapData; found: Set<string> }) {
                 {on && (
                   <>
                     <rect className="area-glow" x={x} y={y} width={w} height={h} rx={0.2} fill="#ff5d5d" />
-                    <circle className="area-ring" cx={x + w / 2} cy={y + h / 2} r={Math.max(w, h) / 2 + 0.9} fill="none" stroke="#ff5d5d" strokeWidth={0.3} />
+                    <circle className="area-ring" cx={x + w / 2} cy={y + h / 2} r={Math.min(Math.max(w, h) / 2 + 0.9, 3)} fill="none" stroke="#ff5d5d" strokeWidth={0.3} />
                   </>
                 )}
               </g>
@@ -192,4 +199,5 @@ const SCHEMATIC_FILL: Record<string, string> = {
   lake: '#5aa6e0',
   mountain: '#8d8a7e',
   landmark: '#b77fd1',
+  snow: '#e3eef7',
 };

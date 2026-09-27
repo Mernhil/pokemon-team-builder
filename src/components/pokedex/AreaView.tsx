@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { MapPin } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { GEN_GAMES } from '@/domain/generations';
+import type { DexBook } from '@/domain/games';
 import { evolutionMethod, type Encounter, type PokedexData } from '@/domain/pokedex';
 import type { Pokemon } from '@/domain/types';
 import { usePokedexStore } from '@/store/pokedexStore';
@@ -11,7 +11,7 @@ import { RegionMaps } from './RegionMap';
 interface Props {
   species: Pokemon;
   data: PokedexData;
-  gen: number;
+  book: DexBook;
   encounters: Encounter[];
   dex: Dex;
 }
@@ -20,8 +20,8 @@ interface Props {
  * The Pokédex "Area" page: pick a game, see where the Pokémon lives on that game's region map,
  * then the detail per location (method, levels, rate, time of day / season / Swarm…).
  */
-export function AreaView({ species, data, gen, encounters, dex }: Props) {
-  const stored = usePokedexStore((s) => s.game[gen]);
+export function AreaView({ species, data, book, encounters, dex }: Props) {
+  const stored = usePokedexStore((s) => s.game[book.id]);
   const { setGame } = usePokedexStore.getState();
   const gamesWith = new Set(encounters.map((e) => e.game.id));
   const game = data.games.find((g) => g.id === stored) ?? data.games.find((g) => gamesWith.has(g.id)) ?? data.games[0];
@@ -49,7 +49,7 @@ export function AreaView({ species, data, gen, encounters, dex }: Props) {
             type="button"
             role="radio"
             aria-checked={g.id === game.id}
-            onClick={() => setGame(gen, g.id)}
+            onClick={() => setGame(book.id, g.id)}
             className={cn(
               'h-8 rounded-md border px-2.5 text-xs font-semibold transition-colors',
               g.id === game.id ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg',
@@ -62,7 +62,7 @@ export function AreaView({ species, data, gen, encounters, dex }: Props) {
         ))}
       </div>
 
-      <RegionMaps gen={gen} game={game.id} encounters={here} />
+      <RegionMaps game={game.id} encounters={here} />
 
       {here.length ? (
         <Panel title={`Where to find ${species.name}`} actions={<span className="text-[11px] text-muted">{game.name}</span>}>
@@ -104,21 +104,21 @@ export function AreaView({ species, data, gen, encounters, dex }: Props) {
       ) : (
         <Panel title="Area unknown">
           <p className="text-sm text-muted">
-            {gen === 9 && !Object.keys(data.encounters).length
-              ? `PokeAPI has no wild encounter tables for ${GEN_GAMES[9]} yet, so there is no Area data for this generation.`
+            {!Object.keys(data.encounters).length
+              ? `There are no wild encounter tables for ${book.games} yet, so this Pokédex has no Area data.`
               : `${species.name} can't be found in the wild in ${game.name}.`}
             {prevo && (
               <>
                 {' '}
                 Evolve{' '}
-                <button type="button" className="font-semibold text-accent hover:underline" onClick={() => usePokedexStore.getState().select(gen, prevo.id)}>
+                <button type="button" className="font-semibold text-accent hover:underline" onClick={() => usePokedexStore.getState().select(book.id, prevo.id)}>
                   {prevo.name}
                 </button>{' '}
                 ({evolutionMethod(species).toLowerCase()}).
               </>
             )}
             {!prevo && gamesWith.size > 0 && ` It appears in ${data.games.filter((g) => gamesWith.has(g.id)).map((g) => g.name).join(', ')}.`}
-            {!prevo && gamesWith.size === 0 && gen !== 9 && ' It has to be traded in, bred, or received at an event.'}
+            {!prevo && gamesWith.size === 0 && Object.keys(data.encounters).length > 0 && ' It has to be traded in, bred, hatched or received as a gift or event.'}
           </p>
         </Panel>
       )}

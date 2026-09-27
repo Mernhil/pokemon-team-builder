@@ -4,6 +4,7 @@
   "width": 52,
   "height": 36,
   "versions": ["diamond", "pearl", "platinum"],
+  "games": ["diamond", "pearl", "platinum", "brilliant-diamond", "shining-pearl"],
   "land": [
     "M3 17 L7 14 L8 9 L12 4 L17 2 L17 -0 L24 0 L27 3 L33 5 L37 7 L41 9 L42 12 L40 16 L42 20 L46 21 L47 26 L44 29 L38 29 L34 30 L28 32 L24 33 L18 33 L12 31 L8 30 L5 28 L3 24 Z",
     "M42 1 L48 0 L51 3 L50 9 L46 10 L42 8 L41 4 Z",
@@ -13,6 +14,7 @@
   ],
   "places": {
     "twinleaf-town": [7, 27, 2, 2, "town", "Twinleaf Town"],
+    "sinnoh-grand-underground": [1, 31, 7, 3, "cave", "Grand Underground (BDSP)"],
     "lake-verity": [4, 24, 2, 2, "lake", "Lake Verity"],
     "sinnoh-route-201": [7, 25, 7, 1, "route", "Route 201"],
     "sandgem-town": [13, 25, 2, 2, "town", "Sandgem Town"],
@@ -56,6 +58,7 @@
     "sinnoh-route-222": [40, 25, 4, 1, "route", "Route 222"],
     "sunyshore-city": [44, 24, 3, 3, "town", "Sunyshore City"],
     "sinnoh-sea-route-223": [45, 16, 1, 8, "sea", "Route 223"],
+    "sinnoh-route-223": [45, 16, 1, 8, "sea", "Route 223"],
     "sinnoh-victory-road": [44, 14, 2, 2, "cave", "Victory Road"],
     "sinnoh-pokemon-league": [44, 11, 2, 2, "town", "Pokémon League"],
     "sinnoh-route-224": [46, 12, 2, 1, "route", "Route 224"],
@@ -82,13 +85,16 @@
     "lake-acuity": [16, 0, 2, 2, "lake", "Lake Acuity"],
     "sinnoh-route-219": [14, 28, 1, 3, "sea", "Route 219"],
     "sinnoh-sea-route-220": [15, 31, 5, 1, "sea", "Route 220"],
+    "sinnoh-route-220": [15, 31, 5, 1, "sea", "Route 220"],
     "sinnoh-route-221": [20, 30, 5, 1, "route", "Route 221"],
     "sinnoh-sea-route-226": [42, 3, 1, 3, "sea", "Route 226"],
+    "sinnoh-route-226": [42, 3, 1, 3, "sea", "Route 226"],
     "sinnoh-route-225": [43, 2, 3, 1, "route", "Route 225"],
     "sinnoh-route-227": [47, 3, 1, 3, "route", "Route 227"],
     "stark-mountain": [48, 1, 2, 2, "mountain", "Stark Mountain"],
     "sinnoh-route-228": [48, 5, 1, 3, "route", "Route 228"],
     "sinnoh-route-229": [44, 8, 3, 1, "route", "Route 229"],
-    "sinnoh-sea-route-230": [42, 7, 1, 2, "sea", "Route 230"]
+    "sinnoh-sea-route-230": [42, 7, 1, 2, "sea", "Route 230"],
+    "sinnoh-route-230": [42, 7, 1, 2, "sea", "Route 230"]
   }
 }

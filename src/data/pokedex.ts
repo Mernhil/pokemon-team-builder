@@ -3,55 +3,37 @@ import type { LearnData, PokedexData } from '@/domain/pokedex';
 import { SIDE_LOADED_DATA, fetchGenerated } from './generated-loader';
 
 /**
- * Lazy loaders for the Pokédex files (src/data/generated/pokedex-gen<N>.json from `npm run pokedex`,
- * gen<N>-learn.json from `npm run data`). Each generation is its own chunk, fetched on first use.
+ * Lazy loaders for a Pokédex book's files: src/data/generated/pokedex-<book>.json (`npm run pokedex`)
+ * and <book>-learn.json (`npm run data`), where book is gen1…gen9, lgpe, bdsp, pla or za. Each file is
+ * its own chunk, fetched on first use.
  */
-const pokedexLoaders: Record<number, () => Promise<{ default: unknown }>> = {
-  1: () => import('./generated/pokedex-gen1.json'),
-  2: () => import('./generated/pokedex-gen2.json'),
-  3: () => import('./generated/pokedex-gen3.json'),
-  4: () => import('./generated/pokedex-gen4.json'),
-  5: () => import('./generated/pokedex-gen5.json'),
-  6: () => import('./generated/pokedex-gen6.json'),
-  7: () => import('./generated/pokedex-gen7.json'),
-  8: () => import('./generated/pokedex-gen8.json'),
-  9: () => import('./generated/pokedex-gen9.json'),
-};
-const learnLoaders: Record<number, () => Promise<{ default: unknown }>> = {
-  1: () => import('./generated/gen1-learn.json'),
-  2: () => import('./generated/gen2-learn.json'),
-  3: () => import('./generated/gen3-learn.json'),
-  4: () => import('./generated/gen4-learn.json'),
-  5: () => import('./generated/gen5-learn.json'),
-  6: () => import('./generated/gen6-learn.json'),
-  7: () => import('./generated/gen7-learn.json'),
-  8: () => import('./generated/gen8-learn.json'),
-  9: () => import('./generated/gen9-learn.json'),
-};
+const pokedexFiles = import.meta.glob('./generated/pokedex-*.json');
+const learnFiles = import.meta.glob('./generated/*-learn.json');
 
 const cache = new Map<string, Promise<unknown>>();
-function load<T>(key: string, loader: () => Promise<{ default: unknown }>): Promise<T> {
-  let p = cache.get(key);
+function load<T>(name: string, files: Record<string, () => Promise<unknown>>): Promise<T> {
+  let p = cache.get(name);
   if (!p) {
-    p = loader().then((m) => m.default);
-    cache.set(key, p);
+    p = SIDE_LOADED_DATA
+      ? fetchGenerated(name)
+      : (files[`./generated/${name}.json`]?.() ?? Promise.reject(new Error(`No data file ${name}`))).then((m) => (m as { default: unknown }).default);
+    cache.set(name, p);
   }
   return p as Promise<T>;
 }
 
-const side = (name: string) => () => fetchGenerated<unknown>(name).then((d) => ({ default: d }));
-export const loadPokedex = (gen: number) => load<PokedexData>(`dex${gen}`, SIDE_LOADED_DATA ? side(`pokedex-gen${gen}`) : pokedexLoaders[gen]);
-export const loadLearnData = (gen: number) => load<LearnData>(`learn${gen}`, SIDE_LOADED_DATA ? side(`gen${gen}-learn`) : learnLoaders[gen]);
+export const loadPokedex = (book: string) => load<PokedexData>(`pokedex-${book}`, pokedexFiles);
+export const loadLearnData = (book: string) => load<LearnData>(`${book}-learn`, learnFiles);
 
-/** Pokédex text/encounters and learn methods for a generation; null while loading. */
-export function usePokedexData(gen: number): { dex: PokedexData; learn: LearnData } | null {
-  const [state, setState] = useState<{ gen: number; dex: PokedexData; learn: LearnData } | null>(null);
+/** Pokédex text/encounters and learn methods for a book; null while loading. */
+export function usePokedexData(book: string): { dex: PokedexData; learn: LearnData } | null {
+  const [state, setState] = useState<{ book: string; dex: PokedexData; learn: LearnData } | null>(null);
   useEffect(() => {
     let alive = true;
-    Promise.all([loadPokedex(gen), loadLearnData(gen)]).then(([dex, learn]) => alive && setState({ gen, dex, learn }));
+    Promise.all([loadPokedex(book), loadLearnData(book)]).then(([dex, learn]) => alive && setState({ book, dex, learn }));
     return () => {
       alive = false;
     };
-  }, [gen]);
-  return state && state.gen === gen ? state : null;
+  }, [book]);
+  return state && state.book === book ? state : null;
 }

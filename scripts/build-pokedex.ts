@@ -1,6 +1,7 @@
 /**
- * Pokédex pipeline for the Gen 1–9 side: joins each generation dataset (src/data/generated/gen<N>.json,
- * from `npm run data`) with PokeAPI's CSV tables and writes src/data/generated/pokedex-gen<N>.json:
+ * Pokédex pipeline for the Gen 1–9 side: joins each Pokédex "book" — a generation (gen<N>) or one of
+ * the other main-series games (lgpe, bdsp, pla, za) — with PokeAPI's CSV tables and writes
+ * src/data/generated/pokedex-<book>.json:
  *
  *   - Pokédex entries (flavor text) from that generation's games, species category ("Seed Pokémon"),
  *     height, and regional Pokédex numbers (Kanto, Johto, Hoenn, … as each game numbered them)
@@ -9,11 +10,14 @@
  *
  *   npm run pokedex
  *
- * The CSVs are downloaded once into .cache/pokeapi/ (delete it to refresh).
+ * The CSVs are downloaded once into .cache/pokeapi/ (delete it to refresh). Encounters for the games
+ * PokeAPI doesn't cover (BDSP, Legends: Arceus, Scarlet/Violet, Legends: Z-A) or covers only partly
+ * (ORAS, SM/USUM) come from PKHeX instead (scripts/pkhex-encounters.ts).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { pkhexEncounters, type PkhexEncounter } from './pkhex-encounters.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, '..');
@@ -28,27 +32,53 @@ const TABLES = [
   'pokemon', 'pokemon_species_names', 'pokemon_species_flavor_text',
   'encounters', 'encounter_slots', 'encounter_method_prose', 'encounter_condition_values',
   'encounter_condition_value_prose', 'encounter_condition_value_map',
-  'locations', 'location_names', 'location_areas', 'location_area_prose', 'regions',
+  'locations', 'location_names', 'location_areas', 'location_area_prose', 'regions', 'pokemon_forms',
 ] as const;
 type Row = Record<string, string>;
 
-/** Games each generation's Pokédex covers. DLC versions fold into their base game. */
-export const GEN_VERSIONS: Record<number, string[]> = {
-  1: ['red', 'blue', 'yellow'],
-  2: ['gold', 'silver', 'crystal'],
-  3: ['ruby', 'sapphire', 'emerald', 'firered', 'leafgreen'],
-  4: ['diamond', 'pearl', 'platinum', 'heartgold', 'soulsilver'],
-  5: ['black', 'white', 'black-2', 'white-2'],
-  6: ['x', 'y', 'omega-ruby', 'alpha-sapphire'],
-  7: ['sun', 'moon', 'ultra-sun', 'ultra-moon'],
-  8: ['sword', 'shield'],
-  9: ['scarlet', 'violet'],
+/** Pokédex books: the games each one covers (PokeAPI version ids). DLC versions fold into their base game. */
+export const BOOKS: { id: string; generation: number; versions: string[] }[] = [
+  { id: 'gen1', generation: 1, versions: ['red', 'blue', 'yellow'] },
+  { id: 'gen2', generation: 2, versions: ['gold', 'silver', 'crystal'] },
+  { id: 'gen3', generation: 3, versions: ['ruby', 'sapphire', 'emerald', 'firered', 'leafgreen'] },
+  { id: 'gen4', generation: 4, versions: ['diamond', 'pearl', 'platinum', 'heartgold', 'soulsilver'] },
+  { id: 'gen5', generation: 5, versions: ['black', 'white', 'black-2', 'white-2'] },
+  { id: 'gen6', generation: 6, versions: ['x', 'y', 'omega-ruby', 'alpha-sapphire'] },
+  { id: 'gen7', generation: 7, versions: ['sun', 'moon', 'ultra-sun', 'ultra-moon'] },
+  { id: 'gen8', generation: 8, versions: ['sword', 'shield'] },
+  { id: 'gen9', generation: 9, versions: ['scarlet', 'violet'] },
+  { id: 'lgpe', generation: 7, versions: ['lets-go-pikachu', 'lets-go-eevee'] },
+  { id: 'bdsp', generation: 8, versions: ['brilliant-diamond', 'shining-pearl'] },
+  { id: 'pla', generation: 8, versions: ['legends-arceus'] },
+  { id: 'za', generation: 9, versions: ['legends-za'] },
+];
+/** Versions whose wild encounters come from PKHeX rather than PokeAPI. */
+const PKHEX_VERSIONS = new Set([
+  'omega-ruby', 'alpha-sapphire', 'sun', 'moon', 'ultra-sun', 'ultra-moon',
+  'brilliant-diamond', 'shining-pearl', 'legends-arceus', 'scarlet', 'violet', 'legends-za',
+]);
+/**
+ * PokeAPI encounter methods that are ordinary wild slots (grass, water, rods, Rock Smash, Headbutt,
+ * SOS, overworld spawns, Honey Trees…). For PKHeX-sourced games these come from PKHeX; PokeAPI's other
+ * rows (gifts, static encounters, Island Scan, trades, events) are kept.
+ */
+const WILD_METHOD_IDS = new Set([
+  ...Array.from({ length: 17 }, (_, i) => String(i + 1)),
+  ...['22', '23', '24', '27', '28', '29', '31', '33', '34', '37', '38', '39', '40', '41', '42', '43', '44'],
+  ...['55', '56', '57', '58', '59', '60', '61', '62', '63', '64', '65', '66'],
+]);
+/** Region of each PKHeX-sourced version, to match its location names to PokeAPI's. */
+const PKHEX_REGION: Record<string, string> = {
+  'omega-ruby': 'hoenn', 'alpha-sapphire': 'hoenn', sun: 'alola', moon: 'alola', 'ultra-sun': 'alola', 'ultra-moon': 'alola',
+  'brilliant-diamond': 'sinnoh', 'shining-pearl': 'sinnoh', 'legends-arceus': 'hisui', scarlet: 'paldea', violet: 'paldea',
+  'legends-za': 'kalos',
 };
 const DLC_OF: Record<string, string> = {
   'the-isle-of-armor-sword': 'sword', 'the-crown-tundra-sword': 'sword',
   'the-isle-of-armor-shield': 'shield', 'the-crown-tundra-shield': 'shield',
   'the-teal-mask-scarlet': 'scarlet', 'the-indigo-disk-scarlet': 'scarlet',
   'the-teal-mask-violet': 'violet', 'the-indigo-disk-violet': 'violet',
+  'mega-dimension': 'legends-za',
 };
 /** Friendlier names for regional Pokédexes. */
 const DEX_LABELS: Record<string, string> = {
@@ -57,6 +87,7 @@ const DEX_LABELS: Record<string, string> = {
   'kalos-central': 'Central Kalos', 'kalos-coastal': 'Coastal Kalos', 'kalos-mountain': 'Mountain Kalos',
   'original-alola': 'Alola (SM)', 'updated-alola': 'Alola (USUM)', galar: 'Galar', 'isle-of-armor': 'Isle of Armor',
   'crown-tundra': 'Crown Tundra', paldea: 'Paldea', kitakami: 'Kitakami', blueberry: 'Blueberry',
+  'letsgo-kanto': "Kanto (Let's Go)", hisui: 'Hisui', 'lumiose-city': 'Lumiose City', hyperspace: 'Hyperspace Lumiose',
 };
 /** Island sub-dexes duplicate the Alola dex; skip them. */
 const SKIP_DEX = /^(original|updated)-(melemele|akala|ulaula|poni)$/;
@@ -144,8 +175,35 @@ async function main() {
   const defaultPokemon = new Map(T.pokemon.filter((r) => r.is_default === '1').map((r) => [Number(r.species_id), r]));
   const versionOrder = (id: string) => Number(versions.get(id)?.id ?? 0);
 
-  for (let gen = 1; gen <= 9; gen++) {
-    const data = JSON.parse(readFileSync(resolve(OUT, `gen${gen}.json`), 'utf8')) as {
+  // PKHeX (species, form) → PokeAPI pokemon: forms in form_order, battle-only ones (Gigantamax…) excluded.
+  const formPokemon = new Map<string, string>();
+  {
+    const bySpecies = new Map<string, Row[]>();
+    for (const f of T.pokemon_forms) {
+      if (f.is_battle_only === '1') continue;
+      const sp = pokemon.get(f.pokemon_id)?.species_id;
+      if (!sp) continue;
+      bySpecies.set(sp, [...(bySpecies.get(sp) ?? []), f]);
+    }
+    for (const forms of bySpecies.values())
+      forms.sort((a, b) => Number(a.form_order) - Number(b.form_order)).forEach((f, i) => formPokemon.set(`${pokemon.get(f.pokemon_id)!.species_id}:${i}`, f.pokemon_id));
+  }
+  // PKHeX location names → PokeAPI location identifiers, per region ("Mount Coronet" = "Mt. Coronet").
+  const norm = (n: string) => toID(n.replace(/^Mount /, 'Mt. '));
+  const locByName = new Map<string, string>();
+  for (const l of T.locations) {
+    const name = locationNames.get(l.id)?.name;
+    const key = `${regions.get(l.region_id)}:${norm(name ?? '')}`;
+    // Sub-locations ("ten-carat-hill--farthest-hollow") share their parent's name; keep the parent.
+    if (name && (!locByName.has(key) || locByName.get(key)!.includes('--'))) locByName.set(key, l.identifier);
+  }
+  const kebab = (n: string) =>
+    n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const pkhex = pkhexEncounters();
+
+  for (const book of BOOKS) {
+    const gen = book.generation;
+    const data = JSON.parse(readFileSync(resolve(OUT, `${book.id}.json`), 'utf8')) as {
       species: Record<string, { id: string; num: number; forme?: string; isMega: boolean; baseSpecies: string }>;
     };
     const species = Object.values(data.species).filter((s) => !s.isMega);
@@ -153,7 +211,7 @@ async function main() {
     const baseByNum = new Map<number, string>();
     for (const s of species) if (!s.forme && !baseByNum.has(s.num)) baseByNum.set(s.num, s.id);
 
-    const gameIds = GEN_VERSIONS[gen];
+    const gameIds = book.versions;
     const versionIdOf = new Map(T.versions.map((r) => [r.identifier, r.id]));
     const gameVersionIds = new Set(gameIds.map((v) => versionIdOf.get(v)!));
     const groups = new Set(gameIds.map((v) => versionGroupOf.get(v)!));
@@ -162,7 +220,7 @@ async function main() {
 
     // ---- Regional Pokédexes used by this generation's games ----
     const dexIds = [...new Set(T.pokedex_version_groups.filter((r) => groups.has(r.version_group_id)).map((r) => r.pokedex_id))]
-      .filter((id) => !SKIP_DEX.test(pokedexes.get(id)!.identifier) && pokedexes.get(id)!.identifier !== 'letsgo-kanto')
+      .filter((id) => !SKIP_DEX.test(pokedexes.get(id)!.identifier) && (book.id === 'lgpe') === (pokedexes.get(id)!.identifier === 'letsgo-kanto'))
       .sort((a, b) => Number(a) - Number(b));
     const dexes = dexIds.map((id) => ({ id: pokedexes.get(id)!.identifier, name: DEX_LABELS[pokedexes.get(id)!.identifier] ?? pokedexes.get(id)!.identifier }));
     const dexNums = new Map<number, Record<string, number>>();
@@ -226,6 +284,7 @@ async function main() {
       const vid = e.version_id;
       const vname = DLC_OF[versions.get(vid)!.identifier] ?? versions.get(vid)!.identifier;
       if (!gameIndex.has(vname)) continue;
+      if (PKHEX_VERSIONS.has(vname) && WILD_METHOD_IDS.has(slots.get(e.encounter_slot_id)!.encounter_method_id)) continue;
       const sid = pokeapiToId(e.pokemon_id);
       if (!sid) continue;
       const area = areas.get(e.location_area_id)!;
@@ -260,6 +319,28 @@ async function main() {
         agg.set(key, { species: sid, game: gameIndex.get(vname)!, area: areaKey, method, conds, min: Number(e.min_level), max: Number(e.max_level), rate });
       }
     }
+    // PKHeX-sourced games: same aggregation, keyed by location name.
+    for (const v of gameIds.filter((g) => PKHEX_VERSIONS.has(g))) {
+      for (const e of pkhex.get(v) ?? ([] as PkhexEncounter[])) {
+        const pid = formPokemon.get(`${e.species}:${e.form}`);
+        const sid = (pid && pokeapiToId(pid)) || baseByNum.get(e.species);
+        if (!sid) continue;
+        // "Grand Underground (Spacious Cave)" → Grand Underground, sub-area Spacious Cave.
+        const ug = e.location.match(/^(Grand Underground) \((.+)\)$/);
+        const name = ug ? ug[1] : e.location;
+        const region = PKHEX_REGION[v];
+        const loc = locByName.get(`${region}:${norm(name)}`) ?? `${region}-${kebab(name)}`;
+        const areaKey = `pk:${loc}:${ug?.[2] ?? ''}`;
+        if (!areaTable.has(areaKey)) areaTable.set(areaKey, { loc, name, region, sub: ug?.[2] });
+        const key = [sid, gameIndex.get(v), areaKey, e.method, e.conditions.join('|')].join('~');
+        const cur = agg.get(key);
+        if (cur) {
+          cur.min = Math.min(cur.min, e.min);
+          cur.max = Math.max(cur.max, e.max);
+        } else agg.set(key, { species: sid, game: gameIndex.get(v)!, area: areaKey, method: e.method, conds: e.conditions, min: e.min, max: e.max, rate: 0 });
+      }
+    }
+
     // Compact tables: areas, methods and conditions are referenced by index.
     const areaKeys = [...new Set([...agg.values()].map((a) => a.area))];
     const areaIdx = new Map(areaKeys.map((k, i) => [k, i]));
@@ -279,6 +360,7 @@ async function main() {
     }
 
     const out = {
+      book: book.id,
       generation: gen,
       games,
       dexes,
@@ -288,9 +370,9 @@ async function main() {
       conditions,
       encounters,
     };
-    writeFileSync(resolve(OUT, `pokedex-gen${gen}.json`), JSON.stringify(out));
+    writeFileSync(resolve(OUT, `pokedex-${book.id}.json`), JSON.stringify(out));
     console.log(
-      `wrote pokedex-gen${gen}.json: ${Object.keys(entries).length} entries, ${dexes.map((d) => d.name).join(' / ')}, ` +
+      `wrote pokedex-${book.id}.json: ${Object.keys(entries).length} entries, ${dexes.map((d) => d.name).join(' / ')}, ` +
         `${Object.keys(encounters).length} species with wild encounters in ${areaKeys.length} areas`,
     );
   }

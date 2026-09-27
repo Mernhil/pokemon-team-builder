@@ -167,11 +167,11 @@ describe('Pokédex Area maps', () => {
   /** Locations without a fixed spot on the region map: roaming, event islands, Mirage spots, Ultra Space… */
   const OFF_MAP = /^(roaming-|unknown-|.*-pokemart$|.*-pokecenter$)|^(terra-cave|marine-cave|navel-rock|birth-island|faraway-island|southern-island|crescent-isle|trackless-forest|nameless-cavern|soaring-in-the-sky|pathless-plain|fabled-cave|gnarled-den|mirage-spot-.*|new-mauville|ultra-.*|team-flare-secret-hq)$/;
 
-  it.each([1, 2, 3, 4, 5, 6, 7, 8])('gen %i: every wild location is on its game’s map', async (g) => {
+  it.each(['gen1', 'gen2', 'gen3', 'gen4', 'gen5', 'gen6', 'gen7', 'gen8', 'gen9', 'lgpe', 'bdsp', 'pla', 'za'])('%s: every wild location is on its game’s map', async (g) => {
     const { default: maps } = (await import('@/data/generated/maps.json')) as unknown as {
       default: { maps: Record<string, { places: Record<string, unknown> }>; games: Record<string, string[]> };
     };
-    const { default: dex } = (await import(`@/data/generated/pokedex-gen${g}.json`)) as {
+    const { default: dex } = (await import(`@/data/generated/pokedex-${g}.json`)) as {
       default: { games: { id: string }[]; areas: { loc: string }[]; encounters: Record<string, number[][]> };
     };
     const missing = new Set<string>();

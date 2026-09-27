@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { ChevronRight, Plus } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { getFormat } from '@/domain/formats';
-import { GEN_GAMES, genInfo, mechanics } from '@/domain/generations';
+import { datasetMechanics, type DexBook } from '@/domain/games';
 import {
   LEARN_METHOD_LABELS,
   encountersOf,
@@ -28,7 +28,7 @@ interface Props {
   dex: Dex;
   data: PokedexData;
   learn: LearnData;
-  gen: number;
+  book: DexBook;
   format: FormatRules;
   onSelect: (id: string) => void;
 }
@@ -40,11 +40,11 @@ const TABS: { id: PokedexTab; label: string }[] = [
 ];
 
 export function PokedexDetail(props: Props) {
-  const { species, gen, data } = props;
+  const { species, book, data } = props;
   const tab = usePokedexStore((s) => s.tab);
   const { setTab } = usePokedexStore.getState();
   const entry = data.entries[species.num];
-  const spriteSet = `gen${gen}` as SpriteSetId;
+  const spriteSet = book.spriteSet;
   const regional = data.dexes.filter((d) => entry?.dex?.[d.id] !== undefined);
 
   return (
@@ -74,7 +74,7 @@ export function PokedexDetail(props: Props) {
               ))}
             </dl>
           </div>
-          <AddToTeam species={species} dex={props.dex} gen={gen} />
+          <AddToTeam species={species} dex={props.dex} book={book} />
         </div>
         <nav className="flex border-t border-border" aria-label="Pokédex sections">
           {TABS.map((t) => (
@@ -97,7 +97,7 @@ export function PokedexDetail(props: Props) {
 
       {tab === 'info' && <InfoTab {...props} />}
       {tab === 'moves' && <MovesTab {...props} />}
-      {tab === 'area' && <AreaView species={species} data={data} gen={gen} encounters={encountersOf(data, species.id)} dex={props.dex} />}
+      {tab === 'area' && <AreaView species={species} data={data} book={book} encounters={encountersOf(data, species.id)} dex={props.dex} />}
     </div>
   );
 }
@@ -112,11 +112,11 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /** "Add to team" when the active team plays this generation. */
-function AddToTeam({ species, dex, gen }: { species: Pokemon; dex: Dex; gen: number }) {
+function AddToTeam({ species, dex, book }: { species: Pokemon; dex: Dex; book: DexBook }) {
   const team = useActiveTeam();
   const format = getFormat(team.formatId);
   const free = team.slots.findIndex((s) => !s);
-  if (format.datasetId !== `gen${gen}`) return null;
+  if (format.datasetId !== book.id) return null;
   return (
     <Button
       variant="primary"
@@ -140,9 +140,10 @@ function AddToTeam({ species, dex, gen }: { species: Pokemon; dex: Dex; gen: num
 // Info
 // ---------------------------------------------------------------------------
 
-function InfoTab({ species, dex, data, gen, onSelect }: Props) {
+function InfoTab({ species, dex, data, book, onSelect }: Props) {
+  const gen = book.gen;
   const entry = data.entries[species.num];
-  const mech = mechanics(gen);
+  const mech = datasetMechanics(book.id, gen);
   const gameName = (id: string) => data.games.find((g) => g.id === id)?.name ?? id;
   const tree = useMemo(() => evolutionTree((id) => dex.species(id), species.id), [dex, species.id]);
   const forms = dex.allSpecies().filter((s) => s.num === species.num && s.id !== species.id);
@@ -171,7 +172,7 @@ function InfoTab({ species, dex, data, gen, onSelect }: Props) {
           <p className="text-sm leading-relaxed">
             <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">{entry.fallback.game}</span>
             {entry.fallback.text}
-            <span className="mt-1 block text-[11px] text-muted">No {GEN_GAMES[gen].replace(/ \(.*\)$/, '')} entry in PokeAPI yet; showing the latest earlier game.</span>
+            <span className="mt-1 block text-[11px] text-muted">No {book.games.replace(/ \(.*\)$/, '')} entry in PokeAPI yet; showing the latest earlier game.</span>
           </p>
         ) : (
           <p className="text-sm text-muted">No entry.</p>
@@ -216,9 +217,9 @@ function InfoTab({ species, dex, data, gen, onSelect }: Props) {
 
       <Panel title="Evolution" className="xl:col-span-2">
         {tree && (tree.children.length || tree.species.id !== species.id) ? (
-          <EvoTree node={tree} current={species.id} gen={gen} onSelect={onSelect} />
+          <EvoTree node={tree} current={species.id} spriteSet={book.spriteSet} onSelect={onSelect} />
         ) : (
-          <p className="text-sm text-muted">Does not evolve in Gen {gen}.</p>
+          <p className="text-sm text-muted">Does not evolve in {book.game ? book.label : `Gen ${gen}`}.</p>
         )}
         {forms.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
@@ -232,7 +233,7 @@ function InfoTab({ species, dex, data, gen, onSelect }: Props) {
                 className="flex items-center gap-1 rounded-lg border border-border px-1.5 py-0.5 text-xs hover:border-muted/60 disabled:cursor-default"
                 title={f.isMega ? `${f.name} (hold ${dex.item(f.requiredItem)?.name ?? 'its Mega Stone'})` : f.name}
               >
-                <Sprite speciesId={f.id} name={f.name} types={f.types} set={`gen${gen}` as SpriteSetId} size={28} />
+                <Sprite speciesId={f.id} name={f.name} types={f.types} set={book.spriteSet} size={28} />
                 {f.forme ?? f.name}
               </button>
             ))}
@@ -269,7 +270,7 @@ function TypeDefenses({ species, dex }: { species: Pokemon; dex: Dex }) {
   );
 }
 
-function EvoTree({ node, current, gen, onSelect }: { node: EvoNode; current: string; gen: number; onSelect: (id: string) => void }) {
+function EvoTree({ node, current, spriteSet, onSelect }: { node: EvoNode; current: string; spriteSet: SpriteSetId; onSelect: (id: string) => void }) {
   const sp = node.species;
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -278,7 +279,7 @@ function EvoTree({ node, current, gen, onSelect }: { node: EvoNode; current: str
         onClick={() => onSelect(sp.id)}
         className={cn('flex flex-col items-center rounded-lg border px-2 py-1 text-xs', sp.id === current ? 'border-accent bg-accent/10' : 'border-border hover:border-muted/60')}
       >
-        <Sprite speciesId={sp.id} name={sp.name} types={sp.types} set={`gen${gen}` as SpriteSetId} size={56} />
+        <Sprite speciesId={sp.id} name={sp.name} types={sp.types} set={spriteSet} size={56} />
         <span className="font-semibold">{sp.name}</span>
       </button>
       {node.children.length > 0 && (
@@ -289,7 +290,7 @@ function EvoTree({ node, current, gen, onSelect }: { node: EvoNode; current: str
                 <ChevronRight size={14} className="shrink-0" />
                 {c.how}
               </span>
-              <EvoTree node={c} current={current} gen={gen} onSelect={onSelect} />
+              <EvoTree node={c} current={current} spriteSet={spriteSet} onSelect={onSelect} />
             </div>
           ))}
         </div>
@@ -304,7 +305,8 @@ function EvoTree({ node, current, gen, onSelect }: { node: EvoNode; current: str
 
 const METHOD_ORDER: LearnMethod[] = ['level', 'machine', 'tutor', 'egg', 'event', 'other'];
 
-function MovesTab({ species, dex, learn, gen }: Props) {
+function MovesTab({ species, dex, learn, book }: Props) {
+  const gen = book.gen;
   const rows = useMemo(() => learnedMoves(learn, species.id), [learn, species.id]);
   const own = new Set(rows.map((r) => r.moveId));
   const fromPrevo = (dex.data.learnsets[species.id] ?? []).filter((m) => !own.has(m)).map((m) => dex.move(m)).filter((m): m is Move => !!m);
@@ -322,21 +324,21 @@ function MovesTab({ species, dex, learn, gen }: Props) {
     <div className="space-y-3">
       {byMethod.map((g) => (
         <Panel key={g.method} title={LEARN_METHOD_LABELS[g.method]} actions={<span className="text-[11px] text-muted">{g.rows.length}</span>}>
-          <MoveTable gen={gen} rows={g.rows.map((r) => ({ move: r.move, lead: g.method === 'level' ? (r.levels!.map((l) => (l <= 1 ? '—' : l)).join(' / ')) : undefined }))} lead={g.method === 'level' ? 'Lv' : undefined} />
+          <MoveTable book={book} rows={g.rows.map((r) => ({ move: r.move, lead: g.method === 'level' ? (r.levels!.map((l) => (l <= 1 ? '—' : l)).join(' / ')) : undefined }))} lead={g.method === 'level' ? 'Lv' : undefined} />
         </Panel>
       ))}
       {fromPrevo.length > 0 && (
         <Panel title="Via pre-evolutions" actions={<span className="text-[11px] text-muted">learned before evolving</span>}>
-          <MoveTable gen={gen} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
+          <MoveTable book={book} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
         </Panel>
       )}
-      <p className="text-center text-[11px] text-muted">Learnsets for {GEN_GAMES[gen]} · move data as of Gen {gen} ({genInfo(gen).region})</p>
+      <p className="text-center text-[11px] text-muted">Learnsets for {book.games} · move data as of Gen {gen} ({book.region})</p>
     </div>
   );
 }
 
-function MoveTable({ rows, lead, gen }: { rows: { move: Move; lead?: string }[]; lead?: string; gen: number }) {
-  const split = mechanics(gen).moveCategorySplit;
+function MoveTable({ rows, lead, book }: { rows: { move: Move; lead?: string }[]; lead?: string; book: DexBook }) {
+  const split = datasetMechanics(book.id, book.gen).moveCategorySplit;
   return (
     <div className="-mx-1 overflow-x-auto">
       <table className="w-full text-sm">
