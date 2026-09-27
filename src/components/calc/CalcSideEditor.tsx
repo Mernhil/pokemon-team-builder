@@ -277,6 +277,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                     onIV={format.fixedIVs ? undefined : (stat, v) => patchSet(role, withSpreadValue(set, sys, 'ivs', stat, v))}
                     onFriendship={sys.kind === 'lgpe-av' ? (friendship) => patchSet(role, { friendship }) : undefined}
                     onNature={(nature) => patchSet(role, { nature })}
+                    megaActive={side.cond.mega}
+                    onMegaActive={(mega) => patchCond(role, { mega })}
                   />
                 </div>
               </details>

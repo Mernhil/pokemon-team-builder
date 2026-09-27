@@ -1,6 +1,7 @@
 import { toID, type Dex } from '@/data/dex';
 import { formatMechanics } from './games';
 import { calcStats, evToStatExp, statExpToEV } from './stats';
+import { sanitizeTeam } from './sanitize';
 import { createSet, createTeam, emptySlots } from './team';
 import {
   STAT_IDS,
@@ -295,13 +296,14 @@ export function encodeShareString(team: Team): string {
 
 export function decodeShareString(str: string, dex: Dex, format: FormatRules): Team {
   const raw = str.trim().replace(/^PTB1\./, '');
-  const p = JSON.parse(b64url.dec(raw)) as { n: string; f: string; s: (CompactSet | 0)[] };
+  const p = JSON.parse(b64url.dec(raw)) as { n: string; f: string; s: (CompactSet | 0)[] } | null;
+  if (!p || typeof p !== 'object' || !Array.isArray(p.s)) throw new Error('Not a valid share code.');
   const team = createTeam(format, p.n);
   team.formatId = p.f;
   const toTable = (a?: number[], d = 0): StatTable =>
     Object.fromEntries(STAT_IDS.map((k, i) => [k, a?.[i] ?? d])) as StatTable;
   team.slots = p.s.slice(0, 6).map((c) => {
-    if (!c) return null;
+    if (!Array.isArray(c)) return null;
     const set = createSet(dex, c[0], format);
     set.abilityId = c[1] ?? set.abilityId;
     set.itemId = c[2];
@@ -316,7 +318,7 @@ export function decodeShareString(str: string, dex: Dex, format: FormatRules): T
     return set;
   }) as TeamSlots;
   while (team.slots.length < 6) (team.slots as (PokemonSet | null)[]).push(null);
-  return team;
+  return sanitizeTeam(team)!;
 }
 
 // ===========================================================================
@@ -334,7 +336,7 @@ export const exportBackup = (teams: Team[]): string =>
   JSON.stringify({ app: 'pokemon-team-builder', version: 1, exportedAt: new Date().toISOString(), teams } satisfies Backup, null, 2);
 
 export function parseBackup(json: string): Team[] {
-  const data = JSON.parse(json) as Partial<Backup>;
-  if (data.app !== 'pokemon-team-builder' || !Array.isArray(data.teams)) throw new Error('Not a Team Builder backup file.');
-  return data.teams.filter((t) => t && typeof t.id === 'string' && Array.isArray(t.slots) && t.slots.length === 6);
+  const data = JSON.parse(json) as Partial<Backup> | null;
+  if (!data || data.app !== 'pokemon-team-builder' || !Array.isArray(data.teams)) throw new Error('Not a Team Builder backup file.');
+  return data.teams.map(sanitizeTeam).filter((t): t is Team => !!t);
 }

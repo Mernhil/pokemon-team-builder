@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { ChevronRight, Crosshair, Swords, Zap } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
+import type { FieldConditions, SideConditions } from '@/domain/battle/conditions';
 import { effectiveStats, stageMultiplier, type StatLine } from '@/domain/battle/effective';
 import { calcStats } from '@/domain/stats';
 import { STAT_LABELS, type FormatRules, type Pokemon, type PokemonSet } from '@/domain/types';
 import { gameInfo } from '@/domain/games';
 import { useCalcStore } from '@/store/calcStore';
-import { useTeamStore, type SlotBattleState } from '@/store/teamStore';
+import { defaultSlotBattle, useSlotBattle, useTeamStore } from '@/store/teamStore';
 import { FieldControls, ModChip, SideControls, Toggle } from '../battle/Controls';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
@@ -42,11 +42,8 @@ export function AdvancedDetails(props: Props) {
 function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
   const [open, setOpen] = useState(true);
   const mega = dex.megaFor(species.id, set.itemId);
-  const saved = useTeamStore((s) => s.battle[set.uid]);
-  const setBattle = useTeamStore((s) => s.setBattle);
   const setView = useTeamStore((s) => s.setView);
-  const state: SlotBattleState = saved ?? { side: defaultSide(!!mega), field: defaultField(), crit: false };
-  const update = (p: Partial<SlotBattleState>) => setBattle(set.uid, { ...state, ...p });
+  const [state, update] = useSlotBattle(set.uid, !!mega);
   const patchSide = (p: Partial<SideConditions>) => update({ side: { ...state.side, ...p } });
   const patchField = (p: Partial<FieldConditions>) => update({ field: { ...state.field, ...p } });
 
@@ -122,7 +119,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                   <Crosshair size={12} /> Critical hits
                 </span>
               </Toggle>
-              <button type="button" className="text-[11px] text-muted underline-offset-2 hover:underline" onClick={() => update({ side: defaultSide(!!mega), field: defaultField(), crit: false })}>
+              <button type="button" className="text-[11px] text-muted underline-offset-2 hover:underline" onClick={() => update(defaultSlotBattle(!!mega))}>
                 Reset conditions
               </button>
             </div>
