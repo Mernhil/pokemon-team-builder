@@ -283,11 +283,13 @@ async function main() {
   }
 
   // ---------- Moves ----------
+  const SPREAD_TARGETS = new Set(['allAdjacent', 'allAdjacentFoes', 'all', 'foeSide', 'allySide']);
   const moveIds = new Set<string>();
   Object.values(learnsets).forEach((ms) => ms.forEach((m) => moveIds.add(m)));
   const moves: Record<string, unknown> = {};
   for (const id of [...moveIds].sort()) {
     const m = base.moves.get(id);
+    const secondaries = m.secondaries ?? (m.secondary ? [m.secondary] : []);
     moves[id] = {
       id,
       name: m.name,
@@ -306,6 +308,21 @@ async function main() {
       recoil: !!(m.recoil || m.hasCrashDamage || m.mindBlownRecoil) || undefined,
       secondary: !!(m.secondary || m.secondaries?.length) || undefined,
       multihit: m.multihit ?? undefined,
+      boosts: m.boosts ?? undefined,
+      self: m.self?.boosts ? { boosts: m.self.boosts } : undefined,
+      status: m.status ?? undefined,
+      volatileStatus: m.volatileStatus ?? undefined,
+      secondaries: secondaries.length
+        ? secondaries.map((s) => ({
+            chance: s.chance ?? 100,
+            status: s.status || undefined,
+            volatileStatus: s.volatileStatus || undefined,
+            boosts: s.boosts ?? undefined,
+            self: s.self?.boosts ? { boosts: s.self.boosts } : undefined,
+          }))
+        : undefined,
+      spread: SPREAD_TARGETS.has(m.target) || undefined,
+      breaksProtect: m.breaksProtect || undefined,
       legalIn: regs.filter((r) => r.moves.has(id)).map((r) => r.meta.id),
     };
   }

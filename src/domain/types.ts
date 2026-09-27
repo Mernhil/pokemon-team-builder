@@ -63,6 +63,22 @@ export interface Pokemon {
 
 export type MoveCategory = 'Physical' | 'Special' | 'Status';
 
+/** Non-volatile status a move can inflict. */
+export type StatusId = 'brn' | 'par' | 'psn' | 'tox' | 'slp' | 'frz';
+
+export type MoveBoosts = Partial<Record<'atk' | 'def' | 'spa' | 'spd' | 'spe' | 'accuracy' | 'evasion', number>>;
+
+export interface MoveSecondaryEffect {
+  /** 1–100; 100 = guaranteed (Showdown still models it as a "secondary"). */
+  chance: number;
+  status?: StatusId;
+  volatileStatus?: string;
+  /** Stat changes applied to the move's target. */
+  boosts?: MoveBoosts;
+  /** Stat changes applied to the user instead of the target. */
+  self?: { boosts?: MoveBoosts };
+}
+
 export interface Move {
   id: string;
   name: string;
@@ -82,6 +98,20 @@ export interface Move {
   /** Has a secondary effect (Sheer Force). */
   secondary?: boolean;
   multihit?: number | [number, number];
+  /** Guaranteed stat changes applied to the move's target (the user, for target === 'self'). */
+  boosts?: MoveBoosts;
+  /** Guaranteed stat changes applied to the user on a move that targets something else (Draco Meteor, Superpower). */
+  self?: { boosts?: MoveBoosts };
+  /** Guaranteed status inflicted on the target (Will-O-Wisp, Thunder Wave). */
+  status?: StatusId;
+  /** Guaranteed volatile condition set by the move itself (Protect, Confuse Ray's target volatile, …). */
+  volatileStatus?: string;
+  /** Chance-based secondary effects (Showdown's secondary + secondaries, merged). */
+  secondaries?: MoveSecondaryEffect[];
+  /** Hits every adjacent Pokémon or the whole opposing/allied side (allAdjacent, allAdjacentFoes, all, foeSide, allySide). */
+  spread?: boolean;
+  /** Ignores Protect / Detect / Wide Guard (Feint, Hyperspace Fury, …). */
+  breaksProtect?: boolean;
   /** Regulation ids in which this move is usable. */
   legalIn: string[];
 }

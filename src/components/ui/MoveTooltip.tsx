@@ -1,0 +1,132 @@
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { Shield, Swords, Zap } from 'lucide-react';
+import { formatMoveEffect } from '@/domain/moveEffect';
+import type { Move } from '@/domain/types';
+import { TypeBadge, cn } from './primitives';
+
+const CATEGORY_ICON = { Physical: Swords, Special: Zap, Status: Shield } as const;
+
+const FLAG_TAGS: { key: keyof Move['flags']; label: string }[] = [
+  { key: 'sound', label: 'Sound' },
+  { key: 'punch', label: 'Punch' },
+  { key: 'bite', label: 'Bite' },
+  { key: 'slicing', label: 'Slicing' },
+  { key: 'pulse', label: 'Pulse' },
+];
+
+const WIDTH = 272;
+const GAP = 8;
+
+/**
+ * Wraps a trigger element (a type badge, a move name, …) and shows a Champions-style move info
+ * card on hover (~150 ms), keyboard focus, or long-press on touch. Pass `move: undefined` to make
+ * this a no-op wrapper (e.g. an empty move slot).
+ */
+export function MoveTooltip({ move, children, className }: { move: Move | undefined; children: ReactNode; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number; above: boolean } | null>(null);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const openTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pressTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const scheduleOpen = (delay: number) => {
+    clearTimeout(openTimer.current);
+    openTimer.current = setTimeout(() => setOpen(true), delay);
+  };
+  const close = () => {
+    clearTimeout(openTimer.current);
+    clearTimeout(pressTimer.current);
+    setOpen(false);
+  };
+
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    let left = rect.left;
+    if (left + WIDTH > window.innerWidth - GAP) left = window.innerWidth - WIDTH - GAP;
+    if (left < GAP) left = GAP;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const above = spaceBelow < 240 && rect.top > spaceBelow;
+    setPos({ top: above ? rect.top - GAP : rect.bottom + GAP, left, above });
+  }, [open]);
+
+  if (!move) return <>{children}</>;
+
+  const tags = [
+    ...(move.contact ? ['Contact'] : []),
+    ...FLAG_TAGS.filter((f) => move.flags[f.key]).map((f) => f.label),
+    ...(move.spread ? ['Spread'] : []),
+    ...(move.breaksProtect ? ['Bypasses Protect'] : []),
+  ];
+  const CategoryIcon = CATEGORY_ICON[move.category];
+
+  return (
+    <span
+      ref={anchorRef}
+      tabIndex={0}
+      className={cn('inline-flex cursor-help outline-none', className)}
+      onMouseEnter={() => scheduleOpen(150)}
+      onMouseLeave={close}
+      onFocus={() => setOpen(true)}
+      onBlur={close}
+      onTouchStart={() => {
+        pressTimer.current = setTimeout(() => setOpen(true), 500);
+      }}
+      onTouchEnd={() => clearTimeout(pressTimer.current)}
+      onTouchMove={() => clearTimeout(pressTimer.current)}
+    >
+      {children}
+      {open &&
+        pos &&
+        createPortal(
+          <div
+            role="tooltip"
+            className="fixed z-50 rounded-xl border border-border bg-surface p-3 shadow-2xl"
+            style={{ top: pos.top, left: pos.left, width: WIDTH, transform: pos.above ? 'translateY(-100%)' : undefined }}
+          >
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <TypeBadge type={move.type} size="xs" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                <CategoryIcon size={11} /> {move.category}
+              </span>
+              {move.priority !== 0 && (
+                <span
+                  className={cn(
+                    'ml-auto rounded px-1.5 py-0.5 text-[10px] font-bold',
+                    move.priority > 0 ? 'bg-good/15 text-good' : 'bg-bad/15 text-bad',
+                  )}
+                >
+                  Priority {move.priority > 0 ? '+' : ''}
+                  {move.priority}
+                </span>
+              )}
+            </div>
+            <div className="mb-1.5 text-sm font-semibold text-fg">{move.name}</div>
+            <div className="mb-1.5 flex items-center gap-3 font-mono text-[11px] text-muted">
+              <span>
+                <b className="text-fg">{move.basePower || '—'}</b> BP
+              </span>
+              <span>
+                <b className="text-fg">{move.accuracy === true ? '—' : `${move.accuracy}%`}</b> Acc
+              </span>
+              <span>
+                <b className="text-fg">{move.pp}</b> PP
+              </span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-fg">{formatMoveEffect(move)}</p>
+            {tags.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {tags.map((label) => (
+                  <span key={label} className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[9px] font-medium text-muted">
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>,
+          document.body,
+        )}
+    </span>
+  );
+}

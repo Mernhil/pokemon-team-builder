@@ -7,6 +7,7 @@ import { useTeamStore } from '@/store/teamStore';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { ItemSprite } from '../ui/ItemSprite';
+import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
 import { Button, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
 import { AdvancedDetails } from './AdvancedDetails';
@@ -194,7 +195,11 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
                     invalid={!!m && badMove(m)}
                     onChange={(id) => setMove(slot, mi, id)}
                   />
-                  {mv && <TypeBadge type={mv.type} size="xs" />}
+                  {mv && (
+                    <MoveTooltip move={mv}>
+                      <TypeBadge type={mv.type} size="xs" />
+                    </MoveTooltip>
+                  )}
                 </div>
               );
             })}

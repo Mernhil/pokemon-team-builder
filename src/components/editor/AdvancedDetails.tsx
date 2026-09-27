@@ -9,6 +9,7 @@ import { useCalcStore } from '@/store/calcStore';
 import { useTeamStore, type SlotBattleState } from '@/store/teamStore';
 import { FieldControls, ModChip, SideControls, Toggle } from '../battle/Controls';
 import { ItemSprite } from '../ui/ItemSprite';
+import { MoveTooltip } from '../ui/MoveTooltip';
 import { Button, Panel, STAT_COLOR_VAR, TypeBadge, cn } from '../ui/primitives';
 
 interface Props {
@@ -167,7 +168,9 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
                   {result.moves.map((m) => (
                     <li key={m.moveId} className="rounded-lg bg-surface-2 px-2.5 py-2">
                       <div className="flex items-center gap-2">
-                        <TypeBadge type={m.type} size="xs" />
+                        <MoveTooltip move={dex.move(m.moveId)}>
+                          <TypeBadge type={m.type} size="xs" />
+                        </MoveTooltip>
                         <span className="min-w-0 flex-1 truncate text-sm font-medium">{m.name}</span>
                         {m.category !== 'Status' && (
                           <span className="font-mono text-xs tabular-nums">

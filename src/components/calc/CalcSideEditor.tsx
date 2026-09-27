@@ -11,6 +11,7 @@ import { useItemOptions, useMoveOptions } from '../editor/options';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { ItemSprite } from '../ui/ItemSprite';
+import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
 import { Field, Panel, Select, TypeBadge, cn } from '../ui/primitives';
 import { setSpreadValue } from '@/domain/stats';
@@ -194,6 +195,11 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                         patchSet(role, { moves });
                       }}
                     />
+                    {m && dex.move(m) && (
+                      <MoveTooltip move={dex.move(m)}>
+                        <TypeBadge type={dex.move(m)!.type} size="xs" />
+                      </MoveTooltip>
+                    )}
                     <button
                       type="button"
                       aria-pressed={side.crits[i]}

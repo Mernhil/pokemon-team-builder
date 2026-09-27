@@ -5,6 +5,7 @@ import { calcMoves, calcSpeed, type MoveResult } from '@/domain/battle/damage';
 import type { FormatRules, Team } from '@/domain/types';
 import { useCalcStore, type CalcSide } from '@/store/calcStore';
 import { FieldControls } from '../battle/Controls';
+import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
 import { Button, Panel, TypeBadge, cn } from '../ui/primitives';
 import { CalcSideEditor } from './CalcSideEditor';
@@ -59,8 +60,8 @@ export function DamageCalcView({ dex, format, team }: { dex: Dex; format: Format
             <div className="space-y-4">
               <TurnOrder attacker={attacker} defender={defender} speedA={results.speedA} speedD={results.speedD} trickRoom={field.trickRoom} dex={dex} format={format} />
               <div className="grid gap-4 lg:grid-cols-2">
-                <ResultList title="Attacker → Defender" tone="bad" results={results.forward} />
-                <ResultList title="Defender → Attacker" tone="accent" results={results.backward} />
+                <ResultList title="Attacker → Defender" tone="bad" results={results.forward} dex={dex} />
+                <ResultList title="Defender → Attacker" tone="accent" results={results.backward} dex={dex} />
               </div>
             </div>
           )}
@@ -127,7 +128,7 @@ function TurnOrder({
   );
 }
 
-function ResultList({ title, tone, results }: { title: string; tone: 'bad' | 'accent'; results: MoveResult[] }) {
+function ResultList({ title, tone, results, dex }: { title: string; tone: 'bad' | 'accent'; results: MoveResult[]; dex: Dex }) {
   return (
     <div>
       <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
@@ -139,7 +140,7 @@ function ResultList({ title, tone, results }: { title: string; tone: 'bad' | 'ac
       ) : (
         <ul className="space-y-2">
           {results.map((r) => (
-            <ResultRow key={r.moveId} r={r} />
+            <ResultRow key={r.moveId} r={r} dex={dex} />
           ))}
         </ul>
       )}
@@ -147,7 +148,7 @@ function ResultList({ title, tone, results }: { title: string; tone: 'bad' | 'ac
   );
 }
 
-function ResultRow({ r }: { r: MoveResult }) {
+function ResultRow({ r, dex }: { r: MoveResult; dex: Dex }) {
   const [copied, setCopied] = useState(false);
   const status = r.category === 'Status';
   const [lo, hi] = r.percent;
@@ -167,7 +168,9 @@ function ResultRow({ r }: { r: MoveResult }) {
   return (
     <li className="rounded-lg border border-border px-3 py-2">
       <div className="flex items-center gap-2">
-        <TypeBadge type={r.type as never} size="xs" />
+        <MoveTooltip move={dex.move(r.moveId)}>
+          <TypeBadge type={r.type as never} size="xs" />
+        </MoveTooltip>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">
           {r.name}
           {r.crit && <span className="ml-1.5 text-[10px] font-bold text-warn">CRIT</span>}
