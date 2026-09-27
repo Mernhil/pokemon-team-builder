@@ -15,6 +15,9 @@
     "typecheck": "tsc -b",
     "build:single": "tsc -b && vite build --mode singlefile",
     "build:artifact": "tsc -b && node scripts/build-artifact.mjs",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
     "reg:status": "tsx scripts/regulation-status.ts",
     "data:strict": "tsx scripts/build-data.ts --strict"
   },
@@ -36,6 +39,7 @@
     "@pkmn/img": "^0.3.4",
     "@pkmn/mods": "^0.10.11",
     "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2.12.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
