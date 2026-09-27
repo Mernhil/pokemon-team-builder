@@ -4,7 +4,8 @@ A Pokémon team builder and database built with Vite, React 19, TypeScript, Tail
 
 - **Pokémon Champions** formats: Lv 50, 31 IVs, and the Stat Point system (66 total SP, 32 max per stat).
 - **Gen 1–9** formats, one per generation, each following that generation's games: its Pokédex, movepools, move data, type chart and stat system (see [Gen 1–9](#gen-19)).
-- A **Pokédex** for every generation, with entries, learnsets and an **Area** map showing where each Pokémon lives, drawn the way that generation's games drew it (see [Pokédex](#pokédex)).
+- Formats for the rest of the main series: **Let's Go, Pikachu!/Eevee!**, **Brilliant Diamond/Shining Pearl**, **Legends: Arceus** and **Legends: Z-A** (see [Let's Go, BDSP and Legends](#games)).
+- A **Pokédex** for every generation and game, with entries, learnsets and an **Area** map showing where each Pokémon lives, drawn the way that game drew it (see [Pokédex](#pokédex)).
 
 ```bash
 npm install
@@ -14,7 +15,7 @@ npm run typecheck
 npm run build         # static site in dist/
 npm run build:single  # one self-contained index.html (works offline)
 npm run data          # regenerate src/data/generated/*.json (Showdown data + regulation files + Gen 1–9 datasets)
-npm run pokedex       # Pokédex entries + wild encounters per generation (PokeAPI CSVs, cached in .cache/pokeapi)
+npm run pokedex       # Pokédex entries + wild encounters per book (PokeAPI CSVs + PKHeX encounter tables)
 npm run maps          # Area maps: in-game maps from the pret disassemblies + src/data/maps/*.json schematics
 npm run sprites       # rebuild sprite atlases in public/sprites/ (PokeAPI)
 npm run reg:status    # regulation calendar: live set, end date, announced sets
@@ -29,7 +30,10 @@ npm run icons         # re-render the home-screen icons in public/icons/ from fa
 ```
 scripts/build-data.ts        Build-time pipeline: @pkmn/dex + @pkmn/mods → compact JSON per dataset
 scripts/build-gens.ts        Gen 1–9 datasets (Dex.forGen(n)): species, move data, movepools, items, type chart
-scripts/build-pokedex.ts     Pokédex entries, regional numbers, wild encounters (PokeAPI CSVs)
+scripts/build-games.ts       Let's Go / BDSP / Legends: Arceus / Legends: Z-A datasets from Showdown's game mods
+scripts/build-pokedex.ts     Pokédex entries, regional numbers, wild encounters (PokeAPI CSVs + PKHeX)
+scripts/pkhex-encounters.ts  Reads PKHeX's wild-encounter tables (BDSP, Legends, SV, ORAS, SM/USUM)
+scripts/sources.ts           Pinned Showdown / PKHeX checkouts the build scripts read from
 scripts/build-maps.ts        Area maps: renders the Gen 1–3 in-game maps from pret, validates the schematics
 src/
   domain/                    Framework-free core (100% unit-testable)
@@ -37,6 +41,7 @@ src/
                              DVSpread, StatSystem (union), FormatRules, PokemonSet, Team, Dataset
     formats.ts               Format registry (Champions regulations + one format per generation)
     generations.ts           Generation symbols, and what each generation's battles had (mechanics())
+    games.ts                 Let's Go / BDSP / Legends rules (formatMechanics()) and the Pokédex books
     pokedex.ts               Pokédex file shapes, evolution trees, learn methods, encounter decoding
     stats.ts                 Champions SP, Gen 3–9 EV/IV and Gen 1–2 DV/Stat Exp formulas + budget helpers
     validation.ts            Team validator: Species/Item Clause, SP cap, learnset & regulation legality…
@@ -66,6 +71,10 @@ src/
 | Champions (Lv 50, 31 IV) | `Base + SP + 75` | `⌊(Base + SP + 20) × nature⌋` |
 | Gen 3–9 | `⌊(2B + IV + ⌊EV/4⌋)·L/100⌋ + L + 10` | `⌊(⌊(2B + IV + ⌊EV/4⌋)·L/100⌋ + 5) × nature⌋` |
 | Gen 1–2 | `⌊((B+DV)·2 + ⌊⌈√StatExp⌉/4⌋)·L/100⌋ + L + 10` | same, `+ 5` |
+| Let's Go | `AV + ⌊(2B + IV)·L/100⌋ + L + 10` | `AV + ⌊friendship% × ⌊(⌊(2B + IV)·L/100⌋ + 5) × nature⌋ / 100⌋` (friendship% 100–110) |
+| Legends: Arceus | `bonus + ⌊(L/100 + 1)·B + L⌋` | `bonus + ⌊⌊(L/50 + 1)·B / 1.5⌋ × nature⌋`, bonus = `round((√B × M[EL] + L) / 2.5)` |
+
+The Let's Go and Legends: Arceus formulas are ported from PKHeX (`PB7.cs`, `PA8.cs`), including the Legends: Arceus float arithmetic.
 
 A test checks the Champions engine against Pokémon Showdown's own `statModify` for every legal species across several natures.
 
@@ -147,9 +156,24 @@ Movepools only contain what that generation's games taught: level-up, TM/HM, tut
 Levels run from 1 to 100. The damage calculator and the Advanced details panel switch to that generation's mechanics, so paralysis quarters Speed before Gen 7, crits do 2× before Gen 6, Gen 3–8 has Hail instead of Snow, and fields that didn't exist yet (terrain, Trick Room, Aurora Veil…) are hidden.
 Showdown import/export works both ways, including Gen 1–2 sets, where Showdown writes Stat Exp as EVs and DVs as IVs.
 
+<a id="games"></a>
+### Let's Go, BDSP and Legends
+
+The rest of the main series has one format each. Every game has its own dataset, built from Pokémon Showdown's mod for it (`gen7letsgo`, `gen8bdsp`, `gen8legends`, `gen9legends`), with that game's roster, movepools and Mega Evolutions:
+
+| Game | Stats | What's different |
+|---|---|---|
+| Let's Go, Pikachu! / Eevee! | AVs 0–200 per stat, IVs, friendship (+10% at 255) | the 151 + Meltan/Melmetal, Alolan forms, partner Pikachu/Eevee and their moves; Megas; no abilities; the item slot is the Mega Stone in the Bag |
+| Brilliant Diamond / Shining Pearl | IVs / EVs | the Sinnoh remakes with Sword/Shield mechanics and no Dynamax |
+| Legends: Arceus | Effort Levels 0–10 | Hisui's roster and moves (Stone Axe…); no abilities or held items |
+| Legends: Z-A (+ Mega Dimension) | IVs / EVs | Lumiose's roster and new Megas; held items from PKHeX's Z-A item pouches; no abilities |
+
+The damage calculator uses Gen 7 mechanics for Let's Go, with the game's own AV and friendship stats. Legends: Arceus (Agile/Strong Styles) and Legends: Z-A (real-time battles) aren't turn-based Showdown mechanics, so for those two the calculator and in-battle details explain that instead of showing numbers that would be wrong.
+In both Legends games, move power and accuracy are Showdown's Sword/Shield and Scarlet/Violet values, because Showdown has no data for those games' own move changes.
+
 ### Pokédex
 
-The **Pokédex** tab (`#dex`) covers every generation. For each one it lists the species its games had, numbered by National or regional Pokédex (Kanto, Johto, Sinnoh (Pt), Coastal Kalos, Galar, Isle of Armor…). Each entry has three tabs:
+The **Pokédex** tab (`#dex`) has a book for every generation and for Let's Go, BDSP, Legends: Arceus and Legends: Z-A. Each book lists the species its games had, numbered by National or regional Pokédex (Kanto, Johto, Sinnoh (Pt), Coastal Kalos, Galar, Hisui, Lumiose City…). Each entry has three tabs:
 
 - **Info:** Pokédex entries from each of the generation's games, category, height, weight, gender, egg groups, base stats, abilities, type defenses on that generation's chart, the evolution tree and other forms. **Add to team** puts the Pokémon in your team when the team plays that generation.
 - **Moves:** the learnset by level-up, TM/HM, tutor, egg and event moves, plus moves learned via pre-evolutions, with that generation's move data.
@@ -163,14 +187,17 @@ Area maps mark locations the way each game's Pokédex did:
 | Gold / Silver / Crystal, HeartGold / SoulSilver | Crystal's Pokégear Johto and Kanto maps with its nest icon ([pret/pokecrystal](https://github.com/pret/pokecrystal)) |
 | Ruby / Sapphire / Emerald, Omega Ruby / Alpha Sapphire | Emerald's Pokédex area map with glowing areas ([pret/pokeemerald](https://github.com/pret/pokeemerald)) |
 | FireRed / LeafGreen | FireRed/LeafGreen's Kanto and Sevii Islands maps ([pret/pokefirered](https://github.com/pret/pokefirered)) |
-| Sinnoh, Unova, Kalos, Alola, Galar (+ Isle of Armor, Crown Tundra) | schematic maps with hand-placed locations (`src/data/maps/*.json`), since these games have no disassembled map data |
+| Let's Go, Pikachu! / Eevee! | FireRed/LeafGreen's Kanto map |
+| Sinnoh (DPPt, BDSP + Grand Underground), Unova, Kalos, Alola, Galar (+ Isle of Armor, Crown Tundra), Hisui, Paldea, Kitakami, Blueberry Academy Terarium, Lumiose City | schematic maps with hand-placed locations (`src/data/maps/*.json`, Lumiose generated), since these games have no disassembled map data |
 
 For the Gen 1–3 maps, each location sits exactly where the game put it; the build script reads the coordinates from the disassemblies.
 HeartGold/SoulSilver and ORAS locations the older map doesn't have, such as Routes 47–48 or Sea Mauville, are placed next to their nearest neighbour.
-A test checks that every wild location in Gens 1–8 is on its game's map, apart from places with no fixed spot: roaming Pokémon, event islands, Mirage spots and Ultra Space.
+In Legends: Arceus and Z-A, whole areas (Obsidian Fieldlands, a Lumiose district) are drawn as dashed outlines that light up as outlines, so the places inside them stay readable.
+A test checks that every wild location of every book is on its game's map, apart from places with no fixed spot: roaming Pokémon, event islands, Mirage spots and Ultra Space.
 
-Data: Pokédex text, regional numbers and encounters come from [PokeAPI](https://github.com/PokeAPI/pokeapi)'s CSV tables.
-PokeAPI has no wild-encounter tables for Scarlet/Violet, so the Gen 9 Area tab says so. PokeAPI also has Scarlet/Violet Pokédex entries for only 120 species, so the rest show the latest earlier game's entry, labelled with that game.
+Data: Pokédex text, regional numbers and most encounters come from [PokeAPI](https://github.com/PokeAPI/pokeapi)'s CSV tables.
+Wild encounters for BDSP, Legends: Arceus, Scarlet/Violet (+ Kitakami and Blueberry), Legends: Z-A, ORAS and SM/USUM come from [PKHeX](https://github.com/kwsch/PKHeX)'s encounter tables instead, because PokeAPI has none for these games or only part of them. PokeAPI's gifts, static encounters and Island Scan entries are kept. PKHeX lists who appears where and at which levels, and flags Alphas, but it has no encounter rates.
+PokeAPI has Pokédex entries for only some species in the newest games (e.g. 120 in Scarlet/Violet, none in BDSP or Z-A). The rest show the latest earlier game's entry, labelled with that game.
 
 ### Replica Team codes
 
@@ -180,7 +207,7 @@ To share a team between builders, use the self-contained **share code** (`PTB1.�
 
 ## Roadmap
 
-- **Gen 1–9:** level caps and Nuzlocke planning; Scarlet/Violet Area maps once an encounter dataset exists; Let's Go, BDSP and Legends games.
+- **Gen 1–9:** level caps and Nuzlocke planning; gift/static encounters for the PKHeX-sourced games; the Legends games' own move data once Showdown has it.
 - **Module 1:** full ChampDex explorer (radar chart, learnset filters).
 - **Module 3:** offensive coverage and speed-tier chart against format threats (Tailwind / Trick Room).
 - **Persistence:** IndexedDB / Supabase sync behind the same store interface.
