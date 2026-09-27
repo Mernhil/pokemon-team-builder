@@ -1,12 +1,12 @@
 /**
- * Popular teams / stat spreads: real usage data from championsbattledata.com's public API
- * (https://championsbattledata.com/api_guide/), one snapshot per regulation. This is a third-party,
- * unofficial source that can lag or change shape without notice, so parsing here is deliberately
- * defensive — a field it doesn't recognise is dropped rather than crashing the fetch — and every
- * snapshot carries `fetchedAt` so the UI can show a "data last updated" indicator.
+ * Popular teams / stat spreads: usage data from a static JSON snapshot checked into
+ * src/data/meta/<regulationId>.json, one file per regulation/season, updated by hand when new
+ * usage data is available. This is baked into the build like the rest of the game data — no
+ * runtime fetch to any third-party API, so there's nothing to fail at runtime; a missing or
+ * malformed snapshot just means that regulation has no data yet.
  */
 
-const API_BASE = 'https://championsbattledata.com/api';
+const metaFiles = import.meta.glob<{ default: unknown }>('../data/meta/*.json', { eager: true });
 
 export interface MetaMoveUsage {
   moveId: string;
@@ -19,7 +19,7 @@ export interface MetaItemUsage {
 export interface MetaSpreadUsage {
   /** Nature name, if reported. */
   nature?: string;
-  /** Stat Points, when the API breaks a spread out per stat. */
+  /** Stat Points, when the snapshot breaks a spread out per stat. */
   sp?: Partial<Record<'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe', number>>;
   pct: number;
 }
@@ -31,14 +31,15 @@ export interface MetaEntry {
   items: MetaItemUsage[];
   moves: MetaMoveUsage[];
   spreads: MetaSpreadUsage[];
-  /** Other species most often teamed with this one (a "core"), if the API reports it. */
+  /** Other species most often teamed with this one (a "core"), if the snapshot reports it. */
   teammates?: { speciesId: string; pct: number }[];
 }
 
 export interface MetaSnapshot {
   regulationId: string;
-  fetchedAt: number;
-  /** Where this came from, for the "data last updated" indicator. */
+  /** Date (or free-form text) the checked-in snapshot was last refreshed, from the JSON itself. */
+  lastUpdated: string;
+  /** Where this snapshot came from, shown alongside `lastUpdated` in the UI. */
   source: string;
   entries: MetaEntry[];
 }
@@ -48,12 +49,7 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 const pct = (v: unknown): number => Math.max(0, Math.min(100, num(v) ?? 0));
 const idOf = (v: unknown): string | undefined => (typeof v === 'string' && v ? v.toLowerCase().replace(/[^a-z0-9]+/g, '') : undefined);
 
-/**
- * The API's exact response shape is documented at championsbattledata.com/api_guide/ but this app
- * can't reach that host from a dev sandbox to pin it down byte-for-byte, so parsing tolerates the
- * handful of reasonable shapes a usage-stats endpoint tends to use (`usage`/`usage_pct`/`pct`,
- * `pokemon`/`species`/`name` for the species key, etc.) instead of assuming one exact schema.
- */
+/** Tolerates the handful of reasonable shapes a hand-written usage entry might use. */
 function parseEntry(raw: unknown): MetaEntry | null {
   if (!isObj(raw)) return null;
   const speciesId = idOf(raw.speciesId ?? raw.species ?? raw.pokemon ?? raw.name);
@@ -111,37 +107,32 @@ function parseEntry(raw: unknown): MetaEntry | null {
   return { speciesId, usagePct, items, moves, spreads, teammates };
 }
 
-export class MetaFetchError extends Error {}
+export class MetaDataError extends Error {}
 
-/** Fetch and normalise one regulation's usage snapshot. Throws MetaFetchError on any failure. */
-export async function fetchChampionsMeta(regulationId: string): Promise<MetaSnapshot> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}/usage?regulation=${encodeURIComponent(regulationId)}`, {
-      headers: { Accept: 'application/json' },
-    });
-  } catch (e) {
-    throw new MetaFetchError(`Couldn't reach championsbattledata.com (${(e as Error).message}).`);
-  }
-  if (!res.ok) throw new MetaFetchError(`championsbattledata.com returned HTTP ${res.status}.`);
-  let body: unknown;
-  try {
-    body = await res.json();
-  } catch {
-    throw new MetaFetchError("championsbattledata.com's response wasn't valid JSON.");
-  }
-  const list = Array.isArray(body) ? body : isObj(body) && Array.isArray(body.data) ? body.data : isObj(body) && Array.isArray(body.results) ? body.results : null;
-  if (!list) throw new MetaFetchError("Unrecognised response shape from championsbattledata.com's usage endpoint.");
+function fileForRegulation(regulationId: string): unknown {
+  const match = Object.entries(metaFiles).find(([path]) => path.endsWith(`/${regulationId}.json`));
+  return match?.[1]?.default;
+}
+
+/** Load and normalise the checked-in usage snapshot for a regulation. Throws MetaDataError if none exists or it doesn't parse. */
+export function loadMetaSnapshot(regulationId: string): MetaSnapshot {
+  const raw = fileForRegulation(regulationId);
+  if (raw === undefined) throw new MetaDataError(`No usage data checked in yet for this regulation.`);
+  if (!isObj(raw)) throw new MetaDataError(`Usage data for this regulation is malformed.`);
+  const lastUpdated = typeof raw.lastUpdated === 'string' && raw.lastUpdated ? raw.lastUpdated : undefined;
+  if (!lastUpdated) throw new MetaDataError(`Usage data for this regulation is missing "lastUpdated".`);
+  const list = Array.isArray(raw.entries) ? raw.entries : null;
+  if (!list) throw new MetaDataError(`Usage data for this regulation has no "entries" array.`);
   const entries = list.map(parseEntry).filter((e): e is MetaEntry => !!e).sort((a, b) => b.usagePct - a.usagePct);
-  if (!entries.length) throw new MetaFetchError('No usage entries came back for that regulation.');
-  return { regulationId, fetchedAt: Date.now(), source: 'championsbattledata.com', entries };
+  if (!entries.length) throw new MetaDataError(`Usage data for this regulation has no valid entries.`);
+  return { regulationId, lastUpdated, source: typeof raw.source === 'string' && raw.source ? raw.source : 'In-repo snapshot', entries };
 }
 
 /**
  * Fallback meta snapshot built entirely from the player's own logged matches (see domain/matches.ts)
- * — no network required. Used when championsbattledata.com can't be reached, so the Meta tab still
- * shows something real instead of just an error card. Clearly attributed via `source` so the UI can
- * distinguish it from live third-party usage stats.
+ * — used when no static snapshot is checked in yet for a regulation, so the Meta tab still shows
+ * something real instead of just an empty state. Clearly attributed via `source` so the UI can
+ * distinguish it from a checked-in snapshot.
  */
 export function localMetaFromMatches(
   matches: { regulationId?: string; opponentTeam: { speciesId: string; itemId?: string; abilityId?: string; moves?: string[] }[] }[],
@@ -176,7 +167,7 @@ export function localMetaFromMatches(
     }))
     .sort((a, b) => b.usagePct - a.usagePct);
 
-  return { regulationId, fetchedAt: Date.now(), source: `${totalMatches} of your logged matches`, entries };
+  return { regulationId, lastUpdated: new Date().toISOString().slice(0, 10), source: `${totalMatches} of your logged matches`, entries };
 }
 
 /**

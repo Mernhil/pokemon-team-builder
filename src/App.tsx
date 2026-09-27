@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BarChart3, BookOpen, Calculator, Check, ChevronDown, FolderOpen, Moon, Save, Sun, Swords, Users } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, BookOpen, Calculator, Check, FolderOpen, Moon, Save, Sun, Swords, Users } from 'lucide-react';
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
@@ -18,6 +18,7 @@ import { SetEditor } from './components/editor/SetEditor';
 import { ImportExportDialog } from './components/io/ImportExportDialog';
 import { SaveTeamDialog } from './components/io/SaveTeamDialog';
 import { TeamsDialog } from './components/io/TeamsDialog';
+import { MobileSlotSheet } from './components/team/MobileSlotSheet';
 import { TeamSlots } from './components/team/TeamSlots';
 import { Button, Select, cn } from './components/ui/primitives';
 
@@ -240,63 +241,76 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
 function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: Dex }) {
   const activeSlot = useTeamStore((s) => s.activeSlot);
   const issues = useMemo(() => validateTeam(team, format, dex), [team, format, dex]);
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const filled = team.slots.filter(Boolean).length;
+
+  const footer = (
+    <p className="pb-2 text-center text-[11px] text-muted">
+      {format.game
+        ? `Data: ${dex.data.source} · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
+        : dex.data.generation
+        ? `Data: Pokémon Showdown's Gen ${dex.data.generation} data (${GEN_GAMES[dex.data.generation]}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
+        : `Data: Pokémon Showdown + official regulation announcements (${dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`}
+    </p>
+  );
 
   return (
     <main className="mx-auto grid w-full max-w-[1400px] flex-1 content-start grid-cols-1 gap-4 p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
       <div className="lg:col-span-2">
         <RegulationBanner team={team} format={format} />
       </div>
+
+      {/* Team list: on mobile it's always visible/scrollable at the top, and tapping a slot opens
+          the bottom sheet below instead of an inline editor; on desktop it's the sticky aside. */}
       <aside className="space-y-4 lg:sticky lg:top-[68px] lg:self-start">
         <div className="rounded-xl border border-border bg-surface p-3">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between px-1 pb-2 text-left"
-            onClick={() => setDrawerOpen((o) => !o)}
-            aria-expanded={drawerOpen}
-          >
-            <span className="text-sm font-semibold">
-              Team <span className="font-normal text-muted">· {filled}/{format.teamSize}</span>
-              {format.bring && (
-                <span className="ml-2 text-[11px] font-normal text-muted">
-                  Bring {format.bring}, pick {format.pick} · {format.gameType}
-                </span>
-              )}
-            </span>
-            <ChevronDown size={16} className={cn('text-muted transition-transform lg:hidden', drawerOpen && 'rotate-180')} />
-          </button>
-          <div className={cn(!drawerOpen && 'hidden lg:block')}>
-            <TeamSlots
-              team={team}
-              dex={dex}
-              format={format}
-              issues={issues}
-              activeSlot={activeSlot}
-              onSelect={() => window.innerWidth < 1024 && setDrawerOpen(false)}
-            />
+          <div className="px-1 pb-2 text-sm font-semibold">
+            Team <span className="font-normal text-muted">· {filled}/{format.teamSize}</span>
+            {format.bring && (
+              <span className="ml-2 text-[11px] font-normal text-muted">
+                Bring {format.bring}, pick {format.pick} · {format.gameType}
+              </span>
+            )}
           </div>
+          <TeamSlots
+            team={team}
+            dex={dex}
+            format={format}
+            issues={issues}
+            activeSlot={activeSlot}
+            onSelect={() => window.innerWidth < 1024 && setSheetOpen(true)}
+          />
         </div>
         <div className="hidden lg:block">
           <ValidationPanel issues={issues} />
         </div>
       </aside>
 
-      <div className="min-w-0 space-y-4">
+      {/* Desktop side panel: untouched — full editor stacked inline next to the team list. */}
+      <div className="hidden min-w-0 space-y-4 lg:block">
         <SetEditor key={team.id + activeSlot} slot={activeSlot} set={team.slots[activeSlot]} dex={dex} format={format} issues={issues} />
-        <div className="lg:hidden">
-          <ValidationPanel issues={issues} />
-        </div>
         <DefenseMatrix team={team} dex={dex} format={format} />
         <OffenseMatrix team={team} dex={dex} />
-        <p className="pb-2 text-center text-[11px] text-muted">
-          {format.game
-            ? `Data: ${dex.data.source} · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
-            : dex.data.generation
-            ? `Data: Pokémon Showdown's Gen ${dex.data.generation} data (${GEN_GAMES[dex.data.generation]}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
-            : `Data: Pokémon Showdown + official regulation announcements (${dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`}
-        </p>
+        {footer}
       </div>
+
+      {/* Mobile: slot details live in the bottom sheet, not inline. */}
+      <div className="space-y-4 lg:hidden">
+        <ValidationPanel issues={issues} />
+        <DefenseMatrix team={team} dex={dex} format={format} />
+        <OffenseMatrix team={team} dex={dex} />
+        {footer}
+      </div>
+
+      <MobileSlotSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        slot={activeSlot}
+        set={team.slots[activeSlot]}
+        dex={dex}
+        format={format}
+        issues={issues}
+      />
     </main>
   );
 }

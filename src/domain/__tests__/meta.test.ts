@@ -1,48 +1,18 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { coreOverlapScore, fetchChampionsMeta, localMetaFromMatches, MetaFetchError, type MetaEntry } from '@/domain/meta';
+import { describe, expect, it } from 'vitest';
+import { coreOverlapScore, loadMetaSnapshot, localMetaFromMatches, MetaDataError, type MetaEntry } from '@/domain/meta';
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-const jsonResponse = (body: unknown, ok = true, status = 200) =>
-  ({ ok, status, json: async () => body }) as Response;
-
-describe('championsbattledata usage fetch', () => {
-  it('normalises a well-formed response, sorted by usage', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        jsonResponse({
-          data: [
-            { species: 'Incineroar', usage: 20, items: ['Safety Goggles'], moves: [{ move: 'Fake Out', pct: 90 }] },
-            { pokemon: 'Rillaboom', usage_pct: 55.5, spreads: [{ nature: 'Adamant', sp: { atk: 32, hp: 20 }, pct: 70 }] },
-          ],
-        }),
-      ),
-    );
-    const snap = await fetchChampionsMeta('champions-reg-mc');
-    expect(snap.entries.map((e) => e.speciesId)).toEqual(['rillaboom', 'incineroar']);
-    expect(snap.entries[1].items[0].itemId).toBe('safetygoggles');
-    expect(snap.entries[0].spreads[0].nature).toBe('Adamant');
-    expect(snap.fetchedAt).toBeGreaterThan(0);
+describe('checked-in usage snapshot', () => {
+  it('loads and normalises the bundled champions-reg-mc snapshot, sorted by usage', () => {
+    const snap = loadMetaSnapshot('champions-reg-mc');
+    expect(snap.regulationId).toBe('champions-reg-mc');
+    expect(snap.lastUpdated).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(snap.entries.length).toBeGreaterThan(0);
+    const usages = snap.entries.map((e) => e.usagePct);
+    expect(usages).toEqual([...usages].sort((a, b) => b - a));
   });
 
-  it('throws MetaFetchError on network failure, non-OK status, bad JSON or an unrecognised shape', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
-    await expect(fetchChampionsMeta('x')).rejects.toBeInstanceOf(MetaFetchError);
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({}, false, 500)));
-    await expect(fetchChampionsMeta('x')).rejects.toThrow('HTTP 500');
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => { throw new Error('bad'); } } as unknown as Response));
-    await expect(fetchChampionsMeta('x')).rejects.toThrow("wasn't valid JSON");
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ weird: true })));
-    await expect(fetchChampionsMeta('x')).rejects.toThrow('Unrecognised response shape');
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ data: [{ nope: 1 }] })));
-    await expect(fetchChampionsMeta('x')).rejects.toThrow('No usage entries');
+  it('throws MetaDataError for a regulation with no checked-in snapshot', () => {
+    expect(() => loadMetaSnapshot('champions-reg-nonexistent')).toThrow(MetaDataError);
   });
 });
 

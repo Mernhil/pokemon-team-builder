@@ -18,6 +18,8 @@ interface Props {
   species: Pokemon;
   dex: Dex;
   format: FormatRules;
+  /** Initial expanded state (default true — the mobile sheet passes false to reduce clutter). */
+  defaultOpen?: boolean;
 }
 
 /**
@@ -39,8 +41,8 @@ export function AdvancedDetails(props: Props) {
   return <AdvancedDetailsPanel {...props} />;
 }
 
-function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
-  const [open, setOpen] = useState(true);
+function AdvancedDetailsPanel({ set, species, dex, format, defaultOpen = true }: Props) {
+  const [open, setOpen] = useState(defaultOpen);
   const mega = dex.megaFor(species.id, set.itemId);
   const setView = useTeamStore((s) => s.setView);
   const [state, update] = useSlotBattle(set.uid, !!mega);

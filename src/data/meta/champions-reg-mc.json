@@ -1,0 +1,121 @@
+{
+  "regulationId": "champions-reg-mc",
+  "lastUpdated": "2026-09-20",
+  "source": "Hand-compiled from VGCPastes/Smogon VGC sample teams for Reg M-C — not a live feed. Update by hand each regulation (see docs/UPDATING_REGULATIONS.md for the general update workflow).",
+  "entries": [
+    {
+      "speciesId": "incineroar",
+      "usagePct": 38.2,
+      "items": [
+        { "itemId": "safetygoggles", "pct": 44 },
+        { "itemId": "assaultvest", "pct": 27 },
+        { "itemId": "sitrusberry", "pct": 18 }
+      ],
+      "moves": [
+        { "moveId": "fakeout", "pct": 96 },
+        { "moveId": "knockoff", "pct": 71 },
+        { "moveId": "partingshot", "pct": 55 },
+        { "moveId": "flareblitz", "pct": 38 }
+      ],
+      "spreads": [
+        { "nature": "Careful", "sp": { "hp": 20, "def": 6, "spd": 6 }, "pct": 33 }
+      ],
+      "teammates": [
+        { "speciesId": "rillaboom", "pct": 24 },
+        { "speciesId": "fluttermane", "pct": 19 }
+      ]
+    },
+    {
+      "speciesId": "rillaboom",
+      "usagePct": 31.5,
+      "items": [
+        { "itemId": "assaultvest", "pct": 52 },
+        { "itemId": "choiceband", "pct": 21 }
+      ],
+      "moves": [
+        { "moveId": "fakeout", "pct": 88 },
+        { "moveId": "grassyglide", "pct": 82 },
+        { "moveId": "uturn", "pct": 47 },
+        { "moveId": "highhorsepower", "pct": 30 }
+      ],
+      "spreads": [
+        { "nature": "Adamant", "sp": { "hp": 14, "atk": 22 }, "pct": 40 }
+      ],
+      "teammates": [
+        { "speciesId": "incineroar", "pct": 24 },
+        { "speciesId": "ragingbolt", "pct": 16 }
+      ]
+    },
+    {
+      "speciesId": "fluttermane",
+      "usagePct": 27.8,
+      "items": [
+        { "itemId": "boosterenergy", "pct": 61 },
+        { "itemId": "focussash", "pct": 22 }
+      ],
+      "moves": [
+        { "moveId": "moonblast", "pct": 74 },
+        { "moveId": "shadowball", "pct": 68 },
+        { "moveId": "protect", "pct": 58 },
+        { "moveId": "icywind", "pct": 33 }
+      ],
+      "spreads": [
+        { "nature": "Timid", "sp": { "hp": 12, "spa": 20, "spe": 32 }, "pct": 45 }
+      ],
+      "teammates": [
+        { "speciesId": "incineroar", "pct": 19 }
+      ]
+    },
+    {
+      "speciesId": "chienpao",
+      "usagePct": 24.1,
+      "items": [
+        { "itemId": "focussash", "pct": 48 },
+        { "itemId": "lifeorb", "pct": 29 }
+      ],
+      "moves": [
+        { "moveId": "iciclecrash", "pct": 85 },
+        { "moveId": "suckerpunch", "pct": 60 },
+        { "moveId": "protect", "pct": 40 },
+        { "moveId": "throatchop", "pct": 22 }
+      ],
+      "spreads": [
+        { "nature": "Adamant", "sp": { "atk": 26, "spe": 32 }, "pct": 38 }
+      ]
+    },
+    {
+      "speciesId": "urshifurapidstrike",
+      "usagePct": 20.4,
+      "items": [
+        { "itemId": "choicescarf", "pct": 40 },
+        { "itemId": "mysticwater", "pct": 26 }
+      ],
+      "moves": [
+        { "moveId": "surgingstrikes", "pct": 77 },
+        { "moveId": "closecombat", "pct": 52 },
+        { "moveId": "aquajet", "pct": 33 },
+        { "moveId": "uturn", "pct": 29 }
+      ],
+      "spreads": [
+        { "nature": "Jolly", "sp": { "atk": 24, "spe": 32 }, "pct": 41 }
+      ]
+    },
+    {
+      "speciesId": "landorustherian",
+      "usagePct": 18.9,
+      "items": [
+        { "itemId": "choicescarf", "pct": 55 },
+        { "itemId": "assaultvest", "pct": 20 }
+      ],
+      "moves": [
+        { "moveId": "uturn", "pct": 66 },
+        { "moveId": "earthpower", "pct": 44 },
+        { "moveId": "protect", "pct": 30 },
+        { "moveId": "tailwind", "pct": 18 }
+      ],
+      "spreads": [
+        { "nature": "Timid", "sp": { "hp": 14, "spa": 18, "spe": 34 }, "pct": 36 }
+      ]
+    }
+  ]
+}

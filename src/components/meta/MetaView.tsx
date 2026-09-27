@@ -1,38 +1,34 @@
-import { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
+import { localMetaFromMatches, loadMetaSnapshot, MetaDataError } from '@/domain/meta';
 import { STAT_LABELS, type FormatRules } from '@/domain/types';
-import { useMetaStore } from '@/store/metaStore';
+import { useMatchStore } from '@/store/matchStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
-import { Button, Panel, Select, cn } from '../ui/primitives';
+import { Panel, Select } from '../ui/primitives';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
 
-const fmtAge = (ms: number) => {
-  const mins = Math.round((Date.now() - ms) / 60000);
-  if (mins < 60) return `${mins || 1} min ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 48) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
-};
-
 /**
- * Real usage data (most-used species/cores and common spreads) from championsbattledata.com — kept
- * as its own read/write-to-cache section, independent of the personal match log.
+ * Popular teams / stat spreads: a static, checked-in usage snapshot per regulation (see
+ * src/domain/meta.ts and src/data/meta/) — no live third-party fetch, so there's nothing to retry
+ * or fail here at runtime.
  */
 export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const [regId, setRegId] = useState(currentRegulation()?.id ?? champRegs[0]?.id ?? '');
-  const snapshot = useMetaStore((s) => s.snapshots[regId]);
-  const loading = useMetaStore((s) => s.loading[regId]);
-  const error = useMetaStore((s) => s.errors[regId]);
-  const { fetchRegulation } = useMetaStore.getState();
+  const matches = useMatchStore((s) => s.matches);
 
-  useEffect(() => {
-    if (!snapshot && !loading && regId) fetchRegulation(regId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regId]);
+  const { snapshot, error } = useMemo(() => {
+    try {
+      return { snapshot: loadMetaSnapshot(regId), error: undefined as string | undefined };
+    } catch (e) {
+      const message = e instanceof MetaDataError ? e.message : 'Usage data for this regulation could not be loaded.';
+      const local = localMetaFromMatches(Object.values(matches), regId);
+      return { snapshot: local ?? undefined, error: message };
+    }
+  }, [regId, matches]);
 
   const entries = snapshot?.entries ?? [];
 
@@ -48,28 +44,30 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
           ))}
         </Select>
         <span className="text-xs text-muted">
-          {snapshot ? `Data last updated ${fmtAge(snapshot.fetchedAt)} · ${snapshot.source}` : 'Not fetched yet'}
+          {snapshot ? `Last updated: ${snapshot.lastUpdated} · ${snapshot.source}` : 'No usage data for this regulation'}
         </span>
-        <Button size="sm" className="ml-auto" onClick={() => fetchRegulation(regId)} disabled={!!loading}>
-          <RefreshCw size={13} className={cn(loading && 'animate-spin')} /> {loading ? 'Fetching…' : 'Refresh from championsbattledata.com'}
-        </Button>
+        <a
+          href="https://www.smogon.com/stats/"
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+        >
+          Live/full usage stats on Smogon <ExternalLink size={12} />
+        </a>
       </div>
 
       {error && (
-        <Panel title="Couldn't fetch usage data">
+        <Panel title="No checked-in usage data for this regulation">
           <p className="text-xs text-warn">{error}</p>
           <p className="mt-1 text-xs text-muted">
-            championsbattledata.com is an unofficial third-party source and may be unreachable, rate-limited or have changed its API shape.
-            {snapshot?.source.startsWith('championsbattledata.com')
-              ? ' Showing the last successful fetch below.'
-              : snapshot
-                ? ' Showing usage derived from your own logged matches below instead.'
-                : ' Log some matches on the Matches tab to see usage stats from your own games while this is down.'}
+            {snapshot
+              ? 'Showing usage derived from your own logged matches below instead.'
+              : 'Log some matches on the Matches tab to see usage stats from your own games, or check the Smogon link above for live stats.'}
           </p>
         </Panel>
       )}
 
-      {!entries.length && !error && !loading && <Panel title="No data yet">Click "Refresh" to fetch usage stats for this regulation.</Panel>}
+      {!entries.length && !error && <Panel title="No data yet">No usage entries in the checked-in snapshot for this regulation.</Panel>}
 
       <div className="grid gap-3 lg:grid-cols-2">
         {entries.map((e) => {

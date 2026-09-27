@@ -3,10 +3,9 @@ import { Copy, Plus, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import { ARCHETYPE_PRESETS, CATEGORY_PRESETS, cloneOpponentTeam, suggestRegulationForDate, type LoggedMon, type Match, type MatchResult } from '@/domain/matches';
-import { coreOverlapScore } from '@/domain/meta';
+import { coreOverlapScore, loadMetaSnapshot } from '@/domain/meta';
 import type { FormatRules } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
-import { useMetaStore } from '@/store/metaStore';
 import { useTeamStore } from '@/store/teamStore';
 import { LoggedMonEditor } from './LoggedMonEditor';
 import { Button, Field, Input, Panel, Select, TextArea, cn } from '../ui/primitives';
@@ -53,8 +52,15 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
   const priorOpponents = allMatches.filter((m) => m.id !== match.id && m.opponentTeam.length > 0);
 
   // Optional cross-reference: flag when this opponent's Team Preview overlaps a known popular core
-  // from the "Popular teams" section, if that regulation's usage data has already been fetched.
-  const metaSnapshot = useMetaStore((s) => (match.regulationId ? s.snapshots[match.regulationId] : undefined));
+  // from the "Popular teams" section, if that regulation has a checked-in usage snapshot.
+  const metaSnapshot = useMemo(() => {
+    if (!match.regulationId) return undefined;
+    try {
+      return loadMetaSnapshot(match.regulationId);
+    } catch {
+      return undefined;
+    }
+  }, [match.regulationId]);
   const knownCore = useMemo(() => {
     if (!metaSnapshot || match.opponentTeam.length < 2) return null;
     const species = match.opponentTeam.map((m) => m.speciesId).filter(Boolean);
