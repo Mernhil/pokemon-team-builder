@@ -11,6 +11,7 @@
     "data": "tsx scripts/build-data.ts",
     "sprites": "tsx scripts/build-sprites.ts",
     "sprites:items": "tsx scripts/build-items.ts",
+    "icons": "node scripts/build-icons.mjs",
     "test": "vitest run",
     "typecheck": "tsc -b",
     "build:single": "tsc -b && vite build --mode singlefile",
@@ -52,6 +53,7 @@
     "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
+    "vite-plugin-pwa": "^1.3.0",
     "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^5.0.2"
   }

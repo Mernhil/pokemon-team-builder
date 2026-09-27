@@ -1,0 +1,48 @@
+name: Web app deploy
+
+# Publishes the installable web app (PWA) to GitHub Pages on every push to the default branch.
+# Phones that added it to their home screen pick up the new version by themselves the next time
+# the app is opened or brought back to the foreground (src/pwa.ts) — no reinstall needed.
+#
+# One-time setup (see docs/IPHONE_APP.md): Settings → Pages → Build and deployment → Source:
+# "GitHub Actions". GitHub Pages needs a public repository on the free plan.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a deploy halfway; a newer push just queues behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Any branch can be pushed, but only the default branch is live.
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
