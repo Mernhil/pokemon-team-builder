@@ -1,6 +1,7 @@
 import { Crosshair, Sparkles } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultSide } from '@/domain/battle/conditions';
+import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
 import { createSet } from '@/domain/team';
 import { STAT_LABELS, type FormatRules, type Team, type TeraType } from '@/domain/types';
 import { useCalcStore, type SideKey } from '@/store/calcStore';
@@ -10,6 +11,7 @@ import { StatDistributor } from '../editor/StatDistributor';
 import { useItemOptions, useMoveOptions } from '../editor/options';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
@@ -130,7 +132,16 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {(mech.heldItems || mech.megaStoneOnly) && (
-              <Field label={mech.megaStoneOnly ? 'Mega Stone' : 'Held item'}>
+              <Field
+                label={mech.megaStoneOnly ? 'Mega Stone' : 'Held item'}
+                hint={
+                  dex.item(set.itemId)?.shortDesc && (
+                    <InfoTooltip title={dex.item(set.itemId)!.name} summary={dex.item(set.itemId)!.shortDesc} interactions={ITEM_INTERACTIONS[set.itemId!]}>
+                      <span className="truncate">ⓘ</span>
+                    </InfoTooltip>
+                  )
+                }
+              >
                 <Combobox
                   aria-label={`${title} item`}
                   options={itemOptions}
@@ -143,7 +154,16 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
               </Field>
               )}
               {mech.abilities && (
-              <Field label="Ability">
+              <Field
+                label="Ability"
+                hint={
+                  dex.ability(set.abilityId)?.shortDesc && (
+                    <InfoTooltip title={dex.ability(set.abilityId)!.name} summary={dex.ability(set.abilityId)!.shortDesc} interactions={ABILITY_INTERACTIONS[set.abilityId!]}>
+                      <span className="truncate">ⓘ</span>
+                    </InfoTooltip>
+                  )
+                }
+              >
                 <Select value={set.abilityId ?? ''} onChange={(e) => patchSet(role, { abilityId: e.target.value })} disabled={forme !== species} title={forme !== species ? 'Mega Evolution sets the ability' : undefined}>
                   {forme !== species ? (
                     <option>{Object.values(forme!.abilities)[0]}</option>

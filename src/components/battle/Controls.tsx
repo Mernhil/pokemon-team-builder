@@ -12,7 +12,9 @@ import {
   type SideConditions,
 } from '@/domain/battle/conditions';
 import { formatMechanics } from '@/domain/games';
+import { terrainInfo, weatherInfo } from '@/domain/mechanics';
 import { STAT_LABELS } from '@/domain/types';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { STAT_COLOR_VAR, Select, cn } from '../ui/primitives';
 
 // ---------------------------------------------------------------------------
@@ -37,25 +39,47 @@ export function Toggle({ on, onChange, children, title, disabled }: { on: boolea
   );
 }
 
-export function Segmented<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; label: string }) {
+export function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+  describe,
+}: {
+  value: T;
+  options: { id: T; label: string }[];
+  onChange: (v: T) => void;
+  label: string;
+  /** Optional per-option tooltip content (weather/terrain mechanics, etc.). */
+  describe?: (id: T) => { title: string; summary: string; effects: string[]; interactions: string[] } | null;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-1" role="radiogroup" aria-label={label}>
       <span className="mr-1 w-16 text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</span>
-      {options.map((o) => (
-        <button
-          key={o.id || 'none'}
-          type="button"
-          role="radio"
-          aria-checked={value === o.id}
-          onClick={() => onChange(o.id)}
-          className={cn(
-            'h-7 rounded-md px-2 text-xs font-medium',
-            value === o.id ? 'bg-fg text-bg' : 'text-muted hover:bg-surface-2 hover:text-fg',
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
+      {options.map((o) => {
+        const info = describe?.(o.id);
+        const btn = (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={value === o.id}
+            onClick={() => onChange(o.id)}
+            className={cn(
+              'h-7 rounded-md px-2 text-xs font-medium',
+              value === o.id ? 'bg-fg text-bg' : 'text-muted hover:bg-surface-2 hover:text-fg',
+            )}
+          >
+            {o.label}
+          </button>
+        );
+        return info ? (
+          <InfoTooltip key={o.id || 'none'} title={info.title} summary={info.summary} effects={info.effects} interactions={info.interactions}>
+            {btn}
+          </InfoTooltip>
+        ) : (
+          <span key={o.id || 'none'}>{btn}</span>
+        );
+      })}
     </div>
   );
 }
@@ -74,8 +98,30 @@ export function FieldControls({ field, onChange, compact, gen = 9, game }: { fie
       {mech.doubles && (
         <Segmented label="Battle" value={field.gameType} options={[{ id: 'Doubles', label: 'Doubles' }, { id: 'Singles', label: 'Singles' }]} onChange={(gameType) => onChange({ gameType })} />
       )}
-      {mech.weather && <Segmented label="Weather" value={field.weather} options={weathers} onChange={(weather) => onChange({ weather })} />}
-      {mech.terrain && <Segmented label="Terrain" value={field.terrain} options={terrains} onChange={(terrain) => onChange({ terrain })} />}
+      {mech.weather && (
+        <Segmented
+          label="Weather"
+          value={field.weather}
+          options={weathers}
+          onChange={(weather) => onChange({ weather })}
+          describe={(id) => {
+            const info = weatherInfo(id, mech.snowName);
+            return info && { title: info.name, summary: info.summary, effects: info.effects, interactions: info.interactions };
+          }}
+        />
+      )}
+      {mech.terrain && (
+        <Segmented
+          label="Terrain"
+          value={field.terrain}
+          options={terrains}
+          onChange={(terrain) => onChange({ terrain })}
+          describe={(id) => {
+            const info = terrainInfo(id);
+            return info && { title: info.name, summary: info.summary, effects: info.effects, interactions: info.interactions };
+          }}
+        />
+      )}
       {mech.trickRoom && (
         <div className="flex flex-wrap items-center gap-1">
           <span className="mr-1 w-16 text-[11px] font-semibold uppercase tracking-wider text-muted">Room</span>

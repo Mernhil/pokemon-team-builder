@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { Sparkles, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
+import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
 import { spreadKey } from '@/domain/stats';
 import { createSet } from '@/domain/team';
 import { STAT_LABELS, type FormatRules, type PokemonSet, type TeraType } from '@/domain/types';
@@ -9,6 +10,7 @@ import type { Issue } from '@/domain/validation';
 import { useSlotBattle, useTeamStore } from '@/store/teamStore';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
@@ -123,7 +125,16 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
               <Input value={set.nickname ?? ''} placeholder={species.name} maxLength={12} onChange={(e) => updateSet(slot, { nickname: e.target.value || undefined })} />
             </Field>
             {(mech.heldItems || mech.megaStoneOnly) && (
-            <Field label={mech.megaStoneOnly ? 'Mega Stone (in the Bag)' : 'Held item'}>
+            <Field
+              label={mech.megaStoneOnly ? 'Mega Stone (in the Bag)' : 'Held item'}
+              hint={
+                item?.shortDesc && (
+                  <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]}>
+                    <span className="truncate">ⓘ</span>
+                  </InfoTooltip>
+                )
+              }
+            >
               <Combobox
                 aria-label="Held item"
                 options={itemOptions}
@@ -137,7 +148,16 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
             </Field>
             )}
             {mech.abilities && (
-            <Field label="Ability" hint={ability?.shortDesc && <span className="truncate" title={ability.shortDesc}>ⓘ</span>}>
+            <Field
+              label="Ability"
+              hint={
+                ability?.shortDesc && (
+                  <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]}>
+                    <span className="truncate">ⓘ</span>
+                  </InfoTooltip>
+                )
+              }
+            >
               <Select value={set.abilityId ?? ''} onChange={(e) => updateSet(slot, { abilityId: e.target.value })}>
                 {dex.abilitiesOf(species.id).map(({ slot: s, ability: a }) => (
                   <option key={s} value={a.id}>
@@ -188,8 +208,22 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
             </Field>
           </div>
         </div>
-        {ability && <p className="mt-3 text-xs text-muted"><b className="text-fg">{ability.name}:</b> {ability.shortDesc}</p>}
-        {item && <p className="mt-1 text-xs text-muted"><b className="text-fg">{item.name}:</b> {item.shortDesc}</p>}
+        {ability && (
+          <p className="mt-3 text-xs text-muted">
+            <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]}>
+              <b className="text-fg underline decoration-dotted">{ability.name}</b>
+            </InfoTooltip>
+            : {ability.shortDesc}
+          </p>
+        )}
+        {item && (
+          <p className="mt-1 text-xs text-muted">
+            <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]}>
+              <b className="text-fg underline decoration-dotted">{item.name}</b>
+            </InfoTooltip>
+            : {item.shortDesc}
+          </p>
+        )}
         <SpriteHistory species={species} />
 
         {/* Moves */}

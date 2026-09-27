@@ -14,10 +14,12 @@ import {
   type LearnMethod,
   type PokedexData,
 } from '@/domain/pokedex';
+import { ABILITY_INTERACTIONS } from '@/domain/mechanics';
 import { createSet } from '@/domain/team';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type Move, type Pokemon, type SpriteSetId } from '@/domain/types';
 import { usePokedexStore, type PokedexTab } from '@/store/pokedexStore';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
+import { InfoTooltip } from '../ui/InfoTooltip';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
 import { Button, Panel, STAT_COLOR_VAR, TYPE_COLORS, TypeBadge, cn } from '../ui/primitives';
@@ -202,7 +204,9 @@ function InfoTab({ species, dex, data, book, onSelect }: Props) {
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Abilities</div>
             {dex.abilitiesOf(species.id).map(({ slot, ability }) => (
               <p key={slot} className="text-xs">
-                <b className="text-fg">{ability.name}</b>
+                <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]}>
+                  <b className="text-fg underline decoration-dotted">{ability.name}</b>
+                </InfoTooltip>
                 {slot === 'H' && <span className="ml-1 text-[10px] font-semibold uppercase text-accent">Hidden</span>}
                 <span className="text-muted"> — {ability.shortDesc}</span>
               </p>
