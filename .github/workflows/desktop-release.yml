@@ -1,9 +1,20 @@
 name: Desktop release
 
 # Builds native installers for Windows (.exe/.msi), macOS (.dmg) and Linux (.deb/.rpm/.AppImage)
-# on each platform's own runner (Tauri apps aren't reliably cross-compiled). Runs on a version
-# tag (v1.2.3) to publish a GitHub Release, or manually via the Actions tab for a test build
-# without publishing anything.
+# on each platform's own runner (Tauri apps aren't reliably cross-compiled).
+#
+# - push a `v*` tag (e.g. `git tag v0.2.0 && git push origin v0.2.0`): builds, signs, and publishes
+#   a GitHub Release with the installers *and* the signed `latest.json` manifest the in-app
+#   updater polls (src-tauri/tauri.conf.json's plugins.updater.endpoints). This is what makes
+#   "check for updates" inside the app find and install the new version.
+# - "Run workflow" from the Actions tab: build-only smoke test, no release, no signing. Installers
+#   are attached to the run as downloadable artifacts (Summary tab) so it also works before the
+#   signing secrets below are configured.
+#
+# One-time setup for the auto-updater to work (see docs/DESKTOP_RELEASES.md):
+#   Settings → Secrets and variables → Actions → New repository secret
+#     TAURI_SIGNING_PRIVATE_KEY          (the private half of src-tauri/updater.key)
+#     TAURI_SIGNING_PRIVATE_KEY_PASSWORD (the password chosen when it was generated)
 on:
   push:
     tags:
@@ -39,11 +50,35 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      # Tag push: build, sign, and publish/update the GitHub Release the updater polls.
       - uses: tauri-apps/tauri-action@v0
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Pokémon Team Builder ${{ github.ref_name }}'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
+
+      # Manual "Run workflow": build only, no signing, no release — just proves the pipeline works.
+      - name: Build only (manual test run)
+        if: github.event_name == 'workflow_dispatch'
+        run: npx tauri build
+
+      - name: Upload build (manual test run)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: |
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.rpm
+          if-no-files-found: error

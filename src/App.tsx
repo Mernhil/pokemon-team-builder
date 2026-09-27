@@ -7,6 +7,7 @@ import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
+import { DesktopUpdater } from './components/DesktopUpdater';
 import { RegulationBanner } from './components/analysis/RegulationBanner';
 import { GenBadge } from './components/ui/GenBadge';
 import { ValidationPanel } from './components/analysis/ValidationPanel';
@@ -53,6 +54,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-full flex-col">
+      <DesktopUpdater />
       <Header team={team} format={format} dex={dexState.status === 'ready' ? dexState.dex : undefined} />
       {dexState.status === 'ready' ? (
         view === 'calc' ? (

@@ -28,6 +28,8 @@
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@smogon/calc": "^0.12.0",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.13.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",
