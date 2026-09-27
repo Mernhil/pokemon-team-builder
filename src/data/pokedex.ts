@@ -7,8 +7,10 @@ import { SIDE_LOADED_DATA, fetchGenerated } from './generated-loader';
  * and <book>-learn.json (`npm run data`), where book is gen1…gen9, lgpe, bdsp, pla or za. Each file is
  * its own chunk, fetched on first use.
  */
-const pokedexFiles = import.meta.glob('./generated/pokedex-*.json');
-const learnFiles = import.meta.glob('./generated/*-learn.json');
+// The mode check is written out here, not via SIDE_LOADED_DATA, so the single-file build drops the
+// globs entirely instead of inlining every file it then fetches from data/ anyway.
+const pokedexFiles = import.meta.env.MODE === 'singlefile' ? {} : import.meta.glob('./generated/pokedex-*.json');
+const learnFiles = import.meta.env.MODE === 'singlefile' ? {} : import.meta.glob('./generated/*-learn.json');
 
 const cache = new Map<string, Promise<unknown>>();
 function load<T>(name: string, files: Record<string, () => Promise<unknown>>): Promise<T> {
