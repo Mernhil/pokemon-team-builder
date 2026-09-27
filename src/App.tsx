@@ -9,7 +9,8 @@ import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
-import { DesktopUpdater } from './components/DesktopUpdater';
+import { OffenseMatrix } from './components/analysis/OffenseMatrix';
+import { DesktopUpdater, UpdateCheckButton } from './components/DesktopUpdater';
 import { RegulationBanner } from './components/analysis/RegulationBanner';
 import { GenBadge } from './components/ui/GenBadge';
 import { ValidationPanel } from './components/analysis/ValidationPanel';
@@ -73,7 +74,7 @@ export default function App() {
         </main>
       ) : dexState.status === 'ready' ? (
         view === 'calc' ? (
-          <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">
+          <main className="mx-auto w-full max-w-[1800px] flex-1 p-4">
             <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading damage calculator…</p>}>
               <DamageCalcView dex={dexState.dex} format={format} team={team} />
             </Suspense>
@@ -186,6 +187,7 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           <Button onClick={() => setIoOpen(true)} disabled={!dex}>
             <ArrowLeftRight size={14} /> <span className="hidden sm:inline">Import / Export</span>
           </Button>
+          <UpdateCheckButton />
           <Button
             size="icon"
             variant="ghost"
@@ -253,6 +255,7 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
           <ValidationPanel issues={issues} />
         </div>
         <DefenseMatrix team={team} dex={dex} format={format} />
+        <OffenseMatrix team={team} dex={dex} />
         <p className="pb-2 text-center text-[11px] text-muted">
           {format.game
             ? `Data: ${dex.data.source} · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`

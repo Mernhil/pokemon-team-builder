@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Minus, Plus, RotateCcw, Target } from 'lucide-react';
+import { Minus, Plus, RotateCcw, Sparkles, Target } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
 import { calcStats, gbHpDV, investRange, investmentForTarget, lgpeFriendshipPercent, natureModifier, spendBudget, spreadKey, sumStats } from '@/domain/stats';
@@ -29,6 +29,9 @@ interface Props {
   /** Let's Go: friendship (0–255) scales every stat but HP by up to +10%. */
   onFriendship?: (value: number) => void;
   onNature: (nature: string) => void;
+  /** Whether the Mega forme is the one shown (controlled; shared with the battle Mega toggle). */
+  megaActive?: boolean;
+  onMegaActive?: (on: boolean) => void;
 }
 
 type Preset = { label: string; spread: Partial<StatTable> };
@@ -68,7 +71,8 @@ const zero = (): StatTable => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
  *  - Legends: Arceus Effort Levels (0–10 each; IVs are folded into them)
  * Inline +/− buttons on each stat set the nature Showdown-style (Gen 3+).
  */
-export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature }: Props) {
+export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive }: Props) {
+  const [localMega, setLocalMega] = useState(true);
   const sys = format.statSystem;
   const mech = formatMechanics(format);
   const key = spreadKey(sys);
@@ -79,8 +83,15 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
   const showIV = !format.fixedIVs && !!onIV && sys.kind !== 'pla-effort';
   const nature = mech.natures ? dex.nature(set.nature) : undefined;
   const level = format.level.fixed ?? set.level;
-  const stats = calcStats(species.baseStats, set, format, nature);
-  const megaStats = mega ? calcStats(mega.baseStats, set, format, nature) : undefined;
+  // With a Mega Stone, one forme is "shown" (base stats, main column, speed tools) and the other
+  // stays visible in a smaller comparison column.
+  const showMega = !!mega && (megaActive ?? localMega);
+  const setShowMega = onMegaActive ?? setLocalMega;
+  const shown = showMega ? mega! : species;
+  const other = mega ? (showMega ? species : mega) : undefined;
+  const stats = calcStats(shown.baseStats, set, format, nature);
+  const otherStats = other ? calcStats(other.baseStats, set, format, nature) : undefined;
+  const otherLabel = showMega ? 'Base' : 'Mega';
   const budget = spendBudget(sys, spread);
   const pct = budget ? Math.min(100, (budget.used / budget.cap) * 100) : 0;
   const unit = { 'champions-sp': 'SP', 'modern-ev': 'EVs', 'gb-statexp': 'Stat Exp', 'lgpe-av': 'AVs', 'pla-effort': 'Effort Lv' }[sys.kind];
@@ -90,10 +101,30 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
   const rows = STAT_IDS.filter((s) => !(gb && !mech.splitSpecial && s === 'spd'));
   const label = (s: StatId) => (gb && !mech.splitSpecial && s === 'spa' ? 'Spc' : STAT_LABELS[s]);
   const linked = (s: StatId) => gb && s === 'spd';
-  const cols = cn(
-    megaStats ? 'sm:grid-cols-[88px_110px_1fr_104px_var(--iv)_48px_48px]' : 'sm:grid-cols-[88px_110px_1fr_104px_var(--iv)_48px]',
-  );
+  const cols = otherStats ? '@xl:grid-cols-[88px_110px_1fr_104px_var(--iv)_48px_48px]' : '@xl:grid-cols-[88px_110px_1fr_104px_var(--iv)_48px]';
   const gridStyle = { ['--iv' as string]: showIV ? '52px' : '0px' };
+  // Base/Mega switch: which forme the main column, totals and speed tools follow.
+  const megaToggle = mega && (
+    <span role="group" aria-label="Stats shown for" className="inline-flex rounded-md bg-surface-2 p-0.5 text-[11px] font-semibold">
+      {[false, true].map((m) => (
+        <button
+          key={String(m)}
+          type="button"
+          aria-pressed={showMega === m}
+          title={m ? `Show ${mega.name} stats` : `Show ${species.name} stats`}
+          onClick={() => setShowMega(m)}
+          className={cn(
+            'inline-flex items-center gap-1 rounded px-2 py-0.5 transition-colors',
+            showMega === m ? 'bg-surface shadow-sm' : 'text-muted hover:text-fg',
+            showMega === m && m && 'text-accent',
+          )}
+        >
+          {m && <Sparkles size={11} />}
+          {m ? 'Mega' : 'Base'}
+        </button>
+      ))}
+    </span>
+  );
 
   const toggleAlign = (stat: StatId, dir: 'plus' | 'minus') => {
     const neutral = !nature?.plus || nature.plus === nature.minus;
@@ -119,12 +150,16 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
   };
 
   return (
-    <div className="space-y-3">
+    <div className="@container space-y-3">
+      {!budget && megaToggle && <div className="flex justify-end">{megaToggle}</div>}
       {/* Budget meter (SP and EVs share a total; Stat Exp doesn't) */}
       {budget ? (
         <div>
           <div className="mb-1.5 flex items-baseline justify-between text-xs">
-            <span className="font-semibold uppercase tracking-wider text-muted">{sys.kind === 'champions-sp' ? 'Stat Points' : 'Effort Values'}</span>
+            <span className="flex items-center gap-2">
+              <span className="font-semibold uppercase tracking-wider text-muted">{sys.kind === 'champions-sp' ? 'Stat Points' : 'Effort Values'}</span>
+              {megaToggle}
+            </span>
             <span className="font-mono tabular-nums">
               <span className={cn('text-base font-bold', budget.status === 'over' && 'text-bad', budget.status === 'complete' && 'text-good')}>{budget.used}</span>
               <span className="text-muted"> / {budget.cap} · </span>
@@ -172,9 +207,9 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
         </p>
       )}
 
-      {/* Rows — grid on desktop, two-line cards on phones */}
+      {/* Rows — grid when wide, two-line cards in narrow containers (phones, calc columns) */}
       <div className="text-sm">
-        <div className={cn('hidden gap-x-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted sm:grid', cols)} style={gridStyle}>
+        <div className={cn('hidden gap-x-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted @xl:grid', cols)} style={gridStyle}>
           <span>Stat</span>
           <span>Base</span>
           <span>
@@ -182,12 +217,12 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
           </span>
           <span className="text-center">{unit}</span>
           <span className="text-center">{showIV ? ivUnit : ''}</span>
-          <span className="text-right">Lv{level}</span>
-          {megaStats && <span className="text-right text-accent">Mega</span>}
+          <span className={cn('text-right', showMega && 'text-accent')}>{showMega ? 'Mega' : `Lv${level}`}</span>
+          {otherStats && <span className="text-right">{otherLabel}</span>}
         </div>
-        <div className="divide-y divide-border/60 sm:divide-y-0">
+        <div className="divide-y divide-border/60 @xl:divide-y-0">
           {rows.map((s) => {
-            const base = species.baseStats[s];
+            const base = shown.baseStats[s];
             const mod = natureModifier(s, nature);
             const val = spread[s];
             const room = budget ? Math.min(perStat, val + Math.max(0, budget.remaining)) : perStat;
@@ -196,7 +231,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
             return (
               <div
                 key={s}
-                className={cn('grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1.5 py-2 sm:py-1', cols)}
+                className={cn('grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1.5 py-2 @xl:py-1', cols)}
                 style={gridStyle}
               >
                 {/* label + nature */}
@@ -231,22 +266,22 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                 </div>
                 {/* base */}
                 <div className="flex items-center gap-2">
-                  <span className="w-7 text-right font-mono text-xs tabular-nums text-muted sm:text-fg">{base}</span>
+                  <span className="w-7 text-right font-mono text-xs tabular-nums text-muted @xl:text-fg">{base}</span>
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
                     <div className="h-full rounded-full" style={{ width: `${Math.min(100, (base / BASE_BAR_MAX) * 100)}%`, background: STAT_COLOR_VAR[s] }} />
                   </div>
                 </div>
                 {/* final stat (phones: top-right) */}
-                <div className={cn('text-right font-mono text-base font-bold tabular-nums sm:hidden', tone)}>
+                <div className={cn('text-right font-mono text-base font-bold tabular-nums @xl:hidden', tone)}>
                   {stats[s]}
-                  {megaStats && <span className="ml-1.5 text-xs font-normal text-accent">M {megaStats[s]}</span>}
+                  {otherStats && <span className="ml-1.5 text-xs font-normal text-muted">{otherLabel} {otherStats[s]}</span>}
                 </div>
                 {locked ? (
-                  <p className="col-span-2 text-[11px] text-muted sm:col-span-3">Uses the Special DV and Stat Exp above.</p>
+                  <p className="col-span-2 text-[11px] text-muted @xl:col-span-3">Uses the Special DV and Stat Exp above.</p>
                 ) : (
                   <>
                     {/* slider */}
-                    <div className="col-span-2 sm:col-span-1 sm:px-1">
+                    <div className="col-span-2 @xl:col-span-1 @xl:px-1">
                       <input
                         type="range"
                         className="stat-range w-full"
@@ -260,7 +295,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                       />
                     </div>
                     {/* numeric */}
-                    <div className="flex items-center justify-end gap-0.5 sm:justify-center">
+                    <div className="flex items-center justify-end gap-0.5 @xl:justify-center">
                       <button type="button" aria-label={`Decrease ${label(s)}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30" disabled={val <= 0} onClick={() => onSpread(s, Math.max(0, val - (gb ? 1 : step)))}>
                         <Minus size={12} />
                       </button>
@@ -287,8 +322,8 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                 )}
                 {/* IV / DV */}
                 {showIV && !locked ? (
-                  <div className="flex items-center justify-end gap-1 sm:justify-center">
-                    <span className="text-[10px] text-muted sm:hidden">{ivUnit}</span>
+                  <div className="flex items-center justify-end gap-1 @xl:justify-center">
+                    <span className="text-[10px] text-muted @xl:hidden">{ivUnit}</span>
                     {gb && s === 'hp' ? (
                       <span className="h-7 w-10 rounded border border-dashed border-border text-center font-mono text-sm leading-7 tabular-nums text-muted" title="The HP DV follows from the Atk, Def, Spe and Special DVs">
                         {hpDV}
@@ -311,22 +346,24 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                     )}
                   </div>
                 ) : (
-                  <span className="hidden sm:block" />
+                  <span className="hidden @xl:block" />
                 )}
                 {/* final stat (desktop columns) */}
-                <div className={cn('hidden text-right font-mono text-base font-bold tabular-nums sm:block', tone)}>{stats[s]}</div>
-                {megaStats && <div className={cn('hidden text-right font-mono tabular-nums sm:block', tone)}>{megaStats[s]}</div>}
+                <div className={cn('hidden text-right font-mono text-base font-bold tabular-nums @xl:block', tone)}>{stats[s]}</div>
+                {otherStats && <div className="hidden text-right font-mono tabular-nums text-muted @xl:block">{otherStats[s]}</div>}
               </div>
             );
           })}
         </div>
         <div className="mt-1 flex justify-between border-t border-border pt-1.5 font-mono text-xs text-muted">
-          <span>Base total {sumStats(species.baseStats) - (mech.splitSpecial ? 0 : species.baseStats.spd)}</span>
           <span>
-            Lv{level} total <b className="text-fg">{sumStats(stats) - (mech.splitSpecial ? 0 : stats.spd)}</b>
-            {megaStats && (
+            {showMega ? `${shown.name} base` : 'Base'} total {sumStats(shown.baseStats) - (mech.splitSpecial ? 0 : shown.baseStats.spd)}
+          </span>
+          <span>
+            Lv{level} total <b className={showMega ? 'text-accent' : 'text-fg'}>{sumStats(stats) - (mech.splitSpecial ? 0 : stats.spd)}</b>
+            {otherStats && (
               <>
-                {' '}· Mega <b className="text-accent">{sumStats(megaStats)}</b>
+                {' '}· {otherLabel} <b className="text-fg">{sumStats(otherStats) - (mech.splitSpecial ? 0 : otherStats.spd)}</b>
               </>
             )}
           </span>
@@ -354,7 +391,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
           </Button>
         )}
       </div>
-      <SpeedBenchmark mega={!!mega} set={set} species={mega ?? species} format={format} dex={dex} onSpread={onSpread} speed={(megaStats ?? stats).spe} unit={unit} />
+      <SpeedBenchmark mega={showMega} set={set} species={shown} format={format} dex={dex} onSpread={onSpread} speed={stats.spe} unit={unit} />
     </div>
   );
 }
