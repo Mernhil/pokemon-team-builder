@@ -13,32 +13,33 @@ offline — without the App Store or an Apple developer account.
 - Not active in the Tauri desktop shell (it has its own updater) nor in the single-file/artifact
   build (`--mode singlefile`).
 
-## Hosting: Cloudflare Pages + Cloudflare Access (private, free)
+## Hosting: Cloudflare Workers + Cloudflare Access (private, free)
 
 The repo is private and the app should only be reachable by people explicitly allowed in, so it
-is hosted on Cloudflare Pages (builds private repos, redeploys on every push) behind Cloudflare
-Access (login gate by e-mail, free up to 50 users). Both are configured in the Cloudflare
-dashboard; there is no workflow in this repo.
+is hosted on Cloudflare (Workers static assets, builds private repos, redeploys on every push)
+behind Cloudflare Access (login gate by e-mail, free up to 50 users). `wrangler.jsonc` tells
+Cloudflare what to publish; the rest is configured in the Cloudflare dashboard.
 
-### 1. Pages project (auto-deploy on push)
+### 1. Worker project (auto-deploy on push)
 
-Workers & Pages → Create → Pages → Connect to Git → pick this repo, then:
+Workers & Pages → Create application → Import a repository → pick this repo, then:
 
 - Production branch: the repo's default branch
 - Build command: `npm run build`
-- Build output directory: `dist`
+- Deploy command: `npx wrangler deploy`
 - Environment variable `NODE_VERSION` = `22`
 
-Every push to the production branch redeploys `https://<project>.pages.dev`.
+Every push to the production branch redeploys `https://pokemon-team-builder.<account>.workers.dev`
+(Worker → Settings → Domains & Routes shows the exact URL). Per-version preview URLs are turned
+off in `wrangler.jsonc` so they can't bypass the login.
 
 ### 2. Restrict access to allowed people
 
-1. Pages project → Settings → General → **Access policy** → Enable. This protects the preview
-   deployments (`*.<project>.pages.dev`) and creates a Zero Trust Access application.
-2. Zero Trust → Access → Applications → that application → edit it and **also add the production
-   hostname** `<project>.pages.dev` (step 1 alone leaves production public).
-3. Policy: Action **Allow**, Include → **Emails** → your address and each person you invite.
-   Login method: **One-time PIN** (a code sent by e-mail; no accounts to create).
+1. Workers & Pages sidebar → **Set up Zero Trust** (free plan; asks for a team name).
+2. Worker → Settings → Domains & Routes → the `workers.dev` entry → enable **Cloudflare Access**.
+3. Zero Trust → Access → Applications → the application just created → Policies: Action
+   **Allow**, Include → **Emails** → your address and each person you invite. Login method:
+   **One-time PIN** (a code sent by e-mail; no accounts to create).
 4. Session duration: a long one (e.g. 1 month) so the phone app doesn't ask to log in often.
 
 To grant or revoke someone, add/remove their e-mail in the policy. Check it by opening the URL in a
