@@ -7,6 +7,7 @@ import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
+import { OffenseMatrix } from './components/analysis/OffenseMatrix';
 import { DesktopUpdater } from './components/DesktopUpdater';
 import { RegulationBanner } from './components/analysis/RegulationBanner';
 import { GenBadge } from './components/ui/GenBadge';
@@ -226,6 +227,7 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
           <ValidationPanel issues={issues} />
         </div>
         <DefenseMatrix team={team} dex={dex} format={format} />
+        <OffenseMatrix team={team} dex={dex} />
         <p className="pb-2 text-center text-[11px] text-muted">
           Data: Pokémon Showdown + official regulation announcements ({dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated {dex.data.generatedAt.slice(0, 10)}
         </p>
