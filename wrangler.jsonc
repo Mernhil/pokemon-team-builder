@@ -1,0 +1,14 @@
+// Cloudflare Workers deploy of the phone/web app (static assets only, no server code).
+// Workers Builds runs `npm run build` then `npx wrangler deploy` on every push; see docs/IPHONE_APP.md.
+{
+  "name": "pokemon-team-builder",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  // Served at pokemon-team-builder.<account>.workers.dev, gated by Cloudflare Access.
+  "workers_dev": true,
+  // Per-version preview URLs would be a second, unprotected way in; keep them off.
+  "preview_urls": false
+}
