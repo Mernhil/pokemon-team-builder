@@ -32,25 +32,29 @@ export const SPRITE_SETS: { id: SpriteSetId; label: string; gen?: number }[] = [
 ];
 
 const base = () => `${import.meta.env.BASE_URL ?? './'}sprites/`.replace(/^\/\//, '/');
-const cache = new Map<SpriteSetId, Promise<SpriteSheet | null>>();
+const cache = new Map<string, Promise<SpriteSheet | null>>();
 
-export function loadSpriteSheet(set: SpriteSetId): Promise<SpriteSheet | null> {
-  let p = cache.get(set);
+function loadSheet(id: string): Promise<SpriteSheet | null> {
+  let p = cache.get(id);
   if (!p) {
-    p = fetch(`${base()}${set}.json`)
+    p = fetch(`${base()}${id}.json`)
       .then((r) => (r.ok ? r.json() : null))
       .then((meta) => {
         if (!meta) return null;
-        const sheet = { ...meta, url: `${base()}${set}.webp` } as SpriteSheet;
+        const sheet = { ...meta, url: `${base()}${id}.webp` } as SpriteSheet;
         // Warm the image so the first paint of every sprite comes from cache.
         const img = new Image();
         img.src = sheet.url;
         return sheet;
       })
       .catch(() => null);
-    cache.set(set, p);
+    cache.set(id, p);
   }
   return p;
+}
+
+export function loadSpriteSheet(set: SpriteSetId): Promise<SpriteSheet | null> {
+  return loadSheet(set);
 }
 
 /** Subscribe to a sprite sheet; returns null while loading or if the set isn't available. */
@@ -64,5 +68,23 @@ export function useSpriteSheet(set: SpriteSetId | undefined): SpriteSheet | null
       alive = false;
     };
   }, [set]);
+  return sheet;
+}
+
+/** Item icon atlas built by scripts/build-items.ts (public/sprites/items.{webp,json}). */
+export function loadItemSheet(): Promise<SpriteSheet | null> {
+  return loadSheet('items');
+}
+
+/** Subscribe to the item icon atlas; returns null while loading or if it isn't available. */
+export function useItemSheet(): SpriteSheet | null {
+  const [sheet, setSheet] = useState<SpriteSheet | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadItemSheet().then((s) => alive && setSheet(s));
+    return () => {
+      alive = false;
+    };
+  }, []);
   return sheet;
 }

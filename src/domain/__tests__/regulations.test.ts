@@ -60,4 +60,25 @@ describe('Sprite atlases', () => {
     expect(g1.index.mew).toBeDefined();
     expect(g1.index.chikorita).toBeUndefined();
   });
+
+  it('every species and item legal in every regulation (M-A, M-B, M-C) resolves to an atlas key', () => {
+    const speciesIdx = JSON.parse(readFileSync('public/sprites/champions.json', 'utf8')).index as Record<string, number>;
+    const itemIdx = JSON.parse(readFileSync('public/sprites/items.json', 'utf8')).index as Record<string, number>;
+    const regulationIds = ['champions-reg-ma', 'champions-reg-mb', 'champions-reg-mc'];
+
+    const missingSpecies: string[] = [];
+    const missingItems: string[] = [];
+    for (const regulationId of regulationIds) {
+      for (const s of dex.allSpecies().filter((s) => s.legalIn.includes(regulationId))) {
+        if (speciesIdx[s.id] === undefined) missingSpecies.push(`${regulationId}: ${s.id}`);
+      }
+      for (const i of dex.items(regulationId)) {
+        if (itemIdx[i.id] === undefined) missingItems.push(`${regulationId}: ${i.id}`);
+      }
+    }
+    if (missingSpecies.length) console.error('Missing species sprites:', missingSpecies);
+    if (missingItems.length) console.error('Missing item icons:', missingItems);
+    expect(missingSpecies).toEqual([]);
+    expect(missingItems).toEqual([]);
+  });
 });

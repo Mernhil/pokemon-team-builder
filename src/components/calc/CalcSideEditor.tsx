@@ -10,6 +10,7 @@ import { StatDistributor } from '../editor/StatDistributor';
 import { useItemOptions, useMoveOptions } from '../editor/options';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
+import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
 import { Field, Panel, Select, TypeBadge, cn } from '../ui/primitives';
 import { setSpreadValue } from '@/domain/stats';
@@ -126,7 +127,15 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Held item">
-                <Combobox aria-label={`${title} item`} options={itemOptions} value={set.itemId} allowClear placeholder="None" onChange={(id) => patchSet(role, { itemId: id || undefined })} />
+                <Combobox
+                  aria-label={`${title} item`}
+                  options={itemOptions}
+                  value={set.itemId}
+                  allowClear
+                  placeholder="None"
+                  icon={<ItemSprite itemId={set.itemId} name={dex.item(set.itemId)?.name} size={18} />}
+                  onChange={(id) => patchSet(role, { itemId: id || undefined })}
+                />
               </Field>
               <Field label="Ability">
                 <Select value={set.abilityId ?? ''} onChange={(e) => patchSet(role, { abilityId: e.target.value })} disabled={forme !== species} title={forme !== species ? 'Mega Evolution sets the ability' : undefined}>

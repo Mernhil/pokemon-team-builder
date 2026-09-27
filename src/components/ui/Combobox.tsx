@@ -21,11 +21,13 @@ interface Props {
   className?: string;
   invalid?: boolean;
   limit?: number;
+  /** Icon for the currently selected option, shown inside the closed input (e.g. an item sprite). */
+  icon?: ReactNode;
   'aria-label'?: string;
 }
 
 /** Lightweight accessible autocomplete (ARIA combobox pattern). */
-export function Combobox({ options, value, onChange, placeholder, allowClear, className, invalid, limit = 80, ...aria }: Props) {
+export function Combobox({ options, value, onChange, placeholder, allowClear, className, invalid, limit = 80, icon, ...aria }: Props) {
   const selected = options.find((o) => o.id === value);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -61,6 +63,9 @@ export function Combobox({ options, value, onChange, placeholder, allowClear, cl
 
   return (
     <div className={cn('relative', className)}>
+      {icon && !open && value && (
+        <div className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2">{icon}</div>
+      )}
       <input
         ref={inputRef}
         role="combobox"
@@ -71,6 +76,7 @@ export function Combobox({ options, value, onChange, placeholder, allowClear, cl
         className={cn(
           'h-9 w-full rounded-md border bg-surface-2 px-2.5 pr-7 text-sm outline-none placeholder:text-muted',
           'focus:border-accent focus:ring-2 focus:ring-accent/25',
+          icon && !open && value && 'pl-8',
           invalid ? 'border-bad' : 'border-border',
         )}
         placeholder={selected ? selected.label : placeholder}

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Dex } from '@/data/dex';
 import type { FormatRules, PokemonSet } from '@/domain/types';
 import type { ComboOption } from '../ui/Combobox';
+import { ItemSprite } from '../ui/ItemSprite';
 import { TypeBadge, cn } from '../ui/primitives';
 
 /** Held-item options legal in the format; the set's own Mega Stone is highlighted. */
@@ -13,9 +14,12 @@ export function useItemOptions(dex: Dex, format: FormatRules, speciesId?: string
         label: i.name,
         keywords: i.shortDesc,
         render: (
-          <span className="flex flex-col">
-            <span className={cn(speciesId && i.megaStone?.[speciesId] && 'font-semibold text-accent')}>{i.name}</span>
-            <span className="truncate text-[11px] text-muted">{i.shortDesc}</span>
+          <span className="flex items-center gap-2">
+            <ItemSprite itemId={i.id} name={i.name} size={20} />
+            <span className="flex flex-col">
+              <span className={cn(speciesId && i.megaStone?.[speciesId] && 'font-semibold text-accent')}>{i.name}</span>
+              <span className="truncate text-[11px] text-muted">{i.shortDesc}</span>
+            </span>
           </span>
         ),
       })),

@@ -16,6 +16,7 @@ import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
 import { useTeamStore } from '@/store/teamStore';
 import { GenBadge } from '../ui/GenBadge';
+import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
 import { MonAvatar, TypeBadge, cn } from '../ui/primitives';
 
@@ -139,8 +140,11 @@ function SlotCard({
                 </span>
               )}
             </div>
-            <div className="truncate text-[11px] text-muted">
-              {dex.item(set.itemId)?.name ?? 'No item'} · {dex.ability(set.abilityId)?.name ?? '—'}
+            <div className="flex items-center gap-1 truncate text-[11px] text-muted">
+              <ItemSprite itemId={set.itemId} name={dex.item(set.itemId)?.name} size={14} />
+              <span className="truncate">
+                {dex.item(set.itemId)?.name ?? 'No item'} · {dex.ability(set.abilityId)?.name ?? '—'}
+              </span>
             </div>
             <div className="mt-1 flex items-center gap-1.5">
               {sp.types.map((t) => (

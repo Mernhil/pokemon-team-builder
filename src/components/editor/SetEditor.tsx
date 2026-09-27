@@ -6,6 +6,7 @@ import type { Issue } from '@/domain/validation';
 import { useTeamStore } from '@/store/teamStore';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
+import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
 import { Button, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
 import { AdvancedDetails } from './AdvancedDetails';
@@ -122,6 +123,7 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
                 value={set.itemId}
                 allowClear
                 placeholder="None"
+                icon={<ItemSprite itemId={set.itemId} name={item?.name} size={18} />}
                 invalid={slotIssues.some((i) => i.code.startsWith('item'))}
                 onChange={(id) => updateSet(slot, { itemId: id || undefined })}
               />

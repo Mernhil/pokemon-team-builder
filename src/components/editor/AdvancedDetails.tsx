@@ -8,6 +8,7 @@ import { STAT_LABELS, type FormatRules, type Pokemon, type PokemonSet } from '@/
 import { useCalcStore } from '@/store/calcStore';
 import { useTeamStore, type SlotBattleState } from '@/store/teamStore';
 import { FieldControls, ModChip, SideControls, Toggle } from '../battle/Controls';
+import { ItemSprite } from '../ui/ItemSprite';
 import { Button, Panel, STAT_COLOR_VAR, TypeBadge, cn } from '../ui/primitives';
 
 interface Props {
@@ -112,7 +113,8 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
             <div>
               <div className="mb-1.5 flex items-baseline justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">In-battle stats · {forme.name}</span>
-                <span className="flex gap-1">
+                <span className="flex items-center gap-1">
+                  <ItemSprite itemId={set.itemId} name={result.item} size={16} />
                   {result.types.map((t) => (
                     <TypeBadge key={t} type={t} size="xs" />
                   ))}
