@@ -60,7 +60,11 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
           <p className="text-xs text-warn">{error}</p>
           <p className="mt-1 text-xs text-muted">
             championsbattledata.com is an unofficial third-party source and may be unreachable, rate-limited or have changed its API shape.
-            {snapshot ? ' Showing the last successful fetch below.' : ''}
+            {snapshot?.source.startsWith('championsbattledata.com')
+              ? ' Showing the last successful fetch below.'
+              : snapshot
+                ? ' Showing usage derived from your own logged matches below instead.'
+                : ' Log some matches on the Matches tab to see usage stats from your own games while this is down.'}
           </p>
         </Panel>
       )}

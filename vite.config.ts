@@ -1,10 +1,22 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url';
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { viteSingleFile } from 'vite-plugin-singlefile';
+
+// The desktop app version (src-tauri/tauri.conf.json), not package.json's — it's the one bumped on
+// every Tauri release, so it's what actually changes and busts the webview's icon cache.
+const appVersion = JSON.parse(readFileSync(new URL('./src-tauri/tauri.conf.json', import.meta.url), 'utf-8')).version as string;
+
+// The Tauri desktop webview (WebView2/WKWebView) caches static assets by URL across app updates —
+// stamping icon links with the app version forces a fresh fetch whenever the logo changes.
+const cacheBustIcons = (): Plugin => ({
+  name: 'cache-bust-icons',
+  transformIndexHtml: (html) => html.replaceAll('%APP_VERSION%', appVersion),
+});
 
 // `vite build --mode singlefile` inlines everything into one index.html (portable/offline build).
 export default defineConfig(({ mode }) => ({
@@ -12,6 +24,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
+    cacheBustIcons(),
     ...(mode === 'singlefile' ? [viteSingleFile()] : []),
     // Installable web app ("Add to Home Screen" on iPhone). The service worker precaches the whole
     // app, sprites included, so it works offline; src/pwa.ts picks up new deploys automatically.

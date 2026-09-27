@@ -138,6 +138,48 @@ export async function fetchChampionsMeta(regulationId: string): Promise<MetaSnap
 }
 
 /**
+ * Fallback meta snapshot built entirely from the player's own logged matches (see domain/matches.ts)
+ * — no network required. Used when championsbattledata.com can't be reached, so the Meta tab still
+ * shows something real instead of just an error card. Clearly attributed via `source` so the UI can
+ * distinguish it from live third-party usage stats.
+ */
+export function localMetaFromMatches(
+  matches: { regulationId?: string; opponentTeam: { speciesId: string; itemId?: string; abilityId?: string; moves?: string[] }[] }[],
+  regulationId: string,
+): MetaSnapshot | null {
+  const relevant = matches.filter((m) => m.regulationId === regulationId);
+  if (!relevant.length) return null;
+
+  const totalMatches = relevant.length;
+  const bySpecies = new Map<string, { seen: number; items: Map<string, number>; moves: Map<string, number> }>();
+  for (const m of relevant) {
+    for (const mon of m.opponentTeam) {
+      const rec = bySpecies.get(mon.speciesId) ?? { seen: 0, items: new Map(), moves: new Map() };
+      rec.seen++;
+      if (mon.itemId) rec.items.set(mon.itemId, (rec.items.get(mon.itemId) ?? 0) + 1);
+      for (const mv of mon.moves ?? []) rec.moves.set(mv, (rec.moves.get(mv) ?? 0) + 1);
+      bySpecies.set(mon.speciesId, rec);
+    }
+  }
+  if (!bySpecies.size) return null;
+
+  const toShare = (counts: Map<string, number>, denom: number) =>
+    [...counts.entries()].map(([id, n]) => ({ id, pct: (n / denom) * 100 })).sort((a, b) => b.pct - a.pct);
+
+  const entries: MetaEntry[] = [...bySpecies.entries()]
+    .map(([speciesId, rec]) => ({
+      speciesId,
+      usagePct: (rec.seen / totalMatches) * 100,
+      items: toShare(rec.items, rec.seen).map((x) => ({ itemId: x.id, pct: x.pct })),
+      moves: toShare(rec.moves, rec.seen).map((x) => ({ moveId: x.id, pct: x.pct })),
+      spreads: [],
+    }))
+    .sort((a, b) => b.usagePct - a.usagePct);
+
+  return { regulationId, fetchedAt: Date.now(), source: `${totalMatches} of your logged matches`, entries };
+}
+
+/**
  * Cheap cross-reference: how much a logged opponent's Team Preview overlaps a known popular core
  * (shared species / total, 0–1). Kept as a simple set-overlap score rather than a full match so the
  * two features stay independent — this is an optional hint, not a hard dependency.

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { coreOverlapScore, fetchChampionsMeta, MetaFetchError, type MetaEntry } from '@/domain/meta';
+import { coreOverlapScore, fetchChampionsMeta, localMetaFromMatches, MetaFetchError, type MetaEntry } from '@/domain/meta';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -57,5 +57,35 @@ describe('opponent-vs-meta core overlap', () => {
 
   it('returns 0 when the entry has no known teammates to compare against', () => {
     expect(coreOverlapScore(['incineroar'], { ...entry, teammates: undefined })).toBe(0);
+  });
+});
+
+describe('local meta fallback from logged matches', () => {
+  it('builds usage/items/moves from matches in the given regulation only', () => {
+    const snap = localMetaFromMatches(
+      [
+        {
+          regulationId: 'reg-a',
+          opponentTeam: [
+            { speciesId: 'incineroar', itemId: 'safetygoggles', moves: ['fakeout', 'knockoff'] },
+            { speciesId: 'rillaboom', itemId: 'assaultvest' },
+          ],
+        },
+        { regulationId: 'reg-a', opponentTeam: [{ speciesId: 'incineroar', itemId: 'safetygoggles' }] },
+        { regulationId: 'reg-b', opponentTeam: [{ speciesId: 'landorustherian' }] },
+      ],
+      'reg-a',
+    );
+    expect(snap).not.toBeNull();
+    expect(snap!.source).toContain('2 of your logged matches');
+    expect(snap!.entries[0].speciesId).toBe('incineroar');
+    expect(snap!.entries[0].usagePct).toBe(100);
+    expect(snap!.entries[0].items[0]).toEqual({ itemId: 'safetygoggles', pct: 100 });
+    expect(snap!.entries.find((e) => e.speciesId === 'rillaboom')?.usagePct).toBe(50);
+  });
+
+  it('returns null when there are no matches for that regulation', () => {
+    expect(localMetaFromMatches([{ regulationId: 'reg-a', opponentTeam: [{ speciesId: 'x' }] }], 'reg-b')).toBeNull();
+    expect(localMetaFromMatches([], 'reg-a')).toBeNull();
   });
 });
