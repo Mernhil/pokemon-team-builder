@@ -1,14 +1,14 @@
 import clsx from 'clsx';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
-import type { StatId, TeraType } from '@/domain/types';
+import type { MoveType, StatId, TeraType } from '@/domain/types';
 
 export const cn = clsx;
 
-export const TYPE_COLORS: Record<TeraType, string> = {
+export const TYPE_COLORS: Record<TeraType | '???', string> = {
   Normal: '#9fa19f', Fire: '#e62829', Water: '#2980ef', Electric: '#fac000', Grass: '#3fa129',
   Ice: '#3dcef3', Fighting: '#ff8000', Poison: '#9141cb', Ground: '#915121', Flying: '#81b9ef',
   Psychic: '#ef4179', Bug: '#91a119', Rock: '#afa981', Ghost: '#704170', Dragon: '#5060e1',
-  Dark: '#624d4e', Steel: '#60a1b8', Fairy: '#ef70ef', Stellar: '#40b5a5',
+  Dark: '#624d4e', Steel: '#60a1b8', Fairy: '#ef70ef', Stellar: '#40b5a5', '???': '#68a090',
 };
 
 export const STAT_COLOR_VAR: Record<StatId, string> = {
@@ -20,7 +20,7 @@ export const STAT_COLOR_VAR: Record<StatId, string> = {
   spe: 'var(--color-stat-spe)',
 };
 
-export function TypeBadge({ type, size = 'sm' }: { type: TeraType; size?: 'xs' | 'sm' }) {
+export function TypeBadge({ type, size = 'sm' }: { type: TeraType | MoveType; size?: 'xs' | 'sm' }) {
   return (
     <span
       className={cn(

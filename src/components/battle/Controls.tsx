@@ -11,6 +11,7 @@ import {
   type FieldConditions,
   type SideConditions,
 } from '@/domain/battle/conditions';
+import { mechanics } from '@/domain/generations';
 import { STAT_LABELS } from '@/domain/types';
 import { STAT_COLOR_VAR, Select, cn } from '../ui/primitives';
 
@@ -63,17 +64,26 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
 // Field
 // ---------------------------------------------------------------------------
 
-export function FieldControls({ field, onChange, compact }: { field: FieldConditions; onChange: (p: Partial<FieldConditions>) => void; compact?: boolean }) {
+/** Field controls; `gen` hides what that generation didn't have (terrain, Trick Room, doubles…). */
+export function FieldControls({ field, onChange, compact, gen = 9 }: { field: FieldConditions; onChange: (p: Partial<FieldConditions>) => void; compact?: boolean; gen?: number }) {
+  const mech = mechanics(gen);
+  const weathers = WEATHERS.map((w) => (w.id === 'Snow' ? { ...w, label: mech.snowName } : w));
+  const terrains = TERRAINS.filter((t) => t.id !== 'Psychic' || mech.psychicTerrain);
   return (
     <div className={cn('flex flex-col gap-2', !compact && 'lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-6')}>
-      <Segmented label="Battle" value={field.gameType} options={[{ id: 'Doubles', label: 'Doubles' }, { id: 'Singles', label: 'Singles' }]} onChange={(gameType) => onChange({ gameType })} />
-      <Segmented label="Weather" value={field.weather} options={WEATHERS} onChange={(weather) => onChange({ weather })} />
-      <Segmented label="Terrain" value={field.terrain} options={TERRAINS} onChange={(terrain) => onChange({ terrain })} />
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="mr-1 w-16 text-[11px] font-semibold uppercase tracking-wider text-muted">Room</span>
-        <Toggle on={field.trickRoom} onChange={(trickRoom) => onChange({ trickRoom })}>Trick Room</Toggle>
-        <Toggle on={field.gravity} onChange={(gravity) => onChange({ gravity })}>Gravity</Toggle>
-      </div>
+      {mech.doubles && (
+        <Segmented label="Battle" value={field.gameType} options={[{ id: 'Doubles', label: 'Doubles' }, { id: 'Singles', label: 'Singles' }]} onChange={(gameType) => onChange({ gameType })} />
+      )}
+      {mech.weather && <Segmented label="Weather" value={field.weather} options={weathers} onChange={(weather) => onChange({ weather })} />}
+      {mech.terrain && <Segmented label="Terrain" value={field.terrain} options={terrains} onChange={(terrain) => onChange({ terrain })} />}
+      {mech.trickRoom && (
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="mr-1 w-16 text-[11px] font-semibold uppercase tracking-wider text-muted">Room</span>
+          <Toggle on={field.trickRoom} onChange={(trickRoom) => onChange({ trickRoom })}>Trick Room</Toggle>
+          <Toggle on={field.gravity} onChange={(gravity) => onChange({ gravity })}>Gravity</Toggle>
+        </div>
+      )}
+      {!mech.weather && <p className="text-xs text-muted">Gen 1 battles have no weather, terrain or rooms — just stat stages, status and screens.</p>}
     </div>
   );
 }
@@ -111,7 +121,9 @@ export function SideControls({
   canMega,
   canTera,
   teraType,
+  gen = 9,
 }: {
+  gen?: number;
   cond: SideConditions;
   onChange: (p: Partial<SideConditions>) => void;
   ability?: string;
@@ -119,7 +131,8 @@ export function SideControls({
   canTera: boolean;
   teraType?: string;
 }) {
-  const abLabel = abilityToggleLabel(ability);
+  const mech = mechanics(gen);
+  const abLabel = mech.abilities ? abilityToggleLabel(ability) : null;
   return (
     <div className="space-y-2.5">
       <div className="flex flex-wrap items-center gap-2">
@@ -152,12 +165,12 @@ export function SideControls({
         {canMega && <Toggle on={cond.mega} onChange={(mega) => onChange({ mega })}>Mega Evolved</Toggle>}
         {canTera && <Toggle on={cond.tera} onChange={(tera) => onChange({ tera })}>Tera {teraType}</Toggle>}
         {abLabel && <Toggle on={cond.abilityOn} onChange={(abilityOn) => onChange({ abilityOn })}>{abLabel}</Toggle>}
-        <Toggle on={cond.tailwind} onChange={(tailwind) => onChange({ tailwind })}>Tailwind</Toggle>
+        {mech.tailwind && <Toggle on={cond.tailwind} onChange={(tailwind) => onChange({ tailwind })}>Tailwind</Toggle>}
         <Toggle on={cond.reflect} onChange={(reflect) => onChange({ reflect })}>Reflect</Toggle>
         <Toggle on={cond.lightScreen} onChange={(lightScreen) => onChange({ lightScreen })}>Light Screen</Toggle>
-        <Toggle on={cond.auroraVeil} onChange={(auroraVeil) => onChange({ auroraVeil })}>Aurora Veil</Toggle>
-        <Toggle on={cond.helpingHand} onChange={(helpingHand) => onChange({ helpingHand })}>Helping Hand</Toggle>
-        <Toggle on={cond.friendGuard} onChange={(friendGuard) => onChange({ friendGuard })}>Friend Guard</Toggle>
+        {mech.auroraVeil && <Toggle on={cond.auroraVeil} onChange={(auroraVeil) => onChange({ auroraVeil })}>Aurora Veil</Toggle>}
+        {mech.helpingHand && <Toggle on={cond.helpingHand} onChange={(helpingHand) => onChange({ helpingHand })}>Helping Hand</Toggle>}
+        {mech.friendGuard && <Toggle on={cond.friendGuard} onChange={(friendGuard) => onChange({ friendGuard })}>Friend Guard</Toggle>}
       </div>
       <BoostControls boosts={cond.boosts} onChange={(boosts) => onChange({ boosts })} />
     </div>

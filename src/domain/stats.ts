@@ -98,9 +98,11 @@ export function calcStats(
         break;
       case 'gb-statexp': {
         // Legacy mapping: ivs holds DVs (0–15), evs holds Stat Exp. Special uses spa.
-        const dvs = { atk: set.ivs.atk, def: set.ivs.def, spe: set.ivs.spe, spa: set.ivs.spa };
-        const dv = s === 'hp' ? gbHpDV(dvs) : s === 'spd' ? set.ivs.spa : set.ivs[s];
-        const exp = s === 'spd' ? set.evs.spa : set.evs[s];
+        // Clamp so a set carried over from an IV-based format (31s) reads as max DVs.
+        const d = (k: StatId) => Math.max(0, Math.min(sys.dvMax, set.ivs[k]));
+        const dvs = { atk: d('atk'), def: d('def'), spe: d('spe'), spa: d('spa') };
+        const dv = s === 'hp' ? gbHpDV(dvs) : s === 'spd' ? dvs.spa : d(s);
+        const exp = Math.min(sys.statExpMax, s === 'spd' ? set.evs.spa : set.evs[s]);
         out[s] = gbStat(s, baseStats[s], dv, exp, level);
         break;
       }
@@ -168,4 +170,75 @@ export function spForTarget(
     if (championsStat(statId, base, sp, nature) >= target) return sp;
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Generic "invest to reach a target" (Champions SP, EVs, Stat Exp)
+// ---------------------------------------------------------------------------
+
+/** Which spread field a stat system edits: Champions → sp; EVs and Stat Exp → evs. */
+export const spreadKey = (sys: StatSystem): 'sp' | 'evs' => (sys.kind === 'champions-sp' ? 'sp' : 'evs');
+
+/** Max investment in one stat, and the step the UI moves in (EVs count in 4s; Stat Exp in 1s). */
+export function investRange(sys: StatSystem): { max: number; step: number } {
+  if (sys.kind === 'champions-sp') return { max: sys.perStatCap, step: 1 };
+  if (sys.kind === 'modern-ev') return { max: sys.perStatCap, step: 4 };
+  return { max: sys.statExpMax, step: 1 };
+}
+
+/**
+ * Smallest investment (SP, EVs or Stat Exp) that brings one stat to at least `target`, keeping the
+ * rest of the set as is. Returns null if even the maximum falls short.
+ */
+export function investmentForTarget(
+  statId: StatId,
+  baseStats: StatTable,
+  target: number,
+  set: Pick<PokemonSet, 'sp' | 'evs' | 'ivs' | 'level'>,
+  format: FormatRules,
+  nature?: Nature,
+): number | null {
+  const sys = format.statSystem;
+  const key = spreadKey(sys);
+  const { max, step } = investRange(sys);
+  const statOf = (v: number) => calcStats(baseStats, { ...set, [key]: { ...set[key], [statId]: v } }, format, nature)[statId];
+  if (statOf(max) < target) return null;
+  if (sys.kind === 'gb-statexp') {
+    // Stat Exp only matters through ⌊⌈√x⌉/4⌋: test the smallest value of each bonus step.
+    for (let bonus = 0; bonus <= 63; bonus++) {
+      const v = Math.min(max, (bonus * 4 - 1) ** 2 + 1);
+      if (statOf(bonus === 0 ? 0 : v) >= target) return bonus === 0 ? 0 : v;
+    }
+    return max;
+  }
+  for (let v = 0; v <= max; v += step) if (statOf(v) >= target) return v;
+  return max;
+}
+
+/** Gen 1–2 Stat Exp ↔ Showdown EVs (Showdown stores ⌈√StatExp⌉ as the EV; 252 EVs = max). */
+export const statExpToEV = (statExp: number) => Math.min(252, Math.ceil(Math.sqrt(Math.max(0, statExp))));
+export const evToStatExp = (ev: number) => Math.min(65535, Math.max(0, ev) ** 2);
+
+/**
+ * A set with one spread value changed, clamped to the stat system's rules: SP/EV caps, IVs 0–31,
+ * Stat Exp 0–65535 and DVs 0–15 (Gen 1–2 keep Sp. Atk and Sp. Def on one Special value).
+ */
+export function withSpreadValue<T extends Pick<PokemonSet, 'sp' | 'evs' | 'ivs'>>(
+  p: T,
+  sys: StatSystem,
+  kind: 'sp' | 'evs' | 'ivs',
+  stat: StatId,
+  value: number,
+): T {
+  const special = sys.kind === 'gb-statexp' && stat === 'spa';
+  const n = Math.round(Number.isFinite(value) ? value : 0) || 0;
+  if (kind === 'ivs') {
+    const v = Math.max(0, Math.min(sys.kind === 'gb-statexp' ? sys.dvMax : 31, n));
+    return { ...p, ivs: { ...p.ivs, [stat]: v, ...(special ? { spd: v } : {}) } };
+  }
+  if (sys.kind === 'gb-statexp') {
+    const v = Math.max(0, Math.min(sys.statExpMax, n));
+    return { ...p, evs: { ...p.evs, [stat]: v, ...(special ? { spd: v } : {}) } };
+  }
+  return { ...p, [kind]: setSpreadValue(p[kind], stat, value, sys.totalCap, sys.perStatCap) };
 }

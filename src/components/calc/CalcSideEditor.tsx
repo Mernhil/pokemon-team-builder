@@ -2,7 +2,7 @@ import { Crosshair, Sparkles } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultSide } from '@/domain/battle/conditions';
 import { createSet } from '@/domain/team';
-import { STAT_LABELS, TYPE_NAMES, type FormatRules, type Team, type TeraType } from '@/domain/types';
+import { STAT_LABELS, type FormatRules, type Team, type TeraType } from '@/domain/types';
 import { useCalcStore, type SideKey } from '@/store/calcStore';
 import { SideControls } from '../battle/Controls';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
@@ -13,8 +13,9 @@ import { GenBadge } from '../ui/GenBadge';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Field, Panel, Select, TypeBadge, cn } from '../ui/primitives';
-import { setSpreadValue } from '@/domain/stats';
+import { Field, Input, Panel, Select, TypeBadge, cn } from '../ui/primitives';
+import { mechanics } from '@/domain/generations';
+import { spreadKey, sumStats, withSpreadValue } from '@/domain/stats';
 
 interface Props {
   role: SideKey;
@@ -48,6 +49,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
 
   const title = role === 'attacker' ? 'Attacker' : 'Defender';
   const sys = format.statSystem;
+  const mech = mechanics(format.generation);
 
   return (
     <Panel
@@ -127,6 +129,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
         {set && species && (
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {mech.heldItems && (
               <Field label="Held item">
                 <Combobox
                   aria-label={`${title} item`}
@@ -138,6 +141,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                   onChange={(id) => patchSet(role, { itemId: id || undefined })}
                 />
               </Field>
+              )}
+              {mech.abilities && (
               <Field label="Ability">
                 <Select value={set.abilityId ?? ''} onChange={(e) => patchSet(role, { abilityId: e.target.value })} disabled={forme !== species} title={forme !== species ? 'Mega Evolution sets the ability' : undefined}>
                   {forme !== species ? (
@@ -152,7 +157,21 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                   )}
                 </Select>
               </Field>
-              <Field label="Stat Alignment">
+              )}
+              {!format.level.fixed && (
+                <Field label="Level">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={format.level.min}
+                    max={format.level.max}
+                    value={set.level}
+                    onChange={(e) => patchSet(role, { level: Math.max(format.level.min, Math.min(format.level.max, Math.round(Number(e.target.value)) || format.level.min)) })}
+                  />
+                </Field>
+              )}
+              {mech.natures && (
+              <Field label={sys.kind === 'champions-sp' ? 'Stat Alignment' : 'Nature'}>
                 <Select value={set.nature} onChange={(e) => patchSet(role, { nature: e.target.value })}>
                   {dex.natures.map((n) => (
                     <option key={n.name} value={n.name}>
@@ -162,11 +181,12 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                   ))}
                 </Select>
               </Field>
+              )}
               {format.gimmicks.tera && (
                 <Field label="Tera Type">
                   <Select value={set.teraType ?? ''} onChange={(e) => patchSet(role, { teraType: (e.target.value || undefined) as TeraType | undefined })}>
                     <option value="">—</option>
-                    {[...TYPE_NAMES, 'Stellar'].map((t) => (
+                    {[...dex.types, 'Stellar'].map((t) => (
                       <option key={t} value={t}>
                         {t}
                       </option>
@@ -228,12 +248,17 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
               canMega={!!mega && format.gimmicks.mega}
               canTera={format.gimmicks.tera && !!set.teraType}
               teraType={set.teraType}
+              gen={dex.generation}
             />
 
-            {sys.kind === 'champions-sp' && (
+            {(
               <details className="group rounded-lg border border-border">
                 <summary className="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-muted group-open:border-b group-open:border-border">
-                  Stat Points · {Object.values(set.sp).reduce((a, b) => a + b, 0)}/{sys.totalCap}
+                  {sys.kind === 'champions-sp'
+                    ? `Stat Points · ${sumStats(set.sp)}/${sys.totalCap}`
+                    : sys.kind === 'modern-ev'
+                      ? `EVs · ${sumStats(set.evs)}/${sys.totalCap} · Lv ${set.level}`
+                      : `Stat Exp & DVs · Lv ${set.level}`}
                 </summary>
                 <div className="p-3">
                   <StatDistributor
@@ -242,8 +267,9 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                     mega={mega}
                     format={format}
                     dex={dex}
-                    onSpread={(stat, v) => patchSet(role, { sp: setSpreadValue(set.sp, stat, v, sys.totalCap, sys.perStatCap) })}
-                    onReplaceSpread={(sp) => patchSet(role, { sp })}
+                    onSpread={(stat, v) => patchSet(role, withSpreadValue(set, sys, spreadKey(sys), stat, v))}
+                    onReplaceSpread={(spread) => patchSet(role, { [spreadKey(sys)]: spread })}
+                    onIV={format.fixedIVs ? undefined : (stat, v) => patchSet(role, withSpreadValue(set, sys, 'ivs', stat, v))}
                     onNature={(nature) => patchSet(role, { nature })}
                   />
                 </div>

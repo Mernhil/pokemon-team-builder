@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Minus, Plus, RotateCcw, Target } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { calcStats, natureModifier, spendBudget, spForTarget, sumStats } from '@/domain/stats';
+import { mechanics } from '@/domain/generations';
+import { calcStats, gbHpDV, investRange, investmentForTarget, natureModifier, spendBudget, spreadKey, sumStats } from '@/domain/stats';
 import {
   STAT_IDS,
   STAT_LABELS,
@@ -19,36 +20,73 @@ interface Props {
   mega?: Pokemon;
   format: FormatRules;
   dex: Dex;
+  /** Edit one stat of the format's spread (SP, EVs or Stat Exp). */
   onSpread: (stat: StatId, value: number) => void;
   onReplaceSpread: (spread: StatTable) => void;
+  /** Edit one IV (Gen 3+) or DV (Gen 1–2). Omitted when IVs are fixed (Champions). */
+  onIV?: (stat: StatId, value: number) => void;
   onNature: (nature: string) => void;
 }
 
-const PRESETS: { label: string; sp: Partial<StatTable> }[] = [
-  { label: 'Physical sweeper', sp: { hp: 2, atk: 32, spe: 32 } },
-  { label: 'Special sweeper', sp: { hp: 2, spa: 32, spe: 32 } },
-  { label: 'Bulky physical', sp: { hp: 32, atk: 32, def: 2 } },
-  { label: 'Bulky special', sp: { hp: 32, spa: 32, spd: 2 } },
-  { label: 'Max bulk', sp: { hp: 32, def: 17, spd: 17 } },
-  { label: 'Trick Room', sp: { hp: 32, atk: 32, def: 2 } },
-];
+type Preset = { label: string; spread: Partial<StatTable> };
+
+const PRESETS: Record<'champions-sp' | 'modern-ev' | 'gb-statexp', Preset[]> = {
+  'champions-sp': [
+    { label: 'Physical sweeper', spread: { hp: 2, atk: 32, spe: 32 } },
+    { label: 'Special sweeper', spread: { hp: 2, spa: 32, spe: 32 } },
+    { label: 'Bulky physical', spread: { hp: 32, atk: 32, def: 2 } },
+    { label: 'Bulky special', spread: { hp: 32, spa: 32, spd: 2 } },
+    { label: 'Max bulk', spread: { hp: 32, def: 17, spd: 17 } },
+    { label: 'Trick Room', spread: { hp: 32, atk: 32, def: 2 } },
+  ],
+  'modern-ev': [
+    { label: 'Physical sweeper', spread: { hp: 4, atk: 252, spe: 252 } },
+    { label: 'Special sweeper', spread: { hp: 4, spa: 252, spe: 252 } },
+    { label: 'Bulky physical', spread: { hp: 252, atk: 252, def: 4 } },
+    { label: 'Bulky special', spread: { hp: 252, spa: 252, spd: 4 } },
+    { label: 'Physically defensive', spread: { hp: 252, def: 252, spd: 4 } },
+    { label: 'Specially defensive', spread: { hp: 252, def: 4, spd: 252 } },
+  ],
+  'gb-statexp': [{ label: 'Max all (trained)', spread: { hp: 65535, atk: 65535, def: 65535, spa: 65535, spd: 65535, spe: 65535 } }],
+};
 
 const BASE_BAR_MAX = 200;
+const zero = (): StatTable => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
 
 /**
- * Champions Stat Point distributor: 0–32 SP per stat, 66 SP pool, live Lv 50 stats.
- * Inline +/− buttons on each stat set the Stat Alignment (nature) Showdown-style.
+ * Stat spread editor for every stat system:
+ *  - Champions Stat Points: 0–32 per stat, 66 SP pool, Lv 50, IVs fixed at 31
+ *  - Gen 3–9 EVs (0–252, 510 total) + IVs (0–31) at any level
+ *  - Gen 1–2 Stat Exp (0–65535 each) + DVs (0–15; the HP DV follows from the others), with one
+ *    Special stat in Gen 1 and a shared Special DV / Stat Exp in Gen 2
+ * Inline +/− buttons on each stat set the nature Showdown-style (Gen 3+).
  */
-export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onNature }: Props) {
+export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onIV, onNature }: Props) {
   const sys = format.statSystem;
-  if (sys.kind !== 'champions-sp') {
-    return <p className="text-sm text-muted">EV / IV distributor for {format.name} arrives in Phase 2.</p>;
-  }
-  const nature = dex.nature(set.nature);
+  const mech = mechanics(format.generation);
+  const key = spreadKey(sys);
+  const spread = set[key];
+  const { max: perStat, step } = investRange(sys);
+  const gb = sys.kind === 'gb-statexp';
+  const ivMax = sys.kind === 'gb-statexp' ? sys.dvMax : sys.kind === 'modern-ev' ? sys.ivMax : 31;
+  const showIV = !format.fixedIVs && !!onIV;
+  const nature = mech.natures ? dex.nature(set.nature) : undefined;
+  const level = format.level.fixed ?? set.level;
   const stats = calcStats(species.baseStats, set, format, nature);
   const megaStats = mega ? calcStats(mega.baseStats, set, format, nature) : undefined;
-  const budget = spendBudget(sys, set.sp)!;
-  const pct = Math.min(100, (budget.used / budget.cap) * 100);
+  const budget = spendBudget(sys, spread);
+  const pct = budget ? Math.min(100, (budget.used / budget.cap) * 100) : 0;
+  const unit = sys.kind === 'champions-sp' ? 'SP' : sys.kind === 'modern-ev' ? 'EVs' : 'Stat Exp';
+  const ivUnit = gb ? 'DV' : 'IV';
+  const hpDV = gb ? gbHpDV({ atk: set.ivs.atk, def: set.ivs.def, spe: set.ivs.spe, spa: set.ivs.spa }) : 0;
+  // Gen 1 shows one Special stat; Gen 2 splits the stat but keeps one Special DV / Stat Exp.
+  const rows = STAT_IDS.filter((s) => !(gb && !mech.splitSpecial && s === 'spd'));
+  const label = (s: StatId) => (gb && !mech.splitSpecial && s === 'spa' ? 'Spc' : STAT_LABELS[s]);
+  const linked = (s: StatId) => gb && s === 'spd';
+  const cols = cn(
+    megaStats ? 'sm:grid-cols-[88px_110px_1fr_104px_var(--iv)_48px_48px]' : 'sm:grid-cols-[88px_110px_1fr_104px_var(--iv)_48px]',
+  );
+  const gridStyle = { ['--iv' as string]: showIV ? '52px' : '0px' };
 
   const toggleAlign = (stat: StatId, dir: 'plus' | 'minus') => {
     const neutral = !nature?.plus || nature.plus === nature.minus;
@@ -69,73 +107,72 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
         if (!plus || plus === stat) plus = partner(stat);
       }
     }
-    const match = plus
-      ? dex.natures.find((n) => n.plus === plus && n.minus === minus)
-      : dex.natures.find((n) => !n.plus);
+    const match = plus ? dex.natures.find((n) => n.plus === plus && n.minus === minus) : dex.natures.find((n) => !n.plus);
     if (match) onNature(match.name);
   };
 
   return (
     <div className="space-y-3">
-      {/* Budget meter */}
-      <div>
-        <div className="mb-1.5 flex items-baseline justify-between text-xs">
-          <span className="font-semibold uppercase tracking-wider text-muted">Stat Points</span>
-          <span className="font-mono tabular-nums">
-            <span
-              className={cn(
-                'text-base font-bold',
-                budget.status === 'over' && 'text-bad',
-                budget.status === 'complete' && 'text-good',
-              )}
-            >
-              {budget.used}
+      {/* Budget meter (SP and EVs share a total; Stat Exp doesn't) */}
+      {budget ? (
+        <div>
+          <div className="mb-1.5 flex items-baseline justify-between text-xs">
+            <span className="font-semibold uppercase tracking-wider text-muted">{sys.kind === 'champions-sp' ? 'Stat Points' : 'Effort Values'}</span>
+            <span className="font-mono tabular-nums">
+              <span className={cn('text-base font-bold', budget.status === 'over' && 'text-bad', budget.status === 'complete' && 'text-good')}>{budget.used}</span>
+              <span className="text-muted"> / {budget.cap} · </span>
+              <span className={cn(budget.status === 'complete' ? 'text-good' : budget.status === 'over' ? 'text-bad' : 'text-fg')}>
+                {budget.status === 'complete' ? 'complete' : `${budget.remaining} left`}
+              </span>
             </span>
-            <span className="text-muted"> / {budget.cap} · </span>
-            <span className={cn(budget.status === 'complete' ? 'text-good' : budget.status === 'over' ? 'text-bad' : 'text-fg')}>
-              {budget.status === 'complete' ? 'complete' : `${budget.remaining} left`}
-            </span>
-          </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-surface-2" role="meter" aria-valuemin={0} aria-valuemax={budget.cap} aria-valuenow={budget.used} aria-label={`${unit} used`}>
+            <div
+              className={cn('h-full rounded-full transition-all', budget.status === 'complete' ? 'bg-good' : budget.status === 'over' ? 'bg-bad' : 'bg-accent')}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-surface-2" role="meter" aria-valuemin={0} aria-valuemax={budget.cap} aria-valuenow={budget.used} aria-label="Stat Points used">
-          <div
-            className={cn('h-full rounded-full transition-all', budget.status === 'complete' ? 'bg-good' : budget.status === 'over' ? 'bg-bad' : 'bg-accent')}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
+      ) : (
+        <p className="text-xs text-muted">
+          Stat Exp: 0–65,535 per stat, no shared cap (max gives +63 at Lv 100). DVs: 0–15; the HP DV comes from the odd/even bits of the others.
+          {!mech.splitSpecial ? ' Gen 1 has one Special stat.' : ' Sp. Atk and Sp. Def share one Special DV and Stat Exp.'}
+        </p>
+      )}
 
       {/* Rows — grid on desktop, two-line cards on phones */}
       <div className="text-sm">
-        <div className={cn('hidden gap-x-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted sm:grid', megaStats ? 'sm:grid-cols-[88px_120px_1fr_104px_48px_48px]' : 'sm:grid-cols-[88px_120px_1fr_104px_48px]')}>
+        <div className={cn('hidden gap-x-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted sm:grid', cols)} style={gridStyle}>
           <span>Stat</span>
           <span>Base</span>
-          <span>SP (0–{sys.perStatCap})</span>
-          <span className="text-center">SP</span>
-          <span className="text-right">Lv50</span>
+          <span>
+            {unit} (0–{perStat.toLocaleString()})
+          </span>
+          <span className="text-center">{unit}</span>
+          <span className="text-center">{showIV ? ivUnit : ''}</span>
+          <span className="text-right">Lv{level}</span>
           {megaStats && <span className="text-right text-accent">Mega</span>}
         </div>
         <div className="divide-y divide-border/60 sm:divide-y-0">
-          {STAT_IDS.map((s) => {
+          {rows.map((s) => {
             const base = species.baseStats[s];
             const mod = natureModifier(s, nature);
-            const val = set.sp[s];
-            const room = Math.min(sys.perStatCap, val + Math.max(0, budget.remaining));
+            const val = spread[s];
+            const room = budget ? Math.min(perStat, val + Math.max(0, budget.remaining)) : perStat;
             const tone = cn(mod === 1.1 && 'text-bad', mod === 0.9 && 'text-accent');
+            const locked = linked(s);
             return (
               <div
                 key={s}
-                className={cn(
-                  'grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1.5 py-2 sm:py-1',
-                  megaStats ? 'sm:grid-cols-[88px_120px_1fr_104px_48px_48px]' : 'sm:grid-cols-[88px_120px_1fr_104px_48px]',
-                )}
+                className={cn('grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1.5 py-2 sm:py-1', cols)}
+                style={gridStyle}
               >
-                {/* label + alignment */}
+                {/* label + nature */}
                 <div className="flex items-center gap-1">
                   <span className="w-8 font-semibold" style={{ color: STAT_COLOR_VAR[s] }}>
-                    {STAT_LABELS[s]}
+                    {label(s)}
                   </span>
-                  {s !== 'hp' && (
+                  {s !== 'hp' && mech.natures && (
                     <span className="flex gap-0.5">
                       <button
                         type="button"
@@ -172,43 +209,78 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                   {stats[s]}
                   {megaStats && <span className="ml-1.5 text-xs font-normal text-accent">M {megaStats[s]}</span>}
                 </div>
-                {/* slider */}
-                <div className="col-span-2 sm:col-span-1 sm:px-1">
-                  <input
-                    type="range"
-                    className="stat-range w-full"
-                    min={0}
-                    max={sys.perStatCap}
-                    step={1}
-                    value={val}
-                    aria-label={`${STAT_LABELS[s]} Stat Points`}
-                    onChange={(e) => onSpread(s, Number(e.target.value))}
-                    style={{ ['--fill' as string]: STAT_COLOR_VAR[s], ['--pct' as string]: `${(val / sys.perStatCap) * 100}%` }}
-                  />
-                </div>
-                {/* numeric */}
-                <div className="flex items-center justify-end gap-0.5 sm:justify-center">
-                  <button type="button" aria-label={`Decrease ${STAT_LABELS[s]}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30" disabled={val <= 0} onClick={() => onSpread(s, val - 1)}>
-                    <Minus size={12} />
-                  </button>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={sys.perStatCap}
-                    value={val}
-                    aria-label={`${STAT_LABELS[s]} Stat Points value`}
-                    onChange={(e) => onSpread(s, Number(e.target.value))}
-                    onFocus={(e) => e.target.select()}
-                    className={cn(
-                      'no-spin h-7 w-10 rounded border bg-surface-2 text-center font-mono text-sm tabular-nums outline-none focus:border-accent',
-                      val === sys.perStatCap ? 'border-good/60' : 'border-border',
+                {locked ? (
+                  <p className="col-span-2 text-[11px] text-muted sm:col-span-3">Uses the Special DV and Stat Exp above.</p>
+                ) : (
+                  <>
+                    {/* slider */}
+                    <div className="col-span-2 sm:col-span-1 sm:px-1">
+                      <input
+                        type="range"
+                        className="stat-range w-full"
+                        min={0}
+                        max={perStat}
+                        step={gb ? 257 : step}
+                        value={val}
+                        aria-label={`${label(s)} ${unit}`}
+                        onChange={(e) => onSpread(s, Math.min(Number(e.target.value), room))}
+                        style={{ ['--fill' as string]: STAT_COLOR_VAR[s], ['--pct' as string]: `${(val / perStat) * 100}%` }}
+                      />
+                    </div>
+                    {/* numeric */}
+                    <div className="flex items-center justify-end gap-0.5 sm:justify-center">
+                      <button type="button" aria-label={`Decrease ${label(s)}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30" disabled={val <= 0} onClick={() => onSpread(s, Math.max(0, val - (gb ? 1 : step)))}>
+                        <Minus size={12} />
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={perStat}
+                        value={val}
+                        aria-label={`${label(s)} ${unit} value`}
+                        onChange={(e) => onSpread(s, Number(e.target.value))}
+                        onFocus={(e) => e.target.select()}
+                        className={cn(
+                          'no-spin h-7 rounded border bg-surface-2 text-center font-mono text-sm tabular-nums outline-none focus:border-accent',
+                          gb ? 'w-16' : 'w-11',
+                          val === perStat ? 'border-good/60' : 'border-border',
+                        )}
+                      />
+                      <button type="button" aria-label={`Increase ${label(s)}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30" disabled={val >= room} onClick={() => onSpread(s, Math.min(room, val + (gb ? 1 : step)))}>
+                        <Plus size={12} />
+                      </button>
+                    </div>
+                  </>
+                )}
+                {/* IV / DV */}
+                {showIV && !locked ? (
+                  <div className="flex items-center justify-end gap-1 sm:justify-center">
+                    <span className="text-[10px] text-muted sm:hidden">{ivUnit}</span>
+                    {gb && s === 'hp' ? (
+                      <span className="h-7 w-10 rounded border border-dashed border-border text-center font-mono text-sm leading-7 tabular-nums text-muted" title="The HP DV follows from the Atk, Def, Spe and Special DVs">
+                        {hpDV}
+                      </span>
+                    ) : (
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        max={ivMax}
+                        value={set.ivs[s]}
+                        aria-label={`${label(s)} ${ivUnit}`}
+                        onChange={(e) => onIV!(s, Number(e.target.value))}
+                        onFocus={(e) => e.target.select()}
+                        className={cn(
+                          'no-spin h-7 w-10 rounded border bg-surface-2 text-center font-mono text-sm tabular-nums outline-none focus:border-accent',
+                          set.ivs[s] === ivMax ? 'border-border' : 'border-warn/60',
+                        )}
+                      />
                     )}
-                  />
-                  <button type="button" aria-label={`Increase ${STAT_LABELS[s]}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30" disabled={val >= room} onClick={() => onSpread(s, val + 1)}>
-                    <Plus size={12} />
-                  </button>
-                </div>
+                  </div>
+                ) : (
+                  <span className="hidden sm:block" />
+                )}
                 {/* final stat (desktop columns) */}
                 <div className={cn('hidden text-right font-mono text-base font-bold tabular-nums sm:block', tone)}>{stats[s]}</div>
                 {megaStats && <div className={cn('hidden text-right font-mono tabular-nums sm:block', tone)}>{megaStats[s]}</div>}
@@ -217,9 +289,9 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
           })}
         </div>
         <div className="mt-1 flex justify-between border-t border-border pt-1.5 font-mono text-xs text-muted">
-          <span>Base total {sumStats(species.baseStats)}</span>
+          <span>Base total {sumStats(species.baseStats) - (mech.splitSpecial ? 0 : species.baseStats.spd)}</span>
           <span>
-            Lv50 total <b className="text-fg">{sumStats(stats)}</b>
+            Lv{level} total <b className="text-fg">{sumStats(stats) - (mech.splitSpecial ? 0 : stats.spd)}</b>
             {megaStats && (
               <>
                 {' '}· Mega <b className="text-accent">{sumStats(megaStats)}</b>
@@ -231,16 +303,26 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
 
       {/* Tools */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <Button size="sm" variant="ghost" onClick={() => onReplaceSpread({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 })}>
+        <Button size="sm" variant="ghost" onClick={() => onReplaceSpread(zero())}>
           <RotateCcw size={12} /> Reset
         </Button>
-        {PRESETS.map((p) => (
-          <Button key={p.label} size="sm" onClick={() => onReplaceSpread({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0, ...p.sp })}>
+        {PRESETS[sys.kind].map((p) => (
+          <Button key={p.label} size="sm" onClick={() => onReplaceSpread({ ...zero(), ...p.spread })}>
             {p.label}
           </Button>
         ))}
+        {showIV && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => STAT_IDS.filter((s) => !(gb && s === 'hp')).forEach((s) => onIV!(s, ivMax))}
+            title={`Set every ${ivUnit} to ${ivMax}`}
+          >
+            Max {ivUnit}s
+          </Button>
+        )}
       </div>
-      <SpeedBenchmark mega={!!mega} set={set} species={mega ?? species} format={format} dex={dex} onSpread={onSpread} speed={(megaStats ?? stats).spe} />
+      <SpeedBenchmark mega={!!mega} set={set} species={mega ?? species} format={format} dex={dex} onSpread={onSpread} speed={(megaStats ?? stats).spe} unit={unit} />
     </div>
   );
 }
@@ -253,6 +335,7 @@ function SpeedBenchmark({
   dex,
   onSpread,
   speed,
+  unit,
 }: {
   mega: boolean;
   set: PokemonSet;
@@ -261,23 +344,38 @@ function SpeedBenchmark({
   dex: Dex;
   onSpread: (stat: StatId, value: number) => void;
   speed: number;
+  unit: string;
 }) {
   const [target, setTarget] = useState('');
-  const sys = format.statSystem;
-  if (sys.kind !== 'champions-sp') return null;
+  const mech = mechanics(format.generation);
+  const nature = mech.natures ? dex.nature(set.nature) : undefined;
   const t = parseInt(target, 10);
-  const need = Number.isFinite(t) ? spForTarget('spe', species.baseStats.spe, t, sys.perStatCap, dex.nature(set.nature)) : undefined;
+  const need = Number.isFinite(t) ? investmentForTarget('spe', species.baseStats, t, set, format, nature) : undefined;
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-surface-2 px-3 py-2 text-xs">
       <span className="font-mono tabular-nums">
         <span className="text-muted">{mega ? 'Mega Spe' : 'Spe'}</span> <b>{speed}</b>
-        <span className="text-muted"> · Tailwind </span>
-        <b>{speed * 2}</b>
-        <span className="text-muted"> · Scarf </span>
-        <b>{Math.floor(speed * 1.5)}</b>
+        {mech.tailwind && (
+          <>
+            <span className="text-muted"> · Tailwind </span>
+            <b>{speed * 2}</b>
+          </>
+        )}
+        {mech.gen >= 4 && (
+          <>
+            <span className="text-muted"> · Scarf </span>
+            <b>{Math.floor(speed * 1.5)}</b>
+          </>
+        )}
         <span className="text-muted"> · −1 </span>
         <b>{Math.floor((speed * 2) / 3)}</b>
+        {mech.gen < 7 && (
+          <>
+            <span className="text-muted"> · Paralyzed </span>
+            <b>{Math.floor(speed / 4)}</b>
+          </>
+        )}
       </span>
       <span className="ml-auto flex items-center gap-1.5">
         <Target size={12} className="text-muted" />
@@ -294,7 +392,7 @@ function SpeedBenchmark({
             <span className="text-bad">unreachable</span>
           ) : (
             <Button size="sm" variant="primary" className="h-6" onClick={() => onSpread('spe', need)}>
-              Set {need} SP
+              Set {need.toLocaleString()} {unit}
             </Button>
           ))}
       </span>

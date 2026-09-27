@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from './storage';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
-import { setSpreadValue } from '@/domain/stats';
+import { withSpreadValue } from '@/domain/stats';
 import { cloneTeam, createTeam } from '@/domain/team';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import type { FieldConditions, SideConditions } from '@/domain/battle/conditions';
@@ -140,14 +140,7 @@ export const useTeamStore = create<TeamState>()(
         setSpread: (i, kind, stat, value) => {
           const team = get().teams[get().activeTeamId];
           const sys = getFormat(team.formatId).statSystem;
-          mutateSlot(i, (p) => {
-            if (kind === 'ivs') {
-              const max = sys.kind === 'gb-statexp' ? sys.dvMax : 31;
-              return { ...p, ivs: { ...p.ivs, [stat]: Math.max(0, Math.min(max, Math.round(value) || 0)) } };
-            }
-            if (sys.kind === 'gb-statexp') return p;
-            return { ...p, [kind]: setSpreadValue(p[kind], stat, value, sys.totalCap, sys.perStatCap) };
-          });
+          mutateSlot(i, (p) => withSpreadValue(p, sys, kind, stat, value));
         },
         resetSpread: (i, kind) =>
           mutateSlot(i, (p) => ({ ...p, [kind]: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } })),

@@ -25,6 +25,7 @@ export function createTeam(format: FormatRules, name = 'Untitled Team'): Team {
 export function createSet(dex: Dex, speciesId: string, format: FormatRules): PokemonSet {
   const sp = dex.species(speciesId);
   const firstAbility = sp ? dex.ability(sp.abilities['0']) : undefined;
+  const gb = format.statSystem.kind === 'gb-statexp';
   return {
     uid: uid(),
     speciesId: sp?.id ?? speciesId,
@@ -35,8 +36,9 @@ export function createSet(dex: Dex, speciesId: string, format: FormatRules): Pok
     moves: ['', '', '', ''],
     level: format.level.fixed ?? format.level.default,
     sp: emptyStats(0),
-    evs: emptyStats(0),
-    ivs: emptyStats(format.fixedIVs ?? 31),
+    // Gen 1–2: max DVs and Stat Exp, as trained cartridge Pokémon (and Showdown) default to.
+    evs: emptyStats(gb ? 65535 : 0),
+    ivs: emptyStats(format.fixedIVs ?? (gb ? 15 : 31)),
   };
 }
 

@@ -2,6 +2,8 @@ import { CalendarClock, RadioTower } from 'lucide-react';
 import { REGULATION_MANIFEST, currentRegulation, formatForRegulation, regulationInfo } from '@/domain/formats';
 import type { FormatRules, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
+import { GEN_GAMES, genInfo, mechanics } from '@/domain/generations';
+import { GenBadge } from '../ui/GenBadge';
 import { Button } from '../ui/primitives';
 
 const fmtDate = (iso?: string) =>
@@ -12,6 +14,32 @@ const fmtDate = (iso?: string) =>
  * data was last checked by the weekly updater. Offers a one-click move to the live regulation.
  */
 export function RegulationBanner({ team, format }: { team: Team; format: FormatRules }) {
+  if (format.datasetId !== 'champions') return <GenerationStrip format={format} />;
+  return <ChampionsBanner team={team} format={format} />;
+}
+
+/** Main-series formats: which games the data follows and what that generation had. */
+function GenerationStrip({ format }: { format: FormatRules }) {
+  const g = genInfo(format.generation);
+  const m = mechanics(format.generation);
+  const missing = [!m.abilities && 'abilities', !m.natures && 'natures', !m.heldItems && 'held items', !m.splitSpecial && 'a split Special stat'].filter(Boolean);
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs">
+      <span className="flex items-center gap-1.5">
+        <GenBadge gen={g.gen} />
+        <b className="text-fg">{g.region}</b>
+        <span className="text-muted">· {GEN_GAMES[g.gen]}</span>
+      </span>
+      <span className="text-muted">
+        Movepools, move power/accuracy/type and effects as in these games
+        {m.moveCategorySplit ? '' : ' · physical/special by type'}
+        {missing.length ? ` · no ${missing.join(', ')}` : ''}
+      </span>
+    </div>
+  );
+}
+
+function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) {
   const updateTeam = useTeamStore((s) => s.updateTeam);
   const live = currentRegulation();
   const teamReg = regulationInfo(format.regulationId);

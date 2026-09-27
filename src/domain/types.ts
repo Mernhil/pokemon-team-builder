@@ -28,6 +28,8 @@ export const TYPE_NAMES = [
 ] as const;
 export type TypeName = (typeof TYPE_NAMES)[number];
 export type TeraType = TypeName | 'Stellar';
+/** Move types: Curse was the typeless "???" type in Gen 2–4. */
+export type MoveType = TypeName | '???';
 
 // ---------------------------------------------------------------------------
 // Static data
@@ -59,6 +61,19 @@ export interface Pokemon {
   legalIn: string[];
   /** True when the learnset fell back to Scarlet/Violet data (Showdown hasn't covered it yet). */
   provisionalLearnset?: boolean;
+
+  // Gen 1–9 datasets only (Pokédex): evolution data restricted to species in that generation.
+  prevo?: string;
+  evos?: string[];
+  evoLevel?: number;
+  evoType?: string;
+  evoItem?: string;
+  evoMove?: string;
+  evoCondition?: string;
+  heightm?: number;
+  eggGroups?: string[];
+  /** 'M' | 'F' | 'N' for single-gender species, else the ratio. */
+  genderRatio?: string | { M: number; F: number };
 }
 
 export type MoveCategory = 'Physical' | 'Special' | 'Status';
@@ -82,7 +97,7 @@ export interface MoveSecondaryEffect {
 export interface Move {
   id: string;
   name: string;
-  type: TypeName;
+  type: MoveType;
   category: MoveCategory;
   basePower: number;
   accuracy: number | true;
@@ -90,6 +105,8 @@ export interface Move {
   priority: number;
   target: string;
   shortDesc: string;
+  /** Full effect text, when it says more than shortDesc. */
+  desc?: string;
   contact: boolean;
   /** Move flags that abilities/items key off (Sharpness, Iron Fist, Strong Jaw, Mega Launcher, Punk Rock…). */
   flags: Partial<Record<'slicing' | 'punch' | 'bite' | 'pulse' | 'sound' | 'wind', true>>;
@@ -173,6 +190,10 @@ export interface RegulationManifest {
 
 export interface Dataset {
   id: string;
+  /** Gen 1–9 datasets: the generation whose games they describe (absent for Champions). */
+  generation?: number;
+  /** Types that exist in this dataset's generation (Gen 1: no Dark/Steel/Fairy). Defaults to all 18. */
+  types?: TypeName[];
   generatedAt: string;
   source: string;
   regulations: RegulationInfo[];

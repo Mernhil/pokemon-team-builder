@@ -3,6 +3,7 @@ import { ArrowLeftRight, Calculator, ChevronDown, FolderOpen, Moon, Sun, Users }
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
+import { GEN_GAMES } from '@/domain/generations';
 import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
@@ -144,12 +145,18 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           value={format.id}
           onChange={(e) => updateTeam(team.id, { formatId: e.target.value, category: getFormat(e.target.value).shortName })}
         >
-          {FORMATS.map((f) => (
-            <option key={f.id} value={f.id} disabled={!f.available}>
-              {f.name}
-              {f.regulationId && f.regulationId === liveRegId ? ' (live)' : ''}
-              {f.available ? '' : ' (Phase 2)'}
-            </option>
+          {[
+            { label: 'Pokémon Champions', formats: FORMATS.filter((f) => f.datasetId === 'champions') },
+            { label: 'Main series · Gen 1–9', formats: FORMATS.filter((f) => f.datasetId !== 'champions') },
+          ].map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.formats.map((f) => (
+                <option key={f.id} value={f.id} disabled={!f.available}>
+                  {f.name}
+                  {f.regulationId && f.regulationId === liveRegId ? ' (live)' : ''}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </Select>
         <div className="ml-auto flex items-center gap-1.5">
@@ -227,7 +234,9 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
         </div>
         <DefenseMatrix team={team} dex={dex} format={format} />
         <p className="pb-2 text-center text-[11px] text-muted">
-          Data: Pokémon Showdown + official regulation announcements ({dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated {dex.data.generatedAt.slice(0, 10)}
+          {dex.data.generation
+            ? `Data: Pokémon Showdown's Gen ${dex.data.generation} data (${GEN_GAMES[dex.data.generation]}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
+            : `Data: Pokémon Showdown + official regulation announcements (${dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`}
         </p>
       </div>
     </main>

@@ -49,6 +49,7 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
         side: state.side,
         field: state.field,
         crit: state.crit,
+        gen: format.generation,
       }),
     [forme, set, format, dex, ability, state],
   );
@@ -87,7 +88,7 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
         <div className="grid gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
           {/* Controls */}
           <div className="space-y-4">
-            <FieldControls field={state.field} onChange={patchField} compact />
+            <FieldControls field={state.field} onChange={patchField} compact gen={format.generation} />
             <div className="h-px bg-border" />
             <SideControls
               cond={state.side}
@@ -96,6 +97,7 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
               canMega={!!mega && format.gimmicks.mega}
               canTera={format.gimmicks.tera && !!set.teraType}
               teraType={set.teraType}
+              gen={format.generation}
             />
             <div className="flex items-center gap-2">
               <Toggle on={state.crit} onChange={(crit) => update({ crit })}>
@@ -126,7 +128,7 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
                   <thead>
                     <tr className="text-left text-[10px] uppercase tracking-wider text-muted">
                       <th className="py-1 font-semibold">Stat</th>
-                      <th className="text-right font-semibold">Lv 50</th>
+                      <th className="text-right font-semibold">Lv {format.level.fixed ?? set.level}</th>
                       <th className="text-center font-semibold">Stage</th>
                       <th className="text-right font-semibold">Final</th>
                       <th className="pl-3 font-semibold">Modifiers</th>

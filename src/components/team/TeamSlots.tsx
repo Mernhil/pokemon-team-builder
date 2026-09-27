@@ -100,8 +100,9 @@ function SlotCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const sp = set ? dex.species(set.speciesId) : undefined;
   const mega = set && format.gimmicks.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
-  const cap = format.statSystem.kind === 'champions-sp' ? format.statSystem.totalCap : 0;
-  const used = set ? sumStats(set.sp) : 0;
+  const sys = format.statSystem;
+  const cap = sys.kind === 'gb-statexp' ? 0 : sys.totalCap;
+  const used = set ? sumStats(sys.kind === 'champions-sp' ? set.sp : set.evs) : 0;
   const pct = cap ? Math.min(100, (used / cap) * 100) : 0;
 
   return (
@@ -143,7 +144,11 @@ function SlotCard({
             <div className="flex items-center gap-1 truncate text-[11px] text-muted">
               <ItemSprite itemId={set.itemId} name={dex.item(set.itemId)?.name} size={14} />
               <span className="truncate">
-                {dex.item(set.itemId)?.name ?? 'No item'} · {dex.ability(set.abilityId)?.name ?? '—'}
+                {format.generation >= 3 || format.statSystem.kind === 'champions-sp'
+                  ? `${dex.item(set.itemId)?.name ?? 'No item'} · ${dex.ability(set.abilityId)?.name ?? '—'}`
+                  : format.generation === 2
+                    ? `${dex.item(set.itemId)?.name ?? 'No item'} · Lv ${set.level}`
+                    : `Lv ${set.level} · ${set.moves.filter(Boolean).length}/4 moves`}
               </span>
             </div>
             <div className="mt-1 flex items-center gap-1.5">
@@ -152,7 +157,7 @@ function SlotCard({
               ))}
               <GenBadge gen={sp.gen} size="xs" />
               {cap > 0 && (
-                <span className="ml-auto flex items-center gap-1.5" title={`${used}/${cap} SP`}>
+                <span className="ml-auto flex items-center gap-1.5" title={`${used}/${cap} ${sys.kind === 'champions-sp' ? 'SP' : 'EVs'}`}>
                   <span className="h-1 w-12 overflow-hidden rounded-full bg-surface-2">
                     <span
                       className={cn('block h-full', used === cap ? 'bg-good' : used > cap ? 'bg-bad' : 'bg-accent')}
