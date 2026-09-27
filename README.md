@@ -17,7 +17,7 @@ npm run build:artifact  # single-file build for the hosted claude.ai app
 npm run icons         # re-render the home-screen icons in public/icons/ from favicon.svg
 ```
 
-**On a phone:** every push to the default branch is deployed as an installable, offline-capable web app that updates itself — see [docs/IPHONE_APP.md](docs/IPHONE_APP.md).
+**On a phone:** every push to the default branch is deployed (privately, behind a login) as an installable, offline-capable web app that updates itself — see [docs/IPHONE_APP.md](docs/IPHONE_APP.md).
 
 ## Architecture
 

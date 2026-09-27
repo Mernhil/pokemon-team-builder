@@ -13,30 +13,44 @@ offline — without the App Store or an Apple developer account.
 - Not active in the Tauri desktop shell (it has its own updater) nor in the single-file/artifact
   build (`--mode singlefile`).
 
-## Hosting: GitHub Pages (automatic on every push)
+## Hosting: Cloudflare Pages + Cloudflare Access (private, free)
 
-`.github/workflows/web-deploy.yml` builds, tests and deploys `dist/` on every push to the default
-branch. One-time setup:
+The repo is private and the app should only be reachable by people explicitly allowed in, so it
+is hosted on Cloudflare Pages (builds private repos, redeploys on every push) behind Cloudflare
+Access (login gate by e-mail, free up to 50 users). Both are configured in the Cloudflare
+dashboard; there is no workflow in this repo.
 
-1. GitHub Pages is free only for **public** repositories (a private repo needs a paid plan).
-   Either make the repo public (Settings → General → Danger Zone → Change visibility) or use one
-   of the alternatives below. Nothing secret is committed: `src-tauri/updater.key.pub` is the
-   public half; the signing key lives only in Actions secrets.
-2. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
-3. Push to the default branch (or Actions → Web app deploy → Run workflow). The URL is shown in
-   the run summary, normally `https://<user>.github.io/pokemon-team-builder/`.
+### 1. Pages project (auto-deploy on push)
 
-### Alternative for a private repo: Cloudflare Pages or Netlify (free)
+Workers & Pages → Create → Pages → Connect to Git → pick this repo, then:
 
-Both can build private repos and redeploy on every push by themselves — no workflow needed.
-Connect the GitHub repo in their dashboard with:
-
-- Build command: `npm run build`
-- Output directory: `dist`
 - Production branch: the repo's default branch
+- Build command: `npm run build`
+- Build output directory: `dist`
 - Environment variable `NODE_VERSION` = `22`
 
-If you go this way, delete `.github/workflows/web-deploy.yml` so it doesn't fail on every push.
+Every push to the production branch redeploys `https://<project>.pages.dev`.
+
+### 2. Restrict access to allowed people
+
+1. Pages project → Settings → General → **Access policy** → Enable. This protects the preview
+   deployments (`*.<project>.pages.dev`) and creates a Zero Trust Access application.
+2. Zero Trust → Access → Applications → that application → edit it and **also add the production
+   hostname** `<project>.pages.dev` (step 1 alone leaves production public).
+3. Policy: Action **Allow**, Include → **Emails** → your address and each person you invite.
+   Login method: **One-time PIN** (a code sent by e-mail; no accounts to create).
+4. Session duration: a long one (e.g. 1 month) so the phone app doesn't ask to log in often.
+
+To grant or revoke someone, add/remove their e-mail in the policy. Check it by opening the URL in a
+private window: it must show the Cloudflare login page, not the app.
+
+### How login interacts with the installed app
+
+- The first launch shows the Cloudflare login page (e-mail → PIN), then the app.
+- Once cached, the app opens offline without logging in (it's already on the phone).
+- Update checks run with the login cookie. If the session has expired the check quietly fails
+  and the app keeps the version it has; the next time the login page shows up and you log in,
+  it updates.
 
 ## Installing on iPhone
 
@@ -48,5 +62,5 @@ Android (Chrome): menu ⋮ → **Install app** / **Add to Home screen**.
 
 ## Updates
 
-Nothing to do on the phone: push to the default branch, wait for the deploy (~1 minute), and the
+Nothing to do on the phone: push to the default branch, wait for the Cloudflare deploy (~1–2 minutes), and the
 next time the app is opened or brought back to the foreground it reloads onto the new version.

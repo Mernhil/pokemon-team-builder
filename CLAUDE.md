@@ -4,7 +4,7 @@
 - Data: `npm run data` rebuilds `src/data/generated/*` from `@pkmn/dex` / `@pkmn/mods` plus `src/data/regulations/*.json`. Never hand-edit the generated files.
 - Sprites: `npm run sprites` rebuilds `public/sprites/*` atlases from PokeAPI.
 - Regulation updates follow `docs/UPDATING_REGULATIONS.md` exactly.
-- Phone app: PWA (`vite-plugin-pwa` + `src/pwa.ts`), auto-deployed to GitHub Pages by `.github/workflows/web-deploy.yml`; see `docs/IPHONE_APP.md`.
+- Phone app: PWA (`vite-plugin-pwa` + `src/pwa.ts`), hosted on Cloudflare Pages behind Cloudflare Access (dashboard-configured, auto-deploys on push); see `docs/IPHONE_APP.md`.
 - Before any commit: `npm run typecheck && npm test`.
 - Hosted app: claude.ai artifact https://claude.ai/artifact/HepTcJzeCYHWDyP4qGmNia
   - Republish `dist/artifact.html` from `npm run build:artifact`.
