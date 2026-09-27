@@ -14,7 +14,10 @@ npm run data          # regenerate src/data/generated/*.json (Showdown data + re
 npm run sprites       # rebuild sprite atlases in public/sprites/ (PokeAPI)
 npm run reg:status    # regulation calendar: live set, end date, announced sets
 npm run build:artifact  # single-file build for the hosted claude.ai app
+npm run icons         # re-render the home-screen icons in public/icons/ from favicon.svg
 ```
+
+**On a phone:** every push to the default branch is deployed (privately, behind a login) as an installable, offline-capable web app that updates itself — see [docs/IPHONE_APP.md](docs/IPHONE_APP.md).
 
 ## Architecture
 
