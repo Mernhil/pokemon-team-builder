@@ -30,13 +30,17 @@ export function useItemOptions(dex: Dex, format: FormatRules, speciesId?: string
 
 /** Learnset options for a set, limited to the format's regulation. */
 export function useMoveOptions(dex: Dex, format: FormatRules, set: PokemonSet | null): ComboOption[] {
+  // Depend on species + moves only, so dragging a stat slider doesn't rebuild the whole learnset.
+  const speciesId = set?.speciesId;
+  const movesKey = set?.moves.join(',') ?? '';
   return useMemo(() => {
-    if (!set) return [];
-    return dex.learnset(set.speciesId, format.regulationId).map((m) => ({
+    if (!speciesId) return [];
+    const moves = movesKey.split(',');
+    return dex.learnset(speciesId, format.regulationId).map((m) => ({
       id: m.id,
       label: m.name,
       keywords: `${m.type} ${m.category}`,
-      disabled: set.moves.includes(m.id),
+      disabled: moves.includes(m.id),
       render: (
         <MoveTooltip move={m}>
           <span className="flex items-center gap-2">
@@ -49,5 +53,5 @@ export function useMoveOptions(dex: Dex, format: FormatRules, set: PokemonSet | 
         </MoveTooltip>
       ),
     }));
-  }, [dex, set, format.regulationId]);
+  }, [dex, speciesId, movesKey, format.regulationId]);
 }

@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from './storage';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
 import { setSpreadValue } from '@/domain/stats';
+import { sanitizeTeam } from '@/domain/sanitize';
 import { cloneTeam, createTeam } from '@/domain/team';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import type { FieldConditions, SideConditions } from '@/domain/battle/conditions';
@@ -169,6 +170,27 @@ export const useTeamStore = create<TeamState>()(
       version: 1,
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, theme: s.theme, view: s.view, battle: s.battle }),
+      // Stored state may be stale or corrupted: never let it leave the app without a valid active team.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<TeamState>;
+        const teams: Record<string, Team> = {};
+        for (const raw of Object.values(p.teams && typeof p.teams === 'object' ? p.teams : {})) {
+          const t = sanitizeTeam(raw);
+          if (t) teams[t.id] = t;
+        }
+        const ids = Object.keys(teams);
+        if (ids.length === 0) return current;
+        const order = [...new Set([...(Array.isArray(p.order) ? p.order : []), ...ids])].filter((id) => Object.hasOwn(teams, id));
+        return {
+          ...current,
+          teams,
+          order,
+          activeTeamId: typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0],
+          theme: p.theme === 'light' ? 'light' : 'dark',
+          view: p.view === 'calc' ? 'calc' : 'builder',
+          battle: p.battle && typeof p.battle === 'object' ? p.battle : {},
+        };
+      },
     },
   ),
 );

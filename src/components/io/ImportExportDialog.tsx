@@ -65,7 +65,9 @@ export function ImportExportDialog({
   const order = useTeamStore((s) => s.order);
   const { updateTeam } = useTeamStore.getState();
 
+  // The dialog stays mounted while closed; don't re-serialise the team on every edit.
   const text = useMemo(() => {
+    if (!open) return '';
     switch (tab) {
       case 'champions':
         return exportChampionsText(team, dex, format);
@@ -78,7 +80,7 @@ export function ImportExportDialog({
       default:
         return '';
     }
-  }, [tab, team, dex, format, allTeams, order]);
+  }, [open, tab, team, dex, format, allTeams, order]);
 
   const copy = async () => {
     try {

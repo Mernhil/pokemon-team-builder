@@ -29,7 +29,12 @@ export function AdvancedDetails({ set, species, dex, format }: Props) {
   const saved = useTeamStore((s) => s.battle[set.uid]);
   const setBattle = useTeamStore((s) => s.setBattle);
   const setView = useTeamStore((s) => s.setView);
-  const state: SlotBattleState = saved ?? { side: defaultSide(!!mega), field: defaultField(), crit: false };
+  const hasMega = !!mega;
+  // Stable default so the stats memo below doesn't recompute on every render.
+  const state: SlotBattleState = useMemo(
+    () => saved ?? { side: defaultSide(hasMega), field: defaultField(), crit: false },
+    [saved, hasMega],
+  );
   const update = (p: Partial<SlotBattleState>) => setBattle(set.uid, { ...state, ...p });
   const patchSide = (p: Partial<SideConditions>) => update({ side: { ...state.side, ...p } });
   const patchField = (p: Partial<FieldConditions>) => update({ field: { ...state.field, ...p } });
