@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-09-27T09:50:34.271Z",
+  "regulations": [
+    {
+      "id": "champions-reg-ma",
+      "name": "Champions · Reg M-A",
+      "shortName": "Reg M-A",
+      "game": "champions",
+      "start": "2026-04-08T00:00:00Z",
+      "end": "2026-06-17T00:00:00Z",
+      "speciesCount": 251,
+      "megaCount": 58,
+      "itemCount": 117,
+      "sources": [
+        "https://victoryroad.pro/champions-regulations/"
+      ],
+      "updatedAt": "2026-09-27"
+    },
+    {
+      "id": "champions-reg-mb",
+      "name": "Champions · Reg M-B",
+      "shortName": "Reg M-B",
+      "game": "champions",
+      "start": "2026-06-17T00:00:00Z",
+      "end": "2026-09-02T00:00:00Z",
+      "speciesCount": 273,
+      "megaCount": 74,
+      "itemCount": 147,
+      "sources": [
+        "https://victoryroad.pro/champions-regulations/"
+      ],
+      "updatedAt": "2026-09-27"
+    },
+    {
+      "id": "champions-reg-mc",
+      "name": "Champions · Reg M-C",
+      "shortName": "Reg M-C",
+      "game": "champions",
+      "start": "2026-09-09T02:00:00Z",
+      "end": "2026-12-02T01:59:00Z",
+      "speciesCount": 299,
+      "megaCount": 80,
+      "itemCount": 165,
+      "sources": [
+        "https://www.pokemon-zone.com/champions/regulations/m-c/",
+        "https://metavgc.com/regulations/regulationm-c",
+        "https://www.vice.com/en/article/pokemon-champions-regulation-mc-all-new-pokemon-list/",
+        "https://pokeled.com/en/blogs/pokemon/z-mega-evolutions-pokemon-champions",
+        "https://www.pokemon-zone.com/champions/pokemon/golisopod-mega-golisopod/",
+        "https://x.com/SerebiiNet/status/2097566417113551156"
+      ],
+      "updatedAt": "2026-09-27"
+    }
+  ],
+  "upcoming": [],
+  "lastChecked": "2026-09-27"
+}

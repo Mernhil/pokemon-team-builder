@@ -1,0 +1,211 @@
+import { useMemo, useState } from 'react';
+import { ArrowLeftRight, Check, Copy, Timer } from 'lucide-react';
+import type { Dex } from '@/data/dex';
+import { calcMoves, calcSpeed, type MoveResult } from '@/domain/battle/damage';
+import type { FormatRules, Team } from '@/domain/types';
+import { useCalcStore, type CalcSide } from '@/store/calcStore';
+import { FieldControls } from '../battle/Controls';
+import { Sprite } from '../ui/Sprite';
+import { Button, Panel, TypeBadge, cn } from '../ui/primitives';
+import { CalcSideEditor } from './CalcSideEditor';
+
+/**
+ * Damage calculator: same dual-pane building blocks as the team builder (attacker | defender),
+ * with results for both directions and turn order on top. Engine: @smogon/calc (Champions mechanics).
+ */
+export function DamageCalcView({ dex, format, team }: { dex: Dex; format: FormatRules; team: Team }) {
+  const attacker = useCalcStore((s) => s.attacker);
+  const defender = useCalcStore((s) => s.defender);
+  const field = useCalcStore((s) => s.field);
+  const { setField, swap } = useCalcStore.getState();
+
+  const ready = !!attacker.set && !!defender.set && !!dex.species(attacker.set.speciesId) && !!dex.species(defender.set.speciesId);
+
+  const results = useMemo(() => {
+    if (!ready) return null;
+    const a = { set: attacker.set!, cond: attacker.cond };
+    const d = { set: defender.set!, cond: defender.cond };
+    try {
+      return {
+        forward: calcMoves(dex, a, d, field, attacker.crits),
+        backward: calcMoves(dex, d, a, field, defender.crits),
+        speedA: calcSpeed(dex, a, field),
+        speedD: calcSpeed(dex, d, field),
+        error: null as string | null,
+      };
+    } catch (e) {
+      return { forward: [], backward: [], speedA: 0, speedD: 0, error: (e as Error).message };
+    }
+  }, [ready, attacker, defender, field, dex]);
+
+  return (
+    <div className="space-y-4">
+      <Panel
+        title="Field"
+        actions={
+          <Button size="sm" onClick={swap} disabled={!attacker.set && !defender.set}>
+            <ArrowLeftRight size={13} /> Swap sides
+          </Button>
+        }
+      >
+        <FieldControls field={field} onChange={setField} />
+      </Panel>
+
+      {results ? (
+        <Panel title="Results">
+          {results.error ? (
+            <p className="text-sm text-bad">The calculator couldn't handle this matchup: {results.error}</p>
+          ) : (
+            <div className="space-y-4">
+              <TurnOrder attacker={attacker} defender={defender} speedA={results.speedA} speedD={results.speedD} trickRoom={field.trickRoom} dex={dex} format={format} />
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ResultList title="Attacker → Defender" tone="bad" results={results.forward} />
+                <ResultList title="Defender → Attacker" tone="accent" results={results.backward} />
+              </div>
+            </div>
+          )}
+        </Panel>
+      ) : (
+        <Panel title="Results">
+          <p className="text-sm text-muted">
+            Pick an attacker and a defender below. Load them from your team with one click, or search any Pokémon legal in {format.shortName}.
+          </p>
+        </Panel>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <CalcSideEditor role="attacker" dex={dex} format={format} team={team} />
+        <CalcSideEditor role="defender" dex={dex} format={format} team={team} />
+      </div>
+      <p className="text-center text-[11px] text-muted">
+        Damage engine: @smogon/calc (Pokémon Showdown), Pokémon Champions mechanics · Lv 50 · 31 IVs · Stat Points
+      </p>
+    </div>
+  );
+}
+
+function TurnOrder({
+  attacker,
+  defender,
+  speedA,
+  speedD,
+  trickRoom,
+  dex,
+  format,
+}: {
+  attacker: CalcSide;
+  defender: CalcSide;
+  speedA: number;
+  speedD: number;
+  trickRoom: boolean;
+  dex: Dex;
+  format: FormatRules;
+}) {
+  const a = dex.species(attacker.set!.speciesId)!;
+  const d = dex.species(defender.set!.speciesId)!;
+  const first = speedA === speedD ? null : (speedA > speedD) !== trickRoom ? 'attacker' : 'defender';
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-surface-2 px-3 py-2 text-xs">
+      <Timer size={14} className="text-muted" />
+      <span className="flex items-center gap-1.5">
+        <Sprite speciesId={a.id} name={a.name} types={a.types} set={format.spriteSet} size={24} />
+        <b className="font-mono tabular-nums">{speedA}</b>
+        <span className="text-muted">Spe</span>
+      </span>
+      <span className="text-muted">vs</span>
+      <span className="flex items-center gap-1.5">
+        <Sprite speciesId={d.id} name={d.name} types={d.types} set={format.spriteSet} size={24} />
+        <b className="font-mono tabular-nums">{speedD}</b>
+        <span className="text-muted">Spe</span>
+      </span>
+      <span className="ml-auto font-medium">
+        {first === null ? 'Speed tie: 50/50' : `${first === 'attacker' ? a.name : d.name} moves first`}
+        {trickRoom && <span className="text-accent"> (Trick Room)</span>}
+        <span className="text-muted"> · same priority bracket</span>
+      </span>
+    </div>
+  );
+}
+
+function ResultList({ title, tone, results }: { title: string; tone: 'bad' | 'accent'; results: MoveResult[] }) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
+        <span className={cn('h-2 w-2 rounded-full', tone === 'bad' ? 'bg-bad' : 'bg-accent')} />
+        {title}
+      </div>
+      {results.length === 0 ? (
+        <p className="text-xs text-muted">No moves selected.</p>
+      ) : (
+        <ul className="space-y-2">
+          {results.map((r) => (
+            <ResultRow key={r.moveId} r={r} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ResultRow({ r }: { r: MoveResult }) {
+  const [copied, setCopied] = useState(false);
+  const status = r.category === 'Status';
+  const [lo, hi] = r.percent;
+  const cur = (r.defenderCurHP / r.defenderHP) * 100;
+  const koColor = hi >= cur ? (lo >= cur ? 'text-bad' : 'text-warn') : 'text-fg';
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(r.desc);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* blocked */
+    }
+  };
+
+  return (
+    <li className="rounded-lg border border-border px-3 py-2">
+      <div className="flex items-center gap-2">
+        <TypeBadge type={r.type as never} size="xs" />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+          {r.name}
+          {r.crit && <span className="ml-1.5 text-[10px] font-bold text-warn">CRIT</span>}
+        </span>
+        {!status && (
+          <span className={cn('font-mono text-sm font-bold tabular-nums', koColor)}>
+            {lo}–{hi}%
+          </span>
+        )}
+      </div>
+      {!status && (
+        <>
+          {/* Damage bar: remaining HP with the min–max band */}
+          <div className="relative mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+            <div className="absolute inset-y-0 left-0 bg-good/35" style={{ width: `${Math.min(100, cur)}%` }} />
+            <div
+              className="absolute inset-y-0 bg-bad/70"
+              style={{ left: `${Math.max(0, cur - Math.min(cur, hi))}%`, width: `${Math.min(cur, hi) - Math.min(cur, lo)}%` }}
+            />
+            <div className="absolute inset-y-0 bg-bad" style={{ left: `${Math.max(0, cur - Math.min(cur, lo))}%`, width: `${Math.min(cur, lo)}%` }} />
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
+            <span className="text-muted">
+              {r.range[0]}–{r.range[1]} HP of {r.defenderHP}
+              {r.koText && <b className="ml-1.5 text-fg">· {r.koText}</b>}
+            </span>
+            <button type="button" onClick={copy} className="flex shrink-0 items-center gap-1 text-muted hover:text-fg" title="Copy calc text">
+              {copied ? <Check size={11} /> : <Copy size={11} />}
+            </button>
+          </div>
+          <details className="mt-0.5">
+            <summary className="cursor-pointer text-[10px] text-muted">Details & rolls</summary>
+            <p className="mt-1 text-[11px] leading-relaxed">{r.desc}</p>
+            <p className="mt-1 font-mono text-[10px] text-muted">{r.rolls.join(', ')}</p>
+          </details>
+        </>
+      )}
+      {status && <p className="mt-1 text-[11px] text-muted">Status move: no damage</p>}
+    </li>
+  );
+}

@@ -1,0 +1,11 @@
+{
+  "id": "champions-reg-ma",
+  "name": "Champions · Reg M-A",
+  "shortName": "Reg M-A",
+  "game": "champions",
+  "start": "2026-04-08T00:00:00Z",
+  "end": "2026-06-17T00:00:00Z",
+  "base": { "showdownMod": "championsregma" },
+  "sources": ["https://victoryroad.pro/champions-regulations/"],
+  "updatedAt": "2026-09-27"
+}

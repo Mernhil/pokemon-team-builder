@@ -1,0 +1,51 @@
+{
+  "name": "pokemon-team-builder",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "data": "tsx scripts/build-data.ts",
+    "sprites": "tsx scripts/build-sprites.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -b",
+    "build:single": "tsc -b && vite build --mode singlefile",
+    "build:artifact": "tsc -b && node scripts/build-artifact.mjs",
+    "reg:status": "tsx scripts/regulation-status.ts",
+    "data:strict": "tsx scripts/build-data.ts --strict"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-tooltip": "^1.2.16",
+    "@smogon/calc": "^0.12.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.48.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@pkmn/dex": "^0.10.11",
+    "@pkmn/img": "^0.3.4",
+    "@pkmn/mods": "^0.10.11",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.81.0",
+    "sharp": "^0.35.4",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^5.0.2"
+  }
+}

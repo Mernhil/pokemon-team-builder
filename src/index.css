@@ -1,0 +1,99 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens — light values here, dark overrides below. Components use these via Tailwind's
+   arbitrary-value / theme utilities (bg-surface, text-muted, …). */
+@theme {
+  --color-bg: #f4f5f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef0f4;
+  --color-border: #d9dde5;
+  --color-fg: #151821;
+  --color-muted: #5d6475;
+  --color-accent: #4f6bff;
+  --color-accent-fg: #ffffff;
+  --color-good: #16a34a;
+  --color-warn: #d97706;
+  --color-bad: #dc2626;
+
+  --color-stat-hp: #e04848;
+  --color-stat-atk: #ee8a33;
+  --color-stat-def: #e9c53a;
+  --color-stat-spa: #4f86e8;
+  --color-stat-spd: #5cbf5c;
+  --color-stat-spe: #e0558f;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dark {
+  --color-bg: #0e1117;
+  --color-surface: #161a23;
+  --color-surface-2: #1e2330;
+  --color-border: #2a3142;
+  --color-fg: #e7eaf1;
+  --color-muted: #8c94a8;
+  --color-accent: #6d84ff;
+  --color-good: #22c55e;
+  --color-warn: #f59e0b;
+  --color-bad: #f05252;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Range input styled per-stat through --track / --fill custom properties. */
+input[type='range'].stat-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--fill) 0 var(--pct), var(--color-surface-2) var(--pct) 100%);
+  outline: none;
+  cursor: pointer;
+}
+input[type='range'].stat-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 3px solid var(--fill);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+input[type='range'].stat-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 3px solid var(--fill);
+}
+input[type='range'].stat-range:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 40%, transparent);
+}
+
+/* Hide number spinners — we render our own −/+ buttons. */
+input[type='number'].no-spin::-webkit-inner-spin-button,
+input[type='number'].no-spin::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'].no-spin {
+  -moz-appearance: textfield;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}

@@ -1,0 +1,51 @@
+{
+  "id": "champions-reg-mc",
+  "name": "Champions · Reg M-C",
+  "shortName": "Reg M-C",
+  "game": "champions",
+  "start": "2026-09-09T02:00:00Z",
+  "end": "2026-12-02T01:59:00Z",
+  "base": { "extends": "champions-reg-mb" },
+  "addSpecies": [
+    "wigglytuff", "persian", "persianalola", "farfetchd", "mrmime", "swalot", "salamence", "gogoat",
+    "golisopod", "rillaboom", "cinderace", "inteleon", "thievul", "toxtricity", "toxtricitylowkey",
+    "grapploct", "perrserker", "sirfetchd", "pincurchin", "indeedee", "indeedeef", "pawmot", "arboliva",
+    "squawkabilly", "mabosstiff", "baxcalibur",
+    "absolmegaz", "garchompmegaz", "lucariomegaz", "salamencemega", "golisopodmega", "baxcaliburmega"
+  ],
+  "removeSpecies": [],
+  "addItems": [
+    "absolitez", "garchompitez", "lucarionitez", "salamencite", "golisopite", "baxcalibrite",
+    "airballoon", "bindingband", "ejectbutton", "electricseed", "grassyseed", "mistyseed", "psychicseed",
+    "leek", "normalgem", "redcard", "rockyhelmet", "terrainextender"
+  ],
+  "removeItems": [],
+  "addMoves": [
+    "courtchange", "doubleshock", "drumbeating", "glaiverush", "jawlock", "meteorassault", "milkdrink",
+    "octolock", "overdrive", "pyroball", "revivalblessing", "shiftgear", "slash", "snipeshot", "zingzap"
+  ],
+  "removeMoves": [],
+  "newAbilities": [
+    { "id": "auraguard", "name": "Aura Guard", "shortDesc": "Halves the damage this Pokemon takes from contact moves." }
+  ],
+  "speciesPatches": {
+    "absolmegaz": { "abilities": { "0": "Sharpness" } },
+    "garchompmegaz": { "abilities": { "0": "Levitate" } },
+    "lucariomegaz": { "abilities": { "0": "Aura Guard" } },
+    "golisopodmega": { "abilities": { "0": "Tough Claws" } },
+    "baxcaliburmega": { "abilities": { "0": "Thermal Exchange" } }
+  },
+  "unconfirmed": {
+    "species": ["farfetchdgalar", "mrmimegalar"],
+    "note": "Listed by a single source (metavgc.com) only; not added. Re-check on the next update."
+  },
+  "sources": [
+    "https://www.pokemon-zone.com/champions/regulations/m-c/",
+    "https://metavgc.com/regulations/regulationm-c",
+    "https://www.vice.com/en/article/pokemon-champions-regulation-mc-all-new-pokemon-list/",
+    "https://pokeled.com/en/blogs/pokemon/z-mega-evolutions-pokemon-champions",
+    "https://www.pokemon-zone.com/champions/pokemon/golisopod-mega-golisopod/",
+    "https://x.com/SerebiiNet/status/2097566417113551156"
+  ],
+  "updatedAt": "2026-09-27"
+}
