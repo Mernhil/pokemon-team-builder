@@ -3,8 +3,9 @@ import type { Issue } from '@/domain/validation';
 import { useTeamStore } from '@/store/teamStore';
 import { Panel, cn } from '../ui/primitives';
 
-export function ValidationPanel({ issues }: { issues: Issue[] }) {
-  const setActiveSlot = useTeamStore((s) => s.setActiveSlot);
+export function ValidationPanel({ issues, onSelectSlot }: { issues: Issue[]; onSelectSlot?: (i: number) => void }) {
+  const globalSetActiveSlot = useTeamStore((s) => s.setActiveSlot);
+  const setActiveSlot = onSelectSlot ?? globalSetActiveSlot;
   const errors = issues.filter((i) => i.severity === 'error').length;
   const warnings = issues.filter((i) => i.severity === 'warning').length;
   const shown = issues.filter((i) => i.severity !== 'info');

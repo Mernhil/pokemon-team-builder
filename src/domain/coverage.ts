@@ -1,5 +1,5 @@
 import type { Dex } from '@/data/dex';
-import type { Team, TypeName } from './types';
+import type { Move, Team, TypeName } from './types';
 
 /** One member's best damaging move against a defending type. */
 export interface MemberHit {
@@ -48,5 +48,39 @@ export function offensiveCoverage(team: Team, dex: Dex): OffenseRow[] {
       superEffective: hits.filter((h) => h.mult > 1).length,
       walled: hits.filter((h) => h.mult < 1).length,
     };
+  });
+}
+
+export interface MatchupRow {
+  defender: string;
+  types: TypeName[];
+  /** The attacking team's single best hit on this defender, or null with no damaging moves at all. */
+  best: { attacker: string; move: string; mult: number } | null;
+}
+
+/**
+ * Head-to-head coverage: for each member of `defenders`, the hardest hit anything on `attackers`
+ * can land on it (across both its types), using its actual movepool rather than a generic per-type
+ * summary. Used to compare two built teams (e.g. the Matches tab's Your Team vs Enemy Team).
+ */
+export function teamVsTeam(attackers: Team, defenders: Team, dex: Dex): MatchupRow[] {
+  const atkMembers = attackers.slots.flatMap((s) => {
+    if (!s) return [];
+    const sp = dex.species(s.speciesId);
+    const moves = s.moves.map((m) => dex.move(m)).filter((m): m is Move => !!m && m.category !== 'Status');
+    return sp && moves.length ? [{ name: s.nickname || sp.name, moves }] : [];
+  });
+  return defenders.slots.flatMap((s) => {
+    if (!s) return [];
+    const sp = dex.species(s.speciesId);
+    if (!sp) return [];
+    let best: MatchupRow['best'] = null;
+    for (const a of atkMembers) {
+      for (const mv of a.moves) {
+        const mult = dex.effectiveness(mv.type, sp.types);
+        if (!best || mult > best.mult) best = { attacker: a.name, move: mv.name, mult };
+      }
+    }
+    return [{ defender: s.nickname || sp.name, types: sp.types, best }];
   });
 }

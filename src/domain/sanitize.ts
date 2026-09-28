@@ -1,5 +1,5 @@
 import type { LoggedMon, Match, MatchResult } from './matches';
-import { uid } from './team';
+import { emptySlots, uid } from './team';
 import { STAT_IDS, type PokemonSet, type StatTable, type Team, type TeamSlots, type TeraType } from './types';
 
 /**
@@ -61,6 +61,13 @@ export function sanitizeTeam(v: unknown): Team | null {
   // which has visibility into the rest of the batch/store.
   const id = safeId(v.id);
   const groupId = typeof v.groupId === 'string' && ID_RE.test(v.groupId) && v.groupId !== id ? v.groupId : undefined;
+  const slotsByFormat = isObj(v.slotsByFormat)
+    ? Object.fromEntries(
+        Object.entries(v.slotsByFormat)
+          .filter(([k]) => typeof k === 'string' && k.length <= MAX_ID)
+          .map(([k, s]) => [k, Array.isArray(s) ? (Array.from({ length: 6 }, (_, i) => sanitizeSet((s as unknown[])[i])) as TeamSlots) : emptySlots()]),
+      )
+    : undefined;
   return {
     id,
     name: str(v.name, MAX_NAME) ?? 'Imported Team',
@@ -69,6 +76,7 @@ export function sanitizeTeam(v: unknown): Team | null {
     notes: str(v.notes, MAX_NOTES),
     replicaCode: str(v.replicaCode, 16),
     slots,
+    slotsByFormat: slotsByFormat && Object.keys(slotsByFormat).length ? slotsByFormat : undefined,
     createdAt: int(v.createdAt, 0, Number.MAX_SAFE_INTEGER, now),
     updatedAt: int(v.updatedAt, 0, Number.MAX_SAFE_INTEGER, now),
     groupId,

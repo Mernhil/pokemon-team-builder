@@ -3,6 +3,7 @@ import { ArrowLeft, Search } from 'lucide-react';
 import { toID, type Dex } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
+import { currentRegulation } from '@/domain/formats';
 import { BOOKS, bookForFormat, bookInfo, type DexBook } from '@/domain/games';
 import type { PokedexData } from '@/domain/pokedex';
 import type { FormatRules, Pokemon, TypeName } from '@/domain/types';
@@ -37,16 +38,22 @@ export function PokedexView({ format }: { format: FormatRules }) {
             className={cn(
               'flex items-center gap-1 rounded-md px-1.5 py-1 transition-colors',
               b.id === book.id ? 'bg-surface-2 ring-1 ring-border' : 'opacity-50 hover:opacity-100',
-              b.game && b.gen === 7 && 'ml-2 border-l border-border pl-2.5',
+              ((b.game && b.gen === 7) || b.id === 'gen1') && 'ml-2 border-l border-border pl-2.5',
             )}
           >
-            <GenBadge gen={b.gen} size="xs" />
-            {b.game ? (
-              <span className="text-xs font-semibold" style={{ color: b.color }}>
-                {b.label}
-              </span>
+            {b.id === 'champions' ? (
+              <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-accent-fg">CHAMPIONS</span>
             ) : (
-              <span className="hidden text-xs font-medium md:inline">{b.label}</span>
+              <>
+                <GenBadge gen={b.gen} size="xs" />
+                {b.game ? (
+                  <span className="text-xs font-semibold" style={{ color: b.color }}>
+                    {b.label}
+                  </span>
+                ) : (
+                  <span className="hidden text-xs font-medium md:inline">{b.label}</span>
+                )}
+              </>
             )}
           </button>
         ))}
@@ -69,7 +76,13 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
   const [wildOnly, setWildOnly] = useState(false);
   const spriteSet = book.spriteSet;
 
-  const all = useMemo(() => dex.selectableSpecies(), [dex]);
+  // The Champions book is regulation-scoped (its roster changes every regulation); every other book
+  // shows the full generation/game roster regardless of the active team's clauses. The book can be
+  // picked independently of the active team's own format (e.g. browsing Champions while your team is
+  // a Gen 9 one), so its regulation comes from the active team's format only when that IS a Champions
+  // format — otherwise from whichever regulation is currently live.
+  const championsRegulationId = format.datasetId === 'champions' ? format.regulationId : currentRegulation()?.id;
+  const all = useMemo(() => dex.selectableSpecies(book.id === 'champions' ? championsRegulationId : undefined), [dex, book.id, championsRegulationId]);
   const number = useCallback((s: Pokemon) => (order === 'national' ? s.num : data.entries[s.num]?.dex?.[order]), [order, data]);
   const list = useMemo(() => {
     const q = toID(query);
@@ -120,8 +133,12 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
             </Select>
           </div>
           <label className="flex items-center gap-2 text-xs text-muted">
-            <input type="checkbox" checked={wildOnly} onChange={(e) => setWildOnly(e.target.checked)} className="accent-[var(--color-accent)]" />
-            Found in the wild in {book.games.split(' · ').length > 1 ? 'these games' : 'this game'}
+            {data.areas.length > 0 && (
+              <>
+                <input type="checkbox" checked={wildOnly} onChange={(e) => setWildOnly(e.target.checked)} className="accent-[var(--color-accent)]" />
+                Found in the wild in {book.games.split(' · ').length > 1 ? 'these games' : 'this game'}
+              </>
+            )}
             <span className="ml-auto font-mono">{list.length}</span>
           </label>
         </div>

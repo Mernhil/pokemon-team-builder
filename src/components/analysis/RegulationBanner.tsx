@@ -56,7 +56,7 @@ function GenerationStrip({ format }: { format: FormatRules }) {
 }
 
 function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) {
-  const updateTeam = useTeamStore((s) => s.updateTeam);
+  const switchFormat = useTeamStore((s) => s.switchFormat);
   const live = currentRegulation();
   const teamReg = regulationInfo(format.regulationId);
   const next = REGULATION_MANIFEST.upcoming[0];
@@ -91,7 +91,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
       <span className="ml-auto flex items-center gap-2">
         {REGULATION_MANIFEST.lastChecked && <span className="text-muted">Checked {fmtDate(REGULATION_MANIFEST.lastChecked)}</span>}
         {outdated && liveFormat && (
-          <Button size="sm" variant="primary" onClick={() => updateTeam(team.id, { formatId: liveFormat.id, category: liveFormat.shortName })}>
+          <Button size="sm" variant="primary" onClick={() => switchFormat(team.id, liveFormat.id)}>
             Move team to {live.shortName}
           </Button>
         )}

@@ -334,6 +334,13 @@ export interface Team {
   /** In-game Champions Replica Team code (10 chars) — stored as metadata. */
   replicaCode?: string;
   slots: TeamSlots;
+  /**
+   * Snapshot of `slots` for every other format this team has been switched away from, keyed by
+   * formatId. Switching the format selector restores that format's own roster instead of carrying
+   * over species the new format's Pokédex doesn't have (which used to get stuck as "unknown species"
+   * with no way to remove them).
+   */
+  slotsByFormat?: Record<string, TeamSlots>;
   createdAt: number;
   updatedAt: number;
   /**

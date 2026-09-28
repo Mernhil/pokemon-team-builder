@@ -5,7 +5,7 @@ import { safeStorage } from './storage';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
 import { withSpreadValue } from '@/domain/stats';
 import { sanitizeTeam } from '@/domain/sanitize';
-import { cloneTeam, createTeam } from '@/domain/team';
+import { cloneTeam, createTeam, emptySlots } from '@/domain/team';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
@@ -32,7 +32,14 @@ export interface TeamState {
   // teams
   newTeam: (formatId?: string) => string;
   selectTeam: (id: string) => void;
-  updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'replicaCode' | 'formatId' | 'variationLabel'>>) => void;
+  updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'replicaCode' | 'variationLabel'>>) => void;
+  /**
+   * Switches a team to a different format, saving its current roster under its old formatId and
+   * restoring whatever roster it last had under the new one (empty, the first time). Keeps a
+   * species from one format's Pokédex (e.g. Bulbasaur in Gen 9) from getting stuck, unremovable, in
+   * a format whose dex doesn't have it (e.g. Champions) after switching the format selector.
+   */
+  switchFormat: (id: string, formatId: string) => void;
   duplicateTeam: (id: string) => string;
   /** Explicitly commits the current in-progress build as a new, distinctly-named top-level entry. */
   saveAsNew: (name: string) => string;
@@ -41,14 +48,15 @@ export interface TeamState {
   deleteTeam: (id: string) => void;
   addTeams: (teams: Team[], activate?: boolean) => void;
 
-  // slots
+  // slots — take an explicit team id (not just the active team) so the same slot editor can drive
+  // more than one team on screen at once (the Matches tab's Your Team / Enemy Team builders).
   setActiveSlot: (i: number) => void;
-  setSlot: (i: number, set: PokemonSet | null) => void;
-  updateSet: (i: number, patch: Partial<PokemonSet>) => void;
-  setMove: (i: number, moveIndex: number, moveId: string) => void;
-  setSpread: (i: number, kind: 'sp' | 'evs' | 'ivs', stat: StatId, value: number) => void;
-  resetSpread: (i: number, kind: 'sp' | 'evs') => void;
-  moveSlot: (from: number, to: number) => void;
+  setSlot: (id: string, i: number, set: PokemonSet | null) => void;
+  updateSet: (id: string, i: number, patch: Partial<PokemonSet>) => void;
+  setMove: (id: string, i: number, moveIndex: number, moveId: string) => void;
+  setSpread: (id: string, i: number, kind: 'sp' | 'evs' | 'ivs', stat: StatId, value: number) => void;
+  resetSpread: (id: string, i: number, kind: 'sp' | 'evs') => void;
+  moveSlot: (id: string, from: number, to: number) => void;
 
   setTheme: (t: Theme) => void;
   setView: (v: View) => void;
@@ -99,15 +107,15 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
 export const useTeamStore = create<TeamState>()(
   persist(
     (set, get) => {
-      /** Immutable update of the active team with updatedAt bump. */
-      const mutateActive = (fn: (t: Team) => Team) =>
+      /** Immutable update of any one team (by id) with updatedAt bump. */
+      const mutateTeam = (id: string, fn: (t: Team) => Team) =>
         set((s) => {
-          const t = s.teams[s.activeTeamId];
+          const t = s.teams[id];
           if (!t) return s;
           return { teams: { ...s.teams, [t.id]: { ...fn(t), updatedAt: Date.now() } } };
         });
-      const mutateSlot = (i: number, fn: (p: PokemonSet) => PokemonSet) =>
-        mutateActive((t) => {
+      const mutateSlot = (id: string, i: number, fn: (p: PokemonSet) => PokemonSet) =>
+        mutateTeam(id, (t) => {
           const cur = t.slots[i];
           if (!cur) return t;
           const slots = [...t.slots] as TeamSlots;
@@ -132,6 +140,17 @@ export const useTeamStore = create<TeamState>()(
         selectTeam: (id) => get().teams[id] && set({ activeTeamId: id, activeSlot: 0 }),
         updateTeam: (id, patch) =>
           set((s) => (s.teams[id] ? { teams: { ...s.teams, [id]: { ...s.teams[id], ...patch, updatedAt: Date.now() } } } : s)),
+        switchFormat: (id, formatId) =>
+          set((s) => {
+            const t = s.teams[id];
+            if (!t || t.formatId === formatId) return s;
+            const slotsByFormat = { ...t.slotsByFormat, [t.formatId]: t.slots };
+            const slots = slotsByFormat[formatId] ?? emptySlots();
+            return {
+              teams: { ...s.teams, [id]: { ...t, formatId, category: getFormat(formatId).shortName, slots, slotsByFormat, updatedAt: Date.now() } },
+              ...(id === s.activeTeamId ? { activeSlot: 0 } : {}),
+            };
+          }),
         duplicateTeam: (id) => {
           const src = get().teams[id];
           if (!src) return id;
@@ -207,28 +226,29 @@ export const useTeamStore = create<TeamState>()(
           }),
 
         setActiveSlot: (i) => set({ activeSlot: Math.max(0, Math.min(5, i)) }),
-        setSlot: (i, p) =>
-          mutateActive((t) => {
+        setSlot: (id, i, p) =>
+          mutateTeam(id, (t) => {
             const slots = [...t.slots] as TeamSlots;
             slots[i] = p;
             return { ...t, slots };
           }),
-        updateSet: (i, patch) => mutateSlot(i, (p) => ({ ...p, ...patch })),
-        setMove: (i, mi, moveId) =>
-          mutateSlot(i, (p) => {
+        updateSet: (id, i, patch) => mutateSlot(id, i, (p) => ({ ...p, ...patch })),
+        setMove: (id, i, mi, moveId) =>
+          mutateSlot(id, i, (p) => {
             const moves = [...p.moves] as PokemonSet['moves'];
             moves[mi] = moveId;
             return { ...p, moves };
           }),
-        setSpread: (i, kind, stat, value) => {
-          const team = get().teams[get().activeTeamId];
+        setSpread: (id, i, kind, stat, value) => {
+          const team = get().teams[id];
+          if (!team) return;
           const sys = getFormat(team.formatId).statSystem;
-          mutateSlot(i, (p) => withSpreadValue(p, sys, kind, stat, value));
+          mutateSlot(id, i, (p) => withSpreadValue(p, sys, kind, stat, value));
         },
-        resetSpread: (i, kind) =>
-          mutateSlot(i, (p) => ({ ...p, [kind]: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } })),
-        moveSlot: (from, to) =>
-          mutateActive((t) => {
+        resetSpread: (id, i, kind) =>
+          mutateSlot(id, i, (p) => ({ ...p, [kind]: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } })),
+        moveSlot: (id, from, to) =>
+          mutateTeam(id, (t) => {
             const slots = [...t.slots];
             const [x] = slots.splice(from, 1);
             slots.splice(to, 0, x);

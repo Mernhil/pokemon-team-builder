@@ -5,7 +5,7 @@ import { formatMechanics } from '@/domain/games';
 import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
 import { spreadKey } from '@/domain/stats';
 import { createSet } from '@/domain/team';
-import { STAT_LABELS, type FormatRules, type PokemonSet, type TeraType } from '@/domain/types';
+import type { FormatRules, PokemonSet, TeraType } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
 import { useSlotBattle, useTeamStore } from '@/store/teamStore';
 import { Combobox } from '../ui/Combobox';
@@ -16,12 +16,14 @@ import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
 import { Button, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
 import { AdvancedDetails } from './AdvancedDetails';
+import { NaturePicker } from './NaturePicker';
 import { useItemOptions, useMoveOptions } from './options';
 import { SpeciesPicker } from './SpeciesPicker';
 import { SpriteHistory } from './SpriteHistory';
 import { StatDistributor } from './StatDistributor';
 
 interface Props {
+  teamId: string;
   slot: number;
   set: PokemonSet | null;
   dex: Dex;
@@ -29,8 +31,12 @@ interface Props {
   issues: Issue[];
 }
 
-export function SetEditor({ slot, set, dex, format, issues }: Props) {
-  const { setSlot, updateSet, setMove, setSpread } = useTeamStore.getState();
+export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
+  const { setSlot: setSlotRaw, updateSet: updateSetRaw, setMove: setMoveRaw, setSpread: setSpreadRaw } = useTeamStore.getState();
+  const setSlot = (i: number, p: PokemonSet | null) => setSlotRaw(teamId, i, p);
+  const updateSet = (i: number, patch: Partial<PokemonSet>) => updateSetRaw(teamId, i, patch);
+  const setMove = (i: number, mi: number, moveId: string) => setMoveRaw(teamId, i, mi, moveId);
+  const setSpread = (i: number, kind: 'sp' | 'evs' | 'ivs', stat: Parameters<typeof setSpreadRaw>[3], value: number) => setSpreadRaw(teamId, i, kind, stat, value);
   const mech = formatMechanics(format);
   const champions = format.statSystem.kind === 'champions-sp';
 
@@ -54,7 +60,31 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
   }
 
   const species = dex.species(set.speciesId);
-  if (!species) return <Panel title="Unknown species">{set.speciesId}</Panel>;
+  if (!species) {
+    return (
+      <Panel
+        title="Unknown species"
+        actions={
+          <Button size="sm" variant="ghost" onClick={() => setSlot(slot, null)} aria-label="Remove Pokémon">
+            <Trash2 size={13} /> Remove
+          </Button>
+        }
+      >
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
+          <p className="text-sm text-muted">
+            &ldquo;{set.speciesId}&rdquo; isn&apos;t in {format.shortName}&apos;s Pokédex — it may belong to a different format or regulation. Remove it, or pick a
+            replacement {champions ? 'legal in' : 'from'} {format.shortName}.
+          </p>
+          <SpeciesPicker
+            className="w-full max-w-md text-left"
+            dex={dex}
+            format={format}
+            onChange={(id) => id && setSlot(slot, createSet(dex, id, format))}
+          />
+        </div>
+      </Panel>
+    );
+  }
   const mega = format.gimmicks.mega ? dex.megaFor(species.id, set.itemId) : undefined;
   const ability = dex.ability(set.abilityId);
   const item = dex.item(set.itemId);
@@ -170,14 +200,7 @@ export function SetEditor({ slot, set, dex, format, issues }: Props) {
             )}
             {mech.natures && (
             <Field label={champions ? 'Stat Alignment (Nature)' : 'Nature'}>
-              <Select value={set.nature} onChange={(e) => updateSet(slot, { nature: e.target.value })}>
-                {dex.natures.map((n) => (
-                  <option key={n.name} value={n.name}>
-                    {n.name}
-                    {n.plus && n.plus !== n.minus ? ` (+${STAT_LABELS[n.plus]} −${STAT_LABELS[n.minus!]})` : ' (neutral)'}
-                  </option>
-                ))}
-              </Select>
+              <NaturePicker dex={dex} value={set.nature} onChange={(nature) => updateSet(slot, { nature })} />
             </Field>
             )}
             {format.gimmicks.tera && (

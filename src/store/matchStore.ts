@@ -9,12 +9,17 @@ interface MatchState {
   matches: Record<string, Match>;
   /** Display order (most recent first), independent of `date` so manual re-ordering is possible later. */
   order: string[];
+  /** Teams shown in the Matches tab's "Team Builder" (Your Team / Enemy Team), by id in teamStore. */
+  scoutYourTeamId?: string;
+  scoutEnemyTeamId?: string;
 
   addMatch: (date?: string) => string;
   updateMatch: (id: string, patch: Partial<Omit<Match, 'id' | 'createdAt'>>) => void;
   deleteMatch: (id: string) => void;
   duplicateAsTemplate: (id: string, date?: string) => string;
   importMatches: (matches: Match[]) => void;
+  setScoutYourTeam: (id: string | undefined) => void;
+  setScoutEnemyTeam: (id: string | undefined) => void;
 }
 
 export const useMatchStore = create<MatchState>()(
@@ -61,6 +66,8 @@ export const useMatchStore = create<MatchState>()(
           }
           return { matches, order: [...ids, ...s.order.filter((x) => !ids.includes(x))] };
         }),
+      setScoutYourTeam: (id) => set({ scoutYourTeamId: id }),
+      setScoutEnemyTeam: (id) => set({ scoutEnemyTeamId: id }),
     }),
     {
       name: 'ptb:matches:v1',
@@ -76,7 +83,13 @@ export const useMatchStore = create<MatchState>()(
         }
         const ids = Object.keys(matches);
         const order = [...new Set([...(Array.isArray(p.order) ? p.order : []), ...ids])].filter((id) => Object.hasOwn(matches, id));
-        return { ...current, matches, order };
+        return {
+          ...current,
+          matches,
+          order,
+          scoutYourTeamId: typeof p.scoutYourTeamId === 'string' ? p.scoutYourTeamId : undefined,
+          scoutEnemyTeamId: typeof p.scoutEnemyTeamId === 'string' ? p.scoutEnemyTeamId : undefined,
+        };
       },
     },
   ),
