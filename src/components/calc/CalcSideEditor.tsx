@@ -1,6 +1,7 @@
 import { Crosshair, Sparkles } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultSide } from '@/domain/battle/conditions';
+import { stripUnsupported } from '@/domain/capabilities';
 import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
 import { createSet } from '@/domain/team';
 import { STAT_LABELS, type FormatRules, type Team, type TeraType } from '@/domain/types';
@@ -42,7 +43,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
     if (!s) return;
     const hasMega = !!dex.megaFor(s.speciesId, s.itemId);
     setSide(role, {
-      set: structuredClone(s),
+      set: stripUnsupported(structuredClone(s), format.capabilities),
       cond: defaultSide(hasMega),
       crits: [false, false, false, false],
       origin: { teamName: team.name, slot: i },
@@ -202,7 +203,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                 </Select>
               </Field>
               )}
-              {format.gimmicks.tera && (
+              {format.capabilities.tera && (
                 <Field label="Tera Type">
                   <Select value={set.teraType ?? ''} onChange={(e) => patchSet(role, { teraType: (e.target.value || undefined) as TeraType | undefined })}>
                     <option value="">—</option>
@@ -265,8 +266,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
               cond={side.cond}
               onChange={(p) => patchCond(role, p)}
               ability={forme !== species ? Object.values(forme!.abilities)[0] : dex.ability(set.abilityId)?.name}
-              canMega={!!mega && format.gimmicks.mega}
-              canTera={format.gimmicks.tera && !!set.teraType}
+              canMega={!!mega && format.capabilities.mega}
+              canTera={format.capabilities.tera && !!set.teraType}
               teraType={set.teraType}
               gen={dex.generation}
               game={format.game}

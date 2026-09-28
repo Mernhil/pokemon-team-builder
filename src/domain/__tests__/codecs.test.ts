@@ -40,8 +40,10 @@ Careful Nature
 describe('Showdown codec', () => {
   it('imports and round-trips', () => {
     const { team, warnings } = importShowdown(PASTE, dex, fmt);
-    expect(warnings).toEqual([]);
+    // Champions has no Terastallization: the paste's Tera Type line is ignored, with a note.
+    expect(warnings).toEqual(['Tera Types were ignored: Reg M-C has no Terastallization.']);
     const g = team.slots[0]!;
+    expect(g.teraType).toBeUndefined();
     expect(g.speciesId).toBe('garchomp');
     expect(g.nickname).toBe('Chompy');
     expect(g.sp).toEqual({ hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 });

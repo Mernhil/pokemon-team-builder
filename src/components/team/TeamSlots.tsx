@@ -106,7 +106,7 @@ function SlotCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const sp = set ? dex.species(set.speciesId) : undefined;
-  const mega = set && format.gimmicks.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
+  const mega = set && format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
   const sys = format.statSystem;
   const cap = sys.kind === 'champions-sp' || sys.kind === 'modern-ev' ? sys.totalCap : 0;
   const used = set ? sumStats(sys.kind === 'champions-sp' ? set.sp : set.evs) : 0;

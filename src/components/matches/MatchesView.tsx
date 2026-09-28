@@ -65,7 +65,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
     const set = createSet(dex, first.speciesId, format);
     if (first.itemId) set.itemId = first.itemId;
     if (first.abilityId) set.abilityId = first.abilityId;
-    if (first.teraType) set.teraType = first.teraType;
+    if (first.teraType && format.capabilities.tera) set.teraType = first.teraType;
     if (first.moves?.length) set.moves = [first.moves[0] ?? '', first.moves[1] ?? '', first.moves[2] ?? '', first.moves[3] ?? ''];
     useCalcStore.getState().patchSide('defender', { set, cond: useCalcStore.getState().defender.cond, crits: [false, false, false, false] });
     useTeamStore.getState().setView('calc');

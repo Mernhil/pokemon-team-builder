@@ -85,7 +85,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
       </Panel>
     );
   }
-  const mega = format.gimmicks.mega ? dex.megaFor(species.id, set.itemId) : undefined;
+  const mega = format.capabilities.mega ? dex.megaFor(species.id, set.itemId) : undefined;
   const ability = dex.ability(set.abilityId);
   const item = dex.item(set.itemId);
   const slotIssues = issues.filter((i) => i.slot === slot && i.severity !== 'info');
@@ -203,7 +203,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
               <NaturePicker dex={dex} value={set.nature} onChange={(nature) => updateSet(slot, { nature })} />
             </Field>
             )}
-            {format.gimmicks.tera && (
+            {format.capabilities.tera && (
               <Field label="Tera Type">
                 <Select value={set.teraType ?? ''} onChange={(e) => updateSet(slot, { teraType: (e.target.value || undefined) as TeraType | undefined })}>
                   <option value="">—</option>

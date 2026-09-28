@@ -2,7 +2,9 @@ import { toID, type Dex } from '@/data/dex';
 import { formatMechanics } from './games';
 import { calcStats, evToStatExp, statExpToEV } from './stats';
 import { sanitizeTeam } from './sanitize';
-import { createSet, createTeam, emptySlots } from './team';
+import { getFormat } from './formats';
+import { stripUnsupported } from './capabilities';
+import { createSet, createTeam, emptySlots, enforceCapabilities } from './team';
 import {
   STAT_IDS,
   STAT_LABELS,
@@ -47,7 +49,7 @@ export function exportSetShowdown(set: PokemonSet, dex: Dex, format: FormatRules
   if (ab) lines.push(`Ability: ${ab.name}`);
   if (!format.level.fixed && set.level !== 100) lines.push(`Level: ${set.level}`);
   if (set.shiny) lines.push('Shiny: Yes');
-  if (format.gimmicks.tera && set.teraType) lines.push(`Tera Type: ${set.teraType}`);
+  if (format.capabilities.tera && set.teraType) lines.push(`Tera Type: ${set.teraType}`);
 
   const sys = format.statSystem;
   if (sys.kind === 'gb-statexp') {
@@ -113,6 +115,7 @@ export function importShowdown(text: string, dex: Dex, format: FormatRules, name
     .map((b) => b.trim())
     .filter((b) => b && !b.startsWith('==='));
   const slots: TeamSlots = emptySlots();
+  let teraIgnored = false;
 
   blocks.slice(0, format.teamSize).forEach((block, idx) => {
     const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -171,6 +174,11 @@ export function importShowdown(text: string, dex: Dex, format: FormatRules, name
           set.shiny = /yes/i.test(v);
           break;
         case 'teratype': {
+          // Only Scarlet/Violet has Terastallization; other games' pastes may still carry the line.
+          if (!format.capabilities.tera) {
+            teraIgnored = true;
+            break;
+          }
           const t = [...dex.types, 'Stellar'].find((x) => toID(x) === toID(v));
           if (t) set.teraType = t as TeraType;
           break;
@@ -211,6 +219,7 @@ export function importShowdown(text: string, dex: Dex, format: FormatRules, name
   });
 
   if (blocks.length > format.teamSize) warnings.push(`Only the first ${format.teamSize} sets were imported.`);
+  if (teraIgnored) warnings.push(`Tera Types were ignored: ${format.shortName} has no Terastallization.`);
   const team = createTeam(format, name);
   team.slots = slots;
   return { team, warnings };
@@ -233,7 +242,7 @@ export function exportChampionsText(team: Team, dex: Dex, format: FormatRules): 
     const align = nat?.plus && nat.plus !== nat.minus ? ` (+${STAT_LABELS[nat.plus]} −${STAT_LABELS[nat.minus!]})` : '';
     out.push(`${i + 1}. ${sp?.name ?? s.speciesId}${s.itemId ? ` @ ${dex.item(s.itemId)?.name}` : ''}${mega ? `  → ${mega.name}` : ''}`);
     out.push(`   Ability: ${dex.ability(s.abilityId)?.name ?? '—'} · Stat Alignment: ${s.nature}${align}`);
-    if (format.gimmicks.tera) out.push(`   Tera Type: ${s.teraType ?? '—'}`);
+    if (format.capabilities.tera) out.push(`   Tera Type: ${s.teraType ?? '—'}`);
     out.push(`   SP: ${spreadLine(s.sp, 0) || '—'}`);
     if (stats) out.push(`   Stats: ${STAT_IDS.map((k) => `${stats[k]} ${STAT_LABELS[k]}`).join(' / ')}`);
     out.push(`   Moves: ${s.moves.filter(Boolean).map((m) => dex.move(m)?.name ?? m).join(' / ') || '—'}`);
@@ -290,7 +299,8 @@ const b64url = {
 };
 
 export function encodeShareString(team: Team): string {
-  const payload = { v: 1, n: team.name, f: team.formatId, s: team.slots.map((s) => (s ? toCompact(s) : 0)) };
+  const caps = getFormat(team.formatId).capabilities;
+  const payload = { v: 1, n: team.name, f: team.formatId, s: team.slots.map((s) => (s ? toCompact(stripUnsupported(s, caps)) : 0)) };
   return 'PTB1.' + b64url.enc(JSON.stringify(payload));
 }
 
@@ -318,7 +328,8 @@ export function decodeShareString(str: string, dex: Dex, format: FormatRules): T
     return set;
   }) as TeamSlots;
   while (team.slots.length < 6) (team.slots as (PokemonSet | null)[]).push(null);
-  return sanitizeTeam(team)!;
+  // Codes from older versions carry a Tera Type for every game; keep it only where the game has Tera.
+  return enforceCapabilities(sanitizeTeam(team)!);
 }
 
 // ===========================================================================
@@ -342,5 +353,8 @@ export function parseBackup(json: string): Team[] {
   const data = JSON.parse(json) as Partial<Backup> | null;
   if (!data || data.app !== 'pokemon-team-builder' || !Array.isArray(data.teams)) throw new Error('Not a Team Builder backup file.');
   if (data.teams.length > MAX_BACKUP_TEAMS) throw new Error(`That backup holds ${data.teams.length} teams; at most ${MAX_BACKUP_TEAMS} can be restored at once.`);
-  return data.teams.map(sanitizeTeam).filter((t): t is Team => !!t);
+  return data.teams
+    .map(sanitizeTeam)
+    .filter((t): t is Team => !!t)
+    .map(enforceCapabilities);
 }

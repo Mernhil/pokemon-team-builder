@@ -57,7 +57,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
         stats: calcStats(forme.baseStats, set, format, dex.nature(set.nature)),
         ability,
         item: dex.item(set.itemId)?.name ?? '',
-        teraType: set.teraType,
+        teraType: format.capabilities.tera ? set.teraType : undefined,
         moves: set.moves.map((m) => dex.move(m)).filter((m): m is NonNullable<typeof m> => !!m),
         side: state.side,
         field: state.field,
@@ -107,8 +107,8 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
               cond={state.side}
               onChange={patchSide}
               ability={ability}
-              canMega={!!mega && format.gimmicks.mega}
-              canTera={format.gimmicks.tera && !!set.teraType}
+              canMega={!!mega && format.capabilities.mega}
+              canTera={format.capabilities.tera && !!set.teraType}
               teraType={set.teraType}
               gen={format.generation}
               game={format.game}

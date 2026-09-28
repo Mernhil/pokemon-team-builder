@@ -9,6 +9,8 @@
  * modern EVs (Gen 3–9) and Game Boy Stat Exp / DVs (Gen 1–2) share one pipeline.
  */
 
+import type { Capabilities } from './capabilities';
+
 export const STAT_IDS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const;
 export type StatId = (typeof STAT_IDS)[number];
 export type StatTable<T = number> = Record<StatId, T>;
@@ -277,10 +279,8 @@ export interface FormatRules {
     species: boolean;
     item: boolean;
   };
-  gimmicks: {
-    mega: boolean;
-    tera: boolean;
-  };
+  /** Battle gimmicks the game has (src/domain/capabilities.ts). */
+  capabilities: Capabilities;
   openTeamList: boolean;
   /** Formats not yet backed by data are listed but disabled in the UI. */
   available: boolean;

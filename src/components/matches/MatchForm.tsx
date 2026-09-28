@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import { ARCHETYPE_PRESETS, CATEGORY_PRESETS, cloneOpponentTeam, suggestRegulationForDate, type LoggedMon, type Match, type MatchResult } from '@/domain/matches';
+import { ARCHETYPE_PRESETS, CATEGORY_PRESETS, cloneOpponentTeam, matchCapabilities, suggestRegulationForDate, type LoggedMon, type Match, type MatchResult } from '@/domain/matches';
 import { coreOverlapScore } from '@/domain/meta';
 import type { FormatRules } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
@@ -24,6 +24,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
   const [myMode, setMyMode] = useState<'saved' | 'freeform'>(match.myTeamId ? 'saved' : 'freeform');
 
   const set = (patch: Partial<Match>) => updateMatch(match.id, patch);
+  const tera = matchCapabilities(match.regulationId).tera;
 
   const setDate = (date: string) => set({ date, regulationId: match.regulationId ?? suggestRegulationForDate(date) });
 
@@ -152,7 +153,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
             ) : (
               <div className="space-y-1.5">
                 {myTeam.map((m, i) => (
-                  <LoggedMonEditor key={i} dex={dex} format={format} mon={m} onChange={(next) => updateMyMon(i, next)} onRemove={() => removeMyMon(i)} />
+                  <LoggedMonEditor key={i} dex={dex} format={format} tera={tera} mon={m} onChange={(next) => updateMyMon(i, next)} onRemove={() => removeMyMon(i)} />
                 ))}
                 {myTeam.length < 6 && (
                   <Button size="sm" onClick={addMyMon}>
@@ -175,7 +176,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
             )}
             <div className="space-y-1.5">
               {match.opponentTeam.map((m, i) => (
-                <LoggedMonEditor key={i} dex={dex} format={format} mon={m} onChange={(next) => updateOpponentMon(i, next)} onRemove={() => removeOpponentMon(i)} />
+                <LoggedMonEditor key={i} dex={dex} format={format} tera={tera} mon={m} onChange={(next) => updateOpponentMon(i, next)} onRemove={() => removeOpponentMon(i)} />
               ))}
               {match.opponentTeam.length < 6 && (
                 <Button size="sm" onClick={addOpponentMon}>

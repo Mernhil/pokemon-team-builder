@@ -21,7 +21,6 @@ export interface GameInfo {
     heldItems?: boolean;
     megaStoneOnly?: boolean;
   };
-  mega: boolean;
   /**
    * Whether the damage calculator can model its battles. Legends: Arceus (Agile/Strong Styles, action
    * order) and Legends: Z-A (real-time battles) aren't turn-based Showdown mechanics.
@@ -44,7 +43,6 @@ export const GAMES: GameInfo[] = [
     spriteSet: 'gen7',
     statSystem: { kind: 'lgpe-av', avMax: 200, ivMax: 31 },
     rules: { abilities: false, hiddenAbilities: false, heldItems: false, megaStoneOnly: true, terrain: false, auroraVeil: false },
-    mega: true,
     battleSim: true,
     summary: 'The 151 Kanto Pokémon + Meltan, Alolan forms and Megas; AVs 0–200 and friendship instead of EVs; no abilities or held items',
   },
@@ -58,7 +56,6 @@ export const GAMES: GameInfo[] = [
     spriteSet: 'gen8',
     statSystem: EV,
     rules: {},
-    mega: false,
     battleSim: true,
     summary: 'The Sinnoh remakes: Gen 1–4 Pokémon with Sword/Shield mechanics, no Dynamax',
   },
@@ -72,7 +69,6 @@ export const GAMES: GameInfo[] = [
     spriteSet: 'gen8',
     statSystem: { kind: 'pla-effort', levelMax: 10 },
     rules: { abilities: false, hiddenAbilities: false, heldItems: false },
-    mega: false,
     battleSim: false,
     summary: 'Hisui: Effort Levels 0–10 instead of EVs; no abilities or held items; Agile/Strong Style battles',
   },
@@ -86,7 +82,6 @@ export const GAMES: GameInfo[] = [
     spriteSet: 'gen9',
     statSystem: EV,
     rules: { abilities: false, hiddenAbilities: false },
-    mega: true,
     battleSim: false,
     summary: 'Lumiose City and the Mega Dimension: new Mega Evolutions, no abilities, real-time battles',
   },

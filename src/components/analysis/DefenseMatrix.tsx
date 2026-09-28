@@ -11,7 +11,7 @@ export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; for
     .map((s) => {
       if (!s) return null;
       const sp = dex.species(s.speciesId);
-      const mega = format.gimmicks.mega ? dex.megaFor(s.speciesId, s.itemId) : undefined;
+      const mega = format.capabilities.mega ? dex.megaFor(s.speciesId, s.itemId) : undefined;
       return sp ? { name: (mega ?? sp).name, types: (mega ?? sp).types } : null;
     })
     .filter((x): x is { name: string; types: TypeName[] } => !!x);

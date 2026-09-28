@@ -100,7 +100,7 @@ export function validateTeam(team: Team, format: FormatRules, dex: Dex): Issue[]
       else if (reg && !item.legalIn.includes(reg)) push('error', 'item-illegal', `${item.name} is not legal in ${format.shortName}.`);
       else if (item.megaStone && !item.megaStone[sp.id])
         push('warning', 'mega-stone-mismatch', `${item.name} does nothing on ${sp.name}.`);
-      if (item?.megaStone && !format.gimmicks.mega) push('error', 'mega-banned', 'Mega Evolution is not allowed in this format.');
+      if (item?.megaStone && !format.capabilities.mega) push('error', 'mega-banned', 'Mega Evolution is not allowed in this format.');
     } else if (mech.heldItems) push('info', 'no-item', 'no held item.');
 
     // Moves
@@ -161,7 +161,7 @@ export function validateTeam(team: Team, format: FormatRules, dex: Dex): Issue[]
       }
     }
 
-    if (format.gimmicks.tera && !s.teraType) push('info', 'no-tera', 'no Tera Type set.');
+    if (format.capabilities.tera && !s.teraType) push('info', 'no-tera', 'no Tera Type set.');
   }
 
   const order: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
