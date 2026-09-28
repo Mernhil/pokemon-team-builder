@@ -8,6 +8,6 @@
 - Regulation updates follow `docs/UPDATING_REGULATIONS.md` exactly.
 - Phone app: PWA (`vite-plugin-pwa` + `src/pwa.ts`), hosted on Cloudflare Workers (`wrangler.jsonc`, auto-deploys on push) behind Cloudflare Access; see `docs/IPHONE_APP.md`.
 - Before any commit: `npm run typecheck && npm test`.
-- Hosted app: claude.ai artifact https://claude.ai/artifact/HepTcJzeCYHWDyP4qGmNia
+- Hosted app: claude.ai artifact https://claude.ai/artifact/LPVBSr6M3VNhWcPbFB3xcm
   - Republish `dist/artifact.html` from `npm run build:artifact`.
   - Pass `files` = every file in `dist/sprites/`, `dist/maps/` and `dist/data/`, published at `sprites/<name>`, `maps/<name>` and `data/<name>` (the single-file build fetches the Gen 1–9 data from `data/`).
