@@ -75,7 +75,7 @@ export function Segmented<T extends string>({
           </button>
         );
         return info ? (
-          <InfoTooltip key={o.id || 'none'} title={info.title} summary={info.summary} effects={info.effects} interactions={info.interactions}>
+          <InfoTooltip key={o.id || 'none'} title={info.title} summary={info.summary} effects={info.effects} interactions={info.interactions} wrapsControl>
             {btn}
           </InfoTooltip>
         ) : (

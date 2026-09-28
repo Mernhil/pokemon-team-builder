@@ -84,14 +84,20 @@ export function Label({ children, className }: { children: ReactNode; className?
 }
 
 export function Field({ label, children, hint, className }: { label: string; children: ReactNode; hint?: ReactNode; className?: string }) {
+  // Text hints sit in the label row. An interactive hint (an info button) sits outside the
+  // <label>: inside it, tapping the hint would activate the field instead.
+  const textHint = typeof hint === 'string';
   return (
-    <label className={cn('flex min-w-0 flex-col gap-1', className)}>
-      <span className="flex items-baseline justify-between gap-2">
-        <Label>{label}</Label>
-        {hint && <span className="text-xs text-muted">{hint}</span>}
-      </span>
-      {children}
-    </label>
+    <div className={cn('relative flex min-w-0 flex-col', className)}>
+      <label className="flex min-w-0 flex-col gap-1">
+        <span className={cn('flex items-baseline justify-between gap-2', hint && !textHint && 'pr-8')}>
+          <Label>{label}</Label>
+          {textHint && <span className="text-right text-xs text-muted">{hint}</span>}
+        </span>
+        {children}
+      </label>
+      {hint && !textHint && <span className="absolute -top-1.5 right-0 flex items-center text-muted">{hint}</span>}
+    </div>
   );
 }
 

@@ -124,6 +124,7 @@ export default function App() {
       <DesktopUpdater />
       <Header team={team} format={format} dex={dex} onOpenSettings={() => setSettingsOpen(true)} />
       <main id="main" tabIndex={-1} className={cn('mx-auto w-full flex-1 p-3 pb-24 outline-none sm:p-4 sm:pb-6', view === 'calc' ? 'max-w-[1800px]' : 'max-w-[1500px]')}>
+        <h1 className="sr-only">{[...PRIMARY, ...SECONDARY].find((d) => d.id === view)?.label ?? 'Build'} · Pokémon Team Builder</h1>
         {content}
       </main>
       <BottomTabs onOpenSettings={() => setSettingsOpen(true)} />

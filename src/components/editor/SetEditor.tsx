@@ -151,8 +151,8 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
               label={mech.megaStoneOnly ? 'Mega Stone (in the Bag)' : 'Held item'}
               hint={
                 item?.shortDesc && (
-                  <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]}>
-                    <span className="inline-flex size-6 items-center justify-center" aria-label={`About ${item.name}`}><Info size={14} aria-hidden /></span>
+                  <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]} label={`About ${item.name}`}>
+                    <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
                   </InfoTooltip>
                 )
               }
@@ -177,8 +177,8 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
               label="Ability"
               hint={
                 ability?.shortDesc && (
-                  <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]}>
-                    <span className="inline-flex size-6 items-center justify-center" aria-label={`About ${ability.name}`}><Info size={14} aria-hidden /></span>
+                  <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]} label={`About ${ability.name}`}>
+                    <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
                   </InfoTooltip>
                 )
               }

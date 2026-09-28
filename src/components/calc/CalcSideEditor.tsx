@@ -1,4 +1,4 @@
-import { Crosshair, Sparkles } from 'lucide-react';
+import { Crosshair, Sparkles, Info } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultSide } from '@/domain/battle/conditions';
 import { stripUnsupported } from '@/domain/capabilities';
@@ -138,8 +138,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                 label={mech.megaStoneOnly ? 'Mega Stone' : 'Held item'}
                 hint={
                   dex.item(set.itemId)?.shortDesc && (
-                    <InfoTooltip title={dex.item(set.itemId)!.name} summary={dex.item(set.itemId)!.shortDesc} interactions={ITEM_INTERACTIONS[set.itemId!]}>
-                      <span className="truncate">ⓘ</span>
+                    <InfoTooltip title={dex.item(set.itemId)!.name} summary={dex.item(set.itemId)!.shortDesc} interactions={ITEM_INTERACTIONS[set.itemId!]} label={`About ${dex.item(set.itemId)!.name}`}>
+                      <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
                     </InfoTooltip>
                   )
                 }
@@ -163,8 +163,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                 label="Ability"
                 hint={
                   dex.ability(set.abilityId)?.shortDesc && (
-                    <InfoTooltip title={dex.ability(set.abilityId)!.name} summary={dex.ability(set.abilityId)!.shortDesc} interactions={ABILITY_INTERACTIONS[set.abilityId!]}>
-                      <span className="truncate">ⓘ</span>
+                    <InfoTooltip title={dex.ability(set.abilityId)!.name} summary={dex.ability(set.abilityId)!.shortDesc} interactions={ABILITY_INTERACTIONS[set.abilityId!]} label={`About ${dex.ability(set.abilityId)!.name}`}>
+                      <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
                     </InfoTooltip>
                   )
                 }
