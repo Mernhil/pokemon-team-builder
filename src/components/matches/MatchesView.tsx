@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, Copy, Crosshair, Download, Plus } from 'lucide-react';
+import { Check, Copy, Crosshair, Plus } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { regulationInfo } from '@/domain/formats';
 import { matchesToCSV, type Match } from '@/domain/matches';
@@ -12,25 +12,6 @@ import { MatchForm } from './MatchForm';
 import { MatchStats } from './MatchStats';
 import { MatchupBuilder } from './MatchupBuilder';
 import { Button, Select, cn } from '../ui/primitives';
-
-/** Embedded/sandboxed frames (e.g. this app published as a claude.ai artifact) block script-started
- *  downloads; offer Copy there instead — same fallback as the Import/Export dialog. */
-const canDownload = (() => {
-  try {
-    return window.self === window.top;
-  } catch {
-    return false;
-  }
-})();
-
-function download(name: string, text: string, mime: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: mime }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const [tab, setTab] = useState<'log' | 'builder'>('log');
@@ -69,10 +50,6 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
       (id) => dex.species(id)?.name ?? id,
       (id) => teams[id]?.name ?? 'Deleted team',
     );
-    if (canDownload) {
-      download(`match-log-${new Date().toISOString().slice(0, 10)}.csv`, csv, 'text/csv');
-      return;
-    }
     try {
       await navigator.clipboard.writeText(csv);
       setCopied(true);
@@ -145,15 +122,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
             </Select>
             <div className="ml-auto flex gap-1.5">
               <Button size="sm" onClick={exportCsv} disabled={!filtered.length}>
-                {canDownload ? (
-                  <>
-                    <Download size={13} /> Export CSV
-                  </>
-                ) : (
-                  <>
-                    {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied CSV' : 'Copy CSV'}
-                  </>
-                )}
+                {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied CSV' : 'Copy CSV'}
               </Button>
               <Button size="sm" variant="primary" onClick={newMatch}>
                 <Plus size={13} /> Log match
