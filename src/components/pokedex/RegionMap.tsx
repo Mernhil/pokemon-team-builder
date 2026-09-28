@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { Map as MapIcon, Maximize2, Minus, Plus } from 'lucide-react';
 import { SIDE_LOADED_DATA, fetchGenerated } from '@/data/generated-loader';
 import type { Encounter } from '@/domain/pokedex';
-import { cn } from '../ui/primitives';
-
-type Rect = [number, number, number, number];
+import { IDENTITY_VIEW, MAX_ZOOM, centerOn, clampView, placeCenter, resolveLocations, zoomAt, type MapView, type Rect } from '@/domain/regionMaps';
+import { Button, Notice } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 interface RegionMapData {
   id: string;
@@ -35,19 +36,26 @@ const SOURCE_LABEL: Record<string, string> = {
   'pret/pokecrystal': 'Crystal Pokégear map',
   'pret/pokeemerald': 'Emerald Pokédex area map',
   'pret/pokefirered': 'FireRed / LeafGreen region map',
+  'pret/pokeplatinum': 'Platinum Town Map',
   schematic: 'Schematic map',
 };
+
+const placeLabel = (map: RegionMapData, loc: string) => map.labels?.[loc] ?? loc.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 /**
  * The Area map: the game's region map with the Pokémon's locations marked the way that game's
  * Pokédex marked them — blinking nest icons in Gen 1–2, glowing squares from Gen 3 — or, for regions
- * without a disassembled map, a schematic of the region with its locations highlighted.
+ * without a disassembled map, a clearly labelled schematic of the region. Zoom with the buttons,
+ * a pinch or ctrl/⌘ + wheel, drag to pan; tap a marked place to pick it in the list below.
  */
-export function RegionMaps({ game, encounters }: { game: string; encounters: Encounter[] }) {
+export function RegionMaps({ game, encounters, selected, onSelect }: { game: string; encounters: Encounter[]; selected?: string; onSelect?: (loc: string) => void }) {
   const [file, setFile] = useState<MapsFile | null>(null);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     let alive = true;
-    loadMaps().then((f) => alive && setFile(f));
+    loadMaps()
+      .then((f) => alive && setFile(f))
+      .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
     };
@@ -55,17 +63,21 @@ export function RegionMaps({ game, encounters }: { game: string; encounters: Enc
 
   const found = useMemo(() => new Set(encounters.map((e) => e.area.loc)), [encounters]);
   const maps = useMemo(() => (file?.games[game] ?? []).map((id) => file!.maps[id]).filter(Boolean), [file, game]);
-  const hits = (m: RegionMapData) => [...found].filter((l) => m.places[l]).length;
-  const best = maps.length ? maps.reduce((a, b) => (hits(b) > hits(a) ? b : a)) : undefined;
+  const resolved = useMemo(() => resolveLocations(maps, found), [maps, found]);
+  // The encounter data's own names ("Route 206") over ones derived from ids ("Sinnoh Route 206").
+  const names = useMemo(() => new Map(encounters.map((e) => [e.area.loc, e.area.name])), [encounters]);
   const [picked, setPicked] = useState<string>();
-  const current = maps.find((m) => m.id === picked) ?? best;
+  // Follow a location picked in the list onto the map that shows it.
+  const holder = selected ? maps.find((m) => m.places[selected]) : undefined;
+  const current = holder ?? maps.find((m) => m.id === picked) ?? resolved.best;
 
+  if (failed) return <Notice icon={MapIcon} tone="accent">The region maps couldn’t load. The locations are listed below.</Notice>;
   if (!file) return <div className="aspect-[3/2] w-full animate-pulse rounded-xl bg-surface-2" />;
   if (!current) return null;
-  const offMap = [...new Map(encounters.filter((e) => !maps.some((m) => m.places[e.area.loc])).map((e) => [e.area.loc, e.area.name])).values()];
+  const offMap = resolved.offMap.map((l) => names.get(l) ?? l);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-surface">
+    <section className="overflow-hidden rounded-xl border border-border bg-surface" aria-label="Region map">
       {maps.length > 1 && (
         <div className="flex border-b border-border" role="tablist" aria-label="Map">
           {maps.map((m) => (
@@ -74,22 +86,25 @@ export function RegionMaps({ game, encounters }: { game: string; encounters: Enc
               type="button"
               role="tab"
               aria-selected={m.id === current.id}
-              onClick={() => setPicked(m.id)}
-              className={cn('flex-1 border-b-2 px-2 py-1.5 text-xs font-semibold', m.id === current.id ? 'border-accent text-fg' : 'border-transparent text-muted hover:text-fg')}
+              onClick={() => {
+                setPicked(m.id);
+                if (selected && !m.places[selected]) onSelect?.('');
+              }}
+              className={cn('flex-1 border-b-2 px-2 py-1.5 text-xs font-semibold pointer-coarse:py-3', m.id === current.id ? 'border-accent text-fg' : 'border-transparent text-muted hover:text-fg')}
             >
               {m.name}
-              <span className="ml-1 font-mono font-normal text-muted">{hits(m)}</span>
+              <span className="ml-1 font-mono font-normal text-muted">{resolved.hits.get(m.id)?.length ?? 0}</span>
             </button>
           ))}
         </div>
       )}
-      <div className="flex justify-center bg-[#10131a] p-2 sm:p-3">
-        <MapCanvas map={current} found={found} />
-      </div>
-      <p className="flex flex-wrap justify-between gap-x-3 px-3 py-1.5 text-[11px] text-muted">
+      <MapViewport key={current.id} map={current} focus={selected && current.places[selected] ? selected : undefined}>
+        <MapCanvas map={current} found={found} names={names} selected={selected} onSelect={onSelect} />
+      </MapViewport>
+      <p className="flex flex-wrap justify-between gap-x-3 px-3 py-1.5 text-xs text-muted">
         <span>
           {SOURCE_LABEL[current.source] ?? current.source}
-          {current.source === 'schematic' ? ' · positions approximate' : ' · from the pret disassembly'}
+          {current.source === 'schematic' ? ' · not the game’s map; positions approximate' : ' · the game’s own map, from the pret decompilation'}
         </span>
         {offMap.length > 0 && <span>Not on this map: {offMap.join(', ')}</span>}
       </p>
@@ -97,15 +112,164 @@ export function RegionMaps({ game, encounters }: { game: string; encounters: Enc
   );
 }
 
-function MapCanvas({ map, found }: { map: RegionMapData; found: Set<string> }) {
-  const label = (loc: string) => map.labels?.[loc] ?? loc.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+/** Zoom / pan frame around a map: buttons, pinch, ctrl/⌘ + wheel, drag, double-click. */
+function MapViewport({ map, focus, children }: { map: RegionMapData; focus?: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<MapView>(IDENTITY_VIEW);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<{ view: MapView; dist: number; mid: [number, number]; start: [number, number]; moved: boolean } | null>(null);
+  const size = () => {
+    const r = box.current!.getBoundingClientRect();
+    return { r, w: r.width, h: r.height };
+  };
+  const zoomBy = (factor: number, at?: [number, number]) => {
+    const { w, h } = size();
+    setView((v) => zoomAt(v, factor, at?.[0] ?? w / 2, at?.[1] ?? h / 2, w, h));
+  };
+
+  // Keep the picked place in view while zoomed in.
+  useEffect(() => {
+    if (!focus || !box.current) return;
+    const [cx, cy] = placeCenter(map.places[focus]);
+    const { w, h } = size();
+    setView((v) => (v.scale > 1 ? centerOn(v, cx / map.width, cy / map.height, w, h) : v));
+  }, [focus, map]);
+
+  // ctrl/⌘ + wheel (and trackpad pinch, which arrives as ctrl + wheel) zooms; a plain wheel scrolls the page.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const { r } = size();
+      zoomBy(Math.exp(-e.deltaY / 200), [e.clientX - r.left, e.clientY - r.top]);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const local = (e: ReactPointerEvent): [number, number] => {
+    const { r } = size();
+    return [e.clientX - r.left, e.clientY - r.top];
+  };
+  const snapshot = () => {
+    const pts = [...pointers.current.values()];
+    const mid: [number, number] = pts.length > 1 ? [(pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2] : [pts[0].x, pts[0].y];
+    const dist = pts.length > 1 ? Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) : 0;
+    return { mid, dist };
+  };
+  const onPointerDown = (e: ReactPointerEvent) => {
+    const [x, y] = local(e);
+    pointers.current.set(e.pointerId, { x, y });
+    const { mid, dist } = snapshot();
+    gesture.current = { view, dist, mid, start: [x, y], moved: gesture.current?.moved ?? false };
+    if (pointers.current.size === 1) gesture.current.moved = false;
+  };
+  const onPointerMove = (e: ReactPointerEvent) => {
+    if (!pointers.current.has(e.pointerId) || !gesture.current) return;
+    const [x, y] = local(e);
+    pointers.current.set(e.pointerId, { x, y });
+    const g = gesture.current;
+    if (!g.moved && Math.hypot(x - g.start[0], y - g.start[1]) < 5 && pointers.current.size === 1) return;
+    const { mid, dist } = snapshot();
+    const { w, h } = size();
+    if (pointers.current.size > 1 && g.dist > 0) {
+      g.moved = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      const zoomed = zoomAt(g.view, dist / g.dist, g.mid[0], g.mid[1], w, h);
+      setView(clampView({ ...zoomed, x: zoomed.x + mid[0] - g.mid[0], y: zoomed.y + mid[1] - g.mid[1] }, w, h));
+    } else if (g.view.scale > 1) {
+      g.moved = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      setView(clampView({ ...g.view, x: g.view.x + mid[0] - g.mid[0], y: g.view.y + mid[1] - g.mid[1] }, w, h));
+    }
+  };
+  const onPointerUp = (e: ReactPointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size && gesture.current) {
+      const { mid, dist } = snapshot();
+      gesture.current = { ...gesture.current, view, mid, dist };
+    }
+  };
+  // A drag or pinch must not also count as a tap on a place.
+  const onClickCapture = (e: ReactMouseEvent) => {
+    if (gesture.current?.moved) {
+      e.stopPropagation();
+      e.preventDefault();
+      gesture.current.moved = false;
+    }
+  };
+
+  const zoomed = view.scale > 1;
+  return (
+    <div className="relative bg-[#10131a]">
+      <div className="flex justify-center p-2 sm:p-3">
+        <div
+          ref={box}
+          className={cn('relative w-full overflow-hidden', map.style === 'schematic' ? 'max-w-3xl' : 'max-w-2xl', zoomed ? 'cursor-grab touch-none active:cursor-grabbing' : 'touch-pan-y')}
+          style={{ aspectRatio: map.style === 'schematic' ? `${map.width + 2} / ${map.height + 2}` : `${map.width} / ${map.height}`, maxHeight: '70vh' }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onClickCapture={onClickCapture}
+          onDoubleClick={(e) => {
+            const { r } = size();
+            zoomBy(zoomed && view.scale >= MAX_ZOOM ? 1 / MAX_ZOOM : 2, [e.clientX - r.left, e.clientY - r.top]);
+          }}
+        >
+          <div className="h-full w-full origin-top-left" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}>
+            {children}
+          </div>
+        </div>
+      </div>
+      <div className="absolute right-2 bottom-2 flex flex-col gap-1 sm:right-3 sm:bottom-3">
+        <Button size="icon-sm" aria-label="Zoom in" onClick={() => zoomBy(1.6)} disabled={view.scale >= MAX_ZOOM}>
+          <Plus size={16} aria-hidden />
+        </Button>
+        <Button size="icon-sm" aria-label="Zoom out" onClick={() => zoomBy(1 / 1.6)} disabled={!zoomed}>
+          <Minus size={16} aria-hidden />
+        </Button>
+        {zoomed && (
+          <Button size="icon-sm" aria-label="Show the whole map" onClick={() => setView(IDENTITY_VIEW)}>
+            <Maximize2 size={14} aria-hidden />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MapCanvas({ map, found, names, selected, onSelect }: { map: RegionMapData; found: Set<string>; names: Map<string, string>; selected?: string; onSelect?: (loc: string) => void }) {
+  const [broken, setBroken] = useState(false);
+  const label = (loc: string) => names.get(loc) ?? placeLabel(map, loc);
   const lit = Object.entries(map.places).filter(([loc]) => found.has(loc));
+  // Marked places are buttons: tap / Enter picks the location in the list below.
+  const pick = (loc: string) => ({
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': label(loc),
+    'aria-pressed': selected === loc,
+    className: 'cursor-pointer outline-none focus-visible:[&>*]:stroke-white',
+    onClick: () => onSelect?.(selected === loc ? '' : loc),
+    onKeyDown: (e: ReactKeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect?.(selected === loc ? '' : loc);
+      }
+    },
+  });
+  const outline = (w0: number) =>
+    selected && map.places[selected]
+      ? map.places[selected].map(([x, y, w, h], i) => <rect key={`sel${i}`} x={x - w0} y={y - w0} width={w + 2 * w0} height={h + 2 * w0} fill="none" stroke="#fff" strokeWidth={w0} className="pointer-events-none" />)
+      : null;
 
   if (map.style === 'schematic') {
     const order = ['zone', 'sea', 'snow', 'route', 'forest', 'lake', 'mountain', 'landmark', 'cave', 'dungeon', 'town'];
     const entries = Object.entries(map.places).sort(([a], [b]) => order.indexOf(map.kinds?.[a] ?? 'route') - order.indexOf(map.kinds?.[b] ?? 'route'));
     return (
-      <svg viewBox={`-1 -1 ${map.width + 2} ${map.height + 2}`} className="h-auto max-h-[70vh] w-full max-w-3xl" role="img" aria-label={`${map.name} map`}>
+      <svg viewBox={`-1 -1 ${map.width + 2} ${map.height + 2}`} className="block h-full w-full" role="group" aria-label={`${map.name} schematic map`}>
         <rect x={-1} y={-1} width={map.width + 2} height={map.height + 2} fill="#2c5d8a" />
         {map.land?.map((d, i) => <path key={i} d={d} fill="#6f9a52" stroke="#e8dfb0" strokeWidth={0.25} strokeLinejoin="round" />)}
         {entries.map(([loc, rects]) =>
@@ -115,12 +279,13 @@ function MapCanvas({ map, found }: { map: RegionMapData; found: Set<string> }) {
             if (kind === 'zone')
               // Whole areas (Obsidian Fieldlands, a Lumiose district…): an outline, lit as an outline.
               return (
-                <rect key={loc + i} x={x} y={y} width={w} height={h} rx={0.6} fill={on ? '#ff5d5d18' : 'none'} stroke={on ? '#ff5d5d' : '#ffffff55'} strokeWidth={on ? 0.35 : 0.18} strokeDasharray={on ? undefined : '0.6 0.5'} className={on ? 'area-glow' : undefined}>
+                <g key={loc + i} {...(on ? pick(loc) : {})}>
                   <title>{label(loc)}</title>
-                </rect>
+                  <rect x={x} y={y} width={w} height={h} rx={0.6} fill={on ? '#ff5d5d18' : 'none'} stroke={on ? '#ff5d5d' : '#ffffff55'} strokeWidth={on ? 0.35 : 0.18} strokeDasharray={on ? undefined : '0.6 0.5'} className={on ? 'area-glow' : undefined} />
+                </g>
               );
             return (
-              <g key={loc + i}>
+              <g key={loc + i} {...(on ? pick(loc) : {})}>
                 <title>{label(loc)}</title>
                 <rect
                   x={x + 0.1}
@@ -136,7 +301,7 @@ function MapCanvas({ map, found }: { map: RegionMapData; found: Set<string> }) {
                 {on && (
                   <>
                     <rect className="area-glow" x={x} y={y} width={w} height={h} rx={0.2} fill="#ff5d5d" />
-                    <circle className="area-ring" cx={x + w / 2} cy={y + h / 2} r={Math.min(Math.max(w, h) / 2 + 0.9, 3)} fill="none" stroke="#ff5d5d" strokeWidth={0.3} />
+                    <circle className="area-ring pointer-events-none" cx={x + w / 2} cy={y + h / 2} r={Math.min(Math.max(w, h) / 2 + 0.9, 3)} fill="none" stroke="#ff5d5d" strokeWidth={0.3} />
                   </>
                 )}
               </g>
@@ -150,39 +315,50 @@ function MapCanvas({ map, found }: { map: RegionMapData; found: Set<string> }) {
               {label(loc).replace(/ (City|Town)$/, '')}
             </text>
           ))}
+        {outline(0.3)}
       </svg>
     );
   }
 
+  if (broken)
+    return (
+      <div className="flex h-full items-center justify-center p-4 text-center text-sm text-white/80">
+        The {map.name} map image couldn’t load (offline in this build?). The locations are listed below.
+      </div>
+    );
+
   return (
-    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="h-auto max-h-[70vh] w-full max-w-2xl" style={{ imageRendering: 'pixelated' }} role="img" aria-label={`${map.name} map`}>
-      <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: 'pixelated' }} />
-      {Object.entries(map.places).map(([loc, rects]) =>
-        rects.map(([x, y, w, h], i) => (
-          <rect key={loc + i} x={x} y={y} width={w} height={h} fill="transparent">
-            <title>{label(loc)}</title>
-          </rect>
-        )),
-      )}
-      {lit.map(([loc, rects]) =>
-        rects.map(([x, y, w, h], i) =>
-          map.style === 'nest' ? (
-            // Gen 1–2: the game's own blinking nest sprite, pixel for pixel.
-            <g key={loc + i} className="nest-blink" transform={`translate(${x + w / 2 - 4} ${y + h / 2 - 4})`}>
-              <title>{label(loc)}</title>
-              <rect x={-0.5} y={-0.5} width={9} height={9} fill="#fff" opacity={0.85} />
-              {(map.nestIcon ?? FALLBACK_NEST).flatMap((row, py) =>
-                [...row].map((c, px) => (c === '.' ? null : <rect key={`${px}-${py}`} x={px} y={py} width={1} height={1} fill={c === '#' ? '#101010' : '#6b6b6b'} />)),
-              )}
-            </g>
-          ) : (
-            // Gen 3: the glowing area squares.
-            <rect key={loc + i} className="area-glow" x={x} y={y} width={w} height={h} fill="#ff4a4a" stroke="#ffd0d0" strokeWidth={0.8}>
+    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="block h-full w-full" style={{ imageRendering: 'pixelated' }} role="group" aria-label={`${map.name} map`}>
+      <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: 'pixelated' }} onError={() => setBroken(true)} />
+      {Object.entries(map.places)
+        .filter(([loc]) => !found.has(loc))
+        .map(([loc, rects]) =>
+          rects.map(([x, y, w, h], i) => (
+            <rect key={loc + i} x={x} y={y} width={w} height={h} fill="transparent">
               <title>{label(loc)}</title>
             </rect>
-          ),
-        ),
-      )}
+          )),
+        )}
+      {lit.map(([loc, rects]) => (
+        <g key={loc} {...pick(loc)}>
+          <title>{label(loc)}</title>
+          {rects.map(([x, y, w, h], i) =>
+            map.style === 'nest' ? (
+              // Gen 1–2: the game's own blinking nest sprite, pixel for pixel.
+              <g key={i} className="nest-blink" transform={`translate(${x + w / 2 - 4} ${y + h / 2 - 4})`}>
+                <rect x={-0.5} y={-0.5} width={9} height={9} fill="#fff" opacity={0.85} />
+                {(map.nestIcon ?? FALLBACK_NEST).flatMap((row, py) =>
+                  [...row].map((c, px) => (c === '.' ? null : <rect key={`${px}-${py}`} x={px} y={py} width={1} height={1} fill={c === '#' ? '#101010' : '#6b6b6b'} />)),
+                )}
+              </g>
+            ) : (
+              // Gen 3–4: the glowing area squares.
+              <rect key={i} className="area-glow" x={x} y={y} width={w} height={h} fill="#ff4a4a" stroke="#ffd0d0" strokeWidth={0.8} />
+            ),
+          )}
+        </g>
+      ))}
+      {outline(1)}
     </svg>
   );
 }

@@ -2,49 +2,152 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Design tokens — light values here, dark overrides below. Components use these via Tailwind's
-   arbitrary-value / theme utilities (bg-surface, text-muted, …). */
+/* Design tokens (the "Iris" palette) — light values here, dark overrides below. Components use them
+   through Tailwind's theme utilities (bg-surface, text-muted, border-border-strong, …).
+   Every text/background pair is checked for WCAG AA by src/components/ui/__tests__/contrast.test.ts;
+   change a value here and that test tells you if it still reads. */
 @theme {
-  --color-bg: #f4f5f8;
-  --color-surface: #ffffff;
-  --color-surface-2: #eef0f4;
-  --color-border: #d9dde5;
-  --color-fg: #151821;
-  --color-muted: #5d6475;
-  --color-accent: #4f6bff;
+  /* Light: warm, soft off-whites instead of pure white. */
+  --color-bg: #f6f4ef;
+  --color-surface: #fcfbf8;
+  --color-surface-2: #efece5;
+  /* Decorative outlines (panels, dividers) vs. the edge of an input or control (3:1). */
+  --color-border: #e2ddd3;
+  --color-border-strong: #8c8577;
+  --color-fg: #1f2128;
+  --color-muted: #5b5e68;
+  --color-accent: #4a5bd4;
   --color-accent-fg: #ffffff;
-  --color-good: #16a34a;
-  --color-warn: #d97706;
-  --color-bad: #dc2626;
+  --color-good: #1d7943;
+  --color-warn: #925e0a;
+  --color-bad: #c0392f;
 
-  --color-stat-hp: #e04848;
-  --color-stat-atk: #ee8a33;
-  --color-stat-def: #e9c53a;
-  --color-stat-spa: #4f86e8;
-  --color-stat-spd: #5cbf5c;
-  --color-stat-spe: #e0558f;
+  --color-stat-hp: #bc3b3b;
+  --color-stat-atk: #a35410;
+  --color-stat-def: #826600;
+  --color-stat-spa: #3264c8;
+  --color-stat-spd: #2c7838;
+  --color-stat-spe: #b8356f;
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* Dark: softened neutrals, not #000. */
 .dark {
-  --color-bg: #0e1117;
-  --color-surface: #161a23;
-  --color-surface-2: #1e2330;
-  --color-border: #2a3142;
-  --color-fg: #e7eaf1;
-  --color-muted: #8c94a8;
-  --color-accent: #6d84ff;
-  --color-good: #22c55e;
-  --color-warn: #f59e0b;
-  --color-bad: #f05252;
+  --color-bg: #15171d;
+  --color-surface: #1c1f26;
+  --color-surface-2: #252933;
+  --color-border: #2e3340;
+  --color-border-strong: #6b7284;
+  --color-fg: #e8e9ee;
+  --color-muted: #a0a5b2;
+  --color-accent: #8e9bff;
+  --color-accent-fg: #121426;
+  --color-good: #5fd08a;
+  --color-warn: #e9b75a;
+  --color-bad: #f08a80;
+
+  --color-stat-hp: #f07a7a;
+  --color-stat-atk: #f0a060;
+  --color-stat-def: #e6cc5c;
+  --color-stat-spa: #7fa6f5;
+  --color-stat-spd: #7cd08a;
+  --color-stat-spe: #f07fae;
+}
+
+/* One visible focus ring for everything focusable by keyboard (raw buttons included). */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Short, subtle transitions; none at all for people who ask for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
+}
+body {
+  /* Landscape iPhones: keep content clear of the notch and rounded corners. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Controls act like app controls on touch screens: no text selection or long-press callout when a
+   finger rests on them, and no 300ms double-tap delay. Text fields stay selectable. */
+button,
+[role='button'],
+[role='tab'],
+[role='option'],
+[role='menuitem'],
+summary,
+nav,
+label {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+img,
+[role='img'] {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+@media (pointer: coarse) {
+  /* iOS zooms into any field under 16px when it's focused; never let that happen. */
+  input:not([type='checkbox'], [type='radio'], [type='range']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+  /* Small icon buttons keep their look but get a 44×44pt touch area (.hit). */
+  /* Anchor the enlarged area, unless the element is already positioned (e.g. an absolute clear button). */
+  .hit:not(.absolute, .fixed, .sticky) {
+    position: relative;
+  }
+  .hit::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Installed app: no rubber-band bounce of the whole page (inner lists still scroll). */
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Under the full-screen status bar (black-translucent, white text) the light theme paints a dark
+   band so the clock and battery stay readable. Zero height outside the installed app. */
+.status-band {
+  height: env(safe-area-inset-top);
+  background: var(--color-surface);
+}
+:root:not(.dark) .status-band {
+  background: #1f2128;
 }
 body {
   background: var(--color-bg);
@@ -78,6 +181,22 @@ input[type='range'].stat-range::-moz-range-thumb {
   border-radius: 50%;
   background: var(--color-surface);
   border: 3px solid var(--fill);
+}
+/* Fingers need a bigger thumb (and a taller hit area) than a mouse pointer. */
+@media (pointer: coarse) {
+  input[type='range'].stat-range {
+    height: 8px;
+    padding-block: 12px;
+    background-clip: content-box;
+  }
+  input[type='range'].stat-range::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+  }
+  input[type='range'].stat-range::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+  }
 }
 /* Dragging a slider past its ends must not start selecting the text around it. */
 .slider-dragging {

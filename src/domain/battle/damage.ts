@@ -9,6 +9,7 @@
 import { Field, Generations, Move as CalcMove, Pokemon as CalcPokemon, Side, calculate } from '@smogon/calc';
 import { getFinalSpeed } from '@smogon/calc/dist/mechanics/util';
 import type { Dex } from '@/data/dex';
+import { datasetCapabilities } from '../capabilities';
 import { datasetMechanics } from '../games';
 import { mechanics } from '../generations';
 import { FORMATS } from '../formats';
@@ -58,7 +59,7 @@ function calcSpeciesName(dex: Dex, gen: CalcGen, id: string): string {
 /** The forme in battle: Mega forme when toggled on and the stone is held. */
 export function battleForme(dex: Dex, set: PokemonSet, cond: SideConditions) {
   const base = dex.species(set.speciesId);
-  const mega = cond.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
+  const mega = cond.mega && datasetCapabilities(dex.data.id).mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
   return mega ?? base;
 }
 
@@ -104,7 +105,8 @@ export function toCalcPokemon(dex: Dex, set: PokemonSet, cond: SideConditions): 
     ivs: spread.ivs,
     boosts: { ...cond.boosts, hp: 0 },
     status: (cond.status || '') as never,
-    teraType: (!g || g === 9) && cond.tera && set.teraType ? (set.teraType as never) : undefined,
+    // Only Scarlet/Violet has Terastallization — never hand the calculator a Tera Type elsewhere.
+    teraType: datasetCapabilities(dex.data.id).tera && cond.tera && set.teraType ? (set.teraType as never) : undefined,
     // Keep our (announcement-patched) typing and stats authoritative.
     overrides: { types: forme.types as [TypeName] | [TypeName, TypeName], baseStats: forme.baseStats } as never,
   });

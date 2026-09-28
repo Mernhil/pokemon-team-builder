@@ -4,7 +4,7 @@ import { SPRITE_SETS, loadSpriteSheet } from '@/data/sprites';
 import type { Pokemon, SpriteSetId } from '@/domain/types';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
-import { cn } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 /**
  * "Across generations": the species' sprite in every generation's style it appears in.
@@ -32,7 +32,7 @@ export function SpriteHistory({ species }: { species: Pokemon }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted hover:text-fg"
+        className="flex min-h-8 items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted hover:text-fg pointer-coarse:min-h-11"
       >
         <ChevronRight size={12} className={cn('transition-transform', open && 'rotate-90')} />
         Across generations

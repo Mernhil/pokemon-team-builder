@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { STAT_LABELS, type StatId } from '@/domain/types';
-import { STAT_COLOR_VAR, cn } from '../ui/primitives';
+import { usePickerPrefs, usePrefsStore } from '@/store/prefsStore';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR } from '../ui/color';
 
 /** The five stats a nature can raise/lower, in the same order the games' Mint grid uses. */
 const GRID_STATS: StatId[] = ['atk', 'def', 'spa', 'spd', 'spe'];
@@ -32,7 +34,9 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
   }, [open]);
 
   const natureAt = (plus: StatId, minus: StatId) => dex.natures.find((n) => n.plus === plus && n.minus === minus);
+  const recent = usePickerPrefs('natures').recent.map((n) => dex.nature(n)).filter((n) => !!n);
   const pick = (name: string) => {
+    usePrefsStore.getState().addRecent('natures', name);
     onChange(name);
     setOpen(false);
   };
@@ -44,7 +48,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
-        className="flex h-9 w-full items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 text-left text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/25"
+        className="flex h-9 w-full items-center gap-1.5 rounded-lg border border-border-strong/60 bg-surface-2 px-2.5 pointer-coarse:h-11 text-left text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/25"
       >
         <span className="min-w-0 flex-1 truncate">
           <b className="font-semibold">{current?.name ?? value}</b>{' '}
@@ -62,6 +66,30 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
 
       {open && (
         <div className="absolute z-40 mt-1 rounded-lg border border-border bg-surface p-2.5 shadow-xl">
+          {recent.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-1" role="group" aria-label="Recent natures">
+              <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-muted">Recent</span>
+              {recent.map((n) => (
+                <button
+                  key={n.name}
+                  type="button"
+                  onClick={() => pick(n.name)}
+                  aria-current={current?.name === n.name}
+                  className={cn(
+                    'rounded-md border px-1.5 py-0.5 text-[10px] font-semibold',
+                    current?.name === n.name ? 'border-accent bg-accent/15' : 'border-border/60 hover:border-muted',
+                  )}
+                >
+                  {n.name}
+                  {n.plus && n.plus !== n.minus && (
+                    <span className="ml-1 font-normal text-muted">
+                      +{STAT_LABELS[n.plus]} −{STAT_LABELS[n.minus!]}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
           <table className="border-separate [border-spacing:2px]">
             <thead>
               <tr>
@@ -121,7 +149,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                           title={`${n.name}: +${STAT_LABELS[plus]} −${STAT_LABELS[minus]}`}
                           aria-current={isCurrent}
                           className={cn(
-                            'flex h-9 w-12 items-center justify-center rounded-md border text-[9px] font-semibold leading-tight',
+                            'flex h-9 w-12 items-center justify-center rounded-md border text-[10px] font-semibold leading-tight',
                             isCurrent ? 'border-accent bg-accent/15 text-fg' : 'border-border/60 hover:border-muted',
                           )}
                         >

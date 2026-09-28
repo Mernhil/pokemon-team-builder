@@ -13,7 +13,9 @@ import {
   type StatSystem,
   type StatTable,
 } from '@/domain/types';
-import { Button, STAT_COLOR_VAR, cn } from '../ui/primitives';
+import { Button } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR } from '../ui/color';
 
 interface Props {
   set: PokemonSet;
@@ -105,7 +107,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
   const gridStyle = { ['--iv' as string]: showIV ? '52px' : '0px' };
   // Base/Mega switch: which forme the main column, totals and speed tools follow.
   const megaToggle = mega && (
-    <span role="group" aria-label="Stats shown for" className="inline-flex rounded-md bg-surface-2 p-0.5 text-[11px] font-semibold">
+    <span role="group" aria-label="Stats shown for" className="inline-flex rounded-md bg-surface-2 p-0.5 text-xs font-semibold">
       {[false, true].map((m) => (
         <button
           key={String(m)}
@@ -114,7 +116,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
           title={m ? `Show ${mega.name} stats` : `Show ${species.name} stats`}
           onClick={() => setShowMega(m)}
           className={cn(
-            'inline-flex items-center gap-1 rounded px-2 py-0.5 transition-colors',
+            'inline-flex items-center gap-1 rounded px-2 py-0.5 transition-colors pointer-coarse:h-10 pointer-coarse:px-3',
             showMega === m ? 'bg-surface shadow-sm' : 'text-muted hover:text-fg',
             showMega === m && m && 'text-accent',
           )}
@@ -190,7 +192,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                 onChange={(e) => onFriendship(Math.max(0, Math.min(255, Math.round(Number(e.target.value)) || 0)))}
                 onFocus={(e) => e.target.select()}
                 aria-label="Friendship"
-                className="no-spin h-7 w-14 rounded border border-border bg-surface-2 text-center font-mono text-sm tabular-nums text-fg outline-none focus:border-accent"
+                className="no-spin h-7 w-14 rounded border border-border bg-surface-2 pointer-coarse:h-11 text-center font-mono text-sm tabular-nums text-fg outline-none focus:border-accent"
               />
               <span className="font-mono">+{lgpeFriendshipPercent(set.friendship ?? 255) - 100}%</span>
             </label>
@@ -247,7 +249,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                         aria-label={`Boost ${STAT_LABELS[s]} (+10%)`}
                         aria-pressed={mod === 1.1}
                         onClick={() => toggleAlign(s, 'plus')}
-                        className={cn('h-5 w-5 rounded text-[11px] leading-none font-bold', mod === 1.1 ? 'bg-bad text-white' : 'text-muted hover:bg-surface-2')}
+                        className={cn('h-5 w-5 rounded text-xs leading-none font-bold pointer-coarse:size-11 pointer-coarse:text-sm', mod === 1.1 ? 'bg-bad text-white' : 'text-muted hover:bg-surface-2')}
                       >
                         +
                       </button>
@@ -257,7 +259,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                         aria-label={`Lower ${STAT_LABELS[s]} (−10%)`}
                         aria-pressed={mod === 0.9}
                         onClick={() => toggleAlign(s, 'minus')}
-                        className={cn('h-5 w-5 rounded text-[11px] leading-none font-bold', mod === 0.9 ? 'bg-accent text-white' : 'text-muted hover:bg-surface-2')}
+                        className={cn('h-5 w-5 rounded text-xs leading-none font-bold pointer-coarse:size-11 pointer-coarse:text-sm', mod === 0.9 ? 'bg-accent text-white' : 'text-muted hover:bg-surface-2')}
                       >
                         −
                       </button>
@@ -277,7 +279,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                   {otherStats && <span className="ml-1.5 text-xs font-normal text-muted">{otherLabel} {otherStats[s]}</span>}
                 </div>
                 {locked ? (
-                  <p className="col-span-2 text-[11px] text-muted @xl:col-span-3">Uses the Special DV and Stat Exp above.</p>
+                  <p className="col-span-2 text-xs text-muted @xl:col-span-3">Uses the Special DV and Stat Exp above.</p>
                 ) : (
                   <>
                     {/* slider */}
@@ -296,7 +298,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                     </div>
                     {/* numeric */}
                     <div className="flex items-center justify-end gap-0.5 @xl:justify-center">
-                      <button type="button" aria-label={`Decrease ${label(s)}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30" disabled={val <= 0} onClick={() => onSpread(s, Math.max(0, val - (gb ? 1 : step)))}>
+                      <button type="button" aria-label={`Decrease ${label(s)}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30 pointer-coarse:flex pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center" disabled={val <= 0} onClick={() => onSpread(s, Math.max(0, val - (gb ? 1 : step)))}>
                         <Minus size={12} />
                       </button>
                       <input
@@ -309,12 +311,12 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                         onChange={(e) => onSpread(s, Number(e.target.value))}
                         onFocus={(e) => e.target.select()}
                         className={cn(
-                          'no-spin h-7 rounded border bg-surface-2 text-center font-mono text-sm tabular-nums outline-none focus:border-accent',
+                          'no-spin h-7 rounded border bg-surface-2 text-center font-mono text-sm tabular-nums outline-none focus:border-accent pointer-coarse:h-11',
                           gb ? 'w-16' : 'w-11',
                           val === perStat ? 'border-good/60' : 'border-border',
                         )}
                       />
-                      <button type="button" aria-label={`Increase ${label(s)}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30" disabled={val >= room} onClick={() => onSpread(s, Math.min(room, val + (gb ? 1 : step)))}>
+                      <button type="button" aria-label={`Increase ${label(s)}`} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-30 pointer-coarse:flex pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center" disabled={val >= room} onClick={() => onSpread(s, Math.min(room, val + (gb ? 1 : step)))}>
                         <Plus size={12} />
                       </button>
                     </div>
@@ -339,7 +341,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                         onChange={(e) => onIV!(s, Number(e.target.value))}
                         onFocus={(e) => e.target.select()}
                         className={cn(
-                          'no-spin h-7 w-10 rounded border bg-surface-2 text-center font-mono text-sm tabular-nums outline-none focus:border-accent',
+                          'no-spin h-7 w-10 rounded border bg-surface-2 text-center font-mono text-sm tabular-nums outline-none focus:border-accent pointer-coarse:h-11 pointer-coarse:w-12',
                           set.ivs[s] === ivMax ? 'border-border' : 'border-warn/60',
                         )}
                       />
@@ -454,13 +456,14 @@ function SpeedBenchmark({
           onChange={(e) => setTarget(e.target.value.replace(/\D/g, ''))}
           placeholder="e.g. 150"
           aria-label="Target speed"
-          className="h-6 w-20 rounded border border-border bg-surface px-1.5 font-mono outline-none focus:border-accent"
+          inputMode="numeric"
+          className="h-6 w-20 rounded border border-border bg-surface px-1.5 font-mono outline-none focus:border-accent pointer-coarse:h-10"
         />
         {need !== undefined &&
           (need === null ? (
             <span className="text-bad">unreachable</span>
           ) : (
-            <Button size="sm" variant="primary" className="h-6" onClick={() => onSpread('spe', need)}>
+            <Button size="sm" onClick={() => onSpread('spe', need)}>
               Set {need.toLocaleString()} {unit}
             </Button>
           ))}

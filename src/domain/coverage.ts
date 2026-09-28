@@ -84,3 +84,36 @@ export function teamVsTeam(attackers: Team, defenders: Team, dex: Dex): MatchupR
     return [{ defender: s.nickname || sp.name, types: sp.types, best }];
   });
 }
+
+export interface DefenseRow {
+  atkType: TypeName;
+  /** One entry per member: its name and the multiplier it takes from this type. */
+  mults: { name: string; mult: number }[];
+  /** Members hit super-effectively. */
+  weak: number;
+  /** Members resisting or immune. */
+  resist: number;
+  /** Three or more weak, or two weak and nobody resisting. */
+  danger: boolean;
+}
+
+/**
+ * Defensive type coverage: for each attacking type, the multiplier every member takes. Uses a
+ * Mega's typing when the member holds its stone and the game has Megas (`megaTyping`). Abilities
+ * (Levitate…) aren't applied.
+ */
+export function defensiveCoverage(team: Team, dex: Dex, megaTyping: boolean): DefenseRow[] {
+  const mons = team.slots.flatMap((s) => {
+    if (!s) return [];
+    const sp = dex.species(s.speciesId);
+    const mega = megaTyping ? dex.megaFor(s.speciesId, s.itemId) : undefined;
+    return sp ? [{ name: (mega ?? sp).name, types: (mega ?? sp).types }] : [];
+  });
+  if (!mons.length) return [];
+  return dex.types.map((atkType) => {
+    const mults = mons.map((m) => ({ name: m.name, mult: dex.effectiveness(atkType, m.types) }));
+    const weak = mults.filter((m) => m.mult > 1).length;
+    const resist = mults.filter((m) => m.mult < 1).length;
+    return { atkType, mults, weak, resist, danger: weak >= 3 || (weak >= 2 && resist === 0) };
+  });
+}

@@ -11,7 +11,9 @@ import { defaultSlotBattle, useSlotBattle, useTeamStore } from '@/store/teamStor
 import { FieldControls, ModChip, SideControls, Toggle } from '../battle/Controls';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
-import { Button, Panel, STAT_COLOR_VAR, TypeBadge, cn } from '../ui/primitives';
+import { Button, Panel, TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR } from '../ui/color';
 
 interface Props {
   set: PokemonSet;
@@ -40,8 +42,8 @@ export function AdvancedDetails(props: Props) {
 }
 
 function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
-  const [open, setOpen] = useState(true);
-  const mega = dex.megaFor(species.id, set.itemId);
+  const [open, setOpen] = useState(false);
+  const mega = format.capabilities.mega ? dex.megaFor(species.id, set.itemId) : undefined;
   const setView = useTeamStore((s) => s.setView);
   const [state, update] = useSlotBattle(set.uid, !!mega);
   const patchSide = (p: Partial<SideConditions>) => update({ side: { ...state.side, ...p } });
@@ -57,7 +59,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
         stats: calcStats(forme.baseStats, set, format, dex.nature(set.nature)),
         ability,
         item: dex.item(set.itemId)?.name ?? '',
-        teraType: set.teraType,
+        teraType: format.capabilities.tera ? set.teraType : undefined,
         moves: set.moves.map((m) => dex.move(m)).filter((m): m is NonNullable<typeof m> => !!m),
         side: state.side,
         field: state.field,
@@ -84,7 +86,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
         <button type="button" className="flex items-center gap-1.5" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           <ChevronRight size={14} className={cn('transition-transform', open && 'rotate-90')} />
           Advanced details
-          <span className="text-[11px] font-normal text-muted">battle conditions, stat stages, move power</span>
+          <span className="text-xs font-normal text-muted">battle conditions, stat stages, move power</span>
         </button>
       }
       actions={
@@ -107,8 +109,8 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
               cond={state.side}
               onChange={patchSide}
               ability={ability}
-              canMega={!!mega && format.gimmicks.mega}
-              canTera={format.gimmicks.tera && !!set.teraType}
+              canMega={!!mega && format.capabilities.mega}
+              canTera={format.capabilities.tera && !!set.teraType}
               teraType={set.teraType}
               gen={format.generation}
               game={format.game}
@@ -119,7 +121,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                   <Crosshair size={12} /> Critical hits
                 </span>
               </Toggle>
-              <button type="button" className="text-[11px] text-muted underline-offset-2 hover:underline" onClick={() => update(defaultSlotBattle(!!mega))}>
+              <button type="button" className="text-xs text-muted underline-offset-2 hover:underline" onClick={() => update(defaultSlotBattle(!!mega))}>
                 Reset conditions
               </button>
             </div>
@@ -154,7 +156,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                       <td className="text-right font-mono tabular-nums">{result.hp}</td>
                       <td />
                       <td className="text-right font-mono font-bold tabular-nums">{Math.max(1, Math.round((result.hp * state.side.hpPercent) / 100))}</td>
-                      <td className="pl-3 text-[11px] text-muted">{state.side.hpPercent}% remaining</td>
+                      <td className="pl-3 text-xs text-muted">{state.side.hpPercent}% remaining</td>
                     </tr>
                     {(['atk', 'def', 'spa', 'spd', 'spe'] as const).map((s) => (
                       <StatRow key={s} stat={s} line={result.stats[s]} />
@@ -163,7 +165,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                 </table>
               </div>
               {result.speedNote && (
-                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-accent">
+                <p className="mt-1.5 flex items-center gap-1 text-xs text-accent">
                   <Zap size={11} /> {result.speedNote}
                 </p>
               )}
@@ -211,7 +213,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                   ))}
                 </ul>
               )}
-              <p className="mt-1.5 text-[11px] text-muted">
+              <p className="mt-1.5 text-xs text-muted">
                 Type effectiveness and the target's bulk aren't included here. Use the Damage Calc for exact damage rolls.
               </p>
             </div>

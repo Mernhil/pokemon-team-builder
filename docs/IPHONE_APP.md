@@ -9,9 +9,47 @@ offline — without the App Store or an Apple developer account.
 - `src/pwa.ts`: registers the service worker and checks for a new deploy on launch, every 30
   minutes, and whenever the app returns to the foreground. When one is found the page reloads
   itself onto the new version; teams are in localStorage, so nothing is lost.
-- `public/icons/*`: home-screen icons, rendered from `public/favicon.svg` by `npm run icons`.
+- `public/icons/*`: home-screen icons, rendered from `src-assets/logo-source.png` by `npm run icons`.
+- `public/splash/*`: iOS launch screens for every iPhone size since the SE, rendered from the same
+  logo by `npm run splash` (the `<link rel="apple-touch-startup-image">` tags in `index.html` list
+  them). They're left out of the service worker's precache; iOS fetches them once on install.
 - Not active in the Tauri desktop shell (it has its own updater) nor in the single-file/artifact
   build (`--mode singlefile`).
+
+## How the app adapts to the iPhone
+
+- **Full screen, clear of the notch:** `viewport-fit=cover` with `env(safe-area-inset-*)` padding
+  on the header, the bottom tab bar, bottom sheets and (in landscape) the page sides. Heights use
+  `dvh`, so nothing hides behind Safari's toolbars or the home indicator.
+- **Status bar:** `black-translucent` (white clock/battery over the app). In the light theme the
+  header paints a dark band under it (`.status-band`) so the status bar stays readable.
+- **Theme colour:** follows the theme picked in Settings (`src/App.tsx` updates `theme-color`).
+- **Navigation:** a bottom tab bar (Build · Calc · Pokédex · More); every picker (Pokémon, item,
+  move, ability) opens as a bottom sheet with its search box at the top, so the keyboard never
+  covers it; dialogs are bottom sheets too.
+- **Touch:** 44×44pt targets on touch screens (`pointer-coarse:` sizes and the `.hit` class for
+  small icon buttons), no text selection or long-press callouts on controls, 16px text in every
+  field (iOS zooms into anything smaller), info cards open on tap. Reordering a team is a press
+  and hold (250 ms) so a swipe still scrolls.
+- **Less on screen:** stats collapse to a one-line summary on phones, Champions' fixed level has
+  no field, and a floating + button jumps to the next empty slot.
+
+## What to check on a real iPhone
+
+Automated checks run in Chromium with iPhone viewports (375×667, 390×844, 430×932); Safari itself
+isn't available in CI. On a device, after **Add to Home Screen**:
+
+1. Launch screen shows the logo on dark, then the app, with no white flash.
+2. The clock and battery are readable in both themes; nothing sits under the notch / Dynamic
+   Island or the home indicator, in portrait and landscape.
+3. Tapping a picker opens the sheet with the keyboard up and the search box still visible;
+   closing the keyboard doesn't leave a gap or jump the page.
+4. Press-and-hold on a team sprite starts a reorder; a quick swipe scrolls instead.
+5. Tapping an ⓘ opens its card, tapping elsewhere closes it.
+6. No field zooms the page when focused.
+7. Offline (Airplane mode): the app opens and every tab works; the Meta tab shows its offline
+   notice.
+8. After a new deploy, reopening the app switches to the new version by itself.
 
 ## Hosting: Cloudflare Workers + Cloudflare Access (private, free)
 

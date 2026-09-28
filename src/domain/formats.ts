@@ -1,4 +1,5 @@
 import manifestJson from '@/data/generated/regulations.json';
+import { datasetCapabilities } from './capabilities';
 import { GAMES } from './games';
 import { GEN_GAMES, GENERATIONS } from './generations';
 import type { FormatRules, RegulationInfo, RegulationManifest, StatSystem } from './types';
@@ -29,7 +30,8 @@ const championsFormats: FormatRules[] = [...REGULATION_MANIFEST.regulations]
     pick: 4,
     gameType: 'doubles',
     clauses: { species: true, item: true },
-    gimmicks: { mega: true, tera: true }, // mirrors Showdown's Champions formats (no Terastal Clause)
+    // Mega Evolution only: no Champions regulation so far has enabled Terastallization.
+    capabilities: datasetCapabilities('champions'),
     openTeamList: true,
     available: true,
   }));
@@ -51,7 +53,7 @@ const genFormats: FormatRules[] = GENERATIONS.map((g) => ({
   teamSize: 6,
   gameType: 'singles',
   clauses: { species: false, item: false },
-  gimmicks: { mega: g.gen === 6 || g.gen === 7, tera: g.gen === 9 },
+  capabilities: datasetCapabilities(`gen${g.gen}`),
   openTeamList: false,
   available: true,
 }));
@@ -70,7 +72,7 @@ const gameFormats: FormatRules[] = GAMES.map((g) => ({
   teamSize: 6,
   gameType: 'singles',
   clauses: { species: false, item: false },
-  gimmicks: { mega: g.mega, tera: false },
+  capabilities: datasetCapabilities(g.id),
   openTeamList: false,
   available: true,
   game: g.id,

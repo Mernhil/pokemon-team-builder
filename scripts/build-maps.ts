@@ -10,21 +10,28 @@
  *                glowing squares from region_map_sections.json
  *   kanto-frlg,  FireRed/LeafGreen region maps (pokefirered: graphics/region_map/*.bin),
  *   sevii-*      squares from src/data/region_map/region_map_layout_*.h
- * Later regions come from hand-placed schematic layouts in src/data/maps/*.json.
+ *   sinnoh-pt    Platinum Town Map, top screen with every hidden location revealed (pokeplatinum:
+ *                res/graphics/town_map/*), squares from the 7×7 px blocks in res/town_map/town_map_data.json;
+ *                also shown for Diamond/Pearl and Brilliant Diamond/Shining Pearl
+ * Later regions come from hand-placed schematic layouts in src/data/maps/*.json (clearly labelled
+ * "schematic" in the app): no disassembly of their games' maps exists to render from.
  *
- * Writes public/maps/<id>.png and src/data/generated/maps.json.
+ * The decomps are pinned in scripts/sources.ts. Their graphics are Nintendo / Creatures / GAME FREAK
+ * assets, used unmodified (credited in Settings → Credits); nothing is redrawn.
+ *
+ * Writes public/maps/<id>.webp (lossless) and src/data/generated/maps.json, and prints a coverage report:
+ * per map, the encounter locations it places and any it can't.
  *   npm run maps          (clones the needed pret repos into .cache/pret on first run)
  */
-import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
 import sharp from 'sharp';
+import { ensure, type REPOS } from './sources.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, '..');
-const PRET = resolve(ROOT, '.cache/pret');
 const OUT_IMG = resolve(ROOT, 'public/maps');
 const OUT_JSON = resolve(ROOT, 'src/data/generated/maps.json');
 const SCHEMATIC_DIR = resolve(ROOT, 'src/data/maps');
@@ -57,24 +64,15 @@ export interface RegionMapOut {
 // Sources
 // ---------------------------------------------------------------------------
 
-const REPOS: Record<string, { branch: string; paths: string[] }> = {
-  pokered: { branch: 'master', paths: ['gfx/town_map', 'data/maps/town_map_entries.asm'] },
-  pokecrystal: { branch: 'master', paths: ['gfx/pokegear', 'data/maps/landmarks.asm'] },
-  pokeemerald: { branch: 'master', paths: ['graphics/pokedex/region_map.bin', 'graphics/pokedex/region_map.png', 'graphics/pokedex/region_map.pal', 'src/data/region_map/region_map_sections.json'] },
-  pokefirered: { branch: 'master', paths: ['graphics/region_map', 'src/data/region_map'] },
+const PRET_PATHS: Record<string, string[]> = {
+  pokered: ['gfx/town_map', 'data/maps/town_map_entries.asm'],
+  pokecrystal: ['gfx/pokegear', 'data/maps/landmarks.asm'],
+  pokeemerald: ['graphics/pokedex/region_map.bin', 'graphics/pokedex/region_map.png', 'graphics/pokedex/region_map.pal', 'src/data/region_map/region_map_sections.json'],
+  pokefirered: ['graphics/region_map', 'src/data/region_map'],
+  pokeplatinum: ['res/graphics/town_map', 'res/town_map/town_map_data.json'],
 };
 
-function ensureRepo(name: string) {
-  const dir = resolve(PRET, name);
-  const { branch, paths } = REPOS[name];
-  if (!existsSync(dir)) {
-    mkdirSync(PRET, { recursive: true });
-    execSync(`git clone -q --depth 1 --filter=blob:none --no-checkout --branch ${branch} https://github.com/pret/${name} ${name}`, { cwd: PRET, stdio: 'inherit' });
-  }
-  const missing = paths.filter((p) => !existsSync(resolve(dir, p)));
-  if (missing.length) execSync(`git checkout HEAD -- ${missing.join(' ')}`, { cwd: dir, stdio: 'inherit' });
-  return dir;
-}
+const ensureRepo = (name: keyof typeof PRET_PATHS & keyof typeof REPOS) => ensure(name, PRET_PATHS[name]);
 
 // ---------------------------------------------------------------------------
 // Minimal PNG decoder → palette indices / gray levels (the decomps' tile sheets are indexed or 2bpp gray)
@@ -173,7 +171,7 @@ class Canvas {
   }
   async save(file: string) {
     await sharp(Buffer.from(this.px), { raw: { width: this.width, height: this.height, channels: 3 } })
-      .png({ palette: true, compressionLevel: 9 })
+      .webp({ lossless: true, effort: 6 })
       .toFile(file);
   }
 }
@@ -313,6 +311,13 @@ const ANCHORS: Record<string, [string, string, number, number][]> = {
     ['kanto-victory-road-1', 'kanto-victory-road-2', 0, 0],
     ['kanto-underground-path', 'saffron-city', 0, 0],
   ],
+  'sinnoh-pt': [
+    // Reached through Turnback Cave (Platinum) and from Spear Pillar (Arceus event).
+    ['distortion-world', 'turnback-cave', 0, 0],
+    ['sinnoh-hall-of-origin-1', 'spear-pillar', 0, 0],
+    // Maniac Tunnel is dug out of the Ruin Maniac's cave on Route 214.
+    ['maniac-tunnel', 'ruin-maniac-cave', 0, 0],
+  ],
   'sevii-67': ['monean-chamber', 'liptoo-chamber', 'weepth-chamber', 'dilford-chamber', 'scufib-chamber', 'rixy-chamber', 'viapos-chamber'].map(
     (c) => [c, 'tanoby-ruins', 0, 0] as [string, string, number, number],
   ),
@@ -326,12 +331,37 @@ function anchor(map: RegionMapOut, cell: number) {
   }
 }
 
-function report(map: RegionMapOut, known: Set<string>, region: string | string[]) {
-  const regions = Array.isArray(region) ? region : [region];
-  const missing = [...known].filter((l) => !map.places[l] && !/^roaming|pokemart|pokecenter|^unknown/.test(l));
-  const regionOf = (l: string) => regions.some((r) => l.startsWith(r)) || true;
-  const list = missing.filter(regionOf);
-  console.log(`  ${map.id}: ${Object.keys(map.places).length} places${list.length ? ` · unplaced: ${list.join(', ')}` : ''}`);
+const coverage: { id: string; source: string; places: number; locations: number; unplaced: string[] }[] = [];
+
+/** Log and record which encounter locations a map places (unplaced ones show as "Not on this map" in the app). */
+function report(map: RegionMapOut, known: Set<string>) {
+  const unplaced = [...known].filter((l) => !map.places[l] && !/^roaming|pokemart|pokecenter|^unknown/.test(l)).sort();
+  const locations = [...known].filter((l) => map.places[l]).length;
+  coverage.push({ id: map.id, source: map.source, places: Object.keys(map.places).length, locations, unplaced });
+  console.log(`  ${map.id}: ${Object.keys(map.places).length} places${unplaced.length ? ` · unplaced: ${unplaced.join(', ')}` : ''}`);
+}
+
+function writeCoverage(games: Record<string, string[]>, maps: RegionMapOut[]) {
+  const lines = [
+    '# Region map coverage',
+    '',
+    'Generated by `npm run maps` (scripts/build-maps.ts); do not edit. "Encounter locations" counts the',
+    'wild-encounter locations of the map\'s games that it places; "unplaced" ones are listed in the app as',
+    '"Not on this map" (roaming Pokémon, event islands, region-wide areas…). The test in',
+    '`src/domain/__tests__/gens.test.ts` fails if any other location is missing.',
+    '',
+    '| Map | Source | Places | Encounter locations placed | Unplaced | Games |',
+    '|---|---|---|---|---|---|',
+    ...coverage.map((c) => {
+      const shownIn = Object.entries(games).filter(([, ids]) => ids.includes(c.id.split(' ')[0])).map(([g]) => g);
+      // A location on another map of the same game (Galar's DLC areas, Kitakami…) isn't missing.
+      const siblings = maps.filter((m) => shownIn.some((g) => games[g].includes(m.id)));
+      const unplaced = c.unplaced.filter((l) => !siblings.some((m) => m.places[l]));
+      return `| ${c.id} | ${c.source === 'schematic' ? 'schematic (hand-placed, approximate)' : c.source} | ${c.places} | ${c.locations} | ${unplaced.join(', ') || '—'} | ${shownIn.join(', ')} |`;
+    }),
+    '',
+  ];
+  writeFileSync(resolve(ROOT, 'docs/MAP_COVERAGE.md'), lines.join('\n'));
 }
 
 // ---------------------------------------------------------------------------
@@ -354,7 +384,7 @@ async function kantoRBY(): Promise<RegionMapOut> {
     const tx = (i % 20) * 8, ty = Math.floor(i / 20) * 8;
     for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) c.set(tx + x, ty + y, pal[3 - tilePixel(sheet, t, x, y)]);
   });
-  await c.save(resolve(OUT_IMG, 'kanto-rby.png'));
+  await c.save(resolve(OUT_IMG, 'kanto-rby.webp'));
 
   const known = encounterLocations(['red', 'blue', 'yellow']);
   const places: Record<string, Rect[]> = {};
@@ -368,8 +398,8 @@ async function kantoRBY(): Promise<RegionMapOut> {
     const id = ids.find((cand) => known.has(cand)) ?? ids.find((cand) => cand.startsWith('kanto')) ?? ids[0];
     if (!(places[id] ?? []).some((r) => r[0] === rect[0] && r[1] === rect[1])) (places[id] ??= []).push(rect);
   }
-  const map: RegionMapOut = { id: 'kanto-rby', name: 'Kanto', width: 160, height: 144, image: 'maps/kanto-rby.png', style: 'nest', places, nestIcon: nestIcon(resolve(dir, 'gfx/town_map/mon_nest_icon.png')), source: 'pret/pokered' };
-  report(map, known, 'kanto');
+  const map: RegionMapOut = { id: 'kanto-rby', name: 'Kanto', width: 160, height: 144, image: 'maps/kanto-rby.webp', style: 'nest', places, nestIcon: nestIcon(resolve(dir, 'gfx/town_map/mon_nest_icon.png')), source: 'pret/pokered' };
+  report(map, known);
   return map;
 }
 
@@ -411,13 +441,13 @@ async function crystal(): Promise<RegionMapOut[]> {
       // 2bpp gray 3 (white) is GB colour 0.
       for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) c.set(tx + x, ty + y, pal[3 - tilePixel(sheet, t, x, y)]);
     }
-    await c.save(resolve(OUT_IMG, `${id}.png`));
+    await c.save(resolve(OUT_IMG, `${id}.webp`));
     const places: Record<string, Rect[]> = {};
     // The nest icon (8×8) is centred on the landmark point.
     for (const lm of landmarks.slice(from, to)) place(places, lm.name, region, known, [lm.x - 4, lm.y - 4, 8, 8]);
-    const map: RegionMapOut = { id, name: region === 'johto' ? 'Johto' : 'Kanto', width: 160, height: 144, image: `maps/${id}.png`, style: 'nest', places, nestIcon: nestIcon(resolve(dir, 'gfx/pokegear/dexmap_nest_icon.png')), source: 'pret/pokecrystal' };
+    const map: RegionMapOut = { id, name: region === 'johto' ? 'Johto' : 'Kanto', width: 160, height: 144, image: `maps/${id}.webp`, style: 'nest', places, nestIcon: nestIcon(resolve(dir, 'gfx/pokegear/dexmap_nest_icon.png')), source: 'pret/pokecrystal' };
     anchor(map, 8);
-    report(map, new Set([...known].filter((l) => (region === 'johto' ? !l.startsWith('kanto') && !kantoNames.has(l) : l.startsWith('kanto') || kantoNames.has(l)))), region);
+    report(map, new Set([...known].filter((l) => (region === 'johto' ? !l.startsWith('kanto') && !kantoNames.has(l) : l.startsWith('kanto') || kantoNames.has(l)))));
     out.push(map);
   }
   return out;
@@ -453,7 +483,7 @@ async function hoennRSE(): Promise<RegionMapOut> {
         c.set(tx + x, ty + y, pal[idx ? idx - 112 : 0] ?? [0, 0, 0]);
       }
   }
-  await c.save(resolve(OUT_IMG, 'hoenn-rse.png'));
+  await c.save(resolve(OUT_IMG, 'hoenn-rse.webp'));
 
   const known = encounterLocations(['ruby', 'sapphire', 'emerald', 'omega-ruby', 'alpha-sapphire']);
   const sections = JSON.parse(readFileSync(resolve(dir, 'src/data/region_map/region_map_sections.json'), 'utf8')).map_sections as {
@@ -465,9 +495,9 @@ async function hoennRSE(): Promise<RegionMapOut> {
     if (s.x === undefined || !s.width || s.id.includes('NONE')) continue;
     place(places, s.id, 'hoenn', known, [(s.x + 1) * 8, (s.y! + 2) * 8, s.width * 8, s.height! * 8]);
   }
-  const map: RegionMapOut = { id: 'hoenn-rse', name: 'Hoenn', width: W, height: H, image: 'maps/hoenn-rse.png', style: 'area', places, source: 'pret/pokeemerald' };
+  const map: RegionMapOut = { id: 'hoenn-rse', name: 'Hoenn', width: W, height: H, image: 'maps/hoenn-rse.webp', style: 'area', places, source: 'pret/pokeemerald' };
   anchor(map, 8);
-  report(map, known, 'hoenn');
+  report(map, known);
   return map;
 }
 
@@ -494,7 +524,7 @@ async function frlg(): Promise<RegionMapOut[]> {
       for (let y = 0; y < 8; y++)
         for (let x = 0; x < 8; x++) c.set(tx + x, ty + y, pal[bank * 16 + (tilePixel(sheet, t, hf ? 7 - x : x, vf ? 7 - y : y) & 15)] ?? [0, 0, 0]);
     }
-    await c.save(resolve(OUT_IMG, `${id}.png`));
+    await c.save(resolve(OUT_IMG, `${id}.webp`));
 
     // Section grid: [layer][row][col] of MAPSEC_ names, 22×15 cells of 8 px from tile (1, 2).
     const src = readFileSync(resolve(dir, 'src/data/region_map', layout), 'utf8');
@@ -509,14 +539,128 @@ async function frlg(): Promise<RegionMapOut[]> {
         }),
       );
     }
-    const map: RegionMapOut = { id, name, width: W, height: H, image: `maps/${id}.png`, style: 'area', places, source: 'pret/pokefirered' };
+    const map: RegionMapOut = { id, name, width: W, height: H, image: `maps/${id}.webp`, style: 'area', places, source: 'pret/pokefirered' };
     anchor(map, 8);
     out.push(map);
   }
   const union: Record<string, Rect[]> = {};
   for (const m of out) for (const k of Object.keys(m.places)) union[k] = [];
-  report({ ...out[0], id: 'kanto-frlg + sevii', places: union }, known, 'kanto');
+  report({ ...out[0], id: 'kanto-frlg + sevii', places: union }, known);
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Gen 4: Platinum (Sinnoh)
+// ---------------------------------------------------------------------------
+
+/** A DS tilemap (.NSCR): u16 entries (tile | hflip<<10 | vflip<<11 | palette bank<<12), row-major within 32×32 screen blocks. */
+function readNSCR(file: string): { cols: number; rows: number; at: (x: number, y: number) => number } {
+  const b = readFileSync(file);
+  const cols = b.readUInt16LE(0x18) / 8, rows = b.readUInt16LE(0x1a) / 8;
+  const sbCols = Math.min(cols, 32);
+  return {
+    cols,
+    rows,
+    at: (x, y) => {
+      const sb = Math.floor(y / 32) * Math.ceil(cols / 32) + Math.floor(x / 32);
+      return b.readUInt16LE(36 + (sb * 1024 + (y % 32) * sbCols + (x % 32)) * 2);
+    },
+  };
+}
+
+/**
+ * Locations with encounters in the given games: PokeAPI's table plus the generated Pokédex files
+ * (Let's Go, BDSP, the Legends games and Scarlet/Violet come from PKHeX, not PokeAPI).
+ */
+function gameLocations(versions: string[]): Set<string> {
+  const out = encounterLocations(versions);
+  for (const f of readdirSync(resolve(ROOT, 'src/data/generated')).filter((f) => /^pokedex-.*\.json$/.test(f))) {
+    const d = JSON.parse(readFileSync(resolve(ROOT, 'src/data/generated', f), 'utf8')) as {
+      games?: { id: string }[]; areas?: { loc: string }[]; encounters?: Record<string, number[][]>;
+    };
+    if (!d.games || !d.areas || !d.encounters) continue;
+    for (const rows of Object.values(d.encounters)) for (const [g, a] of rows) if (versions.includes(d.games[g].id)) out.add(d.areas[a].loc);
+  }
+  return out;
+}
+
+/** Platinum town map names that differ from PokeAPI's (typos in the game data, lakes named by their caverns…). */
+const SINNOH_NAMES: Record<string, string[]> = {
+  eternia_city: ['eterna-city'],
+  mount_coronet: ['mt-coronet'],
+  verity_lakefront: ['lake-verity', 'verity-lakefront'],
+  verity_cavern: ['lake-verity'],
+  valor_cavern: ['lake-valor'],
+  acuity_cavern: ['lake-acuity'],
+  snowpoint_temple_and_gym: ['snowpoint-temple'],
+  // Trophy Garden is the Pokémon Mansion's back garden; Spring Path leads to Sendoff Spring.
+  pokemon_mansion: ['trophy-garden'],
+  spring_path: ['sendoff-spring'],
+  pokemon_league: ['sinnoh-pokemon-league'],
+  victory_road: ['sinnoh-victory-road'],
+};
+
+async function sinnohPt(): Promise<RegionMapOut> {
+  const dir = ensureRepo('pokeplatinum');
+  const gfx = (f: string) => resolve(dir, 'res/graphics/town_map', f);
+  const sheet = decodePNG(gfx('top_screen_map_tiles.png'));
+  const pal = readJASC(gfx('top_screen_map.pal'));
+  const bgMap = readNSCR(gfx('top_screen_region_bg_tilemap.NSCR'));
+  const routeMap = readNSCR(gfx('top_screen_region_map_tilemap.NSCR'));
+  const hidden = readNSCR(gfx('hidden_locations_top_screen.NSCR'));
+  // Two layers of 32×24 tiles: the land/sea background and the routes above it.
+  const layers = [bgMap, routeMap].map((m) => Array.from({ length: 24 }, (_, y) => Array.from({ length: 32 }, (_, x) => m.at(x, y))));
+  // Reveal every hidden location (src/applications/town_map/graphics.c, ShowHiddenLocation: full-screen BG then map rects).
+  const HIDDEN: [number, number, number, number, number, number][][] = [
+    [[5, 0, 3, 1, 2, 3], [5, 3, 3, 2, 2, 2]], // Fullmoon Island
+    [[0, 0, 6, 1, 2, 3], [0, 3, 6, 2, 2, 2]], // Newmoon Island
+    [[0, 0, 0, 0, 0, 0], [4, 5, 22, 13, 3, 3]], // Spring Path (map layer only)
+    [[2, 0, 26, 0, 3, 3], [2, 3, 27, 0, 2, 9]], // Seabreak Path
+  ];
+  for (const rects of HIDDEN)
+    rects.forEach(([sx, sy, dx, dy, w, h], layer) => {
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) layers[layer][dy + y][dx + x] = hidden.at(sx + x, sy + y);
+    });
+  // The map itself, without the screen's frame and name bar: x 20–235, y 0–167.
+  const CROP_X = 20, W = 216, H = 168;
+  const c = new Canvas(W, H);
+  // Tile sheets are 4bpp grayscale PNGs whose gray level is 15 − the palette index.
+  layers.forEach((tiles, li) =>
+    tiles.forEach((row, ty) =>
+      row.forEach((e, tx) => {
+        const t = e & 0x3ff, hf = e & 0x400, vf = e & 0x800, bank = e >> 12;
+        for (let y = 0; y < 8; y++)
+          for (let x = 0; x < 8; x++) {
+            const idx = 15 - tilePixel(sheet, t, hf ? 7 - x : x, vf ? 7 - y : y);
+            if (li > 0 && idx === 0) continue; // colour 0 of the upper layer is transparent
+            c.set(tx * 8 + x - CROP_X, ty * 8 + y, pal[bank * 16 + idx] ?? [0, 0, 0]);
+          }
+      }),
+    ),
+  );
+  await c.save(resolve(OUT_IMG, 'sinnoh-pt.webp'));
+
+  const known = gameLocations(['diamond', 'pearl', 'platinum', 'brilliant-diamond', 'shining-pearl']);
+  const data = JSON.parse(readFileSync(resolve(dir, 'res/town_map/town_map_data.json'), 'utf8')) as {
+    blocks: { x: number; z: number; area: string | null; landmark: string | null }[];
+  };
+  const places: Record<string, Rect[]> = {};
+  // Each block is a 7×7 px cell; the cursor centres on (7x + 25, 7z − 34) (include/applications/town_map/defs.h).
+  for (const b of data.blocks) {
+    const rect: Rect = [7 * b.x + 22 - CROP_X, 7 * b.z - 37, 7, 7];
+    for (const name of [b.area, b.landmark]) {
+      if (!name) continue;
+      const aliased = SINNOH_NAMES[name];
+      if (aliased) {
+        for (const id of aliased) if (!(places[id] ??= []).some((r) => r.join() === rect.join())) places[id].push(rect);
+      }
+      else place(places, name.replace(/_(north|south)$/, ''), 'sinnoh', known, rect);
+    }
+  }
+  const map: RegionMapOut = { id: 'sinnoh-pt', name: 'Sinnoh', width: W, height: H, image: 'maps/sinnoh-pt.webp', style: 'area', places, source: 'pret/pokeplatinum' };
+  anchor(map, 7);
+  report(map, known);
+  return map;
 }
 
 // ---------------------------------------------------------------------------
@@ -558,7 +702,7 @@ function schematics(): RegionMapOut[] {
         if (label) labels[id] = label;
       }
       const map: RegionMapOut = { id: s.id, name: s.name, width: s.width, height: s.height, style: 'schematic', places, land: s.land, kinds, labels, source: 'schematic' };
-      report(map, encounterLocations(s.versions), s.id);
+      report(map, gameLocations(s.games ?? s.versions));
       return map;
   });
 }
@@ -573,17 +717,21 @@ export const GAME_MAPS: Record<string, string[]> = {
   firered: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], leafgreen: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'],
   heartgold: ['johto-gsc', 'kanto-gsc'], soulsilver: ['johto-gsc', 'kanto-gsc'],
   'omega-ruby': ['hoenn-rse'], 'alpha-sapphire': ['hoenn-rse'],
+  diamond: ['sinnoh-pt'], pearl: ['sinnoh-pt'], platinum: ['sinnoh-pt'],
+  'brilliant-diamond': ['sinnoh-pt'], 'shining-pearl': ['sinnoh-pt'],
   // Let's Go's Kanto is Red/Blue's; FireRed/LeafGreen's map has every place it uses.
   'lets-go-pikachu': ['kanto-frlg'], 'lets-go-eevee': ['kanto-frlg'],
 };
 
 async function main() {
   mkdirSync(OUT_IMG, { recursive: true });
-  const maps: RegionMapOut[] = [await kantoRBY(), ...(await crystal()), await hoennRSE(), ...(await frlg()), ...schematics()];
+  for (const f of readdirSync(OUT_IMG)) if (f.endsWith('.png')) rmSync(resolve(OUT_IMG, f)); // pre-0.7 output
+  const maps: RegionMapOut[] = [await kantoRBY(), ...(await crystal()), await hoennRSE(), ...(await frlg()), await sinnohPt(), ...schematics()];
   const games: Record<string, string[]> = { ...GAME_MAPS };
   for (const s of schematicFiles()) for (const v of s.games ?? s.versions) games[v] = [...(games[v] ?? []).filter((m) => m !== s.id), s.id];
   writeFileSync(OUT_JSON, JSON.stringify({ maps: Object.fromEntries(maps.map((m) => [m.id, m])), games }));
-  console.log(`wrote ${maps.length} maps → public/maps/, src/data/generated/maps.json`);
+  writeCoverage(games, maps);
+  console.log(`wrote ${maps.length} maps → public/maps/, src/data/generated/maps.json, docs/MAP_COVERAGE.md`);
 }
 
 main();

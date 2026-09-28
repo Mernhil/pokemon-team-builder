@@ -1,6 +1,7 @@
-import { Crosshair, Sparkles } from 'lucide-react';
+import { Crosshair, Sparkles, Info } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultSide } from '@/domain/battle/conditions';
+import { stripUnsupported } from '@/domain/capabilities';
 import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
 import { createSet } from '@/domain/team';
 import { STAT_LABELS, type FormatRules, type Team, type TeraType } from '@/domain/types';
@@ -8,14 +9,15 @@ import { useCalcStore, type SideKey } from '@/store/calcStore';
 import { SideControls } from '../battle/Controls';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { StatDistributor } from '../editor/StatDistributor';
-import { useItemOptions, useMoveOptions } from '../editor/options';
+import { comboProps, useItemPicker, useMovePicker } from '../editor/options';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Field, Input, Panel, Select, TypeBadge, cn } from '../ui/primitives';
+import { Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
 import { formatMechanics } from '@/domain/games';
 import { spreadKey, sumStats, withSpreadValue } from '@/domain/stats';
 
@@ -31,18 +33,18 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
   const side = useCalcStore((s) => s[role]);
   const { setSide, patchSet, patchCond, patchSide } = useCalcStore.getState();
   const set = side.set;
-  const itemOptions = useItemOptions(dex, format, set?.speciesId);
-  const moveOptions = useMoveOptions(dex, format, set);
+  const itemPicker = useItemPicker(dex, format, set?.speciesId);
+  const movePicker = useMovePicker(dex, format, set);
   const species = set ? dex.species(set.speciesId) : undefined;
-  const mega = set ? dex.megaFor(set.speciesId, set.itemId) : undefined;
+  const mega = set && format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
   const forme = side.cond.mega && mega ? mega : species;
 
   const loadFromTeam = (i: number) => {
     const s = team.slots[i];
     if (!s) return;
-    const hasMega = !!dex.megaFor(s.speciesId, s.itemId);
+    const hasMega = format.capabilities.mega && !!dex.megaFor(s.speciesId, s.itemId);
     setSide(role, {
-      set: structuredClone(s),
+      set: stripUnsupported(structuredClone(s), format.capabilities),
       cond: defaultSide(hasMega),
       crits: [false, false, false, false],
       origin: { teamName: team.name, slot: i },
@@ -60,7 +62,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
           <span className={cn('h-2 w-2 rounded-full', role === 'attacker' ? 'bg-bad' : 'bg-accent')} />
           {title}
           {side.origin && (
-            <span className="text-[11px] font-normal text-muted">
+            <span className="text-xs font-normal text-muted">
               from {side.origin.teamName} · slot {side.origin.slot + 1}
             </span>
           )}
@@ -119,7 +121,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                 ))}
                 <GenBadge gen={forme.gen} size="xs" className="ml-1" />
                 {forme !== species && (
-                  <span className="ml-1 inline-flex items-center gap-0.5 text-[11px] font-semibold text-accent">
+                  <span className="ml-1 inline-flex items-center gap-0.5 text-xs font-semibold text-accent">
                     <Sparkles size={11} /> {forme.name}
                   </span>
                 )}
@@ -136,20 +138,23 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                 label={mech.megaStoneOnly ? 'Mega Stone' : 'Held item'}
                 hint={
                   dex.item(set.itemId)?.shortDesc && (
-                    <InfoTooltip title={dex.item(set.itemId)!.name} summary={dex.item(set.itemId)!.shortDesc} interactions={ITEM_INTERACTIONS[set.itemId!]}>
-                      <span className="truncate">ⓘ</span>
+                    <InfoTooltip title={dex.item(set.itemId)!.name} summary={dex.item(set.itemId)!.shortDesc} interactions={ITEM_INTERACTIONS[set.itemId!]} label={`About ${dex.item(set.itemId)!.name}`}>
+                      <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
                     </InfoTooltip>
                   )
                 }
               >
                 <Combobox
                   aria-label={`${title} item`}
-                  options={itemOptions}
+                  {...comboProps(itemPicker)}
                   value={set.itemId}
                   allowClear
                   placeholder="None"
                   icon={<ItemSprite itemId={set.itemId} name={dex.item(set.itemId)?.name} size={18} />}
-                  onChange={(id) => patchSet(role, { itemId: id || undefined })}
+                  onChange={(id) => {
+                    itemPicker.remember(id);
+                    patchSet(role, { itemId: id || undefined });
+                  }}
                 />
               </Field>
               )}
@@ -158,8 +163,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                 label="Ability"
                 hint={
                   dex.ability(set.abilityId)?.shortDesc && (
-                    <InfoTooltip title={dex.ability(set.abilityId)!.name} summary={dex.ability(set.abilityId)!.shortDesc} interactions={ABILITY_INTERACTIONS[set.abilityId!]}>
-                      <span className="truncate">ⓘ</span>
+                    <InfoTooltip title={dex.ability(set.abilityId)!.name} summary={dex.ability(set.abilityId)!.shortDesc} interactions={ABILITY_INTERACTIONS[set.abilityId!]} label={`About ${dex.ability(set.abilityId)!.name}`}>
+                      <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
                     </InfoTooltip>
                   )
                 }
@@ -202,7 +207,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                 </Select>
               </Field>
               )}
-              {format.gimmicks.tera && (
+              {format.capabilities.tera && (
                 <Field label="Tera Type">
                   <Select value={set.teraType ?? ''} onChange={(e) => patchSet(role, { teraType: (e.target.value || undefined) as TeraType | undefined })}>
                     <option value="">—</option>
@@ -225,11 +230,12 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                     <Combobox
                       className="flex-1"
                       aria-label={`${title} move ${i + 1}`}
-                      options={moveOptions}
+                      {...comboProps(movePicker)}
                       value={m}
                       allowClear
                       placeholder="Search moves…"
                       onChange={(id) => {
+                        movePicker.remember(id);
                         const moves = [...set.moves] as typeof set.moves;
                         moves[i] = id;
                         patchSet(role, { moves });
@@ -265,8 +271,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
               cond={side.cond}
               onChange={(p) => patchCond(role, p)}
               ability={forme !== species ? Object.values(forme!.abilities)[0] : dex.ability(set.abilityId)?.name}
-              canMega={!!mega && format.gimmicks.mega}
-              canTera={format.gimmicks.tera && !!set.teraType}
+              canMega={!!mega && format.capabilities.mega}
+              canTera={format.capabilities.tera && !!set.teraType}
               teraType={set.teraType}
               gen={dex.generation}
               game={format.game}

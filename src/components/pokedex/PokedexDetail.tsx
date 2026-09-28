@@ -22,7 +22,9 @@ import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Button, Panel, STAT_COLOR_VAR, TYPE_COLORS, TypeBadge, cn } from '../ui/primitives';
+import { Button, Panel, TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR, TYPE_COLORS } from '../ui/color';
 import { AreaView } from './AreaView';
 
 interface Props {
@@ -174,7 +176,7 @@ function InfoTab({ species, dex, data, book, onSelect }: Props) {
           <p className="text-sm leading-relaxed">
             <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">{entry.fallback.game}</span>
             {entry.fallback.text}
-            <span className="mt-1 block text-[11px] text-muted">No {book.games.replace(/ \(.*\)$/, '')} entry in PokeAPI yet; showing the latest earlier game.</span>
+            <span className="mt-1 block text-xs text-muted">No {book.games.replace(/ \(.*\)$/, '')} entry in PokeAPI yet; showing the latest earlier game.</span>
           </p>
         ) : (
           <p className="text-sm text-muted">No entry.</p>
@@ -215,7 +217,7 @@ function InfoTab({ species, dex, data, book, onSelect }: Props) {
         )}
       </Panel>
 
-      <Panel title="Type defenses" actions={<span className="text-[11px] text-muted">Gen {gen} type chart</span>}>
+      <Panel title="Type defenses" actions={<span className="text-xs text-muted">Gen {gen} type chart</span>}>
         <TypeDefenses species={species} dex={dex} />
       </Panel>
 
@@ -290,7 +292,7 @@ function EvoTree({ node, current, spriteSet, onSelect }: { node: EvoNode; curren
         <div className="flex flex-col gap-2">
           {node.children.map((c) => (
             <div key={c.species.id} className="flex items-center gap-2">
-              <span className="flex max-w-40 items-center gap-1 text-[11px] text-muted">
+              <span className="flex max-w-40 items-center gap-1 text-xs text-muted">
                 <ChevronRight size={14} className="shrink-0" />
                 {c.how}
               </span>
@@ -327,7 +329,7 @@ function MovesTab({ species, dex, learn, book }: Props) {
   return (
     <div className="space-y-3">
       {byMethod.map((g) => (
-        <Panel key={g.method} title={LEARN_METHOD_LABELS[g.method]} actions={<span className="text-[11px] text-muted">{g.rows.length}</span>}>
+        <Panel key={g.method} title={LEARN_METHOD_LABELS[g.method]} actions={<span className="text-xs text-muted">{g.rows.length}</span>}>
           <MoveTable book={book} rows={g.rows.map((r) => ({ move: r.move, lead: g.method === 'level' ? (r.levels!.map((l) => (l <= 1 ? '—' : l)).join(' / ')) : undefined }))} lead={g.method === 'level' ? 'Lv' : undefined} />
         </Panel>
       ))}
@@ -335,15 +337,15 @@ function MovesTab({ species, dex, learn, book }: Props) {
         // With no per-move learn method (Champions), this is the species' whole legal movepool, not
         // moves inherited from a pre-evolution — labelled accordingly instead of claiming otherwise.
         (byMethod.length ? (
-          <Panel title="Via pre-evolutions" actions={<span className="text-[11px] text-muted">learned before evolving</span>}>
+          <Panel title="Via pre-evolutions" actions={<span className="text-xs text-muted">learned before evolving</span>}>
             <MoveTable book={book} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
           </Panel>
         ) : (
-          <Panel title="Legal movepool" actions={<span className="text-[11px] text-muted">no level-up data for {book.games}</span>}>
+          <Panel title="Legal movepool" actions={<span className="text-xs text-muted">no level-up data for {book.games}</span>}>
             <MoveTable book={book} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
           </Panel>
         ))}
-      <p className="text-center text-[11px] text-muted">Learnsets for {book.games} · move data as of Gen {gen} ({book.region})</p>
+      <p className="text-center text-xs text-muted">Learnsets for {book.games} · move data as of Gen {gen} ({book.region})</p>
     </div>
   );
 }

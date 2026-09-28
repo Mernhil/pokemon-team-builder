@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import type { DexBook } from '@/domain/games';
 import { evolutionMethod, type Encounter, type PokedexData } from '@/domain/pokedex';
 import type { Pokemon } from '@/domain/types';
 import { usePokedexStore } from '@/store/pokedexStore';
-import { Panel, cn } from '../ui/primitives';
+import { Panel } from '../ui/primitives';
+import { cn } from '../ui/styles';
 import { RegionMaps } from './RegionMap';
 
 interface Props {
@@ -40,6 +41,15 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
 
   const prevo = species.prevo ? dex.species(species.prevo) : undefined;
 
+  // The location picked on the map (or in the list): highlighted in both.
+  const scope = `${species.id}:${game.id}`;
+  const [pickedLoc, setPickedLoc] = useState({ scope, loc: '' });
+  const selected = pickedLoc.scope === scope ? pickedLoc.loc : '';
+  const setSelected = (loc: string) => setPickedLoc({ scope, loc });
+  useEffect(() => {
+    if (selected) document.getElementById(`area-loc-${selected}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [selected]);
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Game">
@@ -62,15 +72,23 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
         ))}
       </div>
 
-      <RegionMaps game={game.id} encounters={here} />
+      <RegionMaps game={game.id} encounters={here} selected={selected} onSelect={setSelected} />
 
       {here.length ? (
-        <Panel title={`Where to find ${species.name}`} actions={<span className="text-[11px] text-muted">{game.name}</span>}>
+        <Panel title={`Where to find ${species.name}`} actions={<span className="text-xs text-muted">{game.name}</span>}>
           <div className="space-y-3">
             {byLocation.map(([loc, g]) => (
-              <div key={loc}>
-                <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
-                  <MapPin size={13} className="text-accent" /> {g.name}
+              <div key={loc} id={`area-loc-${loc}`} className={cn('-mx-2 scroll-mt-4 rounded-lg px-2 py-1 transition-colors', selected === loc && 'bg-accent/10 ring-1 ring-accent/40')}>
+                <h3 className="mb-1 text-sm font-semibold">
+                  <button
+                    type="button"
+                    aria-pressed={selected === loc}
+                    onClick={() => setSelected(selected === loc ? '' : loc)}
+                    className="hit inline-flex items-center gap-1.5 rounded text-left hover:text-accent"
+                    title="Show on the map"
+                  >
+                    <MapPin size={13} className="text-accent" aria-hidden /> {g.name}
+                  </button>
                 </h3>
                 <div className="-mx-1 overflow-x-auto">
                   <table className="w-full text-xs">

@@ -31,7 +31,8 @@ installers themselves build fine, only the auto-updater manifest can't be produc
 
 ## Cutting a release
 
-1. Bump the version everywhere at once (tauri.conf.json, Cargo.toml/.lock, package.json/-lock):
+1. Bump the version everywhere at once (tauri.conf.json, Cargo.toml/.lock, package.json/-lock) and
+   add a `## <version> — <date>` section to `CHANGELOG.md` (the workflow uses it as the release text):
    ```bash
    npm run bump -- 0.6.0
    ```
@@ -52,6 +53,20 @@ installers themselves build fine, only the auto-updater manifest can't be produc
 
 If a run fails after the release was published, fix the cause, then delete the release **and** its
 tag on GitHub and publish it again (or bump to the next patch version).
+
+## Rolling back a bad release
+
+- **Web / iPhone app:** revert the release's merge on the default branch (`git revert -m 1 <merge>`) and
+  push; Cloudflare redeploys in 1–2 minutes and installed apps pick it up on their next open.
+  Cloudflare's dashboard (Workers → Deployments → *Rollback*) restores the previous deploy instantly
+  if a revert can't wait. Saved data after rolling 0.7.0 back to 0.6.x: teams, folders and variations
+  load as they are; the match log's newer save format (v2) isn't read by 0.6.x, which shows an empty
+  log but leaves the save alone until a match is logged — and the pre-0.7.0 copies are kept in the
+  browser (`ptb:v1:backup-v2` for teams, `ptb:matches:v1:backup-v1` for matches) to restore by hand.
+- **Desktop:** the updater only moves forward (it installs a *higher* version), so don't delete the
+  release people already have. Fix forward: revert on the default branch, `npm run bump -- <next patch>`,
+  tag it, and installed apps update to the fixed build. To stop a broken release spreading before
+  that's ready, mark its GitHub Release as a draft: `latest.json` then 404s and apps stay where they are.
 
 ## Manual test build (no release, no signing needed)
 

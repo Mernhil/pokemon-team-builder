@@ -1,4 +1,6 @@
 import type { Dex } from '@/data/dex';
+import { stripUnsupported } from './capabilities';
+import { getFormat } from './formats';
 import { emptyStats, type FormatRules, type PokemonSet, type Team, type TeamSlots } from './types';
 
 export const uid = (): string =>
@@ -32,7 +34,7 @@ export function createSet(dex: Dex, speciesId: string, format: FormatRules): Pok
     abilityId: firstAbility?.id,
     itemId: undefined,
     nature: 'Hardy',
-    teraType: format.gimmicks.tera ? sp?.types[0] : undefined,
+    teraType: format.capabilities.tera ? sp?.types[0] : undefined,
     moves: ['', '', '', ''],
     level: format.level.fixed ?? format.level.default,
     sp: emptyStats(0),
@@ -69,4 +71,24 @@ export function teamVariations(teams: Record<string, Team>, groupId: string): Te
   return Object.values(teams)
     .filter((t) => t.groupId === groupId)
     .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/**
+ * Removes whatever a team's games can't have (a Tera Type outside Scarlet/Violet) from its active
+ * roster and from every per-format roster kept in `slotsByFormat`, each checked against its own
+ * format. Returns the same object when nothing changes.
+ */
+export function enforceCapabilities(team: Team): Team {
+  const fix = (slots: TeamSlots, formatId: string): TeamSlots => {
+    const caps = getFormat(formatId).capabilities;
+    const next = slots.map((s) => (s ? stripUnsupported(s, caps) : null)) as TeamSlots;
+    return next.every((s, i) => s === slots[i]) ? slots : next;
+  };
+  const slots = fix(team.slots, team.formatId);
+  let slotsByFormat = team.slotsByFormat;
+  if (slotsByFormat) {
+    const entries = Object.entries(slotsByFormat).map(([id, s]) => [id, fix(s, id)] as const);
+    if (entries.some(([id, s]) => s !== slotsByFormat![id])) slotsByFormat = Object.fromEntries(entries);
+  }
+  return slots === team.slots && slotsByFormat === team.slotsByFormat ? team : { ...team, slots, slotsByFormat };
 }

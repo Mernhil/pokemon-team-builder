@@ -68,9 +68,11 @@ export class Dex {
   allSpecies(): Pokemon[] {
     return this.speciesList;
   }
+  /** Held items legal in a regulation, minus Mega Stones for Pokémon that aren't in this game. */
   items(regulationId?: string): Item[] {
     return Object.values(this.data.items)
       .filter((i) => !regulationId || i.legalIn.includes(regulationId))
+      .filter((i) => this.stoneHolderExists(i))
       .sort((a, b) => a.name.localeCompare(b.name));
   }
   /** Moves a species can learn, optionally limited to one regulation (Megas use their base forme). */
@@ -92,12 +94,30 @@ export class Dex {
   abilitiesOf(speciesId: string): { slot: string; ability: Ability }[] {
     const sp = this.species(speciesId);
     if (!sp) return [];
+    // Slot 1, slot 2, Hidden, then Special (event-only) — never the data's key order.
+    const rank = (slot: string) => ['0', '1', 'H', 'S'].indexOf(slot);
     return Object.entries(sp.abilities)
+      .sort(([a], [b]) => rank(a) - rank(b))
       .map(([slot, name]) => ({ slot, ability: this.ability(name)! }))
       .filter((x) => x.ability);
   }
 
   // ---- mega ------------------------------------------------------------------------------
+  /**
+   * Whether a Mega Stone's Pokémon is in this game (always true for other items). The generated
+   * data keeps a stone's species → Mega map only for Megas the game has, so Let's Go lists all 47
+   * Gen 7 stones but 32 with an empty map (no Garchomp in Kanto). An empty map can also mean the
+   * data doesn't define that Mega yet (Legends: Z-A's Meowsticite), so then the holder named by
+   * Showdown's description ("If held by a Meowstic, …") decides.
+   * TODO: have scripts/build-gens.ts emit Showdown's `itemUser` so this needn't read the text.
+   */
+  private stoneHolderExists(item: Item): boolean {
+    if (!item.megaStone) return true;
+    const megas = Object.values(item.megaStone);
+    if (megas.length) return megas.some((m) => !!this.data.species[m]);
+    const holder = item.shortDesc.match(/^If held by (?:an? )?([^,]+?)(?: in [^,]+)?,/)?.[1];
+    return holder === undefined || !!this.data.species[toID(holder)];
+  }
   /** Mega forme unlocked by this species holding this item, if any. */
   megaFor(speciesId: string, itemId?: string): Pokemon | undefined {
     const item = this.item(itemId);

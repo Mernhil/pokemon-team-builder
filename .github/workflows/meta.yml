@@ -1,0 +1,80 @@
+name: Meta data
+
+# Keeps the Meta tab's usage data (src/data/generated/meta.json) current: `npm run meta` reads
+# Smogon's monthly usage statistics for every Champions regulation (scripts/build-meta.ts).
+#
+# - Weekly schedule (Smogon publishes once a month, a few days after it ends; checking weekly picks
+#   new numbers up within a week): when the data changed, opens (or updates) a pull request against
+#   the default branch. Merging it redeploys the web app (Cloudflare builds every push); desktop apps
+#   get it with their next release.
+# - "Run workflow" on the default branch does the same on demand. On any other branch (a manual run,
+#   or a push that changes this workflow or scripts/build-meta.ts) it commits the new data straight
+#   to that branch, which is how changes to the pipeline get tested against real data.
+#
+# Needs Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"
+# for the pull request step. See docs/UPDATING_META.md.
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+  # A change to the pipeline itself runs it right away on that branch (against real data).
+  push:
+    paths:
+      - .github/workflows/meta.yml
+      - scripts/build-meta.ts
+
+permissions:
+  contents: read
+
+concurrency:
+  group: meta-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build usage data from Smogon's stats
+        run: npm run meta
+
+      - name: Typecheck and test with the new data
+        run: npm run typecheck && npm test
+
+      - name: Propose the update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REF: ${{ github.ref_name }}
+        run: |
+          if git diff --quiet -- src/data/generated/meta.json; then
+            echo "No new usage data."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          msg="data: update Meta tab usage data from Smogon's stats"
+          if [ "$REF" != "$DEFAULT_BRANCH" ]; then
+            git commit -m "$msg" -- src/data/generated/meta.json
+            git push origin "HEAD:$REF"
+            exit 0
+          fi
+          branch="meta/update"
+          git switch -C "$branch"
+          git commit -m "$msg" -- src/data/generated/meta.json
+          git push --force origin "$branch"
+          body="Automated update of \`src/data/generated/meta.json\` by \`npm run meta\` (Smogon usage statistics). Typecheck and tests passed with the new data. Merging redeploys the web app."
+          gh pr view "$branch" --json number >/dev/null 2>&1 \
+            || gh pr create --base "$DEFAULT_BRANCH" --head "$branch" --title "Meta data update ($(date -u +%Y-%m-%d))" --body "$body"

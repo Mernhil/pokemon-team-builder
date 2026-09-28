@@ -6,7 +6,8 @@
  * same way as teams (see store/matchStore.ts): plain objects, sanitized on load.
  */
 
-import { currentRegulation, regulationInfo } from './formats';
+import { datasetCapabilities, type Capabilities } from './capabilities';
+import { currentRegulation, formatForRegulation, regulationInfo } from './formats';
 import { uid } from './team';
 import type { TeraType } from './types';
 
@@ -72,6 +73,22 @@ export function createMatch(date = new Date().toISOString().slice(0, 10)): Match
     createdAt: now,
     updatedAt: now,
   };
+}
+
+/** Battle gimmicks of a match's regulation; none when it has no (known) regulation. */
+export const matchCapabilities = (regulationId?: string): Capabilities =>
+  formatForRegulation(regulationId)?.capabilities ?? datasetCapabilities('');
+
+/**
+ * Drops what the match's game can't have (a revealed Tera Type outside Scarlet/Violet). Returns the
+ * same object when nothing changes.
+ */
+export function enforceMatchCapabilities(m: Match): Match {
+  if (matchCapabilities(m.regulationId).tera) return m;
+  const strip = (mons: LoggedMon[]) => (mons.some((x) => x.teraType !== undefined) ? mons.map(({ teraType: _dropped, ...rest }) => rest) : mons);
+  const opponentTeam = strip(m.opponentTeam);
+  const myTeam = m.myTeam && strip(m.myTeam);
+  return opponentTeam === m.opponentTeam && myTeam === m.myTeam ? m : { ...m, opponentTeam, myTeam };
 }
 
 /** The regulation live on a given date, for auto-suggesting (and overriding) a match's regulation. */
@@ -169,8 +186,8 @@ function csvCell(v: string): string {
   return /[",\r\n]/.test(escaped) ? `"${escaped.replace(/"/g, '""')}"` : escaped;
 }
 
-const monLabel = (m: LoggedMon, speciesName: (id: string) => string) =>
-  [speciesName(m.speciesId), m.itemId, m.abilityId, m.teraType, ...(m.moves ?? [])].filter(Boolean).join(' | ');
+const monLabel = (m: LoggedMon, speciesName: (id: string) => string, tera: boolean) =>
+  [speciesName(m.speciesId), m.itemId, m.abilityId, tera ? m.teraType : undefined, ...(m.moves ?? [])].filter(Boolean).join(' | ');
 
 export function matchesToCSV(matches: Match[], speciesName: (id: string) => string, teamName: (id: string) => string): string {
   const header = [
@@ -194,7 +211,7 @@ export function matchesToCSV(matches: Match[], speciesName: (id: string) => stri
     m.myArchetype ?? '',
     m.myTeamId ? teamName(m.myTeamId) : (m.myTeam ?? []).map((x) => speciesName(x.speciesId)).join(' / '),
     m.opponentArchetype ?? '',
-    m.opponentTeam.map((x) => monLabel(x, speciesName)).join(' / '),
+    m.opponentTeam.map((x) => monLabel(x, speciesName, matchCapabilities(m.regulationId).tera)).join(' / '),
     m.notes ?? '',
   ]);
   return [header, ...rows].map((r) => r.map((c) => csvCell(String(c))).join(',')).join('\n');

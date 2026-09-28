@@ -1,11 +1,12 @@
 {
   "name": "pokemon-team-builder",
   "private": true,
-  "version": "0.6.2",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/check-bundle.mjs",
+    "size": "node scripts/check-bundle.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "data": "tsx scripts/build-data.ts",
@@ -15,6 +16,8 @@
     "sprites": "tsx scripts/build-sprites.ts",
     "sprites:items": "tsx scripts/build-items.ts",
     "icons": "node scripts/build-icons.mjs",
+    "splash": "node scripts/build-splash.mjs",
+    "meta": "tsx scripts/build-meta.ts",
     "test": "vitest run",
     "typecheck": "tsc -b",
     "build:single": "tsc -b && vite build --mode singlefile",
@@ -31,6 +34,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@smogon/calc": "^0.12.0",
     "@tauri-apps/plugin-process": "^2.4.0",
@@ -39,6 +43,7 @@
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

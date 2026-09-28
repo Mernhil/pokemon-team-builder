@@ -97,7 +97,7 @@ function PanelBody({
   const filled = team.slots.filter(Boolean).length;
   return (
     <div className="space-y-3">
-      <p className="text-[11px] text-muted">
+      <p className="text-xs text-muted">
         {team.name} · {format.shortName} · {filled}/{format.teamSize}
       </p>
       <TeamSlots team={team} dex={dex} format={format} issues={issues} activeSlot={activeSlot} onActiveSlot={setActiveSlot} />
