@@ -16,7 +16,8 @@ const title = head.match(/<title>[\s\S]*?<\/title>/)[0];
 const rest = head
   .replace(title, '')
   .replace(/<meta[^>]*>\s*/g, '')
-  .replace(/<link rel="(icon|apple-touch-icon)"[^>]*>\s*/g, '')
+  .replace(/<link rel="(icon|apple-touch-icon|apple-touch-startup-image)"[^>]*>\s*/g, '')
+  .replace(/<!--[\s\S]*?-->\s*/g, '')
   .trim();
 writeFileSync('dist/artifact.html', `${title}\n${rest}\n${body.trim()}\n`);
 mkdirSync('dist/data', { recursive: true });

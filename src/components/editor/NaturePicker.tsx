@@ -48,7 +48,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
-        className="flex h-9 w-full items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 text-left text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/25"
+        className="flex h-9 w-full items-center gap-1.5 rounded-lg border border-border-strong/60 bg-surface-2 px-2.5 pointer-coarse:h-11 text-left text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/25"
       >
         <span className="min-w-0 flex-1 truncate">
           <b className="font-semibold">{current?.name ?? value}</b>{' '}

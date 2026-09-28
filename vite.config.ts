@@ -43,8 +43,8 @@ export default defineConfig(({ mode }) => ({
         scope: './',
         display: 'standalone',
         orientation: 'any',
-        background_color: '#0e1117',
-        theme_color: '#0e1117',
+        background_color: '#15171d',
+        theme_color: '#1c1f26',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -53,6 +53,9 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,json}'],
+        // iOS launch screens are fetched once when the app is added to the home screen; no need to
+        // precache ~0.8 MB of them for everyone.
+        globIgnores: ['splash/**'],
         // The sprite atlases are up to ~4 MB each.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,

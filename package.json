@@ -15,6 +15,7 @@
     "sprites": "tsx scripts/build-sprites.ts",
     "sprites:items": "tsx scripts/build-items.ts",
     "icons": "node scripts/build-icons.mjs",
+    "splash": "node scripts/build-splash.mjs",
     "test": "vitest run",
     "typecheck": "tsc -b",
     "build:single": "tsc -b && vite build --mode singlefile",

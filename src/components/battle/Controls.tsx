@@ -32,7 +32,7 @@ export function Toggle({ on, onChange, children, title, disabled }: { on: boolea
       disabled={disabled}
       onClick={() => onChange(!on)}
       className={cn(
-        'h-7 rounded-md border px-2 text-xs font-medium transition-colors disabled:opacity-40',
+        'h-7 rounded-md border px-2 text-xs font-medium transition-colors disabled:opacity-40 pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm',
         on ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:border-muted/60 hover:text-fg',
       )}
     >
@@ -67,7 +67,7 @@ export function Segmented<T extends string>({
             aria-checked={value === o.id}
             onClick={() => onChange(o.id)}
             className={cn(
-              'h-7 rounded-md px-2 text-xs font-medium',
+              'h-7 rounded-md px-2 text-xs font-medium pointer-coarse:h-11 pointer-coarse:px-3 pointer-coarse:text-sm',
               value === o.id ? 'bg-fg text-bg' : 'text-muted hover:bg-surface-2 hover:text-fg',
             )}
           >
@@ -188,7 +188,7 @@ export function SideControls({
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-xs">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Status</span>
-          <Select className="h-7 w-auto py-0 text-xs" value={cond.status} onChange={(e) => onChange({ status: e.target.value as SideConditions['status'] })}>
+          <Select className="h-7 w-auto py-0 text-xs pointer-coarse:h-10" value={cond.status} onChange={(e) => onChange({ status: e.target.value as SideConditions['status'] })}>
             {STATUSES.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.label}
@@ -237,7 +237,7 @@ export function BoostControls({ boosts, onChange }: { boosts: SideConditions['bo
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Stat stages</span>
         <select
           aria-label="Stage presets"
-          className="h-6 rounded border border-border bg-surface-2 px-1 text-xs text-muted outline-none"
+          className="h-6 rounded border border-border bg-surface-2 px-1 text-xs text-muted outline-none pointer-coarse:h-10"
           value=""
           onChange={(e) => {
             const p = BOOST_PRESETS[Number(e.target.value)];
@@ -254,7 +254,8 @@ export function BoostControls({ boosts, onChange }: { boosts: SideConditions['bo
           ))}
         </select>
       </div>
-      <div className="grid grid-cols-5 gap-1">
+      {/* Touch screens: 3 per row so each −/+ can be a full-size target. */}
+      <div className="grid grid-cols-5 gap-1 pointer-coarse:grid-cols-3">
         {BOOST_STATS.map((s) => {
           const v = boosts[s];
           return (
@@ -263,14 +264,14 @@ export function BoostControls({ boosts, onChange }: { boosts: SideConditions['bo
                 {STAT_LABELS[s]}
               </span>
               <div className="flex items-center">
-                <button type="button" aria-label={`Lower ${STAT_LABELS[s]} stage`} disabled={v <= -6} onClick={() => set(s, v - 1)} className="rounded p-0.5 text-muted hover:text-fg disabled:opacity-30">
-                  <Minus size={11} />
+                <button type="button" aria-label={`Lower ${STAT_LABELS[s]} stage`} disabled={v <= -6} onClick={() => set(s, v - 1)} className="rounded p-0.5 text-muted hover:text-fg disabled:opacity-30 pointer-coarse:flex pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center">
+                  <Minus size={11} aria-hidden />
                 </button>
                 <span className={cn('w-6 text-center font-mono text-xs font-bold tabular-nums', v > 0 && 'text-good', v < 0 && 'text-bad')}>
                   {v > 0 ? `+${v}` : v}
                 </span>
-                <button type="button" aria-label={`Raise ${STAT_LABELS[s]} stage`} disabled={v >= 6} onClick={() => set(s, v + 1)} className="rounded p-0.5 text-muted hover:text-fg disabled:opacity-30">
-                  <Plus size={11} />
+                <button type="button" aria-label={`Raise ${STAT_LABELS[s]} stage`} disabled={v >= 6} onClick={() => set(s, v + 1)} className="rounded p-0.5 text-muted hover:text-fg disabled:opacity-30 pointer-coarse:flex pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center">
+                  <Plus size={11} aria-hidden />
                 </button>
               </div>
             </div>

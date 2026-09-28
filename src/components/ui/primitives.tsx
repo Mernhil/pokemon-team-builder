@@ -220,7 +220,7 @@ export function Tabs<T extends string>({
           onClick={() => onChange(t.id)}
           className={cn(
             'flex flex-1 items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap transition-colors sm:flex-none',
-            size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-sm',
+            size === 'sm' ? 'h-7 px-2.5 text-xs pointer-coarse:h-10' : 'h-8 px-3 text-sm pointer-coarse:h-11',
             value === t.id ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg',
           )}
         >

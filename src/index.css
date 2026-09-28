@@ -77,7 +77,77 @@
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
+}
+body {
+  /* Landscape iPhones: keep content clear of the notch and rounded corners. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Controls act like app controls on touch screens: no text selection or long-press callout when a
+   finger rests on them, and no 300ms double-tap delay. Text fields stay selectable. */
+button,
+[role='button'],
+[role='tab'],
+[role='option'],
+[role='menuitem'],
+summary,
+nav,
+label {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+img,
+[role='img'] {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+@media (pointer: coarse) {
+  /* iOS zooms into any field under 16px when it's focused; never let that happen. */
+  input:not([type='checkbox'], [type='radio'], [type='range']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+  /* Small icon buttons keep their look but get a 44×44pt touch area (.hit). */
+  /* Anchor the enlarged area, unless the element is already positioned (e.g. an absolute clear button). */
+  .hit:not(.absolute, .fixed, .sticky) {
+    position: relative;
+  }
+  .hit::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Installed app: no rubber-band bounce of the whole page (inner lists still scroll). */
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Under the full-screen status bar (black-translucent, white text) the light theme paints a dark
+   band so the clock and battery stay readable. Zero height outside the installed app. */
+.status-band {
+  height: env(safe-area-inset-top);
+  background: var(--color-surface);
+}
+:root:not(.dark) .status-band {
+  background: #1f2128;
 }
 body {
   background: var(--color-bg);
@@ -111,6 +181,22 @@ input[type='range'].stat-range::-moz-range-thumb {
   border-radius: 50%;
   background: var(--color-surface);
   border: 3px solid var(--fill);
+}
+/* Fingers need a bigger thumb (and a taller hit area) than a mouse pointer. */
+@media (pointer: coarse) {
+  input[type='range'].stat-range {
+    height: 8px;
+    padding-block: 12px;
+    background-clip: content-box;
+  }
+  input[type='range'].stat-range::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+  }
+  input[type='range'].stat-range::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+  }
 }
 /* Dragging a slider past its ends must not start selecting the text around it. */
 .slider-dragging {

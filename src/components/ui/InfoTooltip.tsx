@@ -36,7 +36,7 @@ export function InfoTooltip({
   if (!title && !summary && !effects?.length && !interactions?.length) return <>{children}</>;
 
   return (
-    <span {...triggerProps} className={cn('inline-flex cursor-help rounded', className)}>
+    <span {...triggerProps} className={cn('inline-flex cursor-help rounded', label && 'hit', className)}>
       {children}
       {open &&
         pos &&

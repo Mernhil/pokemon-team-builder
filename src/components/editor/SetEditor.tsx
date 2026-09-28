@@ -3,7 +3,7 @@ import { Info, Sparkles, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
 import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
-import { spreadKey } from '@/domain/stats';
+import { spreadKey, sumStats } from '@/domain/stats';
 import { createSet } from '@/domain/team';
 import type { FormatRules, PokemonSet, TeraType } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
@@ -14,7 +14,8 @@ import { InfoTooltip } from '../ui/InfoTooltip';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
+import { Button, Chip, Disclosure, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
+import { useIsPhone } from '../ui/useMedia';
 import { typeGradient } from '../ui/styles';
 import { AdvancedDetails } from './AdvancedDetails';
 import { NaturePicker } from './NaturePicker';
@@ -41,6 +42,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
   const mech = formatMechanics(format);
   const champions = format.statSystem.kind === 'champions-sp';
 
+  const isPhone = useIsPhone();
   const itemPicker = useItemPicker(dex, format, set?.speciesId);
   const movePicker = useMovePicker(dex, format, set);
 
@@ -213,10 +215,10 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
             <Field label="Nickname">
               <Input value={set.nickname ?? ''} placeholder={species.name} maxLength={12} onChange={(e) => updateSet(slot, { nickname: e.target.value || undefined })} />
             </Field>
+            {/* Champions' level is fixed at 50 (shown with the stats), so it gets no field. */}
+            {!format.level.fixed && (
             <Field label="Level">
-              {format.level.fixed ? (
-                <Input value={format.level.fixed} disabled readOnly title="Champions: fixed Lv 50, 31 IVs" />
-              ) : (
+              {(
                 <Input
                   type="number"
                   inputMode="numeric"
@@ -227,6 +229,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
                 />
               )}
             </Field>
+            )}
           </div>
         </div>
         {(ability || item) && (
@@ -276,7 +279,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
                   {...comboProps(movePicker)}
                   value={m}
                   allowClear
-                  placeholder="Search moves…"
+                  placeholder="Add a move"
                   invalid={!!m && badMove(m)}
                   onChange={(id) => {
                     movePicker.remember(id);
@@ -294,27 +297,39 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
         </div>
       </Panel>
 
-      <Panel
-        title={{ 'champions-sp': 'Stat Point Calculator', 'modern-ev': 'EVs & IVs', 'gb-statexp': 'Stat Exp & DVs', 'lgpe-av': 'AVs, IVs & Friendship', 'pla-effort': 'Effort Levels' }[format.statSystem.kind]}
-        actions={
-          <span className="text-xs text-muted">
-            {champions ? 'Lv 50 · 31 IVs · 1 SP = +1 stat' : `Lv ${set.level} · ${format.game ? format.shortName : `Gen ${format.generation}`} stat formula`}
-          </span>
-        }
-      >
-        <SlotStatDistributor
-          set={set}
-          species={species}
-          mega={mega}
-          format={format}
-          dex={dex}
-          onSpread={(stat, v) => setSpread(slot, spreadKey(format.statSystem), stat, v)}
-          onReplaceSpread={(spread) => updateSet(slot, { [spreadKey(format.statSystem)]: spread })}
-          onIV={format.fixedIVs ? undefined : (stat, v) => setSpread(slot, 'ivs', stat, v)}
-          onNature={(nature) => updateSet(slot, { nature })}
-          onFriendship={format.statSystem.kind === 'lgpe-av' ? (friendship) => updateSet(slot, { friendship }) : undefined}
-        />
-      </Panel>
+      {/* Stats: open on wider screens; on phones a one-line summary that expands (progressive disclosure). */}
+      {(() => {
+        const title = { 'champions-sp': 'Stat Point Calculator', 'modern-ev': 'EVs & IVs', 'gb-statexp': 'Stat Exp & DVs', 'lgpe-av': 'AVs, IVs & Friendship', 'pla-effort': 'Effort Levels' }[format.statSystem.kind];
+        const note = champions ? 'Lv 50 · 31 IVs · 1 SP = +1 stat' : `Lv ${set.level} · ${format.game ? format.shortName : `Gen ${format.generation}`} stat formula`;
+        const sys = format.statSystem;
+        const cap = sys.kind === 'champions-sp' || sys.kind === 'modern-ev' ? sys.totalCap : 0;
+        const used = sumStats(sys.kind === 'champions-sp' ? set.sp : set.evs);
+        const summary = [cap ? `${used}/${cap} ${champions ? 'SP' : 'EVs'}` : null, mech.natures ? set.nature : null].filter(Boolean).join(' · ');
+        const body = (
+          <SlotStatDistributor
+            set={set}
+            species={species}
+            mega={mega}
+            format={format}
+            dex={dex}
+            onSpread={(stat, v) => setSpread(slot, spreadKey(format.statSystem), stat, v)}
+            onReplaceSpread={(spread) => updateSet(slot, { [spreadKey(format.statSystem)]: spread })}
+            onIV={format.fixedIVs ? undefined : (stat, v) => setSpread(slot, 'ivs', stat, v)}
+            onNature={(nature) => updateSet(slot, { nature })}
+            onFriendship={format.statSystem.kind === 'lgpe-av' ? (friendship) => updateSet(slot, { friendship }) : undefined}
+          />
+        );
+        return isPhone ? (
+          <Disclosure title={title} summary={summary}>
+            <p className="mb-2 text-xs text-muted">{note}</p>
+            {body}
+          </Disclosure>
+        ) : (
+          <Panel title={title} actions={<span className="text-xs text-muted">{note}</span>}>
+            {body}
+          </Panel>
+        );
+      })()}
 
       <AdvancedDetails set={set} species={species} dex={dex} format={format} />
     </div>

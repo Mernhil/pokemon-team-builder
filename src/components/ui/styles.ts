@@ -16,10 +16,11 @@ export const buttonClass = (variant: ButtonVariant = 'default', size: ButtonSize
   cn(
     'inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg font-semibold whitespace-nowrap transition-colors select-none',
     'disabled:cursor-not-allowed disabled:opacity-50 active:translate-y-px',
-    size === 'sm' && 'h-8 px-2.5 text-xs',
-    size === 'md' && 'h-9 px-3 text-sm',
-    size === 'icon' && 'h-9 w-9 text-sm',
-    size === 'icon-sm' && 'h-8 w-8 text-sm',
+    // Touch screens get 44pt targets (Apple HIG); mouse users keep the denser sizes.
+    size === 'sm' && 'h-8 px-2.5 text-xs pointer-coarse:h-11 pointer-coarse:text-sm',
+    size === 'md' && 'h-9 px-3 text-sm pointer-coarse:h-11',
+    size === 'icon' && 'h-9 w-9 text-sm pointer-coarse:h-11 pointer-coarse:w-11',
+    size === 'icon-sm' && 'hit h-8 w-8 text-sm',
     variant === 'default' && 'border border-border bg-surface text-fg hover:bg-surface-2',
     variant === 'primary' && 'bg-accent text-accent-fg hover:brightness-110',
     variant === 'ghost' && 'text-muted hover:bg-surface-2 hover:text-fg',
@@ -30,7 +31,7 @@ export const buttonClass = (variant: ButtonVariant = 'default', size: ButtonSize
 /** Shared look of text inputs, selects and comboboxes: 16px on phones (no iOS zoom), 14px from sm up. */
 export const controlClass = (invalid?: boolean, className?: string) =>
   cn(
-    'h-9 w-full rounded-lg border bg-surface-2 px-2.5 text-base text-fg outline-none placeholder:text-muted sm:text-sm',
+    'h-9 w-full rounded-lg border bg-surface-2 px-2.5 text-sm text-fg outline-none placeholder:text-muted pointer-coarse:h-11',
     'focus:border-accent focus:ring-2 focus:ring-accent/25 disabled:opacity-60',
     invalid ? 'border-bad' : 'border-border-strong/60',
     className,

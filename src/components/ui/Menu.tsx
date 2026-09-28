@@ -51,7 +51,7 @@ export function MenuItem({
       onSelect={onSelect}
       aria-current={current ? 'page' : undefined}
       className={cn(
-        'flex min-h-10 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm outline-none select-none',
+        'flex min-h-10 pointer-coarse:min-h-12 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-sm outline-none select-none',
         'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-surface-2',
         current && 'font-semibold text-accent',
         tone === 'danger' && 'text-bad',

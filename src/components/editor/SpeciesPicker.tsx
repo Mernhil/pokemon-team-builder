@@ -102,7 +102,7 @@ export function SpeciesPicker({ dex, format, value, onChange, placeholder, class
               type="button"
               onClick={() => setGen(gen === g.gen ? null : g.gen)}
               aria-pressed={gen === g.gen}
-              className={cn('rounded transition-opacity', gen !== null && gen !== g.gen && 'opacity-35 hover:opacity-80')}
+              className={cn('hit rounded transition-opacity', gen !== null && gen !== g.gen && 'opacity-35 hover:opacity-80')}
               title={`${g.region}: ${counts.get(g.gen)} Pokémon`}
             >
               <GenBadge gen={g.gen} size="xs" />

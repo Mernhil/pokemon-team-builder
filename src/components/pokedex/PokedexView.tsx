@@ -38,7 +38,7 @@ export function PokedexView({ format }: { format: FormatRules }) {
             onClick={() => setBook(b.id)}
             title={`${b.region} · ${b.games}`}
             className={cn(
-              'flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2 transition-colors',
+              'flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2 transition-colors pointer-coarse:h-11',
               b.id === book.id ? 'bg-accent/15 text-fg ring-1 ring-accent' : 'text-muted hover:bg-surface-2 hover:text-fg',
               ((b.game && b.gen === 7) || b.id === 'gen1') && 'sm:ml-1',
             )}
@@ -100,7 +100,7 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[320px_minmax(0,1fr)]">
       <aside className={cn('rounded-xl border border-border bg-surface lg:sticky lg:top-[72px] lg:self-start', current && 'hidden lg:block')}>
         <div className="space-y-2 border-b border-border p-3">
-          <label className="flex h-9 items-center gap-2 rounded-lg border border-border-strong/60 bg-surface-2 px-2.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
+          <label className="flex h-9 items-center gap-2 rounded-lg border border-border-strong/60 pointer-coarse:h-11 bg-surface-2 px-2.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
             <Search size={15} className="text-muted" aria-hidden />
             <input
               value={query}
@@ -148,7 +148,7 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
               aria-current={s.id === current?.id}
               onClick={() => select(book.id, s.id)}
               className={cn(
-                'flex min-h-10 w-full items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-sm',
+                'flex min-h-10 w-full items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-sm pointer-coarse:min-h-12',
                 s.id === current?.id ? 'bg-accent/15 text-fg' : 'hover:bg-surface-2',
               )}
             >

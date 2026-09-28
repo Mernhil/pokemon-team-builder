@@ -37,7 +37,7 @@ export function MoveTooltip({ move, children, className }: { move: Move | undefi
   const CategoryIcon = CATEGORY_ICON[move.category];
 
   return (
-    <span {...triggerProps} className={cn('inline-flex cursor-help rounded', className)}>
+    <span {...triggerProps} className={cn('hit inline-flex cursor-help rounded', className)}>
       {children}
       {open &&
         pos &&

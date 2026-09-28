@@ -9,6 +9,7 @@ import {
   Eraser,
   FolderOpen,
   MoreHorizontal,
+  Plus,
   Save,
   Settings,
   Swords,
@@ -103,6 +104,8 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     document.documentElement.style.colorScheme = theme;
+    // Browser UI (Android address bar, iOS Safari tab bar) matches the header.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1c1f26' : '#fcfbf8');
   }, [theme]);
 
   const dex = dexState.status === 'ready' ? dexState.dex : undefined;
@@ -117,7 +120,7 @@ export default function App() {
   else content = <Builder team={team} format={format} dex={dex} />;
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex min-h-dvh flex-col">
       <a href="#main" className={buttonClass('primary', 'md', 'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[70]')}>
         Skip to content
       </a>
@@ -249,7 +252,7 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
       value={team.name}
       onChange={(e) => updateTeam(team.id, { name: e.target.value })}
       aria-label="Team name"
-      className="h-9 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 text-base font-semibold outline-none hover:border-border focus:border-accent xl:max-w-xs"
+      className="h-9 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 text-base font-semibold outline-none hover:border-border focus:border-accent pointer-coarse:h-11 xl:max-w-xs"
     />
   );
   const formatSelect = (
@@ -277,7 +280,8 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
   );
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-surface/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
+      <div className="status-band" aria-hidden />
       <div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 sm:px-4">
         <span className="hidden items-center gap-2 md:flex">
           <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden>
@@ -350,14 +354,31 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
  */
 function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: Dex }) {
   const activeSlot = useTeamStore((s) => s.activeSlot);
+  const setActiveSlot = useTeamStore((s) => s.setActiveSlot);
   const issues = useMemo(() => validateTeam(team, format, dex), [team, format, dex]);
   const filled = team.slots.filter(Boolean).length;
+  const firstEmpty = team.slots.findIndex((s) => s === null);
 
   return (
     <div className="grid content-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_300px]">
       <div className="lg:col-span-2 xl:col-span-3">
         <RegulationBanner team={team} format={format} />
       </div>
+
+      {/* Phones: one tap to the next empty slot (its species search opens there). */}
+      {firstEmpty >= 0 && team.slots[activeSlot] && (
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSlot(firstEmpty);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-30 flex size-14 items-center justify-center rounded-2xl bg-accent text-accent-fg shadow-xl sm:hidden"
+          aria-label={`Add a Pokémon (slot ${firstEmpty + 1})`}
+        >
+          <Plus size={26} aria-hidden />
+        </button>
+      )}
 
       <aside aria-label="Team" className="hidden lg:sticky lg:top-[72px] lg:block lg:self-start">
         <Panel
