@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { FORMATS, getFormat } from '@/domain/formats';
+import { getFormat } from '@/domain/formats';
 import { teamVariations } from '@/domain/team';
 import type { SpriteSetId, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
@@ -136,7 +136,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   const teams = useTeamStore((s) => s.teams);
   const order = useTeamStore((s) => s.order);
   const activeTeamId = useTeamStore((s) => s.activeTeamId);
-  const { selectTeam, duplicateTeam, deleteTeam, newTeam, updateTeam, addVariation } = useTeamStore.getState();
+  const { selectTeam, duplicateTeam, deleteTeam, updateTeam, addVariation } = useTeamStore.getState();
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const select = (id: string) => {
@@ -146,21 +146,6 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Saved teams" description="Stored in this browser. Use JSON backup to move them between devices." wide>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {FORMATS.filter((f) => f.available).map((f) => (
-          <Button
-            key={f.id}
-            size="sm"
-            variant="primary"
-            onClick={() => {
-              newTeam(f.id);
-              onOpenChange(false);
-            }}
-          >
-            <Plus size={13} /> New {f.shortName} team
-          </Button>
-        ))}
-      </div>
       <ul className="space-y-2">
         {order.map((id) => {
           const t = teams[id];
