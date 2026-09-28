@@ -334,7 +334,8 @@ function SheetCombobox({ value, onChange, placeholder, allowClear, className, in
             'flex h-11 w-full items-center gap-2 rounded-lg border bg-surface-2 px-2.5 pr-9 text-left text-base',
             invalid ? 'border-bad' : 'border-border-strong/60',
           )}
-          aria-label={selected ? `${label}: ${selected.label}` : label}
+          // The accessible name includes the visible text (WCAG 2.5.3 label in name).
+          aria-label={selected ? `${label}: ${selected.label}` : placeholder && placeholder !== label ? `${label}: ${placeholder}` : label}
         >
           {icon && value && <span className="shrink-0">{icon}</span>}
           <span className={cn('min-w-0 flex-1 truncate', !selected && 'text-muted')}>{selected?.label ?? placeholder ?? 'Choose…'}</span>
