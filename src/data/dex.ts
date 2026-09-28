@@ -94,7 +94,10 @@ export class Dex {
   abilitiesOf(speciesId: string): { slot: string; ability: Ability }[] {
     const sp = this.species(speciesId);
     if (!sp) return [];
+    // Slot 1, slot 2, Hidden, then Special (event-only) — never the data's key order.
+    const rank = (slot: string) => ['0', '1', 'H', 'S'].indexOf(slot);
     return Object.entries(sp.abilities)
+      .sort(([a], [b]) => rank(a) - rank(b))
       .map(([slot, name]) => ({ slot, ability: this.ability(name)! }))
       .filter((x) => x.ability);
   }
