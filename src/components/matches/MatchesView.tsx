@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, Copy, Crosshair, Plus } from 'lucide-react';
+import { Check, Copy, Crosshair, ListChecks, Plus, Swords } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { regulationInfo } from '@/domain/formats';
 import { matchesToCSV, type Match } from '@/domain/matches';
@@ -11,7 +11,7 @@ import { useTeamStore } from '@/store/teamStore';
 import { MatchForm } from './MatchForm';
 import { MatchStats } from './MatchStats';
 import { MatchupBuilder } from './MatchupBuilder';
-import { Button, Select } from '../ui/primitives';
+import { Button, EmptyState, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
 export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) {
@@ -74,38 +74,24 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 rounded-lg bg-surface-2 p-1 text-sm" role="tablist" aria-label="Matches">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'log'}
-          onClick={() => setTab('log')}
-          className={cn('flex-1 rounded-md px-3 py-1.5 font-semibold sm:flex-none', tab === 'log' ? 'bg-surface shadow-sm' : 'text-muted hover:text-fg')}
-        >
-          Match log
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'builder'}
-          onClick={() => setTab('builder')}
-          className={cn('flex-1 rounded-md px-3 py-1.5 font-semibold sm:flex-none', tab === 'builder' ? 'bg-surface shadow-sm' : 'text-muted hover:text-fg')}
-        >
-          Team Builder
-        </button>
-      </div>
+      <Tabs
+        label="Matches"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: 'log', label: 'Match log', icon: ListChecks },
+          { id: 'builder', label: 'Your team vs. theirs', icon: Swords },
+        ]}
+        className="w-full sm:w-fit"
+      />
 
       {tab === 'builder' ? (
         <MatchupBuilder defaultFormatId={format.id} />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Match log</span>
-            <label className="flex items-center gap-1.5 text-xs">
-              <input type="checkbox" checked={lossOnly} onChange={(e) => setLossOnly(e.target.checked)} className="accent-[var(--color-accent)]" />
-              Losses only
-            </label>
-            <Select aria-label="Filter by regulation" className="h-8 w-auto text-xs" value={regFilter} onChange={(e) => setRegFilter(e.target.value)}>
+          {matches.length > 0 && (
+          <Panel bodyClassName="flex flex-wrap items-center gap-2 p-3">
+            <Select aria-label="Filter by regulation" className="w-full sm:w-auto" value={regFilter} onChange={(e) => setRegFilter(e.target.value)}>
               <option value="">All regulations</option>
               {regsUsed.map((id) => (
                 <option key={id} value={id}>
@@ -113,7 +99,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
                 </option>
               ))}
             </Select>
-            <Select aria-label="Filter by my team" className="h-8 w-auto text-xs" value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}>
+            <Select aria-label="Filter by my team" className="w-full sm:w-auto" value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}>
               <option value="">All teams</option>
               {teamOrder.map((id) => (
                 <option key={id} value={id}>
@@ -121,49 +107,66 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
                 </option>
               ))}
             </Select>
+            <label className="flex min-h-9 items-center gap-2 text-sm">
+              <input type="checkbox" checked={lossOnly} onChange={(e) => setLossOnly(e.target.checked)} className="size-4 accent-[var(--color-accent)]" />
+              Losses only
+            </label>
             <div className="ml-auto flex gap-1.5">
               <Button size="sm" onClick={exportCsv} disabled={!filtered.length}>
-                {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied CSV' : 'Copy CSV'}
+                {copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />} {copied ? 'Copied CSV' : 'Copy CSV'}
               </Button>
               <Button size="sm" variant="primary" onClick={newMatch}>
-                <Plus size={13} /> Log match
+                <Plus size={14} aria-hidden /> Log match
               </Button>
             </div>
-          </div>
+          </Panel>
+          )}
 
-          <div className="grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <aside className="scrollbar-thin max-h-[70vh] space-y-1 overflow-y-auto rounded-xl border border-border bg-surface p-1.5">
-              {filtered.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setSelected(m.id)}
-                  className={cn('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs', m.id === selected ? 'bg-accent/15' : 'hover:bg-surface-2')}
-                >
-                  <span className={cn('h-2 w-2 shrink-0 rounded-full', m.result === 'win' ? 'bg-good' : 'bg-bad')} />
-                  <span className="font-mono text-muted">{m.date}</span>
-                  <span className="min-w-0 flex-1 truncate">{m.eventName || (m.opponentTeam[0] ? (dex.species(m.opponentTeam[0].speciesId)?.name ?? '') : 'Untitled')}</span>
-                  {m.opponentTeam.length > 0 && (
-                    <Crosshair
-                      size={13}
-                      className="shrink-0 text-muted hover:text-accent"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        sendThreatToCalc(m);
-                      }}
-                      aria-label="Send first opponent Pokémon to the damage calculator"
-                    />
-                  )}
-                </button>
-              ))}
-              {!filtered.length && <p className="p-4 text-center text-xs text-muted">No matches logged yet.</p>}
-            </aside>
+          {matches.length === 0 ? (
+            <EmptyState
+              icon={Swords}
+              title="No matches logged yet"
+              action={
+                <Button variant="primary" onClick={newMatch}>
+                  <Plus size={15} aria-hidden /> Log your first match
+                </Button>
+              }
+            >
+              Record wins, losses and what your opponents brought. Win rates and the most common opponents appear here once you have a few.
+            </EmptyState>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-[300px_minmax(0,1fr)]">
+              <Panel as="aside" bodyClassName="scrollbar-thin max-h-[70dvh] space-y-0.5 overflow-y-auto p-1.5">
+                <ul aria-label="Logged matches">
+                  {filtered.map((m) => (
+                    <li key={m.id} className={cn('flex items-center rounded-lg', m.id === selected ? 'bg-accent/15' : 'hover:bg-surface-2')}>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(m.id)}
+                        aria-current={m.id === selected}
+                        className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 text-left text-sm"
+                      >
+                        <span className={cn('shrink-0 text-xs font-bold', m.result === 'win' ? 'text-good' : 'text-bad')}>{m.result === 'win' ? 'W' : 'L'}</span>
+                        <span className="font-mono text-xs text-muted">{m.date}</span>
+                        <span className="min-w-0 flex-1 truncate">{m.eventName || (m.opponentTeam[0] ? (dex.species(m.opponentTeam[0].speciesId)?.name ?? '') : 'Untitled')}</span>
+                      </button>
+                      {m.opponentTeam.length > 0 && (
+                        <Button size="icon-sm" variant="ghost" aria-label="Send their first Pokémon to the damage calculator" title="Send to damage calculator" onClick={() => sendThreatToCalc(m)}>
+                          <Crosshair size={15} aria-hidden />
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {!filtered.length && <p className="p-4 text-center text-sm text-muted">No matches fit these filters.</p>}
+              </Panel>
 
-            <div className="space-y-3">
-              {active ? <MatchForm dex={dex} format={format} match={active} /> : <p className="p-10 text-center text-sm text-muted">Log your first match to get started.</p>}
-              <MatchStats dex={dex} matches={matches} />
+              <div className="min-w-0 space-y-3">
+                {active ? <MatchForm dex={dex} format={format} match={active} /> : <EmptyState title="Pick a match on the left to see or edit it." />}
+                <MatchStats dex={dex} matches={matches} />
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>

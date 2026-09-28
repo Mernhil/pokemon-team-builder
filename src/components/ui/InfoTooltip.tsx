@@ -79,9 +79,9 @@ export function InfoTooltip({
             style={{ top: pos.top, left: pos.left, width: WIDTH, transform: pos.above ? 'translateY(-100%)' : undefined }}
           >
             {title && <div className="mb-1 text-sm font-semibold text-fg">{title}</div>}
-            {summary && <p className="mb-1.5 text-[11px] italic text-muted">{summary}</p>}
+            {summary && <p className="mb-1.5 text-xs italic text-muted">{summary}</p>}
             {effects && effects.length > 0 && (
-              <ul className="mb-1.5 list-disc space-y-1 pl-3.5 text-[11px] leading-snug text-fg">
+              <ul className="mb-1.5 list-disc space-y-1 pl-3.5 text-xs leading-snug text-fg">
                 {effects.map((e, i) => (
                   <li key={i}>{e}</li>
                 ))}
@@ -90,7 +90,7 @@ export function InfoTooltip({
             {interactions && interactions.length > 0 && (
               <div className="border-t border-border pt-1.5">
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">Interactions</p>
-                <ul className="list-disc space-y-1 pl-3.5 text-[11px] leading-snug text-muted">
+                <ul className="list-disc space-y-1 pl-3.5 text-xs leading-snug text-muted">
                   {interactions.map((e, i) => (
                     <li key={i}>{e}</li>
                   ))}

@@ -86,7 +86,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
         <button type="button" className="flex items-center gap-1.5" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           <ChevronRight size={14} className={cn('transition-transform', open && 'rotate-90')} />
           Advanced details
-          <span className="text-[11px] font-normal text-muted">battle conditions, stat stages, move power</span>
+          <span className="text-xs font-normal text-muted">battle conditions, stat stages, move power</span>
         </button>
       }
       actions={
@@ -121,7 +121,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                   <Crosshair size={12} /> Critical hits
                 </span>
               </Toggle>
-              <button type="button" className="text-[11px] text-muted underline-offset-2 hover:underline" onClick={() => update(defaultSlotBattle(!!mega))}>
+              <button type="button" className="text-xs text-muted underline-offset-2 hover:underline" onClick={() => update(defaultSlotBattle(!!mega))}>
                 Reset conditions
               </button>
             </div>
@@ -156,7 +156,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                       <td className="text-right font-mono tabular-nums">{result.hp}</td>
                       <td />
                       <td className="text-right font-mono font-bold tabular-nums">{Math.max(1, Math.round((result.hp * state.side.hpPercent) / 100))}</td>
-                      <td className="pl-3 text-[11px] text-muted">{state.side.hpPercent}% remaining</td>
+                      <td className="pl-3 text-xs text-muted">{state.side.hpPercent}% remaining</td>
                     </tr>
                     {(['atk', 'def', 'spa', 'spd', 'spe'] as const).map((s) => (
                       <StatRow key={s} stat={s} line={result.stats[s]} />
@@ -165,7 +165,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                 </table>
               </div>
               {result.speedNote && (
-                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-accent">
+                <p className="mt-1.5 flex items-center gap-1 text-xs text-accent">
                   <Zap size={11} /> {result.speedNote}
                 </p>
               )}
@@ -213,7 +213,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                   ))}
                 </ul>
               )}
-              <p className="mt-1.5 text-[11px] text-muted">
+              <p className="mt-1.5 text-xs text-muted">
                 Type effectiveness and the target's bulk aren't included here. Use the Damage Calc for exact damage rolls.
               </p>
             </div>

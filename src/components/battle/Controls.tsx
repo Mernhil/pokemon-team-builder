@@ -237,7 +237,7 @@ export function BoostControls({ boosts, onChange }: { boosts: SideConditions['bo
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Stat stages</span>
         <select
           aria-label="Stage presets"
-          className="h-6 rounded border border-border bg-surface-2 px-1 text-[11px] text-muted outline-none"
+          className="h-6 rounded border border-border bg-surface-2 px-1 text-xs text-muted outline-none"
           value=""
           onChange={(e) => {
             const p = BOOST_PRESETS[Number(e.target.value)];

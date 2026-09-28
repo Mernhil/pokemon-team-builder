@@ -6,7 +6,7 @@ export function ListModeToggle({ list }: { list: 'items' | 'moves' }) {
   const mode = usePrefsStore((s) => s.listMode[list] ?? 'grouped');
   const setListMode = usePrefsStore((s) => s.setListMode);
   return (
-    <div className="flex items-center gap-1 text-[11px]" role="group" aria-label="List order">
+    <div className="flex items-center gap-1 text-xs" role="group" aria-label="List order">
       {(['grouped', 'az'] as ListMode[]).map((m) => (
         <button
           key={m}

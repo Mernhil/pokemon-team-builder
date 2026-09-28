@@ -149,7 +149,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                           title={`${n.name}: +${STAT_LABELS[plus]} −${STAT_LABELS[minus]}`}
                           aria-current={isCurrent}
                           className={cn(
-                            'flex h-9 w-12 items-center justify-center rounded-md border text-[9px] font-semibold leading-tight',
+                            'flex h-9 w-12 items-center justify-center rounded-md border text-[10px] font-semibold leading-tight',
                             isCurrent ? 'border-accent bg-accent/15 text-fg' : 'border-border/60 hover:border-muted',
                           )}
                         >

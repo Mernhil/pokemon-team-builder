@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, BookOpen, Search } from 'lucide-react';
 import { toID, type Dex } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
@@ -10,7 +10,7 @@ import type { FormatRules, Pokemon, TypeName } from '@/domain/types';
 import { usePokedexStore } from '@/store/pokedexStore';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
-import { Select } from '../ui/primitives';
+import { Button, EmptyState, LoadingState, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { TYPE_COLORS } from '../ui/color';
 import { PokedexDetail } from './PokedexDetail';
@@ -28,8 +28,8 @@ export function PokedexView({ format }: { format: FormatRules }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2" role="group" aria-label="Pokédex">
-        <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Pokédex</span>
+      {/* Which game's Pokédex: one scrollable row on phones, wrapping on wider screens. */}
+      <div className="scrollbar-thin -mx-3 flex items-center gap-1 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:rounded-xl sm:border sm:border-border sm:bg-surface sm:p-2" role="group" aria-label="Pokédex">
         {BOOKS.map((b) => (
           <button
             key={b.id}
@@ -38,23 +38,17 @@ export function PokedexView({ format }: { format: FormatRules }) {
             onClick={() => setBook(b.id)}
             title={`${b.region} · ${b.games}`}
             className={cn(
-              'flex items-center gap-1 rounded-md px-1.5 py-1 transition-colors',
-              b.id === book.id ? 'bg-surface-2 ring-1 ring-border' : 'opacity-50 hover:opacity-100',
-              ((b.game && b.gen === 7) || b.id === 'gen1') && 'ml-2 border-l border-border pl-2.5',
+              'flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2 transition-colors',
+              b.id === book.id ? 'bg-accent/15 text-fg ring-1 ring-accent' : 'text-muted hover:bg-surface-2 hover:text-fg',
+              ((b.game && b.gen === 7) || b.id === 'gen1') && 'sm:ml-1',
             )}
           >
             {b.id === 'champions' ? (
-              <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-accent-fg">CHAMPIONS</span>
+              <span className="text-sm font-semibold">Champions</span>
             ) : (
               <>
                 <GenBadge gen={b.gen} size="xs" />
-                {b.game ? (
-                  <span className="text-xs font-semibold" style={{ color: b.color }}>
-                    {b.label}
-                  </span>
-                ) : (
-                  <span className="hidden text-xs font-medium md:inline">{b.label}</span>
-                )}
+                <span className="text-sm font-medium">{b.label}</span>
               </>
             )}
           </button>
@@ -63,7 +57,7 @@ export function PokedexView({ format }: { format: FormatRules }) {
       {dexState.status === 'ready' && data ? (
         <PokedexBody key={book.id} book={book} dex={dexState.dex} data={data.dex} learn={data.learn} format={format} />
       ) : (
-        <p className="p-10 text-center text-sm text-muted">{dexState.status === 'error' ? dexState.error : `Loading the ${book.region} Pokédex…`}</p>
+        dexState.status === 'error' ? <p role="alert" className="p-10 text-center text-sm text-bad">{dexState.error}</p> : <LoadingState label={`Loading the ${book.region} Pokédex…`} />
       )}
     </div>
   );
@@ -104,20 +98,20 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
 
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className={cn('rounded-xl border border-border bg-surface lg:sticky lg:top-[68px] lg:self-start', current && 'hidden lg:block')}>
+      <aside className={cn('rounded-xl border border-border bg-surface lg:sticky lg:top-[72px] lg:self-start', current && 'hidden lg:block')}>
         <div className="space-y-2 border-b border-border p-3">
-          <label className="flex h-9 items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 focus-within:border-accent">
-            <Search size={14} className="text-muted" />
+          <label className="flex h-9 items-center gap-2 rounded-lg border border-border-strong/60 bg-surface-2 px-2.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
+            <Search size={15} className="text-muted" aria-hidden />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Name, number or category…"
               aria-label="Search the Pokédex"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+              className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted focus-visible:outline-none sm:text-sm"
             />
           </label>
           <div className="flex gap-1.5">
-            <Select aria-label="Numbering" className="h-8 text-xs" value={order} onChange={(e) => setOrder(e.target.value)}>
+            <Select aria-label="Numbering" value={order} onChange={(e) => setOrder(e.target.value)}>
               <option value="national">National Dex</option>
               {data.dexes.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -125,7 +119,7 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
                 </option>
               ))}
             </Select>
-            <Select aria-label="Type" className="h-8 text-xs" value={type} onChange={(e) => setType(e.target.value as TypeName | '')}>
+            <Select aria-label="Type" value={type} onChange={(e) => setType(e.target.value as TypeName | '')}>
               <option value="">All types</option>
               {dex.types.map((t) => (
                 <option key={t} value={t}>
@@ -134,17 +128,17 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
               ))}
             </Select>
           </div>
-          <label className="flex items-center gap-2 text-xs text-muted">
+          <label className="flex min-h-8 items-center gap-2 text-sm text-muted">
             {data.areas.length > 0 && (
               <>
-                <input type="checkbox" checked={wildOnly} onChange={(e) => setWildOnly(e.target.checked)} className="accent-[var(--color-accent)]" />
+                <input type="checkbox" checked={wildOnly} onChange={(e) => setWildOnly(e.target.checked)} className="size-4 accent-[var(--color-accent)]" />
                 Found in the wild in {book.games.split(' · ').length > 1 ? 'these games' : 'this game'}
               </>
             )}
-            <span className="ml-auto font-mono">{list.length}</span>
+            <span className="ml-auto font-mono text-xs" aria-label={`${list.length} Pokémon listed`}>{list.length}</span>
           </label>
         </div>
-        <div ref={listRef} className="scrollbar-thin max-h-[calc(100vh-260px)] min-h-64 overflow-y-auto p-1.5" role="listbox" aria-label="Pokémon">
+        <div ref={listRef} className="scrollbar-thin max-h-[calc(100dvh-280px)] min-h-64 overflow-y-auto p-1.5" role="listbox" aria-label="Pokémon">
           {list.map((s) => (
             <button
               key={s.id}
@@ -154,36 +148,36 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
               aria-current={s.id === current?.id}
               onClick={() => select(book.id, s.id)}
               className={cn(
-                'flex w-full items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-sm',
+                'flex min-h-10 w-full items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-sm',
                 s.id === current?.id ? 'bg-accent/15 text-fg' : 'hover:bg-surface-2',
               )}
             >
-              <span className="w-10 font-mono text-[11px] text-muted">{String(number(s)).padStart(3, '0')}</span>
+              <span className="w-10 font-mono text-xs text-muted">{String(number(s)).padStart(3, '0')}</span>
               <Sprite speciesId={s.id} name={s.name} types={s.types} set={spriteSet} size={32} />
               <span className="min-w-0 flex-1 truncate">{s.name}</span>
               <span className="flex gap-0.5">
                 {s.types.map((t) => (
-                  <span key={t} className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_COLORS[t] }} title={t} aria-label={t} />
+                  <span key={t} role="img" className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_COLORS[t] }} title={t} aria-label={t} />
                 ))}
               </span>
             </button>
           ))}
-          {!list.length && <p className="p-4 text-center text-xs text-muted">No Pokémon match.</p>}
+          {!list.length && <p className="p-4 text-center text-sm text-muted">No Pokémon match these filters.</p>}
         </div>
       </aside>
 
       <div className={cn('min-w-0', !current && 'hidden lg:block')}>
         {current ? (
           <>
-            <button type="button" onClick={() => select(book.id, undefined)} className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted hover:text-fg lg:hidden">
-              <ArrowLeft size={14} /> All Pokémon
-            </button>
+            <Button variant="ghost" size="sm" onClick={() => select(book.id, undefined)} className="mb-2 -ml-2 lg:hidden">
+              <ArrowLeft size={15} aria-hidden /> All Pokémon
+            </Button>
             <PokedexDetail key={current.id} species={current} dex={dex} data={data} learn={learn} book={book} format={format} onSelect={(id) => select(book.id, id)} />
           </>
         ) : (
-          <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted">
-            Pick a Pokémon to see its entry, moves and where to find it.
-          </div>
+          <EmptyState icon={BookOpen} title="Pick a Pokémon" className="h-64 justify-center">
+            See its Pokédex entry, moves and where to find it.
+          </EmptyState>
         )}
       </div>
     </div>

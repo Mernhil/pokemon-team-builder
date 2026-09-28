@@ -66,7 +66,7 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
       <RegionMaps game={game.id} encounters={here} />
 
       {here.length ? (
-        <Panel title={`Where to find ${species.name}`} actions={<span className="text-[11px] text-muted">{game.name}</span>}>
+        <Panel title={`Where to find ${species.name}`} actions={<span className="text-xs text-muted">{game.name}</span>}>
           <div className="space-y-3">
             {byLocation.map(([loc, g]) => (
               <div key={loc}>

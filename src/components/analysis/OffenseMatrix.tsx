@@ -40,7 +40,7 @@ export function OffenseMatrix({ team, dex }: { team: Team; dex: Dex }) {
           );
         })}
       </div>
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 text-xs text-muted">
         Count of members hitting each defending type <span className="text-good">super-effectively</span> /{' '}
         <span className="text-bad">only for resisted or no damage</span>, from their damaging moves. Hover a cell for each member's best
         move.

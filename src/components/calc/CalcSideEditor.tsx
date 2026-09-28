@@ -62,7 +62,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
           <span className={cn('h-2 w-2 rounded-full', role === 'attacker' ? 'bg-bad' : 'bg-accent')} />
           {title}
           {side.origin && (
-            <span className="text-[11px] font-normal text-muted">
+            <span className="text-xs font-normal text-muted">
               from {side.origin.teamName} · slot {side.origin.slot + 1}
             </span>
           )}
@@ -121,7 +121,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                 ))}
                 <GenBadge gen={forme.gen} size="xs" className="ml-1" />
                 {forme !== species && (
-                  <span className="ml-1 inline-flex items-center gap-0.5 text-[11px] font-semibold text-accent">
+                  <span className="ml-1 inline-flex items-center gap-0.5 text-xs font-semibold text-accent">
                     <Sparkles size={11} /> {forme.name}
                   </span>
                 )}

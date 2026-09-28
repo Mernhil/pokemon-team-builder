@@ -43,7 +43,7 @@ const itemOption = (i: Item, speciesId?: string): ComboOption => ({
       <ItemSprite itemId={i.id} name={i.name} size={20} />
       <span className="flex min-w-0 flex-col">
         <span className={cn(speciesId && i.megaStone?.[speciesId] && 'font-semibold text-accent')}>{i.name}</span>
-        <span className="truncate text-[11px] text-muted">{i.shortDesc}</span>
+        <span className="truncate text-xs text-muted">{i.shortDesc}</span>
       </span>
     </span>
   ),

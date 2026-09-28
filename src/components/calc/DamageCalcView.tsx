@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeftRight, Check, Copy, Crosshair, Timer } from 'lucide-react';
+import { AlertCircle, ArrowLeftRight, Calculator, Check, Copy, Crosshair, Info, Timer } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { gameInfo } from '@/domain/games';
 import { GEN_GAMES } from '@/domain/generations';
@@ -9,7 +9,7 @@ import { useCalcStore, type CalcSide, type SideKey } from '@/store/calcStore';
 import { FieldControls } from '../battle/Controls';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Button, Panel, TypeBadge } from '../ui/primitives';
+import { Button, EmptyState, Notice, Panel, TypeBadge } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { CalcSideEditor } from './CalcSideEditor';
 
@@ -22,13 +22,10 @@ export function DamageCalcView(props: { dex: Dex; format: FormatRules; team: Tea
   const game = gameInfo(props.format.game);
   if (game && !game.battleSim)
     return (
-      <Panel title="Damage Calc">
-        <p className="text-sm text-muted">
-          {game.name} battles aren&apos;t turn-based Pokémon Showdown mechanics
-          {game.id === 'pla' ? ' (Agile and Strong Styles, action order)' : ' (real-time battles)'}, so the damage calculator can&apos;t model them.
-          Switch the team to another format to use it.
-        </p>
-      </Panel>
+      <EmptyState icon={Calculator} title={`The damage calculator can’t model ${game.name}`}>
+        Its battles aren&apos;t turn-based Pokémon Showdown mechanics
+        {game.id === 'pla' ? ' (Agile and Strong Styles, action order)' : ' (real-time battles)'}. Switch the team to another format to use it.
+      </EmptyState>
     );
   return <DamageCalcBody {...props} />;
 }
@@ -70,14 +67,14 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
   return (
     <div className="space-y-4">
       {(format.capabilities.zMoves || format.capabilities.dynamax) && (
-        <p className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs">
+        <Notice icon={Info}>
           {format.capabilities.zMoves
             ? 'Z-Moves aren’t modelled: a Z-Crystal does nothing here and damage is shown for the regular move.'
             : 'Dynamax and Max Moves aren’t modelled: damage is shown for the regular move at normal HP.'}
-        </p>
+        </Notice>
       )}
       <div className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
-        <div className="scrollbar-thin space-y-4 lg:col-span-2 xl:sticky xl:top-[68px] xl:order-2 xl:col-span-1 xl:max-h-[calc(100dvh-84px)] xl:overflow-y-auto">
+        <div className="scrollbar-thin space-y-4 lg:col-span-2 xl:sticky xl:top-[72px] xl:order-2 xl:col-span-1 xl:max-h-[calc(100dvh-88px)] xl:overflow-y-auto">
           <Panel
             title="Field"
             actions={
@@ -91,11 +88,13 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
 
           <Panel title="Results">
             {!results ? (
-              <p className="text-sm text-muted">
-                Pick an attacker and a defender. Load them from your team with one click, or search any Pokémon {format.statSystem.kind === 'champions-sp' ? 'legal in' : 'from'} {format.shortName}.
-              </p>
+              <EmptyState icon={Crosshair} title="Pick an attacker and a defender">
+                Load them from your team with one tap, or search any Pokémon {format.statSystem.kind === 'champions-sp' ? 'legal in' : 'from'} {format.shortName}.
+              </EmptyState>
             ) : results.error ? (
-              <p className="text-sm text-bad">The calculator couldn't handle this matchup: {results.error}</p>
+              <Notice tone="bad" icon={AlertCircle} title="The calculator couldn’t handle this matchup">
+                {results.error}
+              </Notice>
             ) : (
               <div className="@container space-y-4">
                 <TurnOrder attacker={attacker} defender={defender} speedA={results.speedA} speedD={results.speedD} trickRoom={field.trickRoom} dex={dex} format={format} />
@@ -115,7 +114,7 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
           <CalcSideEditor role="defender" dex={dex} format={format} team={team} />
         </div>
       </div>
-      <p className="text-center text-[11px] text-muted">
+      <p className="text-center text-xs text-muted">
         Damage engine: @smogon/calc (Pokémon Showdown),{' '}
         {game
           ? `${game.name}: Gen ${game.generation} mechanics with the game's own stats (AVs, friendship)`
@@ -258,7 +257,7 @@ function ResultRow({ r, dex, onToggleCrit }: { r: MoveResult; dex: Dex; onToggle
             />
             <div className="absolute inset-y-0 bg-bad" style={{ left: `${Math.max(0, cur - Math.min(cur, lo))}%`, width: `${Math.min(cur, lo)}%` }} />
           </div>
-          <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
+          <div className="mt-1 flex items-center justify-between gap-2 text-xs">
             <span className="text-muted">
               {r.range[0]}–{r.range[1]} HP of {r.defenderHP}
               {r.koText && <b className="ml-1.5 text-fg">· {r.koText}</b>}
@@ -269,12 +268,12 @@ function ResultRow({ r, dex, onToggleCrit }: { r: MoveResult; dex: Dex; onToggle
           </div>
           <details className="mt-0.5">
             <summary className="cursor-pointer text-[10px] text-muted">Details & rolls</summary>
-            <p className="mt-1 text-[11px] leading-relaxed">{r.desc}</p>
+            <p className="mt-1 text-xs leading-relaxed">{r.desc}</p>
             <p className="mt-1 font-mono text-[10px] text-muted">{r.rolls.join(', ')}</p>
           </details>
         </>
       )}
-      {status && <p className="mt-1 text-[11px] text-muted">Status move: no damage</p>}
+      {status && <p className="mt-1 text-xs text-muted">Status move: no damage</p>}
     </li>
   );
 }

@@ -86,7 +86,7 @@ export function RegionMaps({ game, encounters }: { game: string; encounters: Enc
       <div className="flex justify-center bg-[#10131a] p-2 sm:p-3">
         <MapCanvas map={current} found={found} />
       </div>
-      <p className="flex flex-wrap justify-between gap-x-3 px-3 py-1.5 text-[11px] text-muted">
+      <p className="flex flex-wrap justify-between gap-x-3 px-3 py-1.5 text-xs text-muted">
         <span>
           {SOURCE_LABEL[current.source] ?? current.source}
           {current.source === 'schematic' ? ' · positions approximate' : ' · from the pret disassembly'}

@@ -75,7 +75,7 @@ export function SpeciesPicker({ dex, format, value, onChange, placeholder, class
 
   const toolbar =
     unavailable.length > 0 ? (
-      <label className="flex items-center gap-2 text-[11px] text-muted">
+      <label className="flex items-center gap-2 text-xs text-muted">
         <input type="checkbox" checked={showUnavailable} onChange={(e) => setShowUnavailableSpecies(e.target.checked)} />
         Show {unavailable.length} Pokémon not in {format.shortName} (greyed out)
       </label>

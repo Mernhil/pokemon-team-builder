@@ -15,7 +15,7 @@ import { teamVariations } from '@/domain/team';
 import type { FormatRules, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
 import { Modal } from '../ui/Modal';
-import { Button, Field, Input } from '../ui/primitives';
+import { Button, Field, Input, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
 type Tab = 'champions' | 'showdown' | 'share' | 'json' | 'import';
@@ -80,19 +80,7 @@ export function ImportExportDialog({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Import / Export" description={`${team.name} · ${format.name}`} wide>
-      <div className="mb-4 flex flex-wrap gap-1 rounded-lg bg-surface-2 p-1" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={cn('flex-1 rounded-md px-3 py-1.5 text-xs font-semibold', tab === t.id ? 'bg-surface shadow-sm' : 'text-muted hover:text-fg')}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs label="Import or export" value={tab} onChange={(t) => setTab(t)} tabs={TABS} size="sm" className="mb-4 flex-wrap" />
 
       {tab === 'import' ? (
         <ImportPane dex={dex} format={format} onDone={() => onOpenChange(false)} />
@@ -112,17 +100,18 @@ export function ImportExportDialog({
             </Field>
           )}
           {tab === 'share' && (
-            <p className="text-xs text-muted">
+            <p className="text-sm text-muted">
               A self-contained code for this builder — paste it into <b>Import</b> on any device. (Replica Team codes are
               minted by the game's servers, so they can be stored on a team but not generated here.)
             </p>
           )}
           <textarea
             readOnly
+            aria-label={`${TABS.find((t) => t.id === tab)?.label} export`}
             value={text}
             onFocus={(e) => e.target.select()}
             className={cn(
-              'scrollbar-thin h-72 w-full resize-none rounded-lg border border-border bg-surface-2 p-3 font-mono text-xs leading-relaxed outline-none',
+              'scrollbar-thin h-72 w-full resize-none rounded-lg border border-border-strong/60 bg-surface-2 p-3 font-mono text-sm leading-relaxed outline-none sm:text-xs',
               tab === 'share' && 'h-28 break-all',
             )}
           />
@@ -171,17 +160,22 @@ function ImportPane({ dex, format, onDone }: { dex: Dex; format: FormatRules; on
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted">
+      <p className="text-sm text-muted">
         Paste a <b>Showdown export</b>, a <b>share code</b> (PTB1.…) or a <b>JSON backup</b>. Imported teams are added as new
         teams — nothing is overwritten.
       </p>
       <textarea
+        aria-label="Text to import"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={'Garchomp @ Garchompite\nAbility: Rough Skin\nEVs: 2 HP / 32 Atk / 32 Spe\nJolly Nature\n- Earthquake\n…'}
-        className="scrollbar-thin h-64 w-full resize-none rounded-lg border border-border bg-surface-2 p-3 font-mono text-xs outline-none focus:border-accent"
+        className="scrollbar-thin h-64 w-full resize-none rounded-lg border border-border-strong/60 bg-surface-2 p-3 font-mono text-base outline-none focus:border-accent sm:text-xs"
       />
-      {msg && <p className={cn('text-xs', msg.kind === 'ok' ? 'text-good' : 'text-warn')}>{msg.text}</p>}
+      {msg && (
+        <p role={msg.kind === 'ok' ? 'status' : 'alert'} className={cn('text-sm', msg.kind === 'ok' ? 'text-good' : 'text-warn')}>
+          {msg.text}
+        </p>
+      )}
       <div className="flex justify-end gap-2">
         <input
           ref={fileRef}

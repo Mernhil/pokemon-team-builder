@@ -107,7 +107,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
   const gridStyle = { ['--iv' as string]: showIV ? '52px' : '0px' };
   // Base/Mega switch: which forme the main column, totals and speed tools follow.
   const megaToggle = mega && (
-    <span role="group" aria-label="Stats shown for" className="inline-flex rounded-md bg-surface-2 p-0.5 text-[11px] font-semibold">
+    <span role="group" aria-label="Stats shown for" className="inline-flex rounded-md bg-surface-2 p-0.5 text-xs font-semibold">
       {[false, true].map((m) => (
         <button
           key={String(m)}
@@ -249,7 +249,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                         aria-label={`Boost ${STAT_LABELS[s]} (+10%)`}
                         aria-pressed={mod === 1.1}
                         onClick={() => toggleAlign(s, 'plus')}
-                        className={cn('h-5 w-5 rounded text-[11px] leading-none font-bold', mod === 1.1 ? 'bg-bad text-white' : 'text-muted hover:bg-surface-2')}
+                        className={cn('h-5 w-5 rounded text-xs leading-none font-bold', mod === 1.1 ? 'bg-bad text-white' : 'text-muted hover:bg-surface-2')}
                       >
                         +
                       </button>
@@ -259,7 +259,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                         aria-label={`Lower ${STAT_LABELS[s]} (−10%)`}
                         aria-pressed={mod === 0.9}
                         onClick={() => toggleAlign(s, 'minus')}
-                        className={cn('h-5 w-5 rounded text-[11px] leading-none font-bold', mod === 0.9 ? 'bg-accent text-white' : 'text-muted hover:bg-surface-2')}
+                        className={cn('h-5 w-5 rounded text-xs leading-none font-bold', mod === 0.9 ? 'bg-accent text-white' : 'text-muted hover:bg-surface-2')}
                       >
                         −
                       </button>
@@ -279,7 +279,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
                   {otherStats && <span className="ml-1.5 text-xs font-normal text-muted">{otherLabel} {otherStats[s]}</span>}
                 </div>
                 {locked ? (
-                  <p className="col-span-2 text-[11px] text-muted @xl:col-span-3">Uses the Special DV and Stat Exp above.</p>
+                  <p className="col-span-2 text-xs text-muted @xl:col-span-3">Uses the Special DV and Stat Exp above.</p>
                 ) : (
                   <>
                     {/* slider */}

@@ -114,11 +114,11 @@ export function MoveTooltip({ move, children, className }: { move: Move | undefi
                 <b className="text-fg">{move.pp}</b> PP
               </span>
             </div>
-            <p className="text-[11px] leading-relaxed text-fg">{formatMoveEffect(move)}</p>
+            <p className="text-xs leading-relaxed text-fg">{formatMoveEffect(move)}</p>
             {tags.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {tags.map((label) => (
-                  <span key={label} className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[9px] font-medium text-muted">
+                  <span key={label} className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-muted">
                     {label}
                   </span>
                 ))}
