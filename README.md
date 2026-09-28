@@ -115,6 +115,12 @@ Champions formats are generated from these files, and the app switches to the li
 
 A weekly scheduled task follows [`docs/UPDATING_REGULATIONS.md`](docs/UPDATING_REGULATIONS.md). Each run researches new regulations, writes or updates these files, rebuilds, tests, commits and republishes the app.
 
+### Meta tab
+
+The Meta tab lists each Champions regulation's most-used Pokémon with their common items, moves, abilities, spreads and teammates.
+The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
+A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
+
 ### Advanced details and damage calculator
 
 Each Pokémon in the builder has an **Advanced details** panel for "what are my stats under…" questions. You can set:

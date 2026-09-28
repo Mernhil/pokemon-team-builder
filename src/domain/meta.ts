@@ -275,3 +275,34 @@ export function coreOverlapScore(loggedSpecies: string[], metaEntry: Pick<MetaEn
   for (const s of core) if (logged.has(s)) shared++;
   return shared / core.size;
 }
+
+export interface MetaPartner {
+  speciesId: string;
+  /** Sum of "% of teams with X that also have this" over the team's members that have usage data. */
+  score: number;
+  /** The team members it's commonly paired with, strongest first. */
+  with: { speciesId: string; pct: number }[];
+}
+
+/**
+ * Teammate suggestions from published usage data: species most often paired with the team's
+ * members, excluding ones already on it. Empty when no member has usage data.
+ */
+export function metaPartners(snapshot: MetaSnapshot, teamSpecies: string[], limit = 4): MetaPartner[] {
+  const onTeam = new Set(teamSpecies);
+  const byId = new Map(snapshot.entries.map((e) => [e.speciesId, e]));
+  const partners = new Map<string, MetaPartner>();
+  for (const member of onTeam) {
+    for (const t of byId.get(member)?.teammates ?? []) {
+      if (onTeam.has(t.id)) continue;
+      const p = partners.get(t.id) ?? { speciesId: t.id, score: 0, with: [] };
+      p.score += t.pct;
+      p.with.push({ speciesId: member, pct: t.pct });
+      partners.set(t.id, p);
+    }
+  }
+  return [...partners.values()]
+    .map((p) => ({ ...p, score: Math.round(p.score * 10) / 10, with: p.with.sort((a, b) => b.pct - a.pct) }))
+    .sort((a, b) => b.score - a.score || a.speciesId.localeCompare(b.speciesId))
+    .slice(0, limit);
+}

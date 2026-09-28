@@ -8,6 +8,7 @@ import {
   localMetaFromMatches,
   metaAgeDays,
   metaDataDate,
+  metaPartners,
   parseMetaFile,
   pickSnapshot,
   type MetaEntry,
@@ -121,6 +122,23 @@ describe('core overlap hint', () => {
     expect(coreOverlapScore(['incineroar'], entry)).toBe(0.5);
     expect(coreOverlapScore(['landorustherian'], entry)).toBe(0);
     expect(coreOverlapScore(['incineroar'], { ...entry, teammates: [] })).toBe(0);
+  });
+});
+
+describe('teammate suggestions', () => {
+  const snap = baseSnap({
+    entries: [
+      { speciesId: 'incineroar', usagePct: 50, abilities: [], items: [], moves: [], spreads: [], teammates: [{ id: 'rillaboom', pct: 40 }, { id: 'garchomp', pct: 20 }, { id: 'kingambit', pct: 10 }] },
+      { speciesId: 'garchomp', usagePct: 40, abilities: [], items: [], moves: [], spreads: [], teammates: [{ id: 'kingambit', pct: 35 }, { id: 'incineroar', pct: 30 }] },
+    ],
+  });
+  it('sums pairings over the team, skipping members already on it', () => {
+    const out = metaPartners(snap, ['incineroar', 'garchomp']);
+    expect(out.map((p) => p.speciesId)).toEqual(['kingambit', 'rillaboom']);
+    expect(out[0]).toEqual({ speciesId: 'kingambit', score: 45, with: [{ speciesId: 'garchomp', pct: 35 }, { speciesId: 'incineroar', pct: 10 }] });
+  });
+  it('is empty when no member has data', () => {
+    expect(metaPartners(snap, ['pikachu'])).toEqual([]);
   });
 });
 

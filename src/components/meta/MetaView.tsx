@@ -54,6 +54,8 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const personal = useMemo(() => (published ? null : localMetaFromMatches(Object.values(matches), regId)), [published, matches, regId]);
   const snapshot = published ?? personal ?? undefined;
   const reg = champRegs.find((r) => r.id === regId);
+  // Newest other regulation that has published numbers, offered when this one has none.
+  const withData = useMemo(() => (published ? undefined : champRegs.find((r) => r.id !== regId && metaFor(r.id, refreshed))), [published, regId, refreshed]);
 
   return (
     <div className="space-y-3">
@@ -97,7 +99,11 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
       )}
 
       {!snapshot ? (
-        <EmptyState icon={BarChart3} title={`No usage data for ${reg?.shortName ?? 'this regulation'} yet`}>
+        <EmptyState
+          icon={BarChart3}
+          title={`No usage data for ${reg?.shortName ?? 'this regulation'} yet`}
+          action={withData && <Button onClick={() => setRegId(withData.id)}>See {withData.shortName}</Button>}
+        >
           Smogon publishes each month’s usage statistics after the month ends; the app picks them up with its next update. Meanwhile, log matches on
           the Match log to see what you face most.
         </EmptyState>
