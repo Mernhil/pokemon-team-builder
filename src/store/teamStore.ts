@@ -5,7 +5,7 @@ import { safeStorage } from './storage';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
 import { withSpreadValue } from '@/domain/stats';
 import { sanitizeTeam } from '@/domain/sanitize';
-import { cloneTeam, createTeam, emptySlots } from '@/domain/team';
+import { cloneTeam, createTeam, emptySlots, enforceCapabilities } from '@/domain/team';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
@@ -68,13 +68,31 @@ export interface TeamState {
 
 const firstTeam = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team');
 
+/** Where the pre-v3 save is copied before the v3 migration rewrites it (see migrateTeamState). */
+export const TEAM_BACKUP_V2_KEY = 'ptb:v1:backup-v2';
+
 /**
- * v1 stored teams as a flat list. v2 adds optional `groupId`/`variationLabel` for folder-style
+ * v1 stored teams as a flat list. v2 added optional `groupId`/`variationLabel` for folder-style
  * grouping; a flat v1 team has neither, which already reads as a top-level group with no
- * variations, so there is nothing to transform here — `mergeTeamState` below (re)normalises
- * `order` and drops any dangling `groupId` regardless of the stored version.
+ * variations — `mergeTeamState` below (re)normalises `order` and drops any dangling `groupId`.
+ *
+ * v3: Terastallization exists only in Scarlet/Violet. Tera Types saved on teams of any other game
+ * (Champions teams got one by default) are removed, per roster, against that roster's own format.
+ * The untouched v1/v2 state is copied to TEAM_BACKUP_V2_KEY first, once, so it can be recovered.
  */
-export function migrateTeamState(persisted: unknown, _version: number): TeamState {
+export function migrateTeamState(persisted: unknown, version: number): TeamState {
+  const p = (persisted ?? {}) as Partial<TeamState>;
+  if (version < 3 && p.teams && typeof p.teams === 'object') {
+    if (safeStorage.getItem(TEAM_BACKUP_V2_KEY) === null) {
+      safeStorage.setItem(TEAM_BACKUP_V2_KEY, JSON.stringify({ version, backedUpAt: new Date().toISOString(), state: persisted }));
+    }
+    const teams: Record<string, unknown> = {};
+    for (const [id, raw] of Object.entries(p.teams)) {
+      const t = sanitizeTeam(raw);
+      teams[id] = t ? enforceCapabilities(t) : raw;
+    }
+    return { ...p, teams } as TeamState;
+  }
   return persisted as TeamState;
 }
 
@@ -84,7 +102,7 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
   const teams: Record<string, Team> = {};
   for (const raw of Object.values(p.teams && typeof p.teams === 'object' ? p.teams : {})) {
     const t = sanitizeTeam(raw);
-    if (t) teams[t.id] = t;
+    if (t) teams[t.id] = enforceCapabilities(t);
   }
   const ids = Object.keys(teams);
   if (ids.length === 0) return current;
@@ -118,12 +136,15 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
 export const useTeamStore = create<TeamState>()(
   persist(
     (set, get) => {
-      /** Immutable update of any one team (by id) with updatedAt bump. */
+      /**
+       * Immutable update of any one team (by id) with updatedAt bump. Every slot edit goes through
+       * here, so a mechanic the team's game doesn't have (Tera outside Scarlet/Violet) can't be set.
+       */
       const mutateTeam = (id: string, fn: (t: Team) => Team) =>
         set((s) => {
           const t = s.teams[id];
           if (!t) return s;
-          return { teams: { ...s.teams, [t.id]: { ...fn(t), updatedAt: Date.now() } } };
+          return { teams: { ...s.teams, [t.id]: { ...enforceCapabilities(fn(t)), updatedAt: Date.now() } } };
         });
       const mutateSlot = (id: string, i: number, fn: (p: PokemonSet) => PokemonSet) =>
         mutateTeam(id, (t) => {
@@ -158,7 +179,7 @@ export const useTeamStore = create<TeamState>()(
             const slotsByFormat = { ...t.slotsByFormat, [t.formatId]: t.slots };
             const slots = slotsByFormat[formatId] ?? emptySlots();
             return {
-              teams: { ...s.teams, [id]: { ...t, formatId, category: getFormat(formatId).shortName, slots, slotsByFormat, updatedAt: Date.now() } },
+              teams: { ...s.teams, [id]: enforceCapabilities({ ...t, formatId, category: getFormat(formatId).shortName, slots, slotsByFormat, updatedAt: Date.now() }) },
               ...(id === s.activeTeamId ? { activeSlot: 0 } : {}),
             };
           }),
@@ -215,7 +236,7 @@ export const useTeamStore = create<TeamState>()(
                 return copy;
               }
               return { ...t };
-            });
+            }).map(enforceCapabilities);
             // A variation's groupId must resolve to another team in this same import (or the existing
             // store) — anything else (missing parent, self-reference) is promoted to a top-level group.
             const validGroupIds = new Set([...Object.keys(s.teams), ...prepared.map((p) => p.id)]);
@@ -277,7 +298,7 @@ export const useTeamStore = create<TeamState>()(
     },
     {
       name: 'ptb:v1',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, theme: s.theme, view: s.view, battle: s.battle }),
       migrate: migrateTeamState,
