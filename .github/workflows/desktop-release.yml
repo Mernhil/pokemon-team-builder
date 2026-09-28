@@ -108,6 +108,15 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      # The release text: this version's section of CHANGELOG.md ("## 0.7.0 — …" up to the next "## ").
+      - name: Release notes from CHANGELOG.md
+        id: notes
+        shell: bash
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          notes=$(awk -v v="$v" 'index($0, "## " v) == 1 { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md)
+          { echo 'body<<EOF_RELEASE_NOTES'; echo "${notes:-See CHANGELOG.md.}"; echo 'EOF_RELEASE_NOTES'; } >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # action-v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -116,6 +125,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Pokémon Team Builder ${{ github.ref_name }}'
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
