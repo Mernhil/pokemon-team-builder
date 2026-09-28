@@ -7,8 +7,9 @@ name: Meta data
 #   new numbers up within a week): when the data changed, opens (or updates) a pull request against
 #   the default branch. Merging it redeploys the web app (Cloudflare builds every push); desktop apps
 #   get it with their next release.
-# - "Run workflow" on the default branch does the same on demand. Run on any other branch, it
-#   commits the new data straight to that branch (for testing the pipeline).
+# - "Run workflow" on the default branch does the same on demand. On any other branch (a manual run,
+#   or a push that changes this workflow or scripts/build-meta.ts) it commits the new data straight
+#   to that branch, which is how changes to the pipeline get tested against real data.
 #
 # Needs Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"
 # for the pull request step. See docs/UPDATING_META.md.
@@ -16,6 +17,11 @@ on:
   schedule:
     - cron: '17 6 * * 1'
   workflow_dispatch:
+  # A change to the pipeline itself runs it right away on that branch (against real data).
+  push:
+    paths:
+      - .github/workflows/meta.yml
+      - scripts/build-meta.ts
 
 permissions:
   contents: read
