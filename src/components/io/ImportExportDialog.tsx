@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Check, Copy, Download, Upload } from 'lucide-react';
+import { Check, Copy, Upload } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import {
   decodeShareString,
@@ -26,24 +26,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'json', label: 'JSON backup' },
   { id: 'import', label: 'Import' },
 ];
-
-/** Embedded/sandboxed frames block script-started downloads; offer Copy only there. */
-const canDownload = (() => {
-  try {
-    return window.self === window.top;
-  } catch {
-    return false;
-  }
-})();
-
-function download(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 export function ImportExportDialog({
   open,
@@ -144,11 +126,6 @@ export function ImportExportDialog({
             )}
           />
           <div className="flex justify-end gap-2">
-            {tab === 'json' && canDownload && (
-              <Button onClick={() => download(`team-builder-backup-${new Date().toISOString().slice(0, 10)}.json`, text)}>
-                <Download size={14} /> Download .json
-              </Button>
-            )}
             <Button variant="primary" onClick={copy}>
               {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy'}
             </Button>
