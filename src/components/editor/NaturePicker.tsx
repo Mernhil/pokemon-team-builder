@@ -101,7 +101,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                             title="Neutral: no stat is raised or lowered"
                             aria-current={isCurrent}
                             className={cn(
-                              'flex h-8 w-8 items-center justify-center rounded-md border text-[10px] text-muted',
+                              'flex h-9 w-12 items-center justify-center rounded-md border text-[10px] text-muted',
                               isCurrent ? 'border-accent bg-accent/15 text-fg' : 'border-border/60 hover:border-muted',
                             )}
                           >
@@ -121,11 +121,11 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                           title={`${n.name}: +${STAT_LABELS[plus]} −${STAT_LABELS[minus]}`}
                           aria-current={isCurrent}
                           className={cn(
-                            'flex h-8 w-8 items-center justify-center rounded-md border text-[9px] font-semibold leading-tight',
+                            'flex h-9 w-12 items-center justify-center rounded-md border text-[9px] font-semibold leading-tight',
                             isCurrent ? 'border-accent bg-accent/15 text-fg' : 'border-border/60 hover:border-muted',
                           )}
                         >
-                          {n.name.slice(0, 3)}
+                          {n.name}
                         </button>
                       </td>
                     );
