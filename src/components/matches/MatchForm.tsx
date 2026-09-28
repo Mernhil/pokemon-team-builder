@@ -7,6 +7,7 @@ import { coreOverlapScore } from '@/domain/meta';
 import type { FormatRules } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
 import { useMetaStore } from '@/store/metaStore';
+import { metaFor } from '@/data/meta';
 import { useTeamStore } from '@/store/teamStore';
 import { LoggedMonEditor } from './LoggedMonEditor';
 import { Button, Field, Input, Panel, Select, TextArea } from '../ui/primitives';
@@ -54,9 +55,10 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
 
   const priorOpponents = allMatches.filter((m) => m.id !== match.id && m.opponentTeam.length > 0);
 
-  // Optional cross-reference: flag when this opponent's Team Preview overlaps a known popular core
-  // from the "Popular teams" section, if that regulation's usage data has already been fetched.
-  const metaSnapshot = useMetaStore((s) => (match.regulationId ? s.snapshots[match.regulationId] : undefined));
+  // Optional cross-reference: flag when this opponent's Team Preview overlaps a popular core from
+  // the Meta tab's usage data for that regulation (when there is any).
+  const refreshedMeta = useMetaStore((s) => s.refreshed);
+  const metaSnapshot = useMemo(() => (match.regulationId ? metaFor(match.regulationId, refreshedMeta) : undefined), [match.regulationId, refreshedMeta]);
   const knownCore = useMemo(() => {
     if (!metaSnapshot || match.opponentTeam.length < 2) return null;
     const species = match.opponentTeam.map((m) => m.speciesId).filter(Boolean);
@@ -172,7 +174,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Opponent (Team Preview)</span>
             {knownCore && (
               <p className="rounded-md bg-accent/10 px-2 py-1 text-xs text-accent">
-                Overlaps a known popular core built around {dex.species(knownCore.speciesId)?.name ?? knownCore.speciesId} (see Popular teams &amp; spreads).
+                Overlaps a known popular core built around {dex.species(knownCore.speciesId)?.name ?? knownCore.speciesId} (see the Meta tab).
               </p>
             )}
             <div className="space-y-1.5">

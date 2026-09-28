@@ -16,6 +16,7 @@
     "sprites:items": "tsx scripts/build-items.ts",
     "icons": "node scripts/build-icons.mjs",
     "splash": "node scripts/build-splash.mjs",
+    "meta": "tsx scripts/build-meta.ts",
     "test": "vitest run",
     "typecheck": "tsc -b",
     "build:single": "tsc -b && vite build --mode singlefile",
@@ -41,6 +42,7 @@
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

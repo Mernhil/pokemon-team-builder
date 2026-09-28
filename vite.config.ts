@@ -18,6 +18,16 @@ const cacheBustIcons = (): Plugin => ({
   transformIndexHtml: (html) => html.replaceAll('%APP_VERSION%', appVersion),
 });
 
+// The Meta tab's "Check for newer data" fetches the deployed copy of the usage data
+// (src/store/metaStore.ts). Emit it next to the app; it isn't precached, so it's always fresh.
+const emitMeta = (): Plugin => ({
+  name: 'emit-meta',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({ type: 'asset', fileName: 'meta/latest.json', source: readFileSync(new URL('./src/data/generated/meta.json', import.meta.url), 'utf-8') });
+  },
+});
+
 // `vite build --mode singlefile` inlines everything into one index.html (portable/offline build).
 export default defineConfig(({ mode }) => ({
   base: './',
@@ -27,7 +37,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     tailwindcss(),
     cacheBustIcons(),
-    ...(mode === 'singlefile' ? [viteSingleFile()] : []),
+    ...(mode === 'singlefile' ? [viteSingleFile()] : [emitMeta()]),
     // Installable web app ("Add to Home Screen" on iPhone). The service worker precaches the whole
     // app, sprites included, so it works offline; src/pwa.ts picks up new deploys automatically.
     VitePWA({
@@ -55,7 +65,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,svg,png,webp,json}'],
         // iOS launch screens are fetched once when the app is added to the home screen; no need to
         // precache ~0.8 MB of them for everyone.
-        globIgnores: ['splash/**'],
+        globIgnores: ['splash/**', 'meta/**'],
         // The sprite atlases are up to ~4 MB each.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,
