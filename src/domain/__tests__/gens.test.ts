@@ -164,8 +164,8 @@ describe('damage calc per generation', () => {
 });
 
 describe('Pokédex Area maps', () => {
-  /** Locations without a fixed spot on the region map: roaming, event islands, Mirage spots, Ultra Space… */
-  const OFF_MAP = /^(roaming-|unknown-|.*-pokemart$|.*-pokecenter$)|^(terra-cave|marine-cave|navel-rock|birth-island|faraway-island|southern-island|crescent-isle|trackless-forest|nameless-cavern|soaring-in-the-sky|pathless-plain|fabled-cave|gnarled-den|mirage-spot-.*|new-mauville|ultra-.*|team-flare-secret-hq)$/;
+  /** Locations without a fixed spot on the region map: roaming, event islands, Mirage spots, Ultra Space, BDSP’s region-wide Grand Underground… */
+  const OFF_MAP = /^(roaming-|unknown-|.*-pokemart$|.*-pokecenter$)|^(terra-cave|marine-cave|navel-rock|birth-island|faraway-island|southern-island|crescent-isle|trackless-forest|nameless-cavern|soaring-in-the-sky|pathless-plain|fabled-cave|gnarled-den|mirage-spot-.*|new-mauville|ultra-.*|team-flare-secret-hq|sinnoh-grand-underground)$/;
 
   it.each(['gen1', 'gen2', 'gen3', 'gen4', 'gen5', 'gen6', 'gen7', 'gen8', 'gen9', 'lgpe', 'bdsp', 'pla', 'za'])('%s: every wild location is on its game’s map', async (g) => {
     const { default: maps } = (await import('@/data/generated/maps.json')) as unknown as {

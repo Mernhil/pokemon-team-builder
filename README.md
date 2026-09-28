@@ -34,7 +34,7 @@ scripts/build-games.ts       Let's Go / BDSP / Legends: Arceus / Legends: Z-A da
 scripts/build-pokedex.ts     Pokédex entries, regional numbers, wild encounters (PokeAPI CSVs + PKHeX)
 scripts/pkhex-encounters.ts  Reads PKHeX's wild-encounter tables (BDSP, Legends, SV, ORAS, SM/USUM)
 scripts/sources.ts           Pinned Showdown / PKHeX checkouts the build scripts read from
-scripts/build-maps.ts        Area maps: renders the Gen 1–3 in-game maps from pret, validates the schematics
+scripts/build-maps.ts        Area maps: renders the Gen 1–4 in-game maps from pret, validates the schematics, writes docs/MAP_COVERAGE.md
 src/
   domain/                    Framework-free core (100% unit-testable)
     types.ts                 Pokemon, Move, Ability, Item, Nature, StatPoints, EVSpread, IVSpread,
@@ -52,7 +52,7 @@ src/
     useDex.ts                React hook for loading a dataset
     generated/champions.json 379 species (incl. Megas), 511 moves, 165 items, 216 abilities, natures, type chart
     generated/gen<N>.json    Gen 1–9 datasets; gen<N>-learn.json learn methods; pokedex-gen<N>.json; maps.json
-    maps/*.json              Hand-placed schematic region maps (Sinnoh → Galar); edit these, not maps.json
+    maps/*.json              Hand-placed schematic region maps (Unova → Paldea); edit these, not maps.json
     pokedex.ts               Lazy loaders for the Pokédex files
   store/teamStore.ts         Zustand store (teams, active slot, theme), persisted to localStorage
   components/
@@ -194,12 +194,14 @@ Area maps mark locations the way each game's Pokédex did:
 | Ruby / Sapphire / Emerald, Omega Ruby / Alpha Sapphire | Emerald's Pokédex area map with glowing areas ([pret/pokeemerald](https://github.com/pret/pokeemerald)) |
 | FireRed / LeafGreen | FireRed/LeafGreen's Kanto and Sevii Islands maps ([pret/pokefirered](https://github.com/pret/pokefirered)) |
 | Let's Go, Pikachu! / Eevee! | FireRed/LeafGreen's Kanto map |
-| Sinnoh (DPPt, BDSP + Grand Underground), Unova, Kalos, Alola, Galar (+ Isle of Armor, Crown Tundra), Hisui, Paldea, Kitakami, Blueberry Academy Terarium, Lumiose City | schematic maps with hand-placed locations (`src/data/maps/*.json`, Lumiose generated), since these games have no disassembled map data |
+| Diamond / Pearl / Platinum, Brilliant Diamond / Shining Pearl | Platinum's Town Map with every hidden location revealed and glowing areas on its 7×7 blocks ([pret/pokeplatinum](https://github.com/pret/pokeplatinum)); BDSP's Grand Underground runs under the whole region, so it's listed rather than marked |
+| Unova, Kalos, Alola, Galar (+ Isle of Armor, Crown Tundra), Hisui, Paldea, Kitakami, Blueberry Academy Terarium, Lumiose City | schematic maps with hand-placed locations (`src/data/maps/*.json`, Lumiose generated), clearly labelled as schematics in the app, since these games have no disassembled map data |
 
-For the Gen 1–3 maps, each location sits exactly where the game put it; the build script reads the coordinates from the disassemblies.
+For the Gen 1–4 maps, each location sits exactly where the game put it; the build script reads the coordinates from the disassemblies (pinned in `scripts/sources.ts`) and writes lossless WebP images plus [`docs/MAP_COVERAGE.md`](docs/MAP_COVERAGE.md).
+The map zooms (buttons, pinch, ctrl/⌘ + wheel, double-click) and pans by dragging; tapping a marked place highlights it in the list below, and picking a location in the list highlights it on the map.
 HeartGold/SoulSilver and ORAS locations the older map doesn't have, such as Routes 47–48 or Sea Mauville, are placed next to their nearest neighbour.
 In Legends: Arceus and Z-A, whole areas (Obsidian Fieldlands, a Lumiose district) are drawn as dashed outlines that light up as outlines, so the places inside them stay readable.
-A test checks that every wild location of every book is on its game's map, apart from places with no fixed spot: roaming Pokémon, event islands, Mirage spots and Ultra Space.
+A test checks that every wild location of every book is on its game's map, apart from places with no fixed spot: roaming Pokémon, event islands, Mirage spots, Ultra Space and the Grand Underground.
 
 Data: Pokédex text, regional numbers and most encounters come from [PokeAPI](https://github.com/PokeAPI/pokeapi)'s CSV tables.
 Wild encounters for BDSP, Legends: Arceus, Scarlet/Violet (+ Kitakami and Blueberry), Legends: Z-A, ORAS and SM/USUM come from [PKHeX](https://github.com/kwsch/PKHeX)'s encounter tables instead, because PokeAPI has none for these games or only part of them. PokeAPI's gifts, static encounters and Island Scan entries are kept. PKHeX lists who appears where and at which levels, and flags Alphas, but it has no encounter rates.

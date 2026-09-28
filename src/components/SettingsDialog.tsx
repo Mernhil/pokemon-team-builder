@@ -65,7 +65,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               Wild encounter tables: <b>PKHeX</b> encounter data.
             </li>
             <li>
-              Gen 1–3 region maps: rendered from the <b>pret</b> disassemblies (pokered, pokecrystal, pokeemerald, pokefirered).
+              Gen 1–4 region maps: rendered from the <b>pret</b> disassemblies (pokered, pokecrystal, pokeemerald, pokefirered, pokeplatinum). Later regions are schematics.
             </li>
             <li>Champions regulations: official Pokémon announcements, cross-checked as listed in each regulation’s sources.</li>
           </ul>
