@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
-import { createTeam } from '@/domain/team';
-import type { Team } from '@/domain/types';
-import { mergeTeamState, migrateTeamState, useTeamStore } from '../teamStore';
+import data from '@/data/generated/champions.json';
+import { Dex } from '@/data/dex';
+import { createSet, createTeam } from '@/domain/team';
+import type { Dataset, Team } from '@/domain/types';
+import { defaultSlotBattle, mergeTeamState, migrateTeamState, useTeamStore } from '../teamStore';
 
 const fmt = getFormat(DEFAULT_FORMAT_ID);
+const dex = new Dex(data as unknown as Dataset);
 
 /** Reset the store to a single, known top-level team before each test. */
 function resetStore() {
@@ -184,6 +187,20 @@ describe('persist migration (v1 flat teams -> v2 grouped teams)', () => {
 
     expect(merged.teams[orphan.id].groupId).toBeUndefined();
     expect(merged.order).toContain(orphan.id);
+  });
+
+  it('merge keeps battle state only for sets that still exist', () => {
+    const t = createTeam(fmt, 'With Battle');
+    const set = createSet(dex, 'garchomp', fmt);
+    t.slots[0] = set;
+    const live = defaultSlotBattle(false);
+    const current = useTeamStore.getState();
+    const merged = mergeTeamState(
+      { teams: { [t.id]: t }, order: [t.id], battle: { [set.uid]: live, 'deleted-set': live, [t.id]: 'junk' } },
+      current,
+    );
+
+    expect(Object.keys(merged.battle)).toEqual([set.uid]);
   });
 
   it('merge keeps a valid group/variation pair and excludes the variation from order', () => {

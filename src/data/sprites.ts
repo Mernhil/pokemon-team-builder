@@ -40,14 +40,21 @@ function loadSheet(id: string): Promise<SpriteSheet | null> {
     p = fetch(`${base()}${id}.json`)
       .then((r) => (r.ok ? r.json() : null))
       .then((meta) => {
-        if (!meta) return null;
+        if (!meta) {
+          cache.delete(id);
+          return null;
+        }
         const sheet = { ...meta, url: `${base()}${id}.webp` } as SpriteSheet;
         // Warm the image so the first paint of every sprite comes from cache.
         const img = new Image();
         img.src = sheet.url;
         return sheet;
       })
-      .catch(() => null);
+      .catch(() => {
+        // Transient network failure: let the next request retry instead of caching "no sprites".
+        cache.delete(id);
+        return null;
+      });
     cache.set(id, p);
   }
   return p;

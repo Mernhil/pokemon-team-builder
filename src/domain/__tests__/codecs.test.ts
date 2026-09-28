@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
 import { getFormat } from '@/domain/formats';
-import { decodeShareString, encodeShareString, exportTeamShowdown, importShowdown, normalizeReplicaCode } from '@/domain/codecs';
+import {
+  MAX_BACKUP_TEAMS,
+  decodeShareString,
+  encodeShareString,
+  exportBackup,
+  exportTeamShowdown,
+  importShowdown,
+  normalizeReplicaCode,
+  parseBackup,
+} from '@/domain/codecs';
 import { validateTeam } from '@/domain/validation';
 import type { Dataset } from '@/domain/types';
 
@@ -53,6 +62,12 @@ describe('Share string & replica code', () => {
     const back = decodeShareString(encodeShareString(team), dex, fmt);
     expect(back.slots[1]!.sp).toEqual(team.slots[1]!.sp);
     expect(back.slots[0]!.moves).toEqual(team.slots[0]!.moves);
+  });
+  it('restores a backup but refuses an oversized one', () => {
+    const { team } = importShowdown(PASTE, dex, fmt);
+    expect(parseBackup(exportBackup([team]))[0].slots[0]!.speciesId).toBe(team.slots[0]!.speciesId);
+    const huge = JSON.stringify({ app: 'pokemon-team-builder', version: 1, teams: Array(MAX_BACKUP_TEAMS + 1).fill(team) });
+    expect(() => parseBackup(huge)).toThrow(/at most/);
   });
   it('normalises replica codes', () => {
     expect(normalizeReplicaCode('ab12c-d34ef')).toBe('AB12CD34EF');

@@ -7,6 +7,8 @@
  */
 
 const API_BASE = 'https://championsbattledata.com/api';
+/** A hung third-party request must not leave the Meta tab spinning forever. */
+const FETCH_TIMEOUT_MS = 15_000;
 
 export interface MetaMoveUsage {
   moveId: string;
@@ -119,6 +121,7 @@ export async function fetchChampionsMeta(regulationId: string): Promise<MetaSnap
   try {
     res = await fetch(`${API_BASE}/usage?regulation=${encodeURIComponent(regulationId)}`, {
       headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
   } catch (e) {
     throw new MetaFetchError(`Couldn't reach championsbattledata.com (${(e as Error).message}).`);

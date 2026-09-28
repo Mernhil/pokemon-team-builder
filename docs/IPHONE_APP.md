@@ -31,7 +31,9 @@ Workers & Pages → Create application → Import a repository → pick this rep
 
 Every push to the production branch redeploys `https://pokemon-team-builder.<account>.workers.dev`
 (Worker → Settings → Domains & Routes shows the exact URL). Per-version preview URLs are turned
-off in `wrangler.jsonc` so they can't bypass the login.
+off in `wrangler.jsonc` so they can't bypass the login. `public/_headers` (copied into `dist/`)
+adds the security headers — a Content-Security-Policy matching the desktop app's, no framing,
+no-sniff; if the app ever needs a new outside host, add it to that file's `connect-src`.
 
 ### 2. Restrict access to allowed people
 

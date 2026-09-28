@@ -159,6 +159,9 @@ export function ImportExportDialog({
   );
 }
 
+/** Backups, share codes and Showdown exports are a few KB; anything this big isn't one of them. */
+const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+
 function ImportPane({ dex, format, onDone }: { dex: Dex; format: FormatRules; onDone: () => void }) {
   const [text, setText] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
@@ -209,8 +212,17 @@ function ImportPane({ dex, format, onDone }: { dex: Dex; format: FormatRules; on
           className="hidden"
           onChange={async (e) => {
             const f = e.target.files?.[0];
-            if (f) run(await f.text());
             e.target.value = '';
+            if (!f) return;
+            if (f.size > MAX_IMPORT_BYTES) {
+              setMsg({ kind: 'err', text: 'That file is too large to be a team export or backup.' });
+              return;
+            }
+            try {
+              run(await f.text());
+            } catch {
+              setMsg({ kind: 'err', text: 'Could not read that file.' });
+            }
           }}
         />
         <Button onClick={() => fileRef.current?.click()}>
