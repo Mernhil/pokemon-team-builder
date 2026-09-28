@@ -236,7 +236,7 @@ export function exportChampionsText(team: Team, dex: Dex, format: FormatRules): 
   team.slots.forEach((s, i) => {
     if (!s) return;
     const sp = dex.species(s.speciesId);
-    const mega = dex.megaFor(s.speciesId, s.itemId);
+    const mega = format.capabilities.mega ? dex.megaFor(s.speciesId, s.itemId) : undefined;
     const nat = dex.nature(s.nature);
     const stats = sp ? calcStats(sp.baseStats, s, format, nat) : undefined;
     const align = nat?.plus && nat.plus !== nat.minus ? ` (+${STAT_LABELS[nat.plus]} −${STAT_LABELS[nat.minus!]})` : '';

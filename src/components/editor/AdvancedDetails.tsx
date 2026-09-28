@@ -41,7 +41,7 @@ export function AdvancedDetails(props: Props) {
 
 function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
   const [open, setOpen] = useState(true);
-  const mega = dex.megaFor(species.id, set.itemId);
+  const mega = format.capabilities.mega ? dex.megaFor(species.id, set.itemId) : undefined;
   const setView = useTeamStore((s) => s.setView);
   const [state, update] = useSlotBattle(set.uid, !!mega);
   const patchSide = (p: Partial<SideConditions>) => update({ side: { ...state.side, ...p } });

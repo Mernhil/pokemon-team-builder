@@ -35,6 +35,9 @@ export function datasetCapabilities(datasetId: string): Capabilities {
   return { ...NONE, ...(Object.hasOwn(BY_DATASET, datasetId) ? BY_DATASET[datasetId] : {}) };
 }
 
+/** Z-Crystals (Gen 7): Showdown ids all end in "iumz" (Firium Z, Pikanium Z…). */
+export const isZCrystal = (itemId?: string): boolean => !!itemId && /iumz$/.test(itemId);
+
 /**
  * Drops data the game can't have (a Tera Type outside Scarlet/Violet). Returns the same object when
  * nothing changes, so it's cheap to run on every store update.

@@ -1,4 +1,5 @@
 import type { Dex } from '@/data/dex';
+import { isZCrystal } from './capabilities';
 import { formatMechanics } from './games';
 import { sumStats } from './stats';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type Team } from './types';
@@ -101,6 +102,8 @@ export function validateTeam(team: Team, format: FormatRules, dex: Dex): Issue[]
       else if (item.megaStone && !item.megaStone[sp.id])
         push('warning', 'mega-stone-mismatch', `${item.name} does nothing on ${sp.name}.`);
       if (item?.megaStone && !format.capabilities.mega) push('error', 'mega-banned', 'Mega Evolution is not allowed in this format.');
+      if (item && format.capabilities.zMoves && isZCrystal(item.id))
+        push('info', 'z-not-modelled', `${item.name}: Z-Moves aren't modelled by the damage calculator, which shows the regular move.`);
     } else if (mech.heldItems) push('info', 'no-item', 'no held item.');
 
     // Moves

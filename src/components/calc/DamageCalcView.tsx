@@ -68,6 +68,13 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
   // numbers stay in view while editing either side. Narrower: results on top, sides below.
   return (
     <div className="space-y-4">
+      {(format.capabilities.zMoves || format.capabilities.dynamax) && (
+        <p className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs">
+          {format.capabilities.zMoves
+            ? 'Z-Moves aren’t modelled: a Z-Crystal does nothing here and damage is shown for the regular move.'
+            : 'Dynamax and Max Moves aren’t modelled: damage is shown for the regular move at normal HP.'}
+        </p>
+      )}
       <div className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
         <div className="scrollbar-thin space-y-4 lg:col-span-2 xl:sticky xl:top-[68px] xl:order-2 xl:col-span-1 xl:max-h-[calc(100dvh-84px)] xl:overflow-y-auto">
           <Panel

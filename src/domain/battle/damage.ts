@@ -59,7 +59,7 @@ function calcSpeciesName(dex: Dex, gen: CalcGen, id: string): string {
 /** The forme in battle: Mega forme when toggled on and the stone is held. */
 export function battleForme(dex: Dex, set: PokemonSet, cond: SideConditions) {
   const base = dex.species(set.speciesId);
-  const mega = cond.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
+  const mega = cond.mega && datasetCapabilities(dex.data.id).mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
   return mega ?? base;
 }
 

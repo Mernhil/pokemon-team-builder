@@ -35,13 +35,13 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
   const itemOptions = useItemOptions(dex, format, set?.speciesId);
   const moveOptions = useMoveOptions(dex, format, set);
   const species = set ? dex.species(set.speciesId) : undefined;
-  const mega = set ? dex.megaFor(set.speciesId, set.itemId) : undefined;
+  const mega = set && format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
   const forme = side.cond.mega && mega ? mega : species;
 
   const loadFromTeam = (i: number) => {
     const s = team.slots[i];
     if (!s) return;
-    const hasMega = !!dex.megaFor(s.speciesId, s.itemId);
+    const hasMega = format.capabilities.mega && !!dex.megaFor(s.speciesId, s.itemId);
     setSide(role, {
       set: stripUnsupported(structuredClone(s), format.capabilities),
       cond: defaultSide(hasMega),

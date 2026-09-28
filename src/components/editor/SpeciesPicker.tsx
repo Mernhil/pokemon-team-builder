@@ -21,6 +21,7 @@ interface Props {
 /** Species search with sprites, generation symbols and a generation filter. */
 export function SpeciesPicker({ dex, format, value, onChange, placeholder, className, showGenFilter = true }: Props) {
   const [gen, setGen] = useState<number | null>(null);
+  const mega = format.capabilities.mega;
   const pool = useMemo(() => dex.selectableSpecies(format.regulationId), [dex, format.regulationId]);
   const counts = useMemo(() => {
     const c = new Map<number, number>();
@@ -35,13 +36,13 @@ export function SpeciesPicker({ dex, format, value, onChange, placeholder, class
         .map((s) => ({
           id: s.id,
           label: s.name,
-          keywords: [...s.types, ...Object.values(s.abilities), s.megaForms.length ? 'mega' : '', `gen${s.gen}`].join(' '),
+          keywords: [...s.types, ...Object.values(s.abilities), mega && s.megaForms.length ? 'mega' : '', `gen${s.gen}`].join(' '),
           render: (
             <span className="flex items-center gap-2">
               <Sprite speciesId={s.id} name={s.name} types={s.types} set={format.spriteSet} size={32} />
               <span className="w-8 font-mono text-[10px] text-muted">#{s.num}</span>
               <span className="min-w-0 flex-1 truncate">{s.name}</span>
-              {s.megaForms.length > 0 && <span className="text-[10px] font-bold text-accent">MEGA</span>}
+              {mega && s.megaForms.length > 0 && <span className="text-[10px] font-bold text-accent">MEGA</span>}
               <GenBadge gen={s.gen} size="xs" />
               <span className="hidden gap-0.5 sm:flex">
                 {s.types.map((t) => (
@@ -51,7 +52,7 @@ export function SpeciesPicker({ dex, format, value, onChange, placeholder, class
             </span>
           ),
         })),
-    [pool, gen, format.spriteSet],
+    [pool, gen, format.spriteSet, mega],
   );
 
   return (

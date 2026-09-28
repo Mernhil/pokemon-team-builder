@@ -92,3 +92,25 @@ describe.each(PER_GAME.map((f) => [f.datasetId, f] as const))('Tera data in %s',
     expect(validateTeam(team, format, dex).some((i) => /tera/i.test(i.code + i.message))).toBe(false);
   });
 });
+
+describe('Mega Stones and Z-Crystals', () => {
+  it('offers only the Mega Stones whose Mega is in the game', async () => {
+    const lgpe = await loadDex('lgpe');
+    const stones = lgpe.items('lgpe');
+    expect(stones.map((i) => i.id)).toContain('venusaurite');
+    expect(stones.map((i) => i.id)).not.toContain('garchompite');
+    for (const i of stones) expect(Object.values(i.megaStone!).some((m) => lgpe.species(m)), i.id).toBe(true);
+    // Z-A stones whose Mega the data doesn't define yet are kept rather than silently dropped.
+    const za = await loadDex('za');
+    expect(za.items('za').map((i) => i.id)).toEqual(expect.arrayContaining(['meowsticite', 'tatsugirinite', 'zygardite']));
+  });
+
+  it('notes that Z-Moves are not modelled, only in Sun/Moon', async () => {
+    for (const id of ['gen7', 'gen6']) {
+      const format = FORMATS.find((f) => f.id === id)!;
+      const dex = await loadDex(id);
+      const team: Team = { ...createTeam(format), slots: [{ ...createSet(dex, 'charizard', format), itemId: id === 'gen7' ? 'firiumz' : 'charcoal' }, null, null, null, null, null] };
+      expect(validateTeam(team, format, dex).some((i) => i.code === 'z-not-modelled')).toBe(id === 'gen7');
+    }
+  });
+});
