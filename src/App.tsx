@@ -140,7 +140,7 @@ function ViewTabs() {
 
 function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: Dex }) {
   const theme = useTeamStore((s) => s.theme);
-  const { updateTeam, setTheme, saveAsNew } = useTeamStore.getState();
+  const { updateTeam, switchFormat, setTheme, saveAsNew } = useTeamStore.getState();
   const [teamsOpen, setTeamsOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -182,7 +182,7 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           aria-label="Format"
           className="order-last w-full sm:order-none sm:w-auto sm:max-w-[19rem]"
           value={format.id}
-          onChange={(e) => updateTeam(team.id, { formatId: e.target.value, category: getFormat(e.target.value).shortName })}
+          onChange={(e) => switchFormat(team.id, e.target.value)}
         >
           {[
             { label: 'Pokémon Champions', formats: FORMATS.filter((f) => f.datasetId === 'champions') },
@@ -283,7 +283,7 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
       </aside>
 
       <div className="min-w-0 space-y-4">
-        <SetEditor key={team.id + activeSlot} slot={activeSlot} set={team.slots[activeSlot]} dex={dex} format={format} issues={issues} />
+        <SetEditor key={team.id + activeSlot} teamId={team.id} slot={activeSlot} set={team.slots[activeSlot]} dex={dex} format={format} issues={issues} />
         <div className="lg:hidden">
           <ValidationPanel issues={issues} />
         </div>

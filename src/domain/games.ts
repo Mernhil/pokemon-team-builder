@@ -123,6 +123,15 @@ export interface DexBook {
 }
 
 export const BOOKS: DexBook[] = [
+  {
+    id: 'champions',
+    gen: 9,
+    label: 'Champions',
+    region: 'Champions',
+    games: 'Pokémon Champions',
+    spriteSet: 'champions',
+    color: '#e0345c',
+  },
   ...GENERATIONS.map((g) => ({
     id: `gen${g.gen}`,
     gen: g.gen,
@@ -135,8 +144,8 @@ export const BOOKS: DexBook[] = [
   ...GAMES.map((g) => ({ id: g.id, gen: g.generation, label: g.shortName, region: g.region, games: g.name, spriteSet: g.spriteSet, color: g.color, game: g.id })),
 ];
 
-export const bookInfo = (id?: string): DexBook => BOOKS.find((b) => b.id === id) ?? BOOKS[8];
+export const bookInfo = (id?: string): DexBook => BOOKS.find((b) => b.id === id) ?? BOOKS[9];
 
-/** The book that matches a format (Champions reads the Scarlet/Violet book). */
+/** The book that matches a format: Champions has its own regulation-filtered book. */
 export const bookForFormat = (format: Pick<FormatRules, 'datasetId' | 'generation' | 'game'>): DexBook =>
-  bookInfo(format.game ?? (format.datasetId === 'champions' ? 'gen9' : `gen${format.generation}`));
+  bookInfo(format.game ?? (format.datasetId === 'champions' ? 'champions' : `gen${format.generation}`));

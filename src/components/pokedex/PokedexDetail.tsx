@@ -128,7 +128,7 @@ function AddToTeam({ species, dex, book }: { species: Pokemon; dex: Dex; book: D
       title={free < 0 ? 'Your team is full' : `Add to ${team.name}`}
       onClick={() => {
         const { setSlot, setActiveSlot, setView } = useTeamStore.getState();
-        setSlot(free, createSet(dex, species.id, format));
+        setSlot(team.id, free, createSet(dex, species.id, format));
         setActiveSlot(free);
         setView('builder');
       }}
@@ -223,7 +223,7 @@ function InfoTab({ species, dex, data, book, onSelect }: Props) {
         {tree && (tree.children.length || tree.species.id !== species.id) ? (
           <EvoTree node={tree} current={species.id} spriteSet={book.spriteSet} onSelect={onSelect} />
         ) : (
-          <p className="text-sm text-muted">Does not evolve in {book.game ? book.label : `Gen ${gen}`}.</p>
+          <p className="text-sm text-muted">Does not evolve in {book.id === 'champions' ? book.label : book.game ? book.label : `Gen ${gen}`}.</p>
         )}
         {forms.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
@@ -331,11 +331,18 @@ function MovesTab({ species, dex, learn, book }: Props) {
           <MoveTable book={book} rows={g.rows.map((r) => ({ move: r.move, lead: g.method === 'level' ? (r.levels!.map((l) => (l <= 1 ? '—' : l)).join(' / ')) : undefined }))} lead={g.method === 'level' ? 'Lv' : undefined} />
         </Panel>
       ))}
-      {fromPrevo.length > 0 && (
-        <Panel title="Via pre-evolutions" actions={<span className="text-[11px] text-muted">learned before evolving</span>}>
-          <MoveTable book={book} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
-        </Panel>
-      )}
+      {fromPrevo.length > 0 &&
+        // With no per-move learn method (Champions), this is the species' whole legal movepool, not
+        // moves inherited from a pre-evolution — labelled accordingly instead of claiming otherwise.
+        (byMethod.length ? (
+          <Panel title="Via pre-evolutions" actions={<span className="text-[11px] text-muted">learned before evolving</span>}>
+            <MoveTable book={book} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
+          </Panel>
+        ) : (
+          <Panel title="Legal movepool" actions={<span className="text-[11px] text-muted">no level-up data for {book.games}</span>}>
+            <MoveTable book={book} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
+          </Panel>
+        ))}
       <p className="text-center text-[11px] text-muted">Learnsets for {book.games} · move data as of Gen {gen} ({book.region})</p>
     </div>
   );

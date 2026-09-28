@@ -27,12 +27,19 @@ interface Props {
   issues: Issue[];
   activeSlot: number;
   onSelect?: () => void;
+  /**
+   * Which slot editing should focus, when this isn't the Builder tab's one global "active slot"
+   * (e.g. the Matches tab's two side-by-side builders, each with its own local selection).
+   * Defaults to the global store's `setActiveSlot`.
+   */
+  onActiveSlot?: (i: number) => void;
 }
 
 /** Sortable 6-slot roster. Empty slots use a stable synthetic id so they can be reordered too. */
-export function TeamSlots({ team, dex, format, issues, activeSlot, onSelect }: Props) {
+export function TeamSlots({ team, dex, format, issues, activeSlot, onSelect, onActiveSlot }: Props) {
   const moveSlot = useTeamStore((s) => s.moveSlot);
-  const setActiveSlot = useTeamStore((s) => s.setActiveSlot);
+  const globalSetActiveSlot = useTeamStore((s) => s.setActiveSlot);
+  const setActiveSlot = onActiveSlot ?? globalSetActiveSlot;
   const ids = team.slots.map((s, i) => s?.uid ?? `empty-${i}`);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -44,7 +51,7 @@ export function TeamSlots({ team, dex, format, issues, activeSlot, onSelect }: P
     const from = ids.indexOf(String(e.active.id));
     const to = ids.indexOf(String(e.over.id));
     const activeUid = ids[activeSlot];
-    moveSlot(from, to);
+    moveSlot(team.id, from, to);
     // Keep the editor on the same Pokémon after reorder.
     const next = [...ids];
     const [x] = next.splice(from, 1);

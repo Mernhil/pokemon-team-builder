@@ -49,6 +49,7 @@ export function createSet(dex: Dex, speciesId: string, format: FormatRules): Pok
  */
 export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: Partial<Pick<Team, 'groupId' | 'variationLabel'>>): Team {
   const now = Date.now();
+  const cloneSlots = (slots: TeamSlots): TeamSlots => slots.map((s) => (s ? { ...structuredClone(s), uid: uid() } : null)) as TeamSlots;
   return {
     ...structuredClone(team),
     id: uid(),
@@ -56,7 +57,8 @@ export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: 
     groupId: undefined,
     variationLabel: undefined,
     ...overrides,
-    slots: team.slots.map((s) => (s ? { ...structuredClone(s), uid: uid() } : null)) as TeamSlots,
+    slots: cloneSlots(team.slots),
+    slotsByFormat: team.slotsByFormat && Object.fromEntries(Object.entries(team.slotsByFormat).map(([id, s]) => [id, cloneSlots(s)])),
     createdAt: now,
     updatedAt: now,
   };

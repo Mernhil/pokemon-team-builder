@@ -3,6 +3,7 @@
 - Stack: Vite + React 19 + TS strict + Tailwind v4 + Zustand. Domain logic lives in `src/domain/`, which has no React imports.
 - Data: `npm run data` rebuilds `src/data/generated/*` (Champions, `gen1…gen9`, and `lgpe`/`bdsp`/`pla`/`za` from Showdown's game mods) from `@pkmn/dex` / `@pkmn/mods`, a pinned Showdown checkout (`scripts/sources.ts`) and `src/data/regulations/*.json`. Never hand-edit the generated files.
 - Pokédex: `npm run pokedex` rebuilds `pokedex-<book>.json` from PokeAPI CSVs + PKHeX encounter tables (pinned in `scripts/sources.ts`; run after `npm run data`); `npm run maps` rebuilds `public/maps/*.png` + `maps.json` from the pret disassemblies and the hand-placed schematics in `src/data/maps/*.json` (those you may edit). Keep `gens.test.ts`' map-coverage test green.
+  - Champions has no wild encounters and isn't in PokeAPI: `npm run pokedex:champions` (after `npm run data` and `npm run pokedex`) rebuilds `pokedex-champions.json`/`champions-learn.json` locally, reusing Gen 9's flavor text for the National Dex numbers Champions has. Its species list is filtered live to whichever regulation is selected (`Dex.selectableSpecies(regulationId)`), so a regulation change alone needs no rebuild.
 - Sprites: `npm run sprites` rebuilds `public/sprites/*` atlases from PokeAPI.
 - Regulation updates follow `docs/UPDATING_REGULATIONS.md` exactly.
 - Phone app: PWA (`vite-plugin-pwa` + `src/pwa.ts`), hosted on Cloudflare Workers (`wrangler.jsonc`, auto-deploys on push) behind Cloudflare Access; see `docs/IPHONE_APP.md`.
