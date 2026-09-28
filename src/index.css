@@ -51,6 +51,7 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
 }
 
 /* Range input styled per-stat through --track / --fill custom properties. */
