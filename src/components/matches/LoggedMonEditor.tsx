@@ -5,7 +5,7 @@ import type { LoggedMon } from '@/domain/matches';
 import type { FormatRules } from '@/domain/types';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { Combobox, type ComboOption } from '../ui/Combobox';
-import { ItemSprite } from '../ui/ItemSprite';
+import { comboProps, useItemPicker, useMovePicker } from '../editor/options';
 import { Sprite } from '../ui/Sprite';
 import { Button, cn } from '../ui/primitives';
 
@@ -35,40 +35,6 @@ export function LoggedMonEditor({
   const [expanded, setExpanded] = useState(false);
   const species = dex.species(mon.speciesId);
 
-  // Only built once the details are open (a Team Preview has up to 12 of these editors), and kept
-  // stable across renders so the comboboxes' filtering memo isn't invalidated on every keystroke.
-  const itemOptions = useMemo<ComboOption[]>(
-    () =>
-      expanded
-        ? dex.items().map((i) => ({
-            id: i.id,
-            label: i.name,
-            render: (
-              <span className="flex items-center gap-2">
-                <ItemSprite itemId={i.id} name={i.name} size={18} />
-                {i.name}
-              </span>
-            ),
-          }))
-        : [],
-    [dex, expanded],
-  );
-  const abilityOptions = useMemo<ComboOption[]>(
-    () => (expanded ? Object.values(dex.data.abilities).map((a) => ({ id: a.id, label: a.name })) : []),
-    [dex, expanded],
-  );
-  const moveOptions = useMemo<ComboOption[]>(
-    () => (expanded && mon.speciesId ? dex.learnset(mon.speciesId).map((m) => ({ id: m.id, label: m.name })) : []),
-    [dex, expanded, mon.speciesId],
-  );
-
-  const moves = mon.moves ?? [];
-  const setMove = (i: number, id: string) => {
-    const next = [...moves];
-    next[i] = id;
-    onChange({ ...mon, moves: next.filter(Boolean) });
-  };
-
   return (
     <div className="rounded-lg border border-border bg-surface-2 p-2">
       <div className="flex items-center gap-2">
@@ -83,32 +49,65 @@ export function LoggedMonEditor({
           <X size={14} />
         </Button>
       </div>
-      {expanded && (
-        <div className="mt-2 grid grid-cols-2 gap-1.5 border-t border-border pt-2 sm:grid-cols-4">
-          <Combobox aria-label="Item seen" options={itemOptions} value={mon.itemId} onChange={(id) => onChange({ ...mon, itemId: id })} allowClear placeholder="Item (optional)" />
-          <Combobox aria-label="Ability seen" options={abilityOptions} value={mon.abilityId} onChange={(id) => onChange({ ...mon, abilityId: id })} allowClear placeholder="Ability (optional)" />
-          {tera && (
-            <select
-              aria-label="Tera type revealed"
-              value={mon.teraType ?? ''}
-              onChange={(e) => onChange({ ...mon, teraType: (e.target.value || undefined) as LoggedMon['teraType'] })}
-              className="h-9 rounded-md border border-border bg-surface px-2 text-xs outline-none focus:border-accent"
-            >
-              <option value="">Tera (optional)</option>
-              {TERA_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          )}
-          <div className="col-span-2 grid grid-cols-2 gap-1.5 sm:col-span-4 sm:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <Combobox key={i} aria-label={`Move ${i + 1} seen`} options={moveOptions} value={moves[i]} onChange={(id) => setMove(i, id)} allowClear placeholder={`Move ${i + 1} seen`} />
-            ))}
-          </div>
-        </div>
+      {expanded && <LoggedMonDetails dex={dex} format={format} tera={tera} mon={mon} onChange={onChange} />}
+    </div>
+  );
+}
+
+/**
+ * Item/ability/moves/Tera revealed in battle — only mounted once a row is expanded (a Team Preview
+ * has up to 12 of these editors), with the same ordered pickers as the builder.
+ */
+function LoggedMonDetails({ dex, format, tera, mon, onChange }: { dex: Dex; format: FormatRules; tera: boolean; mon: LoggedMon; onChange: (m: LoggedMon) => void }) {
+  const moves = mon.moves ?? [];
+  const itemPicker = useItemPicker(dex, format, mon.speciesId);
+  const movePicker = useMovePicker(dex, format, mon.speciesId ? { speciesId: mon.speciesId, itemId: mon.itemId, moves: [moves[0] ?? '', moves[1] ?? '', moves[2] ?? '', moves[3] ?? ''] } : null);
+  // A species can only have its own abilities (slot 1, slot 2, Hidden).
+  const abilityOptions = useMemo<ComboOption[]>(
+    () => dex.abilitiesOf(mon.speciesId).map(({ slot, ability }) => ({ id: ability.id, label: slot === 'H' ? `${ability.name} (Hidden)` : ability.name })),
+    [dex, mon.speciesId],
+  );
+  const setMove = (i: number, id: string) => {
+    movePicker.remember(id);
+    const next = [...moves];
+    next[i] = id;
+    onChange({ ...mon, moves: next.filter(Boolean) });
+  };
+
+  return (
+    <div className="mt-2 grid grid-cols-2 gap-1.5 border-t border-border pt-2 sm:grid-cols-4">
+      <Combobox
+        aria-label="Item seen"
+        {...comboProps(itemPicker)}
+        value={mon.itemId}
+        onChange={(id) => {
+          itemPicker.remember(id);
+          onChange({ ...mon, itemId: id || undefined });
+        }}
+        allowClear
+        placeholder="Item (optional)"
+      />
+      <Combobox aria-label="Ability seen" options={abilityOptions} value={mon.abilityId} onChange={(id) => onChange({ ...mon, abilityId: id || undefined })} allowClear placeholder="Ability (optional)" />
+      {tera && (
+        <select
+          aria-label="Tera type revealed"
+          value={mon.teraType ?? ''}
+          onChange={(e) => onChange({ ...mon, teraType: (e.target.value || undefined) as LoggedMon['teraType'] })}
+          className="h-9 rounded-md border border-border bg-surface px-2 text-xs outline-none focus:border-accent"
+        >
+          <option value="">Tera (optional)</option>
+          {TERA_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
       )}
+      <div className="col-span-2 grid grid-cols-2 gap-1.5 sm:col-span-4 sm:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Combobox key={i} aria-label={`Move ${i + 1} seen`} {...comboProps(movePicker)} value={moves[i]} onChange={(id) => setMove(i, id)} allowClear placeholder={`Move ${i + 1} seen`} />
+        ))}
+      </div>
     </div>
   );
 }

@@ -17,7 +17,7 @@ import { Sprite } from '../ui/Sprite';
 import { Button, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
 import { AdvancedDetails } from './AdvancedDetails';
 import { NaturePicker } from './NaturePicker';
-import { useItemOptions, useMoveOptions } from './options';
+import { comboProps, optionCount, useItemPicker, useMovePicker } from './options';
 import { SpeciesPicker } from './SpeciesPicker';
 import { SpriteHistory } from './SpriteHistory';
 import { StatDistributor } from './StatDistributor';
@@ -40,8 +40,8 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
   const mech = formatMechanics(format);
   const champions = format.statSystem.kind === 'champions-sp';
 
-  const itemOptions = useItemOptions(dex, format, set?.speciesId);
-  const moveOptions = useMoveOptions(dex, format, set);
+  const itemPicker = useItemPicker(dex, format, set?.speciesId);
+  const movePicker = useMovePicker(dex, format, set);
 
   if (!set) {
     return (
@@ -167,13 +167,16 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
             >
               <Combobox
                 aria-label="Held item"
-                options={itemOptions}
+                {...comboProps(itemPicker)}
                 value={set.itemId}
                 allowClear
                 placeholder="None"
                 icon={<ItemSprite itemId={set.itemId} name={item?.name} size={18} />}
                 invalid={slotIssues.some((i) => i.code.startsWith('item'))}
-                onChange={(id) => updateSet(slot, { itemId: id || undefined })}
+                onChange={(id) => {
+                  itemPicker.remember(id);
+                  updateSet(slot, { itemId: id || undefined });
+                }}
               />
             </Field>
             )}
@@ -254,7 +257,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
           <div className="mb-1.5 flex items-baseline justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Moves</span>
             <span className="text-[11px] text-muted">
-              {moveOptions.length} legal in {format.shortName}
+              {optionCount(movePicker.groups)} legal in {format.shortName}
               {species.provisionalLearnset && <span className="text-warn"> · learnset provisional (Scarlet/Violet data)</span>}
             </span>
           </div>
@@ -267,12 +270,15 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
                   <Combobox
                     className="flex-1"
                     aria-label={`Move ${mi + 1}`}
-                    options={moveOptions}
+                    {...comboProps(movePicker)}
                     value={m}
                     allowClear
                     placeholder="Search moves…"
                     invalid={!!m && badMove(m)}
-                    onChange={(id) => setMove(slot, mi, id)}
+                    onChange={(id) => {
+                      movePicker.remember(id);
+                      setMove(slot, mi, id);
+                    }}
                   />
                   {mv && (
                     <MoveTooltip move={mv}>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { STAT_LABELS, type StatId } from '@/domain/types';
+import { usePickerPrefs, usePrefsStore } from '@/store/prefsStore';
 import { STAT_COLOR_VAR, cn } from '../ui/primitives';
 
 /** The five stats a nature can raise/lower, in the same order the games' Mint grid uses. */
@@ -32,7 +33,9 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
   }, [open]);
 
   const natureAt = (plus: StatId, minus: StatId) => dex.natures.find((n) => n.plus === plus && n.minus === minus);
+  const recent = usePickerPrefs('natures').recent.map((n) => dex.nature(n)).filter((n) => !!n);
   const pick = (name: string) => {
+    usePrefsStore.getState().addRecent('natures', name);
     onChange(name);
     setOpen(false);
   };
@@ -62,6 +65,30 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
 
       {open && (
         <div className="absolute z-40 mt-1 rounded-lg border border-border bg-surface p-2.5 shadow-xl">
+          {recent.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-1" role="group" aria-label="Recent natures">
+              <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-muted">Recent</span>
+              {recent.map((n) => (
+                <button
+                  key={n.name}
+                  type="button"
+                  onClick={() => pick(n.name)}
+                  aria-current={current?.name === n.name}
+                  className={cn(
+                    'rounded-md border px-1.5 py-0.5 text-[10px] font-semibold',
+                    current?.name === n.name ? 'border-accent bg-accent/15' : 'border-border/60 hover:border-muted',
+                  )}
+                >
+                  {n.name}
+                  {n.plus && n.plus !== n.minus && (
+                    <span className="ml-1 font-normal text-muted">
+                      +{STAT_LABELS[n.plus]} −{STAT_LABELS[n.minus!]}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
           <table className="border-separate [border-spacing:2px]">
             <thead>
               <tr>

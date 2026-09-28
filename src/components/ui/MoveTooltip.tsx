@@ -1,11 +1,10 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Shield, Swords, Zap } from 'lucide-react';
 import { formatMoveEffect } from '@/domain/moveEffect';
+import { CATEGORY_ICON } from './categoryIcon';
 import type { Move } from '@/domain/types';
 import { TypeBadge, cn } from './primitives';
 
-const CATEGORY_ICON = { Physical: Swords, Special: Zap, Status: Shield } as const;
 
 const FLAG_TAGS: { key: keyof Move['flags']; label: string }[] = [
   { key: 'sound', label: 'Sound' },

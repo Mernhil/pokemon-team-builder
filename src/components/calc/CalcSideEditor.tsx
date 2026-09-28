@@ -9,7 +9,7 @@ import { useCalcStore, type SideKey } from '@/store/calcStore';
 import { SideControls } from '../battle/Controls';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { StatDistributor } from '../editor/StatDistributor';
-import { useItemOptions, useMoveOptions } from '../editor/options';
+import { comboProps, useItemPicker, useMovePicker } from '../editor/options';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { InfoTooltip } from '../ui/InfoTooltip';
@@ -32,8 +32,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
   const side = useCalcStore((s) => s[role]);
   const { setSide, patchSet, patchCond, patchSide } = useCalcStore.getState();
   const set = side.set;
-  const itemOptions = useItemOptions(dex, format, set?.speciesId);
-  const moveOptions = useMoveOptions(dex, format, set);
+  const itemPicker = useItemPicker(dex, format, set?.speciesId);
+  const movePicker = useMovePicker(dex, format, set);
   const species = set ? dex.species(set.speciesId) : undefined;
   const mega = set && format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
   const forme = side.cond.mega && mega ? mega : species;
@@ -145,12 +145,15 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
               >
                 <Combobox
                   aria-label={`${title} item`}
-                  options={itemOptions}
+                  {...comboProps(itemPicker)}
                   value={set.itemId}
                   allowClear
                   placeholder="None"
                   icon={<ItemSprite itemId={set.itemId} name={dex.item(set.itemId)?.name} size={18} />}
-                  onChange={(id) => patchSet(role, { itemId: id || undefined })}
+                  onChange={(id) => {
+                    itemPicker.remember(id);
+                    patchSet(role, { itemId: id || undefined });
+                  }}
                 />
               </Field>
               )}
@@ -226,11 +229,12 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                     <Combobox
                       className="flex-1"
                       aria-label={`${title} move ${i + 1}`}
-                      options={moveOptions}
+                      {...comboProps(movePicker)}
                       value={m}
                       allowClear
                       placeholder="Search moves…"
                       onChange={(id) => {
+                        movePicker.remember(id);
                         const moves = [...set.moves] as typeof set.moves;
                         moves[i] = id;
                         patchSet(role, { moves });
