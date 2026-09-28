@@ -44,6 +44,48 @@ describe('teamStore: saveAsNew', () => {
   });
 });
 
+describe('teamStore: clearTeam', () => {
+  it('empties a team\'s slots but keeps its format, name and id', () => {
+    const id = resetStore();
+    const set = createSet(dex, 'charizard', fmt);
+    useTeamStore.getState().setSlot(id, 0, set);
+
+    useTeamStore.getState().clearTeam(id);
+
+    const state = useTeamStore.getState();
+    expect(state.teams[id].slots).toEqual([null, null, null, null, null, null]);
+    expect(state.teams[id].formatId).toBe(fmt.id);
+    expect(state.teams[id].name).toBe('Base Team');
+    expect(state.activeTeamId).toBe(id);
+  });
+
+  it('does not touch other saved teams, order, or battle state', () => {
+    const id = resetStore();
+    const set = createSet(dex, 'charizard', fmt);
+    useTeamStore.getState().setSlot(id, 0, set);
+    const otherId = useTeamStore.getState().saveAsNew('Other Team');
+    // Reactivate the original team as the one being built.
+    useTeamStore.getState().selectTeam(id);
+    const before = useTeamStore.getState().teams[otherId];
+
+    useTeamStore.getState().clearTeam(id);
+
+    const state = useTeamStore.getState();
+    expect(state.teams[otherId]).toBe(before);
+    expect(state.order).toContain(otherId);
+    expect(state.order).toContain(id);
+  });
+
+  it('is a no-op on an already-empty team', () => {
+    const id = resetStore();
+    const before = useTeamStore.getState().teams[id];
+
+    useTeamStore.getState().clearTeam(id);
+
+    expect(useTeamStore.getState().teams[id]).toBe(before);
+  });
+});
+
 describe('teamStore: variations', () => {
   it('addVariation nests a copy under the same group instead of creating a top-level entry', () => {
     const groupId = resetStore();

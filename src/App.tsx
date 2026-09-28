@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BarChart3, BookOpen, Calculator, Check, ChevronDown, FolderOpen, Moon, Save, Sun, Swords, Users } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, BookOpen, Calculator, Check, ChevronDown, Eraser, FolderOpen, Moon, Save, Sun, Swords, Users } from 'lucide-react';
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
@@ -140,7 +140,8 @@ function ViewTabs() {
 
 function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: Dex }) {
   const theme = useTeamStore((s) => s.theme);
-  const { updateTeam, switchFormat, setTheme, saveAsNew } = useTeamStore.getState();
+  const { updateTeam, switchFormat, setTheme, saveAsNew, clearTeam } = useTeamStore.getState();
+  const isEmpty = team.slots.every((s) => s === null);
   const [teamsOpen, setTeamsOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -209,6 +210,15 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
           </Button>
           <Button onClick={() => setIoOpen(true)} disabled={!dex}>
             <ArrowLeftRight size={14} /> <span className="hidden sm:inline">Import / Export</span>
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Clear team"
+            disabled={isEmpty}
+            onClick={() => clearTeam(team.id)}
+          >
+            <Eraser size={16} />
           </Button>
           <UpdateCheckButton />
           <Button

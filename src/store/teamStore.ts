@@ -57,6 +57,8 @@ export interface TeamState {
   setSpread: (id: string, i: number, kind: 'sp' | 'evs' | 'ivs', stat: StatId, value: number) => void;
   resetSpread: (id: string, i: number, kind: 'sp' | 'evs') => void;
   moveSlot: (id: string, from: number, to: number) => void;
+  /** Empties a team's six slots in place (keeps its format/category/name). No-op if already empty. */
+  clearTeam: (id: string) => void;
 
   setTheme: (t: Theme) => void;
   setView: (v: View) => void;
@@ -263,6 +265,10 @@ export const useTeamStore = create<TeamState>()(
             slots.splice(to, 0, x);
             return { ...t, slots: slots as TeamSlots };
           }),
+        clearTeam: (id) => {
+          if (get().teams[id]?.slots.every((s) => s === null)) return;
+          mutateTeam(id, (t) => ({ ...t, slots: emptySlots() }));
+        },
 
         setTheme: (theme) => set({ theme }),
         setView: (view) => set({ view }),
