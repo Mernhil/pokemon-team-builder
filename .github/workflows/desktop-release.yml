@@ -153,8 +153,10 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      # Updater artifacts need the signing key, which a test run doesn't have (and doesn't need):
+      # src-tauri/tauri.test.conf.json turns them off for this build only. Tag releases don't use it.
       - name: Build only (manual test run)
-        run: npx tauri build
+        run: npx tauri build --config src-tauri/tauri.test.conf.json
 
       - name: Upload build (manual test run)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
