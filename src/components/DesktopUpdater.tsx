@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { AlertTriangle, Check, Download, RefreshCw, X } from 'lucide-react';
 import { create } from 'zustand';
-import { Button, cn } from './ui/primitives';
+import { Button } from './ui/primitives';
+import { cn } from './ui/styles';
 
 type Update = import('@tauri-apps/plugin-updater').Update;
 

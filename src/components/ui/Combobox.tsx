@@ -1,7 +1,7 @@
 import { useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Star, X } from 'lucide-react';
 import { rankSearch } from '@/domain/pickerOrder';
-import { cn } from './primitives';
+import { cn } from './styles';
 
 export interface ComboOption {
   id: string;

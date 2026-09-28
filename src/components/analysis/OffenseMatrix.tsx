@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import type { Dex } from '@/data/dex';
 import { offensiveCoverage } from '@/domain/coverage';
 import type { Team } from '@/domain/types';
-import { Panel, TYPE_COLORS, cn } from '../ui/primitives';
+import { Panel } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { TYPE_BADGE } from '../ui/color';
 
 /**
  * Compact offensive coverage: for each defending type, how many team members hit it
@@ -13,7 +15,7 @@ export function OffenseMatrix({ team, dex }: { team: Team; dex: Dex }) {
   if (!rows[0]?.hits.length) return null;
 
   return (
-    <Panel title="Offensive Type Matrix">
+    <Panel title="Offensive type matrix">
       <div className="grid grid-cols-6 gap-1 sm:grid-cols-9">
         {rows.map(({ defType, hits, superEffective, walled }) => {
           // No super-effective hit on this type, and most of the team can't even hit it neutrally.
@@ -27,12 +29,12 @@ export function OffenseMatrix({ team, dex }: { team: Team; dex: Dex }) {
               )}
               title={hits.map((h) => `${h.name}: ×${h.mult} (${h.move})`).join('\n')}
             >
-              <div className="truncate rounded text-[9px] font-bold uppercase text-white" style={{ background: TYPE_COLORS[defType] }}>
+              <div className="truncate rounded text-[10px] font-bold uppercase" style={{ background: TYPE_BADGE[defType].fill, color: TYPE_BADGE[defType].text }}>
                 {defType.slice(0, 4)}
               </div>
               <div className="mt-0.5 flex justify-center gap-1.5 font-mono text-[11px]">
-                <span className={superEffective ? 'font-bold text-good' : 'text-muted/50'}>{superEffective}</span>
-                <span className={walled ? 'font-bold text-bad' : 'text-muted/50'}>{walled}</span>
+                <span className={superEffective ? 'font-bold text-good' : 'text-muted'}>{superEffective}</span>
+                <span className={walled ? 'font-bold text-bad' : 'text-muted'}>{walled}</span>
               </div>
             </div>
           );

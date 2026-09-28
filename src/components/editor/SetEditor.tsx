@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { Sparkles, Trash2 } from 'lucide-react';
+import { Info, Sparkles, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
 import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
@@ -14,7 +14,8 @@ import { InfoTooltip } from '../ui/InfoTooltip';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Button, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
+import { Button, Chip, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
+import { typeGradient } from '../ui/styles';
 import { AdvancedDetails } from './AdvancedDetails';
 import { NaturePicker } from './NaturePicker';
 import { comboProps, optionCount, useItemPicker, useMovePicker } from './options';
@@ -93,36 +94,28 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Identity: who this is and how it's set up. */}
       <Panel
-        title={
-          <span className="flex items-center gap-2">
-            Slot {slot + 1}
-            {mega && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
-                <Sparkles size={11} /> Mega-ready
-              </span>
-            )}
-          </span>
-        }
+        title={<span className="sr-only">Slot {slot + 1}: {set.nickname || species.name}</span>}
         actions={
-          <Button size="sm" variant="ghost" onClick={() => setSlot(slot, null)} aria-label="Remove Pokémon">
-            <Trash2 size={13} /> Remove
+          <Button size="sm" variant="ghost" onClick={() => setSlot(slot, null)}>
+            <Trash2 size={14} aria-hidden /> Remove
           </Button>
         }
+        bodyClassName="pt-0"
       >
-        {/* Identity */}
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <div className="flex items-start gap-3 sm:w-72 sm:shrink-0">
-            <div className="flex flex-col items-center gap-1">
-              <Sprite speciesId={species.id} name={species.name} types={species.types} set={format.spriteSet} size={88} backdrop />
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <div className="relative flex size-24 sm:size-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl" style={{ background: typeGradient(species.types) }}>
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/25" aria-hidden />
+              <Sprite speciesId={species.id} name={species.name} types={species.types} set={format.spriteSet} size={96} className="drop-shadow-[0_3px_4px_rgb(0_0_0/0.45)]" />
               {mega && (
-                <div className="flex items-center gap-0.5 text-[10px] font-semibold text-accent" title={mega.name}>
-                  <Sparkles size={10} />
-                  <Sprite speciesId={mega.id} name={mega.name} types={mega.types} set={format.spriteSet} size={36} />
-                </div>
+                <span className="absolute right-1 bottom-1 rounded-lg bg-black/35 p-0.5" title={mega.name}>
+                  <Sprite speciesId={mega.id} name={mega.name} types={mega.types} set={format.spriteSet} size={34} />
+                </span>
               )}
             </div>
-            <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="min-w-0 flex-1 space-y-1.5 sm:max-w-sm">
               <SpeciesPicker
                 showGenFilter={false}
                 dex={dex}
@@ -141,26 +134,25 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
                 ))}
                 <GenBadge gen={species.gen} label className="ml-1" />
               </div>
-              <div className="font-mono text-[10px] text-muted">National Dex #{species.num}</div>
+              <div className="font-mono text-xs text-muted">National Dex #{species.num}</div>
               {mega && (
-                <div className="text-[11px] text-muted">
-                  → <b className="text-fg">{mega.name}</b> · {mega.types.join('/')} · {Object.values(mega.abilities)[0]}
-                </div>
+                <Chip tone="accent" icon={Sparkles} className="max-w-full">
+                  <span className="truncate">
+                    {mega.name} · {mega.types.join('/')} · {Object.values(mega.abilities)[0]}
+                  </span>
+                </Chip>
               )}
             </div>
           </div>
 
-          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Nickname">
-              <Input value={set.nickname ?? ''} placeholder={species.name} maxLength={12} onChange={(e) => updateSet(slot, { nickname: e.target.value || undefined })} />
-            </Field>
+          <div className="grid min-w-0 grid-cols-1 content-start gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             {(mech.heldItems || mech.megaStoneOnly) && (
             <Field
               label={mech.megaStoneOnly ? 'Mega Stone (in the Bag)' : 'Held item'}
               hint={
                 item?.shortDesc && (
                   <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]}>
-                    <span className="truncate">ⓘ</span>
+                    <span className="inline-flex size-6 items-center justify-center" aria-label={`About ${item.name}`}><Info size={14} aria-hidden /></span>
                   </InfoTooltip>
                 )
               }
@@ -186,7 +178,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
               hint={
                 ability?.shortDesc && (
                   <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]}>
-                    <span className="truncate">ⓘ</span>
+                    <span className="inline-flex size-6 items-center justify-center" aria-label={`About ${ability.name}`}><Info size={14} aria-hidden /></span>
                   </InfoTooltip>
                 )
               }
@@ -202,7 +194,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
             </Field>
             )}
             {mech.natures && (
-            <Field label={champions ? 'Stat Alignment (Nature)' : 'Nature'}>
+            <Field label={champions ? 'Stat alignment (nature)' : 'Nature'}>
               <NaturePicker dex={dex} value={set.nature} onChange={(nature) => updateSet(slot, { nature })} />
             </Field>
             )}
@@ -218,6 +210,9 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
                 </Select>
               </Field>
             )}
+            <Field label="Nickname">
+              <Input value={set.nickname ?? ''} placeholder={species.name} maxLength={12} onChange={(e) => updateSet(slot, { nickname: e.target.value || undefined })} />
+            </Field>
             <Field label="Level">
               {format.level.fixed ? (
                 <Input value={format.level.fixed} disabled readOnly title="Champions: fixed Lv 50, 31 IVs" />
@@ -234,68 +229,75 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
             </Field>
           </div>
         </div>
-        {ability && (
-          <p className="mt-3 text-xs text-muted">
-            <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]}>
-              <b className="text-fg underline decoration-dotted">{ability.name}</b>
-            </InfoTooltip>
-            : {ability.shortDesc}
-          </p>
-        )}
-        {item && (
-          <p className="mt-1 text-xs text-muted">
-            <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]}>
-              <b className="text-fg underline decoration-dotted">{item.name}</b>
-            </InfoTooltip>
-            : {item.shortDesc}
-          </p>
+        {(ability || item) && (
+          <div className="mt-4 space-y-1 text-sm text-muted">
+            {ability && (
+              <p>
+                <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]}>
+                  <b className="text-fg underline decoration-dotted underline-offset-2">{ability.name}</b>
+                </InfoTooltip>
+                : {ability.shortDesc}
+              </p>
+            )}
+            {item && (
+              <p>
+                <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]}>
+                  <b className="text-fg underline decoration-dotted underline-offset-2">{item.name}</b>
+                </InfoTooltip>
+                : {item.shortDesc}
+              </p>
+            )}
+          </div>
         )}
         <SpriteHistory species={species} />
+      </Panel>
 
-        {/* Moves */}
-        <div className="mt-4">
-          <div className="mb-1.5 flex items-baseline justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Moves</span>
-            <span className="text-[11px] text-muted">
-              {optionCount(movePicker.groups)} legal in {format.shortName}
-              {species.provisionalLearnset && <span className="text-warn"> · learnset provisional (Scarlet/Violet data)</span>}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {set.moves.map((m, mi) => {
-              const mv = dex.move(m);
-              return (
-                <div key={mi} className="flex items-center gap-2">
-                  <span className="w-3 text-xs text-muted">{mi + 1}</span>
-                  <Combobox
-                    className="flex-1"
-                    aria-label={`Move ${mi + 1}`}
-                    {...comboProps(movePicker)}
-                    value={m}
-                    allowClear
-                    placeholder="Search moves…"
-                    invalid={!!m && badMove(m)}
-                    onChange={(id) => {
-                      movePicker.remember(id);
-                      setMove(slot, mi, id);
-                    }}
-                  />
-                  {mv && (
-                    <MoveTooltip move={mv}>
-                      <TypeBadge type={mv.type} size="xs" />
-                    </MoveTooltip>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      {/* Moves: four cards, two per row. */}
+      <Panel
+        title="Moves"
+        actions={
+          <span className="text-xs text-muted">
+            {optionCount(movePicker.groups)} legal in {format.shortName}
+            {species.provisionalLearnset && <span className="text-warn"> · provisional (Scarlet/Violet learnset)</span>}
+          </span>
+        }
+      >
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          {set.moves.map((m, mi) => {
+            const mv = dex.move(m);
+            return (
+              <div key={mi} className="flex min-w-0 items-center gap-2 rounded-xl bg-surface-2 p-1.5 pl-2.5">
+                <span className="w-3 text-xs font-semibold text-muted" aria-hidden>
+                  {mi + 1}
+                </span>
+                <Combobox
+                  className="min-w-0 flex-1"
+                  aria-label={`Move ${mi + 1}`}
+                  {...comboProps(movePicker)}
+                  value={m}
+                  allowClear
+                  placeholder="Search moves…"
+                  invalid={!!m && badMove(m)}
+                  onChange={(id) => {
+                    movePicker.remember(id);
+                    setMove(slot, mi, id);
+                  }}
+                />
+                {mv && (
+                  <MoveTooltip move={mv}>
+                    <TypeBadge type={mv.type} size="xs" />
+                  </MoveTooltip>
+                )}
+              </div>
+            );
+          })}
         </div>
       </Panel>
 
       <Panel
         title={{ 'champions-sp': 'Stat Point Calculator', 'modern-ev': 'EVs & IVs', 'gb-statexp': 'Stat Exp & DVs', 'lgpe-av': 'AVs, IVs & Friendship', 'pla-effort': 'Effort Levels' }[format.statSystem.kind]}
         actions={
-          <span className="text-[11px] text-muted">
+          <span className="text-xs text-muted">
             {champions ? 'Lv 50 · 31 IVs · 1 SP = +1 stat' : `Lv ${set.level} · ${format.game ? format.shortName : `Gen ${format.generation}`} stat formula`}
           </span>
         }

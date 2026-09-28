@@ -15,7 +15,8 @@ import { teamVariations } from '@/domain/team';
 import type { FormatRules, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
 import { Modal } from '../ui/Modal';
-import { Button, Field, Input, cn } from '../ui/primitives';
+import { Button, Field, Input } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 type Tab = 'champions' | 'showdown' | 'share' | 'json' | 'import';
 

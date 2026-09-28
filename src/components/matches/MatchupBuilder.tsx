@@ -4,7 +4,8 @@ import { teamVsTeam, type MatchupRow } from '@/domain/coverage';
 import { getFormat } from '@/domain/formats';
 import { useMatchStore } from '@/store/matchStore';
 import { useTeamStore } from '@/store/teamStore';
-import { Panel, TypeBadge, cn } from '../ui/primitives';
+import { Panel, TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
 import { TeamBuilderPanel } from './TeamBuilderPanel';
 
 /**

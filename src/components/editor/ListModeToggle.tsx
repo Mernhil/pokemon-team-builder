@@ -1,5 +1,5 @@
 import { usePrefsStore, type ListMode } from '@/store/prefsStore';
-import { cn } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 /** Grouped / A–Z switch shown above the item and move lists. */
 export function ListModeToggle({ list }: { list: 'items' | 'moves' }) {

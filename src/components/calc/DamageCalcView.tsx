@@ -9,7 +9,8 @@ import { useCalcStore, type CalcSide, type SideKey } from '@/store/calcStore';
 import { FieldControls } from '../battle/Controls';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Button, Panel, TypeBadge, cn } from '../ui/primitives';
+import { Button, Panel, TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
 import { CalcSideEditor } from './CalcSideEditor';
 
 /**

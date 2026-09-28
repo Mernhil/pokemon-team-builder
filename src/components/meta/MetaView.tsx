@@ -6,7 +6,8 @@ import { STAT_LABELS, type FormatRules } from '@/domain/types';
 import { useMetaStore } from '@/store/metaStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
-import { Button, Panel, Select, cn } from '../ui/primitives';
+import { Button, Panel, Select } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
 

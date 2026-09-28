@@ -9,7 +9,8 @@ import { useMatchStore } from '@/store/matchStore';
 import { useMetaStore } from '@/store/metaStore';
 import { useTeamStore } from '@/store/teamStore';
 import { LoggedMonEditor } from './LoggedMonEditor';
-import { Button, Field, Input, Panel, Select, TextArea, cn } from '../ui/primitives';
+import { Button, Field, Input, Panel, Select, TextArea } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
 

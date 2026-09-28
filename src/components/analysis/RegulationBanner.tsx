@@ -26,7 +26,7 @@ function GenerationStrip({ format }: { format: FormatRules }) {
   const game = gameInfo(format.game);
   if (game)
     return (
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs sm:px-4 sm:py-2.5">
         <span className="flex items-center gap-1.5">
           <GenBadge gen={g.gen} />
           <b className="text-fg">{game.name}</b>
@@ -40,7 +40,7 @@ function GenerationStrip({ format }: { format: FormatRules }) {
     );
   const missing = [!m.abilities && 'abilities', !m.natures && 'natures', !m.heldItems && 'held items', !m.splitSpecial && 'a split Special stat'].filter(Boolean);
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs sm:px-4 sm:py-2.5">
       <span className="flex items-center gap-1.5">
         <GenBadge gen={g.gen} />
         <b className="text-fg">{g.region}</b>
@@ -67,7 +67,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
   const daysLeft = live.end ? Math.ceil((new Date(live.end).getTime() - Date.now()) / 86_400_000) : undefined;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs sm:px-4 sm:py-2.5">
       <span className="flex items-center gap-1.5">
         <RadioTower size={14} className="text-good" />
         <b className="text-fg">{live.shortName} is live</b>
@@ -76,22 +76,22 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
           {daysLeft !== undefined && daysLeft >= 0 && ` · ${daysLeft} days left`}
         </span>
       </span>
-      <span className="text-muted">
+      <span className="hidden text-muted sm:inline">
         {live.speciesCount} Pokémon · {live.megaCount} Megas · {live.itemCount} items
       </span>
       {next ? (
-        <span className="flex items-center gap-1.5">
+        <span className="hidden items-center gap-1.5 sm:flex">
           <CalendarClock size={14} className="text-accent" />
           <b>Next: {next.name}</b>
           <span className="text-muted">from {fmtDate(next.start)}</span>
         </span>
       ) : (
-        <span className="text-muted">Next regulation not announced yet</span>
+        <span className="hidden text-muted sm:inline">Next regulation not announced yet</span>
       )}
       <span className="ml-auto flex items-center gap-2">
-        {REGULATION_MANIFEST.lastChecked && <span className="text-muted">Checked {fmtDate(REGULATION_MANIFEST.lastChecked)}</span>}
+        {REGULATION_MANIFEST.lastChecked && <span className="hidden text-muted sm:inline">Checked {fmtDate(REGULATION_MANIFEST.lastChecked)}</span>}
         {outdated && liveFormat && (
-          <Button size="sm" variant="primary" onClick={() => switchFormat(team.id, liveFormat.id)}>
+          <Button size="sm" onClick={() => switchFormat(team.id, liveFormat.id)}>
             Move team to {live.shortName}
           </Button>
         )}

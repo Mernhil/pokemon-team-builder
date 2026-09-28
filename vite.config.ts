@@ -21,6 +21,8 @@ const cacheBustIcons = (): Plugin => ({
 // `vite build --mode singlefile` inlines everything into one index.html (portable/offline build).
 export default defineConfig(({ mode }) => ({
   base: './',
+  // Shown in Settings & credits.
+  define: { __APP_VERSION__: JSON.stringify(appVersion) },
   plugins: [
     react(),
     tailwindcss(),

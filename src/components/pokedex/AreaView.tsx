@@ -5,7 +5,8 @@ import type { DexBook } from '@/domain/games';
 import { evolutionMethod, type Encounter, type PokedexData } from '@/domain/pokedex';
 import type { Pokemon } from '@/domain/types';
 import { usePokedexStore } from '@/store/pokedexStore';
-import { Panel, cn } from '../ui/primitives';
+import { Panel } from '../ui/primitives';
+import { cn } from '../ui/styles';
 import { RegionMaps } from './RegionMap';
 
 interface Props {

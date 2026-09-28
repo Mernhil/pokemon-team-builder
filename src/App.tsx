@@ -1,5 +1,20 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftRight, BarChart3, BookOpen, Calculator, Check, ChevronDown, Eraser, FolderOpen, Moon, Save, Sun, Swords, Users } from 'lucide-react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  ArrowLeftRight,
+  BarChart3,
+  BookOpen,
+  Calculator,
+  Check,
+  ChevronDown,
+  Eraser,
+  FolderOpen,
+  MoreHorizontal,
+  Save,
+  Settings,
+  Swords,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { useDex } from '@/data/useDex';
 import type { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
@@ -7,40 +22,62 @@ import { gameInfo } from '@/domain/games';
 import { GEN_GAMES } from '@/domain/generations';
 import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
-import { useActiveTeam, useTeamStore } from '@/store/teamStore';
+import { toast } from '@/store/toastStore';
+import { useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
 import { OffenseMatrix } from './components/analysis/OffenseMatrix';
+import { TeamCheck } from './components/analysis/TeamCheck';
 import { DesktopUpdater, UpdateCheckButton } from './components/DesktopUpdater';
 import { RegulationBanner } from './components/analysis/RegulationBanner';
 import { GenBadge } from './components/ui/GenBadge';
-import { ValidationPanel } from './components/analysis/ValidationPanel';
 import { SetEditor } from './components/editor/SetEditor';
 import { ImportExportDialog } from './components/io/ImportExportDialog';
 import { SaveTeamDialog } from './components/io/SaveTeamDialog';
 import { TeamsDialog } from './components/io/TeamsDialog';
-import { TeamSlots } from './components/team/TeamSlots';
-import { Button, Select, cn } from './components/ui/primitives';
+import { SettingsDialog } from './components/SettingsDialog';
+import { TeamSlots, TeamStrip } from './components/team/TeamSlots';
+import { Menu, MenuItem, MenuSeparator } from './components/ui/Menu';
+import { Toaster } from './components/ui/Toaster';
+import { Button, LoadingState, Panel } from './components/ui/primitives';
+import { buttonClass, cn, controlClass } from './components/ui/styles';
 
-// The damage calculator engine is sizeable; load it only when the tab is opened.
+// Heavier screens load when first opened.
 const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').then((m) => ({ default: m.DamageCalcView })));
 const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
+
+interface Dest {
+  id: View;
+  label: string;
+  icon: LucideIcon;
+}
+/** The three everyday destinations; the rest live under "More". */
+const PRIMARY: Dest[] = [
+  { id: 'builder', label: 'Build', icon: Users },
+  { id: 'calc', label: 'Calc', icon: Calculator },
+  { id: 'dex', label: 'Pokédex', icon: BookOpen },
+];
+const SECONDARY: Dest[] = [
+  { id: 'matches', label: 'Match log', icon: Swords },
+  { id: 'meta', label: 'Meta', icon: BarChart3 },
+];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'matches', 'meta'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
   const team = useActiveTeam();
   const format = getFormat(team.formatId);
   const dexState = useDex(format.datasetId);
-
   const view = useTeamStore((s) => s.view);
   const setView = useTeamStore((s) => s.setView);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Deep link: #calc opens the calculator, #dex the Pokédex, #builder the team builder.
+  // Deep link: #calc opens the calculator, #dex the Pokédex, #builder the team builder, …
   useEffect(() => {
     const fromHash = () => {
-      const h = location.hash.replace('#', '');
-      if (h === 'calc' || h === 'builder' || h === 'dex' || h === 'matches' || h === 'meta') setView(h);
+      const h = location.hash.replace('#', '') as View;
+      if (VIEWS.includes(h)) setView(h);
     };
     fromHash();
     window.addEventListener('hashchange', fromHash);
@@ -58,6 +95,9 @@ export default function App() {
     } catch {
       /* sandboxed */
     }
+    // A new screen starts at the top, and keyboard/screen-reader focus moves to it.
+    document.getElementById('main')?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0 });
   }, [view]);
 
   useEffect(() => {
@@ -65,82 +105,130 @@ export default function App() {
     document.documentElement.style.colorScheme = theme;
   }, [theme]);
 
+  const dex = dexState.status === 'ready' ? dexState.dex : undefined;
+  const loading = (label: string) => <LoadingState label={label} />;
+
+  let content: ReactNode;
+  if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
+  else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
+  else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
+  else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;
+  else if (view === 'meta') content = <Suspense fallback={loading('Loading meta data…')}><MetaView dex={dex} format={format} /></Suspense>;
+  else content = <Builder team={team} format={format} dex={dex} />;
+
   return (
     <div className="flex min-h-full flex-col">
+      <a href="#main" className={buttonClass('primary', 'md', 'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[70]')}>
+        Skip to content
+      </a>
       <DesktopUpdater />
-      <Header team={team} format={format} dex={dexState.status === 'ready' ? dexState.dex : undefined} />
-      {view === 'dex' ? (
-        <main className="mx-auto w-full max-w-[1400px] flex-1 p-4">
-          <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading Pokédex…</p>}>
-            <PokedexView format={format} />
-          </Suspense>
-        </main>
-      ) : dexState.status === 'ready' ? (
-        view === 'calc' ? (
-          <main className="mx-auto w-full max-w-[1800px] flex-1 p-4">
-            <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading damage calculator…</p>}>
-              <DamageCalcView dex={dexState.dex} format={format} team={team} />
-            </Suspense>
-          </main>
-        ) : view === 'matches' ? (
-          <main className="mx-auto w-full max-w-[1600px] flex-1 p-4">
-            <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading match log…</p>}>
-              <MatchesView dex={dexState.dex} format={format} />
-            </Suspense>
-          </main>
-        ) : view === 'meta' ? (
-          <main className="mx-auto w-full max-w-[1600px] flex-1 p-4">
-            <Suspense fallback={<p className="p-10 text-center text-sm text-muted">Loading meta data…</p>}>
-              <MetaView dex={dexState.dex} format={format} />
-            </Suspense>
-          </main>
-        ) : (
-          <Builder team={team} format={format} dex={dexState.dex} />
-        )
-      ) : (
-        <div className="flex flex-1 items-center justify-center p-10 text-sm text-muted">
-          {dexState.status === 'loading' ? 'Loading Pokédex…' : dexState.error}
-        </div>
-      )}
+      <Header team={team} format={format} dex={dex} onOpenSettings={() => setSettingsOpen(true)} />
+      <main id="main" tabIndex={-1} className={cn('mx-auto w-full flex-1 p-3 pb-24 outline-none sm:p-4 sm:pb-6', view === 'calc' ? 'max-w-[1800px]' : 'max-w-[1500px]')}>
+        {content}
+      </main>
+      <BottomTabs onOpenSettings={() => setSettingsOpen(true)} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <Toaster />
     </div>
   );
 }
 
-function ViewTabs() {
+/** Build · Calc · Pokédex, then More (Match log, Meta, Settings). Desktop and tablet. */
+function TopNav({ onOpenSettings }: { onOpenSettings: () => void }) {
   const view = useTeamStore((s) => s.view);
   const setView = useTeamStore((s) => s.setView);
-  const tabs = [
-    { id: 'builder' as const, label: 'Builder', icon: Users },
-    { id: 'calc' as const, label: 'Damage Calc', icon: Calculator },
-    { id: 'dex' as const, label: 'Pokédex', icon: BookOpen },
-    { id: 'matches' as const, label: 'Matches', icon: Swords },
-    { id: 'meta' as const, label: 'Meta', icon: BarChart3 },
-  ];
+  const secondary = SECONDARY.find((d) => d.id === view);
+  const item = (active: boolean) =>
+    cn('flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-colors', active ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg');
   return (
-    <nav className="flex rounded-lg bg-surface-2 p-0.5" aria-label="Sections">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          aria-current={view === t.id ? 'page' : undefined}
-          aria-label={t.label}
-          onClick={() => setView(t.id)}
-          className={cn(
-            'flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors',
-            view === t.id ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg',
-          )}
-        >
-          <t.icon size={14} />
-          <span className="hidden sm:inline">{t.label}</span>
+    <nav aria-label="Main" className="hidden rounded-lg bg-surface-2 p-0.5 sm:flex">
+      {PRIMARY.map((d) => (
+        <button key={d.id} type="button" aria-current={view === d.id ? 'page' : undefined} onClick={() => setView(d.id)} className={item(view === d.id)}>
+          <d.icon size={15} aria-hidden />
+          {d.label}
         </button>
       ))}
+      <Menu
+        label="More destinations"
+        align="start"
+        trigger={
+          <button type="button" className={item(!!secondary)} aria-current={secondary ? 'page' : undefined}>
+            {secondary ? <secondary.icon size={15} aria-hidden /> : null}
+            {secondary?.label ?? 'More'}
+            <ChevronDown size={14} aria-hidden />
+          </button>
+        }
+      >
+        {SECONDARY.map((d) => (
+          <MenuItem key={d.id} icon={d.icon} current={view === d.id} onSelect={() => setView(d.id)}>
+            {d.label}
+          </MenuItem>
+        ))}
+        <MenuSeparator />
+        <MenuItem icon={Settings} onSelect={onOpenSettings}>
+          Settings &amp; credits
+        </MenuItem>
+      </Menu>
     </nav>
   );
 }
 
-function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: Dex }) {
-  const theme = useTeamStore((s) => s.theme);
-  const { updateTeam, switchFormat, setTheme, saveAsNew, clearTeam } = useTeamStore.getState();
+/** Phone navigation: the same destinations as a bottom tab bar (clear of the home indicator). */
+function BottomTabs({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const view = useTeamStore((s) => s.view);
+  const setView = useTeamStore((s) => s.setView);
+  const secondary = SECONDARY.find((d) => d.id === view);
+  const tab = (active: boolean) =>
+    cn('flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold', active ? 'text-accent' : 'text-muted');
+  return (
+    <nav
+      aria-label="Main"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-surface/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
+    >
+      {PRIMARY.map((d) => (
+        <button key={d.id} type="button" aria-current={view === d.id ? 'page' : undefined} onClick={() => setView(d.id)} className={tab(view === d.id)}>
+          <d.icon size={21} aria-hidden />
+          {d.label}
+        </button>
+      ))}
+      <Menu
+        label="More destinations"
+        trigger={
+          <button type="button" className={tab(!!secondary)} aria-current={secondary ? 'page' : undefined}>
+            {secondary ? <secondary.icon size={21} aria-hidden /> : <MoreHorizontal size={21} aria-hidden />}
+            {secondary?.label ?? 'More'}
+          </button>
+        }
+      >
+        {SECONDARY.map((d) => (
+          <MenuItem key={d.id} icon={d.icon} current={view === d.id} onSelect={() => setView(d.id)}>
+            {d.label}
+          </MenuItem>
+        ))}
+        <MenuSeparator />
+        <MenuItem icon={Settings} onSelect={onOpenSettings}>
+          Settings &amp; credits
+        </MenuItem>
+      </Menu>
+    </nav>
+  );
+}
+
+function FormatBadge({ format }: { format: FormatRules }) {
+  const game = gameInfo(format.game);
+  if (game)
+    return (
+      <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-muted uppercase" title={game.name}>
+        {game.shortName}
+      </span>
+    );
+  if (format.datasetId === 'champions')
+    return <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-accent uppercase">Champions</span>;
+  return <GenBadge gen={format.generation} />;
+}
+
+function Header({ team, format, dex, onOpenSettings }: { team: Team; format: FormatRules; dex?: Dex; onOpenSettings: () => void }) {
+  const { updateTeam, switchFormat, saveAsNew, clearTeam, restoreSlots } = useTeamStore.getState();
   const isEmpty = team.slots.every((s) => s === null);
   const [teamsOpen, setTeamsOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
@@ -148,87 +236,94 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
   const [ioOpen, setIoOpen] = useState(false);
   const liveRegId = currentRegulation()?.id;
 
+  const clearWithUndo = () => {
+    const before = team.slots;
+    clearTeam(team.id);
+    toast(`Cleared ${team.name}.`, { label: 'Undo', run: () => restoreSlots(team.id, before) });
+  };
+
+  // Rendered in one of two places depending on width (only one is ever visible).
+  const nameInput = (
+    <input
+      value={team.name}
+      onChange={(e) => updateTeam(team.id, { name: e.target.value })}
+      aria-label="Team name"
+      className="h-9 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 text-base font-semibold outline-none hover:border-border focus:border-accent xl:max-w-xs"
+    />
+  );
+  const formatSelect = (
+    <select
+      aria-label="Game and format"
+      className={controlClass(false, 'w-full min-w-0 px-2 sm:w-auto sm:max-w-[20rem] sm:shrink')}
+      value={format.id}
+      onChange={(e) => switchFormat(team.id, e.target.value)}
+    >
+      {[
+        { label: 'Pokémon Champions', formats: FORMATS.filter((f) => f.datasetId === 'champions') },
+        { label: 'Main series · Gen 1–9', formats: FORMATS.filter((f) => f.datasetId !== 'champions' && !f.game) },
+        { label: "Main series · Let's Go, BDSP, Legends", formats: FORMATS.filter((f) => f.game) },
+      ].map((g) => (
+        <optgroup key={g.label} label={g.label}>
+          {g.formats.map((f) => (
+            <option key={f.id} value={f.id} disabled={!f.available}>
+              {f.name}
+              {f.regulationId && f.regulationId === liveRegId ? ' (live)' : ''}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-surface/90 backdrop-blur">
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-2 px-4 py-2.5">
-        <div className="mr-2 flex items-center gap-2">
-          <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden>
+    <header className="sticky top-0 z-30 border-b border-border bg-surface/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 sm:px-4">
+        <span className="hidden items-center gap-2 md:flex">
+          <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden>
             <circle cx="16" cy="16" r="14" fill="none" stroke="var(--color-accent)" strokeWidth="3" />
             <path d="M2 16h9M21 16h9" stroke="var(--color-accent)" strokeWidth="3" />
             <circle cx="16" cy="16" r="4.5" fill="var(--color-accent)" />
           </svg>
-          <span className="hidden text-sm font-bold tracking-tight xl:inline">Team Builder</span>
-        </div>
-        <ViewTabs />
-        <input
-          value={team.name}
-          onChange={(e) => updateTeam(team.id, { name: e.target.value })}
-          aria-label="Team name"
-          className="h-9 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 text-base font-semibold outline-none hover:border-border focus:border-accent sm:max-w-xs"
-        />
-        <span className="hidden sm:inline-flex">
-          {format.game ? (
-            <span className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-white" style={{ background: gameInfo(format.game)!.color }} title={gameInfo(format.game)!.name}>
-              {gameInfo(format.game)!.shortName.toUpperCase()}
-            </span>
-          ) : format.datasetId === 'champions' ? (
-            <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-accent-fg" title="Pokémon Champions">
-              CHAMPIONS
-            </span>
-          ) : (
-            <GenBadge gen={format.generation} />
-          )}
+          <span className="hidden text-sm font-bold tracking-tight lg:inline">Team Builder</span>
         </span>
-        <Select
-          aria-label="Format"
-          className="order-last w-full sm:order-none sm:w-auto sm:max-w-[19rem]"
-          value={format.id}
-          onChange={(e) => switchFormat(team.id, e.target.value)}
-        >
-          {[
-            { label: 'Pokémon Champions', formats: FORMATS.filter((f) => f.datasetId === 'champions') },
-            { label: 'Main series · Gen 1–9', formats: FORMATS.filter((f) => f.datasetId !== 'champions' && !f.game) },
-            { label: "Main series · Let's Go, BDSP, Legends", formats: FORMATS.filter((f) => f.game) },
-          ].map((g) => (
-            <optgroup key={g.label} label={g.label}>
-              {g.formats.map((f) => (
-                <option key={f.id} value={f.id} disabled={!f.available}>
-                  {f.name}
-                  {f.regulationId && f.regulationId === liveRegId ? ' (live)' : ''}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </Select>
+        <TopNav onOpenSettings={onOpenSettings} />
+
+        {/* The team being edited and its format: inline from xl up, a second row below that. */}
+        <div className="order-last flex w-full min-w-0 items-center gap-2 xl:order-none xl:w-auto xl:flex-1">
+          <span className="contents max-sm:hidden">{nameInput}</span>
+          <span className="hidden sm:inline-flex">
+            <FormatBadge format={format} />
+          </span>
+          {formatSelect}
+        </div>
+
+        {/* Phones: the team name shares the first row with the actions. */}
+        <span className="flex min-w-0 flex-1 sm:hidden">{nameInput}</span>
         <div className="ml-auto flex items-center gap-1.5">
-          <Button onClick={() => setSaveOpen(true)}>
-            {justSaved ? <Check size={14} /> : <Save size={14} />}
-            <span className="hidden sm:inline">{justSaved ? 'Saved' : 'Save'}</span>
-          </Button>
-          <Button onClick={() => setTeamsOpen(true)}>
-            <FolderOpen size={14} /> <span className="hidden sm:inline">Teams</span>
-          </Button>
-          <Button onClick={() => setIoOpen(true)} disabled={!dex}>
-            <ArrowLeftRight size={14} /> <span className="hidden sm:inline">Import / Export</span>
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Clear team"
-            disabled={isEmpty}
-            onClick={() => clearTeam(team.id)}
-          >
-            <Eraser size={16} />
-          </Button>
           <UpdateCheckButton />
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          <Button variant="primary" onClick={() => setSaveOpen(true)}>
+            {justSaved ? <Check size={15} aria-hidden /> : <Save size={15} aria-hidden />}
+            {justSaved ? 'Saved' : 'Save'}
           </Button>
+          <Menu
+            label="Team actions"
+            trigger={
+              <button type="button" className={buttonClass('default', 'icon')}>
+                <MoreHorizontal size={18} aria-hidden />
+              </button>
+            }
+          >
+            <MenuItem icon={FolderOpen} onSelect={() => setTeamsOpen(true)}>
+              Saved teams
+            </MenuItem>
+            <MenuItem icon={ArrowLeftRight} disabled={!dex} onSelect={() => setIoOpen(true)}>
+              Import / Export
+            </MenuItem>
+            <MenuSeparator />
+            <MenuItem icon={Eraser} disabled={isEmpty} tone="danger" onSelect={clearWithUndo}>
+              Clear this team
+            </MenuItem>
+          </Menu>
         </div>
       </div>
       <TeamsDialog open={teamsOpen} onOpenChange={setTeamsOpen} dex={dex} />
@@ -239,6 +334,7 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
         onSave={(name) => {
           saveAsNew(name);
           setJustSaved(true);
+          toast(`Saved “${name}” to your teams.`);
           window.setTimeout(() => setJustSaved(false), 1500);
         }}
       />
@@ -247,66 +343,57 @@ function Header({ team, format, dex }: { team: Team; format: FormatRules; dex?: 
   );
 }
 
+/**
+ * Workbench layout: team on the left, the selected Pokémon in the middle, team check on the right
+ * (below the editor on narrower screens). Phones get a sprite strip instead of the team list.
+ */
 function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: Dex }) {
   const activeSlot = useTeamStore((s) => s.activeSlot);
   const issues = useMemo(() => validateTeam(team, format, dex), [team, format, dex]);
-  const [drawerOpen, setDrawerOpen] = useState(true);
   const filled = team.slots.filter(Boolean).length;
 
   return (
-    <main className="mx-auto grid w-full max-w-[1400px] flex-1 content-start grid-cols-1 gap-4 p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <div className="lg:col-span-2">
+    <div className="grid content-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_300px]">
+      <div className="lg:col-span-2 xl:col-span-3">
         <RegulationBanner team={team} format={format} />
       </div>
-      <aside className="space-y-4 lg:sticky lg:top-[68px] lg:self-start">
-        <div className="rounded-xl border border-border bg-surface p-3">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between px-1 pb-2 text-left"
-            onClick={() => setDrawerOpen((o) => !o)}
-            aria-expanded={drawerOpen}
-          >
-            <span className="text-sm font-semibold">
+
+      <aside aria-label="Team" className="hidden lg:sticky lg:top-[72px] lg:block lg:self-start">
+        <Panel
+          title={
+            <>
               Team <span className="font-normal text-muted">· {filled}/{format.teamSize}</span>
-              {format.bring && (
-                <span className="ml-2 text-[11px] font-normal text-muted">
-                  Bring {format.bring}, pick {format.pick} · {format.gameType}
-                </span>
-              )}
-            </span>
-            <ChevronDown size={16} className={cn('text-muted transition-transform lg:hidden', drawerOpen && 'rotate-180')} />
-          </button>
-          <div className={cn(!drawerOpen && 'hidden lg:block')}>
-            <TeamSlots
-              team={team}
-              dex={dex}
-              format={format}
-              issues={issues}
-              activeSlot={activeSlot}
-              onSelect={() => window.innerWidth < 1024 && setDrawerOpen(false)}
-            />
-          </div>
-        </div>
-        <div className="hidden lg:block">
-          <ValidationPanel issues={issues} />
-        </div>
+            </>
+          }
+          actions={format.bring ? <span className="text-xs text-muted">Bring {format.bring}, pick {format.pick} · {format.gameType}</span> : undefined}
+          bodyClassName="p-2 pt-1"
+        >
+          <TeamSlots team={team} dex={dex} format={format} issues={issues} activeSlot={activeSlot} />
+        </Panel>
       </aside>
 
       <div className="min-w-0 space-y-4">
-        <SetEditor key={team.id + activeSlot} teamId={team.id} slot={activeSlot} set={team.slots[activeSlot]} dex={dex} format={format} issues={issues} />
         <div className="lg:hidden">
-          <ValidationPanel issues={issues} />
+          <TeamStrip team={team} dex={dex} format={format} issues={issues} activeSlot={activeSlot} />
         </div>
+        <SetEditor key={team.id + activeSlot} teamId={team.id} slot={activeSlot} set={team.slots[activeSlot]} dex={dex} format={format} issues={issues} />
+      </div>
+
+      <aside aria-label="Team check" className="min-w-0 space-y-4 lg:col-start-2 xl:sticky xl:top-[72px] xl:col-start-3 xl:row-start-2 xl:self-start">
+        <TeamCheck team={team} dex={dex} format={format} issues={issues} />
+      </aside>
+
+      <div className="min-w-0 space-y-4 lg:col-start-2 xl:col-span-1 xl:col-start-2">
         <DefenseMatrix team={team} dex={dex} format={format} />
         <OffenseMatrix team={team} dex={dex} />
-        <p className="pb-2 text-center text-[11px] text-muted">
+        <p className="pb-2 text-center text-xs text-muted">
           {format.game
             ? `Data: ${dex.data.source} · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
             : dex.data.generation
-            ? `Data: Pokémon Showdown's Gen ${dex.data.generation} data (${GEN_GAMES[dex.data.generation]}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
-            : `Data: Pokémon Showdown + official regulation announcements (${dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`}
+              ? `Data: Pokémon Showdown's Gen ${dex.data.generation} data (${GEN_GAMES[dex.data.generation]}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`
+              : `Data: Pokémon Showdown + official regulation announcements (${dex.data.regulations.map((r) => r.shortName).join(', ')}) · sprites: PokeAPI · generated ${dex.data.generatedAt.slice(0, 10)}`}
         </p>
       </div>
-    </main>
+    </div>
   );
 }

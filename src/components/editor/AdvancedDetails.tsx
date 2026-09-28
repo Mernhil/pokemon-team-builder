@@ -11,7 +11,9 @@ import { defaultSlotBattle, useSlotBattle, useTeamStore } from '@/store/teamStor
 import { FieldControls, ModChip, SideControls, Toggle } from '../battle/Controls';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
-import { Button, Panel, STAT_COLOR_VAR, TypeBadge, cn } from '../ui/primitives';
+import { Button, Panel, TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR } from '../ui/color';
 
 interface Props {
   set: PokemonSet;
@@ -40,7 +42,7 @@ export function AdvancedDetails(props: Props) {
 }
 
 function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const mega = format.capabilities.mega ? dex.megaFor(species.id, set.itemId) : undefined;
   const setView = useTeamStore((s) => s.setView);
   const [state, update] = useSlotBattle(set.uid, !!mega);

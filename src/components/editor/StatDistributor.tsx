@@ -13,7 +13,9 @@ import {
   type StatSystem,
   type StatTable,
 } from '@/domain/types';
-import { Button, STAT_COLOR_VAR, cn } from '../ui/primitives';
+import { Button } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR } from '../ui/color';
 
 interface Props {
   set: PokemonSet;

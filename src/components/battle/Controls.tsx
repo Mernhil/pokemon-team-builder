@@ -15,7 +15,9 @@ import { formatMechanics } from '@/domain/games';
 import { terrainInfo, weatherInfo } from '@/domain/mechanics';
 import { STAT_LABELS } from '@/domain/types';
 import { InfoTooltip } from '../ui/InfoTooltip';
-import { STAT_COLOR_VAR, Select, cn } from '../ui/primitives';
+import { Select } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR } from '../ui/color';
 
 // ---------------------------------------------------------------------------
 // Primitives

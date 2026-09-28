@@ -8,7 +8,8 @@ import { ItemSprite } from '../ui/ItemSprite';
 import { CATEGORY_ICON } from '../ui/categoryIcon';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { ListModeToggle } from './ListModeToggle';
-import { TypeBadge, cn } from '../ui/primitives';
+import { TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 /** Everything a Combobox needs for one ordered picker, plus `remember` to record a pick as recent. */
 export interface PickerProps {

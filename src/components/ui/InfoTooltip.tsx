@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { cn } from './primitives';
+import { cn } from './styles';
 
 const WIDTH = 288;
 const GAP = 8;

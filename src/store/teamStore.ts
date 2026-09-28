@@ -59,6 +59,8 @@ export interface TeamState {
   moveSlot: (id: string, from: number, to: number) => void;
   /** Empties a team's six slots in place (keeps its format/category/name). No-op if already empty. */
   clearTeam: (id: string) => void;
+  /** Puts back a roster (the Undo of clearTeam). */
+  restoreSlots: (id: string, slots: TeamSlots) => void;
 
   setTheme: (t: Theme) => void;
   setView: (v: View) => void;
@@ -290,6 +292,7 @@ export const useTeamStore = create<TeamState>()(
           if (get().teams[id]?.slots.every((s) => s === null)) return;
           mutateTeam(id, (t) => ({ ...t, slots: emptySlots() }));
         },
+        restoreSlots: (id, slots) => mutateTeam(id, (t) => ({ ...t, slots: [...slots] as TeamSlots })),
 
         setTheme: (theme) => set({ theme }),
         setView: (view) => set({ view }),

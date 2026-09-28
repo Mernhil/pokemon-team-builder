@@ -13,7 +13,8 @@ import {
   type WinRate,
 } from '@/domain/matches';
 import { useTeamStore } from '@/store/teamStore';
-import { Panel, cn } from '../ui/primitives';
+import { Panel } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 const pct = (r: WinRate) => `${Math.round(r.rate * 100)}%`;
 

@@ -1,6 +1,7 @@
 import { useSpriteSheet } from '@/data/sprites';
 import type { SpriteSetId, TeraType } from '@/domain/types';
-import { MonAvatar, TYPE_COLORS } from './primitives';
+import { MonAvatar } from './primitives';
+import { TYPE_COLORS } from './color';
 
 interface Props {
   speciesId?: string;

@@ -3,7 +3,8 @@ import { ChevronDown } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { STAT_LABELS, type StatId } from '@/domain/types';
 import { usePickerPrefs, usePrefsStore } from '@/store/prefsStore';
-import { STAT_COLOR_VAR, cn } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR } from '../ui/color';
 
 /** The five stats a nature can raise/lower, in the same order the games' Mint grid uses. */
 const GRID_STATS: StatId[] = ['atk', 'def', 'spa', 'spd', 'spe'];

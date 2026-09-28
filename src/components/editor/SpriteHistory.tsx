@@ -4,7 +4,7 @@ import { SPRITE_SETS, loadSpriteSheet } from '@/data/sprites';
 import type { Pokemon, SpriteSetId } from '@/domain/types';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
-import { cn } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 /**
  * "Across generations": the species' sprite in every generation's style it appears in.

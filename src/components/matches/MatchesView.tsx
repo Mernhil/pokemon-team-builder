@@ -11,7 +11,8 @@ import { useTeamStore } from '@/store/teamStore';
 import { MatchForm } from './MatchForm';
 import { MatchStats } from './MatchStats';
 import { MatchupBuilder } from './MatchupBuilder';
-import { Button, Select, cn } from '../ui/primitives';
+import { Button, Select } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const [tab, setTab] = useState<'log' | 'builder'>('log');

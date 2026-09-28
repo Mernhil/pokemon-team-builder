@@ -10,7 +10,9 @@ import type { FormatRules, Pokemon, TypeName } from '@/domain/types';
 import { usePokedexStore } from '@/store/pokedexStore';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
-import { Select, TYPE_COLORS, cn } from '../ui/primitives';
+import { Select } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { TYPE_COLORS } from '../ui/color';
 import { PokedexDetail } from './PokedexDetail';
 
 /**

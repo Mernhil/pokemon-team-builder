@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SIDE_LOADED_DATA, fetchGenerated } from '@/data/generated-loader';
 import type { Encounter } from '@/domain/pokedex';
-import { cn } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 type Rect = [number, number, number, number];
 

@@ -7,7 +7,8 @@ import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { Combobox, type ComboOption } from '../ui/Combobox';
 import { comboProps, useItemPicker, useMovePicker } from '../editor/options';
 import { Sprite } from '../ui/Sprite';
-import { Button, cn } from '../ui/primitives';
+import { Button } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 const TERA_TYPES = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy', 'Stellar'];
 

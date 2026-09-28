@@ -22,7 +22,9 @@ import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Button, Panel, STAT_COLOR_VAR, TYPE_COLORS, TypeBadge, cn } from '../ui/primitives';
+import { Button, Panel, TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
+import { STAT_COLOR_VAR, TYPE_COLORS } from '../ui/color';
 import { AreaView } from './AreaView';
 
 interface Props {

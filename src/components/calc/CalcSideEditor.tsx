@@ -16,7 +16,8 @@ import { InfoTooltip } from '../ui/InfoTooltip';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Field, Input, Panel, Select, TypeBadge, cn } from '../ui/primitives';
+import { Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
 import { formatMechanics } from '@/domain/games';
 import { spreadKey, sumStats, withSpreadValue } from '@/domain/stats';
 

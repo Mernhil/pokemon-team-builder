@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { formatMoveEffect } from '@/domain/moveEffect';
 import { CATEGORY_ICON } from './categoryIcon';
 import type { Move } from '@/domain/types';
-import { TypeBadge, cn } from './primitives';
+import { TypeBadge } from './primitives';
+import { cn } from './styles';
 
 
 const FLAG_TAGS: { key: keyof Move['flags']; label: string }[] = [

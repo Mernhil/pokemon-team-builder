@@ -7,7 +7,8 @@ import { usePickerPrefs, usePrefsStore } from '@/store/prefsStore';
 import { Combobox, type ComboGroup, type ComboOption } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
-import { TypeBadge, cn } from '../ui/primitives';
+import { TypeBadge } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 interface Props {
   dex: Dex;
