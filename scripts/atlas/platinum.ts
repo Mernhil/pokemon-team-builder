@@ -625,7 +625,7 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
     if (!leader) continue;
     const typeCount = new Map<string, number>();
     for (const m of leader.party) for (const ty of speciesData(`SPECIES_${m.species.toUpperCase()}`)?.types ?? []) typeCount.set(ty, (typeCount.get(ty) ?? 0) + 1);
-    const top = [...typeCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const top = [...typeCount.entries()].sort((a, b) => b[1] - a[1] || Number(/NORMAL/.test(a[0])) - Number(/NORMAL/.test(b[0])))[0]?.[0];
     const gym: AtlasGym = { leader: leader.name, badge: title(badge.replace('BADGE_ID_', '').toLowerCase()), levelCap: Math.max(...leader.party.map((m) => m.level)), ...(top ? { type: title(top.replace('TYPE_', '').toLowerCase()) } : {}) };
     loc.gym = gym;
     leaderOf.set(place, leader.id);

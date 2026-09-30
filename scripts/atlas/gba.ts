@@ -519,7 +519,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
     if (!leader) continue;
     const counts = new Map<string, number>();
     for (const m of leader.party) for (const ty of gen3.species.get(m.species)?.types ?? []) counts.set(ty, (counts.get(ty) ?? 0) + 1);
-    const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || Number(a[0] === 'Normal') - Number(b[0] === 'Normal'))[0]?.[0];
     const gym: AtlasGym = { leader: leader.name, badge, levelCap: Math.max(...leader.party.map((m) => m.level)), ...(top ? { type: top } : {}) };
     loc.gym = gym;
     if (!badges.includes(badge)) badges.push(badge);

@@ -41,6 +41,24 @@ export const MAP_SKINS: Record<string, MapSkin> = {
     cursor: 'frame',
     pixelPerfect: true,
   },
+  rby: {
+    id: 'rby',
+    label: 'Kanto Town Map (Red / Blue / Yellow)',
+    resolution: [160, 144],
+    palette: { cursor: '#101010', match: '#ffd23f', done: '#2e9c45', dim: '#ffffffaa', focus: '#101010' },
+    cell: 8,
+    cursor: 'frame',
+    pixelPerfect: true,
+  },
+  gsc: {
+    id: 'gsc',
+    label: 'Pokégear map (Gold / Silver / Crystal)',
+    resolution: [160, 144],
+    palette: { cursor: '#ffffff', match: '#ffe066', done: '#57d26b', dim: '#00000099', focus: '#ffffff' },
+    cell: 8,
+    cursor: 'frame',
+    pixelPerfect: true,
+  },
   frlg: {
     id: 'frlg',
     label: 'Kanto / Sevii region map',
@@ -64,4 +82,4 @@ export const MAP_SKINS: Record<string, MapSkin> = {
 export const skinFor = (id: string): MapSkin => MAP_SKINS[id] ?? MAP_SKINS.dppt;
 
 /** The skin of a maps.json map. */
-export const skinOfMap = (mapId: string): MapSkin => skinFor(mapId === 'hoenn-rse' ? 'rse' : /^(kanto-frlg|sevii-)/.test(mapId) ? 'frlg' : 'dppt');
+export const skinOfMap = (mapId: string): MapSkin => skinFor(mapId === 'hoenn-rse' ? 'rse' : mapId === 'kanto-rby' ? 'rby' : /-gsc$/.test(mapId) ? 'gsc' : /^(kanto-frlg|sevii-)/.test(mapId) ? 'frlg' : 'dppt');

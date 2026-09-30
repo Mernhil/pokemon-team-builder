@@ -45,6 +45,20 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
   const outlines = useMemo(() => Object.fromEntries(Object.entries(places).map(([l, r]) => [l, unionOutline(r, skin.cell)])), [places, skin.cell]);
   const [broken, setBroken] = useState(false);
 
+  /** The place under a pointer: among those whose block contains it, the one whose centre is nearest (places can overlap on small maps). */
+  const locAt = (e: { clientX: number; clientY: number }, svg: SVGSVGElement): string | undefined => {
+    const r = svg.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * map.width;
+    const y = ((e.clientY - r.top) / r.height) * map.height;
+    let best: { id: string; d: number } | undefined;
+    for (const [id, rects] of Object.entries(places))
+      for (const [rx, ry, rw, rh] of rects) {
+        if (x < rx || x >= rx + rw || y < ry || y >= ry + rh) continue;
+        const d = Math.hypot(x - (rx + rw / 2), y - (ry + rh / 2));
+        if (!best || d < best.d || (d === best.d && id < best.id)) best = { id, d };
+      }
+    return best?.id;
+  };
   const focusLoc = (loc: string) => document.getElementById(`atlas-loc-${loc}`)?.focus();
   const onKey = (loc: string) => (e: ReactKeyboardEvent) => {
     const dir = ARROWS[e.key];
@@ -66,7 +80,19 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
         {broken ? (
           <div className="flex h-full items-center justify-center p-4 text-center text-sm text-white/80">The map image couldn’t load (offline in this build?).</div>
         ) : (
-          <svg viewBox={`0 0 ${map.width} ${map.height}`} className="block h-full w-full" style={{ imageRendering: 'pixelated' }} role="group" aria-label={`${map.name} map. Arrow keys move between locations, Enter opens one.`}>
+          <svg
+            viewBox={`0 0 ${map.width} ${map.height}`}
+            className="block h-full w-full"
+            style={{ imageRendering: 'pixelated', cursor: hovered ? 'pointer' : 'default' }}
+            onClick={(e) => {
+              const l = locAt(e, e.currentTarget);
+              if (l) onPin(l);
+            }}
+            onPointerMove={(e) => {
+              if (e.pointerType === 'mouse') onHover(locAt(e, e.currentTarget));
+            }}
+            onPointerLeave={(e) => e.pointerType === 'mouse' && onHover(undefined)}
+            role="group" aria-label={`${map.name} map. Arrow keys move between locations, Enter opens one.`}>
             <defs>
               {matches && (
                 <mask id="atlas-dim">
@@ -90,15 +116,12 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
                   tabIndex={0}
                   aria-label={`${names(loc)}${isDone ? ', done' : ''}${isMatch ? ', matches filter' : ''}`}
                   aria-pressed={isPinned}
-                  className="cursor-pointer outline-none [&:focus-visible>path.frame]:stroke-[1.4]"
-                  onClick={() => onPin(loc)}
+                  className="pointer-events-none outline-none [&:focus-visible>path.frame]:stroke-[1.4]"
                   onKeyDown={onKey(loc)}
-                  onPointerEnter={(e) => e.pointerType === 'mouse' && onHover(loc)}
-                  onPointerLeave={(e) => e.pointerType === 'mouse' && onHover(undefined)}
                   onFocus={() => onHover(loc)}
                   onBlur={() => onHover(undefined)}
                 >
-                  {rects.map(([x, y, w, h], i) => <rect key={i} x={x} y={y} width={w} height={h} fill="transparent" />)}
+                  {/* pointer hits are resolved by the svg (nearest centre), so these shapes only carry focus */}
                   {/* One soft shape per place: a straight route is a single rectangle, not a square per block. */}
                   <path
                     className={cn('pointer-events-none transition-opacity', isMatch && 'area-glow')}

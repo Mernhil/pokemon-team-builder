@@ -553,7 +553,7 @@ function buildGen1(cfg: Gen1Config): { file: AtlasFile; gaps: string } {
     const no = LEADERS.indexOf(leaderTrainer.id.replace(/_\d+$/, ''));
     const counts = new Map<string, number>();
     for (const m of leaderTrainer.party) for (const ty of gen1.species.get(m.species)?.types ?? []) counts.set(ty, (counts.get(ty) ?? 0) + 1);
-    const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || Number(a[0] === 'Normal') - Number(b[0] === 'Normal'))[0]?.[0];
     const gym: AtlasGym = { leader: leaderTrainer.name, badge: BADGES[no] ?? '?', levelCap: Math.max(...leaderTrainer.party.map((m) => m.level)), ...(top ? { type: top } : {}) };
     loc.gym = gym;
     badgeOf.set(loc.id, gym.badge);
