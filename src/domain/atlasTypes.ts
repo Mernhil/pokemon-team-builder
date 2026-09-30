@@ -21,8 +21,10 @@ export interface AtlasMon {
   ability?: string;
   nature?: string;
   gender?: 'M' | 'F' | 'N';
-  /** Every IV, 0–31 (the game sets one value for the whole team member). */
+  /** Every IV, 0–31 (the game sets one value for the whole team member). Gen 1–2: the DV. */
   iv: number;
+  /** Gen 1–2: DVs per stat [hp, atk, def, spa, spd, spe] when the game fixes them individually. */
+  dvs?: number[];
 }
 
 export type TrainerKind = 'trainer' | 'leader' | 'elite-four' | 'champion' | 'rival' | 'boss' | 'other';

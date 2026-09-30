@@ -4,7 +4,7 @@
  * trainer teams → Showdown text (for Load into Builder), search and map filters, progress counting.
  */
 import type { Dex } from '@/data/dex';
-import { mechanics } from './generations';
+import { exportSetShowdown } from './codecs';
 import { createSet, createTeam } from './team';
 import type { PokedexData } from './pokedex';
 import type { FormatRules, PokemonSet, StatTable, Team, TeamSlots } from './types';
@@ -18,29 +18,9 @@ import type { AtlasFile, AtlasLocation, AtlasMon, AtlasTrainer } from './atlasTy
 
 const cap = (s: string) => s.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 
-/** One trainer mon as Showdown export text, resolved against the game's Dex (names, natures, moves). */
-export function monToShowdown(mon: AtlasMon, dex: Dex, hasAbilities: boolean): string {
-  const sp = dex.species(mon.species);
-  const lines: string[] = [];
-  const item = mon.item ? dex.item(mon.item) : undefined;
-  lines.push(`${sp?.name ?? cap(mon.species)}${mon.gender === 'M' || mon.gender === 'F' ? ` (${mon.gender})` : ''}${item ? ` @ ${item.name}` : ''}`);
-  if (hasAbilities && mon.ability) {
-    const ab = dex.ability(mon.ability);
-    if (ab) lines.push(`Ability: ${ab.name}`);
-  }
-  lines.push(`Level: ${mon.level}`);
-  if (mon.nature) lines.push(`${cap(mon.nature)} Nature`);
-  const iv = mon.iv;
-  lines.push(`IVs: ${['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'].map((s) => `${iv} ${s}`).join(' / ')}`);
-  for (const m of mon.moves) {
-    const mv = dex.move(m);
-    if (mv) lines.push(`- ${mv.name}`);
-  }
-  return lines.join('\n');
-}
-
+/** The team as Showdown text, written by the builder's own exporter so every generation's conventions (DVs, abilities, natures) hold. */
 export function trainerToShowdown(t: AtlasTrainer, dex: Dex, format: FormatRules): string {
-  return t.party.map((m) => monToShowdown(m, dex, mechanics(format.generation).abilities)).join('\n\n');
+  return t.party.map((m, i) => exportSetShowdown(monToSet(m, dex, format, `atlas:${t.id}:${i}`), dex, format)).join('\n\n');
 }
 
 /** A trainer mon as the builder's PokemonSet (the game's own IVs, no EVs), with a stable uid per trainer slot. */
@@ -48,7 +28,9 @@ export function monToSet(mon: AtlasMon, dex: Dex, format: FormatRules, uid: stri
   const base = createSet(dex, mon.species, format);
   const ab = mon.ability ? dex.ability(mon.ability) : undefined;
   const moves = [...mon.moves.filter((m) => dex.move(m)), '', '', '', ''].slice(0, 4) as PokemonSet['moves'];
-  const ivs = Object.fromEntries(Object.keys(base.ivs).map((k) => [k, mon.iv])) as unknown as StatTable;
+  const gb = format.statSystem.kind === 'gb-statexp';
+  const order = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+  const ivs = Object.fromEntries(order.map((k, i) => [k, mon.dvs?.[i] ?? mon.iv])) as unknown as StatTable;
   return {
     ...base,
     uid,
@@ -58,6 +40,8 @@ export function monToSet(mon: AtlasMon, dex: Dex, format: FormatRules, uid: stri
     moves,
     level: mon.level,
     ivs,
+    // trainers' Pokémon have no EVs / Stat Exp
+    ...(gb ? { evs: Object.fromEntries(order.map((k) => [k, 0])) as unknown as StatTable } : {}),
     ...(mon.gender === 'M' || mon.gender === 'F' ? { gender: mon.gender } : {}),
   };
 }
@@ -190,6 +174,8 @@ export interface AtlasGame {
 }
 
 export const ATLAS_GAMES: AtlasGame[] = [
+  { id: 'red', name: 'Pokémon Red', shortName: 'Red', book: 'gen1', formatId: 'gen1', dexGame: 'red', mapIds: ['kanto-rby'], available: true },
+  { id: 'blue', name: 'Pokémon Blue', shortName: 'Blue', book: 'gen1', formatId: 'gen1', dexGame: 'blue', mapIds: ['kanto-rby'], file: 'red', available: true },
   { id: 'platinum', name: 'Pokémon Platinum', shortName: 'Platinum', book: 'gen4', formatId: 'gen4', dexGame: 'platinum', mapIds: ['sinnoh-pt'], available: true },
   { id: 'emerald', name: 'Pokémon Emerald', shortName: 'Emerald', book: 'gen3', formatId: 'gen3', dexGame: 'emerald', mapIds: ['hoenn-rse'], available: true },
   { id: 'ruby', name: 'Pokémon Ruby', shortName: 'Ruby', book: 'gen3', formatId: 'gen3', dexGame: 'ruby', mapIds: ['hoenn-rse'], available: true },
