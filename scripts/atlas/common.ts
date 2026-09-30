@@ -18,7 +18,7 @@ export const cid = (c: string) => {
   return DECOMP_ALIASES[id] ?? id;
 };
 /** Decomp constants that are spelled differently from Showdown's ids. */
-export const DECOMP_ALIASES: Record<string, string> = { faintattack: 'feintattack', hijumpkick: 'highjumpkick', smellingsalt: 'smellingsalts' };
+export const DECOMP_ALIASES: Record<string, string> = { faintattack: 'feintattack', hijumpkick: 'highjumpkick', smellingsalt: 'smellingsalts', vicegrip: 'visegrip' };
 export const title = (s: string) => s.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 export const spaced = (s: string) => s.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/_/g, ' ');
 

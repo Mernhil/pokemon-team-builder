@@ -180,6 +180,8 @@ export const ATLAS_GAMES: AtlasGame[] = [
   { id: 'gold', name: 'Pokémon Gold', shortName: 'Gold', book: 'gen2', formatId: 'gen2', dexGame: 'gold', mapIds: ['johto-gsc', 'kanto-gsc'], available: true },
   { id: 'silver', name: 'Pokémon Silver', shortName: 'Silver', book: 'gen2', formatId: 'gen2', dexGame: 'silver', mapIds: ['johto-gsc', 'kanto-gsc'], file: 'gold', available: true },
   { id: 'crystal', name: 'Pokémon Crystal', shortName: 'Crystal', book: 'gen2', formatId: 'gen2', dexGame: 'crystal', mapIds: ['johto-gsc', 'kanto-gsc'], available: true },
+  { id: 'heartgold', name: 'Pokémon HeartGold', shortName: 'HeartGold', book: 'gen4', formatId: 'gen4', dexGame: 'heartgold', mapIds: ['johto-gsc', 'kanto-gsc'], available: true },
+  { id: 'soulsilver', name: 'Pokémon SoulSilver', shortName: 'SoulSilver', book: 'gen4', formatId: 'gen4', dexGame: 'soulsilver', mapIds: ['johto-gsc', 'kanto-gsc'], file: 'heartgold', available: true },
   { id: 'platinum', name: 'Pokémon Platinum', shortName: 'Platinum', book: 'gen4', formatId: 'gen4', dexGame: 'platinum', mapIds: ['sinnoh-pt'], available: true },
   { id: 'emerald', name: 'Pokémon Emerald', shortName: 'Emerald', book: 'gen3', formatId: 'gen3', dexGame: 'emerald', mapIds: ['hoenn-rse'], available: true },
   { id: 'ruby', name: 'Pokémon Ruby', shortName: 'Ruby', book: 'gen3', formatId: 'gen3', dexGame: 'ruby', mapIds: ['hoenn-rse'], available: true },

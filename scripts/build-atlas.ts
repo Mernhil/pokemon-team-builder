@@ -14,6 +14,7 @@ import { GAPS, OUT } from './atlas/common.ts';
 import { buildEmerald, buildFireRed, buildRuby } from './atlas/gba.ts';
 import { buildRed, buildYellow } from './atlas/gen1.ts';
 import { buildCrystal, buildGold } from './atlas/gen2.ts';
+import { buildHgss } from './atlas/hgss.ts';
 import { buildPlatinum } from './atlas/platinum.ts';
 
 const BUILDERS: Record<string, () => { file: AtlasFile; gaps: string }> = {
@@ -25,6 +26,7 @@ const BUILDERS: Record<string, () => { file: AtlasFile; gaps: string }> = {
   yellow: buildYellow,
   crystal: buildCrystal,
   gold: buildGold,
+  heartgold: buildHgss,
 };
 
 function main() {
