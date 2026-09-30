@@ -51,8 +51,6 @@ export interface RegionMapOut {
   style: 'nest' | 'area' | 'schematic';
   /** PokeAPI location identifier → rectangles in map pixels. */
   places: Record<string, Rect[]>;
-  /** Icons the game draws on its map, in map pixels: [x, y, role] with role city (red square), landmark (blue) or special (a place inside a city). */
-  markers?: [number, number, 'city' | 'landmark' | 'special'][];
   /** Nest-style maps: the game's 8×8 nest sprite, one string per row ('#' dark, '+' mid, '.' transparent). */
   nestIcon?: string[];
   /** Schematic maps only: land shapes and place kinds/labels for drawing. */
@@ -71,7 +69,7 @@ const PRET_PATHS: Record<string, string[]> = {
   pokecrystal: ['gfx/pokegear', 'data/maps/landmarks.asm'],
   pokeemerald: ['graphics/pokedex/region_map.bin', 'graphics/pokedex/region_map.png', 'graphics/pokedex/region_map.pal', 'src/data/region_map/region_map_sections.json'],
   pokefirered: ['graphics/region_map', 'src/data/region_map'],
-  pokeplatinum: ['res/graphics/town_map', 'res/town_map/town_map_data.json'],
+  pokeplatinum: ['res/graphics/town_map', 'res/town_map/town_map_data.json', 'src/applications/town_map/fly_locations.c'],
 };
 
 const ensureRepo = (name: keyof typeof PRET_PATHS & keyof typeof REPOS) => ensure(name, PRET_PATHS[name]);
@@ -602,6 +600,33 @@ const SINNOH_NAMES: Record<string, string[]> = {
   victory_road: ['sinnoh-victory-road'],
 };
 
+/**
+ * The Town Map's own block icons: the 20 fly destinations (src/applications/town_map/fly_locations.c) drawn
+ * with the game's sprites (res/graphics/town_map/fly_destination_blocks.png: seven 16×16 shapes, palette bank 1 =
+ * blue for towns, bank 2 = red for cities), centred at (spriteX + 25, spriteY − 34) on the top screen.
+ */
+function drawFlyDestinations(c: Canvas, dir: string, cropX: number) {
+  const src = readFileSync(resolve(dir, 'src/applications/town_map/fly_locations.c'), 'utf8');
+  const SHAPES = ['1x1_SQUARE', 'VERTICAL', '2x2_SQUARE', 'TOP_LEFT_ANGLE', 'TOP_RIGHT_ANGLE', 'HORIZONTAL', 'SMALL_RECTANGLE'];
+  const sheet = decodePNG(resolve(dir, 'res/graphics/town_map/fly_destination_blocks.png'));
+  const num = (e: string) => e.split('+').reduce((sum, t) => sum + t.split('*').reduce((p, f) => p * (f.trim() === 'TOWN_MAP_GRID_SPACING' ? 7 : Number(f)), 1), 0);
+  const table = src.slice(src.indexOf('sFlyLocations'), src.indexOf('TownMap_LoadFlyLocations'));
+  let n = 0;
+  for (const m of table.matchAll(/\.blockShape = FLY_LOCATION_SHAPE_(\w+),\s*\.palette = FLY_LOCATION_PALETTE_(\w+),[\s\S]*?\.spriteX = ([^,]+),\s*\.spriteY = ([^,]+),/g)) {
+    const shape = SHAPES.indexOf(m[1]);
+    const bank = m[2] === 'BLUE' ? 1 : 2;
+    const cx = num(m[3]) + 25 - cropX, cy = num(m[4]) - 34;
+    for (let y = 0; y < 16; y++)
+      for (let x = 0; x < 16; x++) {
+        const idx = sheet.data[(shape * 16 + y) * sheet.width + x] % 16;
+        if (idx === 0) continue; // colour 0 is transparent
+        c.set(cx - 8 + x, cy - 8 + y, sheet.palette![bank * 16 + idx]);
+      }
+    n++;
+  }
+  if (n !== 20) throw new Error(`expected 20 fly destinations, read ${n}`);
+}
+
 async function sinnohPt(): Promise<RegionMapOut> {
   const dir = ensureRepo('pokeplatinum');
   const gfx = (f: string) => resolve(dir, 'res/graphics/town_map', f);
@@ -640,6 +665,7 @@ async function sinnohPt(): Promise<RegionMapOut> {
       }),
     ),
   );
+  drawFlyDestinations(c, dir, CROP_X);
   await c.save(resolve(OUT_IMG, 'sinnoh-pt.webp'));
 
   const known = gameLocations(['diamond', 'pearl', 'platinum', 'brilliant-diamond', 'shining-pearl']);
@@ -647,13 +673,9 @@ async function sinnohPt(): Promise<RegionMapOut> {
     blocks: { x: number; z: number; area: string | null; landmark: string | null; signpost_type: string }[];
   };
   const places: Record<string, Rect[]> = {};
-  const markers: NonNullable<RegionMapOut['markers']> = [];
   // Each block is a 7×7 px cell; the cursor centres on (7x + 25, 7z − 34) (include/applications/town_map/defs.h).
   for (const b of data.blocks) {
     const rect: Rect = [7 * b.x + 22 - CROP_X, 7 * b.z - 37, 7, 7];
-    // The game marks city blocks (signpost type MAP) red, lake / island / mountain blocks (LANDMARK) blue, and a landmark inside a city as a small special icon.
-    if (b.signpost_type === 'SIGNPOST_TYPE_MAP') markers.push([rect[0], rect[1], 'city'], ...(b.landmark ? ([[rect[0], rect[1], 'special']] as typeof markers) : []));
-    else if (b.signpost_type === 'SIGNPOST_TYPE_LANDMARK' && b.landmark) markers.push([rect[0], rect[1], 'landmark']);
     for (const name of [b.area, b.landmark]) {
       if (!name) continue;
       const aliased = SINNOH_NAMES[name];
@@ -663,7 +685,7 @@ async function sinnohPt(): Promise<RegionMapOut> {
       else place(places, name.replace(/_(north|south)$/, ''), 'sinnoh', known, rect);
     }
   }
-  const map: RegionMapOut = { id: 'sinnoh-pt', name: 'Sinnoh', width: W, height: H, image: 'maps/sinnoh-pt.webp', style: 'area', places, markers, source: 'pret/pokeplatinum' };
+  const map: RegionMapOut = { id: 'sinnoh-pt', name: 'Sinnoh', width: W, height: H, image: 'maps/sinnoh-pt.webp', style: 'area', places, source: 'pret/pokeplatinum' };
   anchor(map, 7);
   report(map, known);
   return map;

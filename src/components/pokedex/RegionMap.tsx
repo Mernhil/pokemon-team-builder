@@ -14,7 +14,6 @@ export interface RegionMapData {
   image?: string;
   style: 'nest' | 'area' | 'schematic';
   places: Record<string, Rect[]>;
-  markers?: [number, number, 'city' | 'landmark' | 'special'][];
   nestIcon?: string[];
   land?: string[];
   kinds?: Record<string, string>;

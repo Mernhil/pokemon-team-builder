@@ -77,7 +77,6 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
             </defs>
             <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: 'pixelated' }} onError={() => setBroken(true)} />
             {matches && <rect width={map.width} height={map.height} fill={pal.dim} mask="url(#atlas-dim)" className="pointer-events-none" />}
-            {map.markers?.map(([x, y, role], i) => <MapIconShape key={`m${i}`} icon={skin.icons[role]} x={x} y={y} w={7} h={7} />)}
             {Object.entries(places).map(([loc, rects]) => {
               const isPinned = pinned === loc;
               const isMatch = !!matches?.has(loc);
@@ -129,10 +128,3 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
   );
 }
 
-/** The skin's marker for a location, centred on its block; drawn without anti-aliasing like the game's sprites. */
-function MapIconShape({ icon, x, y, w, h }: { icon?: import('@/domain/mapSkins').MapIcon; x: number; y: number; w: number; h: number }) {
-  if (!icon) return null;
-  const px = x + (w - icon.size) / 2;
-  const py = y + (h - icon.size) / 2;
-  return <rect className="pointer-events-none" x={px} y={py} width={icon.size} height={icon.size} fill={icon.fill} stroke={icon.stroke} strokeWidth={icon.shape === 'dot' ? 0.5 : 0.8} shapeRendering="crispEdges" />;
-}

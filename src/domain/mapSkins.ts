@@ -4,14 +4,6 @@
  * The game's own artwork is rendered by `npm run maps`; a skin says how it is presented
  * (integer upscale, cursor and highlight style), so every game's map reads like that game's.
  */
-/** One marker the skin draws on a location, in map pixels (the game's own icon shapes). */
-export interface MapIcon {
-  shape: 'square' | 'dot';
-  size: number;
-  fill: string;
-  stroke: string;
-}
-
 export interface MapSkin {
   id: string;
   label: string;
@@ -29,8 +21,6 @@ export interface MapSkin {
     /** Keyboard focus ring. */
     focus: string;
   };
-  /** How each marker role the map data carries is drawn (routes have none: the route itself is on the map). */
-  icons: Record<'city' | 'landmark' | 'special', MapIcon>;
   /** The game's cursor: a square frame (Platinum Town Map), a pointing hand, or a filled marker. */
   cursor: 'frame' | 'marker';
   /** Pixel map: always upscale by whole numbers. */
@@ -45,12 +35,6 @@ export const MAP_SKINS: Record<string, MapSkin> = {
     label: 'Sinnoh Town Map',
     resolution: [216, 168],
     palette: { cursor: '#ffffff', match: '#fff2a8', done: '#57d26b', dim: '#0b1a3a99', focus: '#ffffff' },
-    // Platinum's Town Map: red squares for cities and towns, blue for landmarks, a small teal mark for a place inside a city.
-    icons: {
-      city: { shape: 'square', size: 5, fill: '#e8383d', stroke: '#fff' },
-      landmark: { shape: 'square', size: 5, fill: '#3b6de0', stroke: '#fff' },
-      special: { shape: 'dot', size: 2, fill: '#1fb8a6', stroke: 'transparent' },
-    },
     cursor: 'frame',
     pixelPerfect: true,
   },
