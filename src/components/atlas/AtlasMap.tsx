@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { neighbour, type Dir } from '@/domain/regionMaps';
+import { neighbour, unionOutline, type Dir } from '@/domain/regionMaps';
 import type { MapSkin } from '@/domain/mapSkins';
 import { MapViewport, asset, type RegionMapData } from '../pokedex/RegionMap';
 import { cn } from '../ui/styles';
@@ -42,6 +42,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
   const scale = fixedScale && Math.min(fixedScale, Math.max(1, Math.floor((typeof window === 'undefined' ? 900 : window.innerHeight * 0.8) / map.height)));
 
   const places = useMemo(() => Object.fromEntries(Object.entries(map.places).filter(([l]) => locations.has(l))), [map, locations]);
+  const outlines = useMemo(() => Object.fromEntries(Object.entries(places).map(([l, r]) => [l, unionOutline(r)])), [places]);
   const [broken, setBroken] = useState(false);
 
   const focusLoc = (loc: string) => document.getElementById(`atlas-loc-${loc}`)?.focus();
@@ -90,7 +91,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
                   tabIndex={0}
                   aria-label={`${names(loc)}${isDone ? ', done' : ''}${isMatch ? ', matches filter' : ''}`}
                   aria-pressed={isPinned}
-                  className="cursor-pointer outline-none [&:focus-visible>rect.frame]:stroke-[1.2]"
+                  className="cursor-pointer outline-none [&:focus-visible>path.frame]:stroke-[1.4]"
                   onClick={() => onPin(loc)}
                   onKeyDown={onKey(loc)}
                   onPointerEnter={(e) => e.pointerType === 'mouse' && onHover(loc)}
@@ -98,25 +99,22 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
                   onFocus={() => onHover(loc)}
                   onBlur={() => onHover(undefined)}
                 >
-                  {rects.map(([x, y, w, h], i) => (
-                    <g key={i}>
-                      <rect x={x} y={y} width={w} height={h} fill="transparent" />
-                      {isMatch && <rect className="area-glow pointer-events-none" x={x - 1} y={y - 1} width={w + 2} height={h + 2} fill={pal.match} opacity={0.55} />}
-                      {isDone && <rect className="pointer-events-none" x={x + w - 3} y={y} width={3} height={3} fill={pal.done} stroke="#0008" strokeWidth={0.4} />}
-                      <rect
-                        className="frame pointer-events-none"
-                        x={x - 1}
-                        y={y - 1}
-                        width={w + 2}
-                        height={h + 2}
-                        fill="none"
-                        stroke={isPinned ? pal.cursor : cur === loc ? pal.focus : 'transparent'}
-                        strokeWidth={isPinned ? 1 : 0.8}
-                        shapeRendering="crispEdges"
-                      />
-                      {isPinned && skin.cursor === 'frame' && <rect className="pointer-events-none" x={x - 2} y={y - 2} width={w + 4} height={h + 4} fill="none" stroke="#e33" strokeWidth={0.8} shapeRendering="crispEdges" />}
-                    </g>
-                  ))}
+                  {rects.map(([x, y, w, h], i) => <rect key={i} x={x} y={y} width={w} height={h} fill="transparent" />)}
+                  {/* One soft shape per place: a straight route is a single rectangle, not a square per block. */}
+                  <path
+                    className={cn('pointer-events-none transition-opacity', isMatch && 'area-glow')}
+                    d={outlines[loc]}
+                    fill={isMatch ? pal.match : pal.cursor}
+                    fillOpacity={isMatch ? 0.4 : isPinned ? 0.2 : cur === loc ? 0.12 : 0}
+                    stroke="none"
+                  />
+                  {(isPinned || cur === loc) && (
+                    <>
+                      <path className="pointer-events-none" d={outlines[loc]} fill="none" stroke="#10131a" strokeOpacity={0.45} strokeWidth={2.4} strokeLinejoin="round" />
+                      <path className="frame pointer-events-none" d={outlines[loc]} fill="none" stroke={pal.cursor} strokeOpacity={isPinned ? 0.95 : 0.7} strokeWidth={1} strokeLinejoin="round" />
+                    </>
+                  )}
+                  {isDone && <circle className="pointer-events-none" cx={rects[0][0] + rects[0][2] - 1} cy={rects[0][1] + 1} r={1.6} fill={pal.done} stroke="#10131a" strokeOpacity={0.6} strokeWidth={0.4} />}
                 </g>
               );
             })}

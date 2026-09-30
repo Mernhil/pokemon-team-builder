@@ -156,3 +156,13 @@ describe('Map keyboard navigation', () => {
     expect(neighbour(places, 'a', 'up')).toBeUndefined();
   });
 });
+
+describe('Place outlines', () => {
+  it('merges a row of blocks into one rectangle', async () => {
+    const { unionOutline } = await import('@/domain/regionMaps');
+    expect(unionOutline([[0, 0, 7, 7], [0, 7, 7, 7], [0, 14, 7, 7]])).toBe('M0 0L7 0L7 21L0 21Z');
+    // an L of three blocks is one six-corner shape, a lone block stays a square
+    expect(unionOutline([[0, 0, 7, 7], [0, 7, 7, 7], [7, 7, 7, 7]]).split('L').length).toBe(6);
+    expect(unionOutline([[5, 5, 7, 7]])).toBe('M5 5L12 5L12 12L5 12Z');
+  });
+});

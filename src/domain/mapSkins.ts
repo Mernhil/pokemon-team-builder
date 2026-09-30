@@ -44,7 +44,7 @@ export const MAP_SKINS: Record<string, MapSkin> = {
     id: 'dppt',
     label: 'Sinnoh Town Map',
     resolution: [216, 168],
-    palette: { cursor: '#ffffff', match: '#ffe066', done: '#57d26b', dim: '#0b1a3acc', focus: '#ffffff' },
+    palette: { cursor: '#ffffff', match: '#fff2a8', done: '#57d26b', dim: '#0b1a3a99', focus: '#ffffff' },
     // Platinum's Town Map: red squares for cities and towns, blue for landmarks, a small teal mark for a place inside a city.
     icons: {
       city: { shape: 'square', size: 5, fill: '#e8383d', stroke: '#fff' },
