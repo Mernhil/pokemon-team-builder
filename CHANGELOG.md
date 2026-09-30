@@ -2,6 +2,32 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.8.0 — 2026-09-30
+
+### New
+- **Atlas tab** with Pokémon Platinum complete: an interactive Sinnoh Town Map (whole-number pixel scale,
+  the game's red city / blue landmark / teal special markers). Hover a place for a preview; click, tap or
+  press Enter to open it; arrow keys move between places. Filters (has Gym / Mart / Pokémon Center, has
+  item, Pokémon appears here, trainer uses move, free text) make matches glow.
+- **Location details** in a side panel (bottom sheet on phones): Overview (Gym leader, badge, level cap,
+  Poké Mart stock with prices and badge tiers, connections, obstacles), Items (visible, hidden, gift and
+  TM spots with tile coordinates), NPCs (dialogue, gifts, trades), Wild Pokémon and Trainers.
+- **All 927 Platinum trainers with full teams**, built from the pret/pokeplatinum decompilation: level,
+  item, moves, ability, nature and IVs as the game computes them, rematch and starter-dependent
+  versions, defensive and offensive matrices, **Load into Builder** and **Calc as attacker / defender**.
+- Item database, trainer index (name, class, location, Pokémon, move) and a progress tracker saved on
+  the device. The Pokédex Area page links each location to the Atlas.
+- `npm run atlas` builds the data; `docs/data-gaps/platinum.md` reports coverage and what is unverified.
+
+### Changed
+- The item icon atlas now includes bag items and type-coloured TM/HM icons.
+- Bundle budget: the largest lazy chunk may be 320 KB gzipped (a game's Atlas file is ~280 KB).
+
+### Known limits
+- Only Platinum has an Atlas so far; other games follow.
+- 245 trainer entries (unused / daily Pokémon Center trainers) and 15 hidden items sit on maps the
+  Town Map does not show; story requirements for reaching areas are not listed.
+
 ## 0.7.0 — 2026-09-28
 
 ### New
