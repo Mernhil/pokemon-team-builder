@@ -11,7 +11,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Dex } from '@pkmn/dex';
-import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasLocation, AtlasMon, AtlasNpc, AtlasTrainer, LocationKind, TrainerKind } from '../../src/domain/atlasTypes.ts';
+import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasLocation, AtlasMon, AtlasNpc, AtlasShopItem, AtlasTrainer, LocationKind, TrainerKind } from '../../src/domain/atlasTypes.ts';
 import { ensure } from '../sources.ts';
 import { NATURES, OUT, cid, cleanText, readJSON, title } from './common.ts';
 
@@ -72,7 +72,7 @@ const tidyText = (raw: string) =>
   );
 
 export function buildHgss(): { file: AtlasFile; gaps: string } {
-  const dir = ensure('pokeheartgold', ['files/poketool', 'files/fielddata', 'files/msgdata', 'files/itemtool', 'include', 'src/data', 'src/item.c', 'src/trainer_data.c']);
+  const dir = ensure('pokeheartgold', ['files/poketool', 'files/fielddata', 'files/msgdata', 'files/itemtool', 'include', 'src/data', 'src/item.c', 'src/trainer_data.c', 'src/scrcmd_mart.c']);
   const gen4 = Dex.forGen(4);
   const allMaps = readJSON<{ maps: Record<string, { places: Record<string, unknown> }> }>(resolve(OUT, 'maps.json')).maps;
   const mapIds = ['johto-gsc', 'kanto-gsc'];
@@ -268,6 +268,16 @@ export function buildHgss(): { file: AtlasFile; gaps: string } {
   }
   const hiddenItemTable = [...(/sHiddenItemParam\[\]\s*=\s*\{([\s\S]*?)\n\};/.exec(read(dir, 'src/data/fieldmap/hidden_items.h'))?.[1] ?? '').matchAll(/\{\s*(ITEM_\w+),\s*(\d+)/g)].map((m) => ({ item: m[1], qty: Number(m[2]) }));
 
+  // Poké Mart stock: src/scrcmd_mart.c (common badge-tiered list; special lists indexed by VAR_SPECIAL_x8004)
+  const martSrc = readFileSync(resolve(dir, 'src/scrcmd_mart.c'), 'utf8');
+  const martLists = new Map<string, string[]>();
+  for (const m of martSrc.matchAll(/const u16 (\w+)\[\]\s*=\s*\{([^}]*)\}/g)) martLists.set(m[1], [...m[2].matchAll(/ITEM_\w+/g)].map((x) => x[0]));
+  const specialMarts = [...(/_0210FA3C\[\]\s*=\s*\{([^}]*)\}/.exec(martSrc)?.[1] ?? '').matchAll(/_\w+/g)].map((m) => martLists.get(m[0]) ?? []);
+  const commonMart = [...(/_020FBF22\[\]\s*=\s*\{([\s\S]*?)\};/.exec(martSrc)?.[1] ?? '').matchAll(/\{\s*(ITEM_\w+),\s*(\d+)/g)].map((m) => ({ c: m[1], tier: Number(m[2]) }));
+  const TIER_BADGES = [0, 0, 1, 3, 5, 7, 8];
+  const shopItems = (cs: string[], badges?: (c: string) => number): AtlasShopItem[] =>
+    cs.map((c) => ({ id: itemId(c), c })).filter((x) => items[x.id]).map((x) => ({ item: x.id, price: items[x.id].price, ...(badges ? { badges: badges(x.c) } : {}) }));
+
   const locations: Record<string, AtlasLocation> = {};
   const kindOf = (id: string): LocationKind => (/sea-route/.test(id) ? 'sea-route' : /route/.test(id) ? 'route' : /-city$/.test(id) ? 'city' : /-town$|island$/.test(id) ? 'town' : /cave|tunnel|mt-|forest|path|tower|hq|ruins|lake|den|power|safari|victory|falls|islands|plateau|league|woods/.test(id) ? 'cave' : 'landmark');
   for (const id of placeIds) locations[id] = { id, name: areaName.get(id) ?? title(id.replace(/^(johto|kanto)-/, '')), kind: kindOf(id), maps: [], connections: [], pokecenter: false, shops: [], obstacles: [], items: [], npcs: [], trainers: [], events: [] };
@@ -375,6 +385,17 @@ export function buildHgss(): { file: AtlasFile; gaps: string } {
       }
     }
     if (scripts) {
+      const cs = scripts.text.split('\n').map((l) => l.replace(/@.*$/, '').trim());
+      cs.forEach((l, i) => {
+        const special = /^SetVar VAR_SPECIAL_x8004,\s*(\d+)/.exec(l);
+        if (special && cs.slice(i + 1, i + 4).some((x) => x === 'CallStd std_special_mart') && specialMarts[Number(special[1])]?.length)
+          {
+          const its = shopItems(specialMarts[Number(special[1])]);
+          if (!loc.shops.some((x) => x.name !== 'Poké Mart' && x.items.map((y) => y.item).join() === its.map((y) => y.item).join())) loc.shops.push({ name: 'Special stock', items: its });
+        }
+        if (l === 'CallStd std_pokemart' && !loc.shops.some((x) => x.badgeStock))
+          loc.shops.push({ name: 'Poké Mart', items: shopItems(commonMart.map((x) => x.c), (c) => TIER_BADGES[commonMart.find((x) => x.c === c)!.tier]), badgeStock: true });
+      });
       for (const t of scripts.text.matchAll(/\bTRAINER_\w+/g)) if (trainers[t[0]] && !trainerPlace.has(t[0])) trainerPlace.set(t[0], place);
       for (const bm of scripts.text.matchAll(/GiveBadge\s+BADGE_(\w+)/g)) badgeOf.set(place, title(bm[1].toLowerCase()));
     }
@@ -429,7 +450,7 @@ export function buildHgss(): { file: AtlasFile; gaps: string } {
     `| Hidden items | ${hiddenN} | ${hiddenItemTable.length} | sHiddenItemParam entries |`,
     `| Visible items (balls, TMs) | ${visibleN} | — | std item-ball objects |`,
     `| NPCs with dialogue | ${npcWithText} | ${npcTotal} | NPCs whose reachable script shows text |`,
-    `| Shops | ${L.reduce((n, l) => n + l.shops.length, 0)} | — | Poké Mart stock is not read yet (the shop lists are in a C table keyed by script variables) |`,
+    `| Shops | ${L.reduce((n, l) => n + l.shops.length, 0)} | — | Common and special mart stock from src/scrcmd_mart.c; the apricorn, Game Corner and other scripted counters are not read |`,
     `| Gyms with leader, badge, level cap | ${L.filter((l) => l.gym).length} | 16 | |`,
     '',
     '## Zones not attached to a Town Map place',
