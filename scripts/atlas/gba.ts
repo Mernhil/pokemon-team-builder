@@ -20,7 +20,7 @@ import { NATURES, OUT, cid, cleanText, readJSON, spaced, title } from './common.
 interface GbaConfig {
   game: string;
   name: string;
-  repo: 'pokeemerald' | 'pokefirered';
+  repo: 'pokeemerald' | 'pokefirered' | 'pokeruby';
   url: string;
   commit: string;
   /** PokeAPI region prefix of place ids ("hoenn-route-104"). */
@@ -123,7 +123,14 @@ export const FIRERED: GbaConfig = {
 };
 
 export const buildEmerald = () => buildGba(EMERALD);
+export const RUBY: GbaConfig = {
+  game: 'ruby', name: 'Pokémon Ruby', repo: 'pokeruby', url: 'pret/pokeruby', commit: '5784633ce4ef7ade1a7f2d2d0c288e3d5e6cdd7f',
+  prefix: 'hoenn', mapIds: ['hoenn-rse'], dexGame: 'ruby', badges: ['Stone', 'Knuckle', 'Dynamo', 'Heat', 'Balance', 'Feather', 'Mind', 'Rain'],
+  aliases: HOENN_ALIASES,
+  note: 'Sapphire uses this file too: the decompilation builds both from shared data, and only the `#ifdef SAPPHIRE` differences (version exclusives, Team Aqua / Magma roles) are not applied.',
+};
 export const buildFireRed = () => buildGba(FIRERED);
+export const buildRuby = () => buildGba(RUBY);
 
 function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   const COMMIT = cfg.commit;
@@ -145,19 +152,20 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   const nameSum = (name: string) => [...name].reduce((s, ch) => s + (charBytes.get(ch) ?? 0), 0);
 
   // --- species data ----------------------------------------------------------------------------
-  const speciesText = read(dir, 'src/data/text/species_names.h');
+  const pick = (...rel: string[]) => rel.find((r) => existsSync(resolve(dir, r))) ?? rel[0];
+  const speciesText = read(dir, pick('src/data/text/species_names.h', 'src/data/text/species_names_en.h'));
   const speciesName = new Map([...speciesText.matchAll(/\[(SPECIES_\w+)\]\s*=\s*_\("([^"]*)"\)/g)].map((m) => [m[1], m[2]]));
-  const infoSrc = read(dir, 'src/data/pokemon/species_info.h');
+  const infoSrc = read(dir, pick('src/data/pokemon/species_info.h', 'src/data/pokemon/base_stats.h'));
   const info = new Map<string, { types: string[]; ratio: number; abilities: string[] }>();
   for (const m of infoSrc.matchAll(/\[(SPECIES_\w+)\]\s*=\s*\{/g)) {
     const body = block(infoSrc, m.index! + m[0].length - 1);
-    const types = /\.types\s*=\s*\{\s*(TYPE_\w+)\s*,\s*(TYPE_\w+)/.exec(body);
+    const types = /\.types\s*=\s*\{\s*(TYPE_\w+)\s*,\s*(TYPE_\w+)/.exec(body) ?? /\.type1\s*=\s*(TYPE_\w+)\s*,\s*\.type2\s*=\s*(TYPE_\w+)/.exec(body);
     const gr = /\.genderRatio\s*=\s*([^,]+),/.exec(body)?.[1].trim() ?? '127';
     const ratio = /MON_GENDERLESS/.test(gr) ? 255 : /MON_FEMALE/.test(gr) ? 254 : /MON_MALE/.test(gr) ? 0 : (() => {
       const p = /PERCENT_FEMALE\(([\d.]+)\)/.exec(gr);
       return p ? Math.min(254, Math.floor((Number(p[1]) * 255) / 100)) : 127;
     })();
-    const ab = /\.abilities\s*=\s*\{\s*(ABILITY_\w+)\s*,\s*(ABILITY_\w+)/.exec(body);
+    const ab = /\.abilities\s*=\s*\{\s*(ABILITY_\w+)\s*,\s*(ABILITY_\w+)/.exec(body) ?? /\.ability1\s*=\s*(ABILITY_\w+)\s*,[^]*?\.ability2\s*=\s*(ABILITY_\w+)/.exec(body);
     if (types) info.set(m[1], { types: [...new Set([types[1], types[2]])], ratio, abilities: ab ? [ab[1], ab[2]] : ['ABILITY_NONE', 'ABILITY_NONE'] });
   }
   const learnPtr = new Map([...read(dir, 'src/data/pokemon/level_up_learnset_pointers.h').matchAll(/\[(SPECIES_\w+)\]\s*=\s*(\w+)/g)].map((m) => [m[1], m[2]]));
@@ -168,8 +176,8 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
 
   // --- items -----------------------------------------------------------------------------------
   const descText = new Map<string, string>();
-  if (existsSync(resolve(dir, 'src/data/text/item_descriptions.h')))
-  for (const m of read(dir, 'src/data/text/item_descriptions.h').matchAll(/(\w+)\[\]\s*=\s*_\(([^;]*?)\);/gs))
+  for (const dp of ['src/data/text/item_descriptions.h', 'src/data/item_descriptions_en.h'].filter((x) => existsSync(resolve(dir, x))))
+  for (const m of read(dir, dp).matchAll(/(\w+)\[\]\s*=\s*_\(([^;]*?)\);/gs))
     descText.set(m[1], [...m[2].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((x) => x[1]).join('').replace(/\\n/g, ' '));
   // TM / HM moves: `#define ITEM_TM01_FOCUS_PUNCH ITEM_TM01` (FireRed) or the FOREACH_TM list (Emerald)
   const constItems = read(dir, 'include/constants/items.h');
@@ -190,13 +198,14 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   };
   interface RawItem { c: string; name: string; price: number; description: string; pocket: string }
   const rawItems: RawItem[] = [];
-  if (existsSync(resolve(dir, 'src/data/items.h'))) {
-    const itemsSrc = read(dir, 'src/data/items.h');
-    for (const m of itemsSrc.matchAll(/\[(ITEM_\w+)\]\s*=\s*\{/g)) {
-      const f = fields(block(itemsSrc, m.index! + m[0].length - 1));
-      if (!f.name) continue;
-      rawItems.push({ c: m[1], name: /_\("([^"]*)"\)/.exec(f.name)?.[1] ?? m[1], price: Number(f.price ?? 0), description: (f.description && descText.get(f.description)) || '', pocket: (f.pocket ?? '').replace('POCKET_', '').toLowerCase() });
-    }
+  const itemsFile = pick('src/data/items.h', 'src/data/items_en.h');
+  if (existsSync(resolve(dir, itemsFile))) {
+    const itemsSrc = read(dir, itemsFile);
+    const push = (c: string, f: Kv) => rawItems.push({ c, name: /_\("([^"]*)"\)/.exec(f.name ?? '')?.[1] ?? c, price: Number(f.price ?? 0), description: (f.description && descText.get(f.description)) || '', pocket: (f.pocket ?? '').replace('POCKET_', '').toLowerCase() });
+    const keyed = [...itemsSrc.matchAll(/\[(ITEM_\w+)\]\s*=\s*\{/g)];
+    if (keyed.length) for (const m of keyed) push(m[1], fields(block(itemsSrc, m.index! + m[0].length - 1)));
+    // Ruby: positional entries, each carrying its own .itemId
+    else for (const m of itemsSrc.matchAll(/\{\s*\.name\s*=/g)) { const f = fields(block(itemsSrc, m.index!)); if (f.itemId) push(f.itemId, f); }
   } else {
     // FireRed: src/data/items.json
     for (const it of readJSON<{ items: { english: string; itemId: string; price: number; description_english: string | string[]; pocket: string }[] }>(resolve(dir, 'src/data/items.json')).items)
@@ -219,7 +228,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   const texts = new Map<string, string>();
   const mapDirsAll = readdirSync(resolve(dir, 'data/maps')).filter((d) => existsSync(resolve(dir, 'data/maps', d, 'map.json')));
   const incFiles = (rel: string) => (existsSync(resolve(dir, rel)) ? readdirSync(resolve(dir, rel)).map((x) => `${rel}/${x}`) : []);
-  for (const f of [...mapDirsAll.flatMap((d) => incFiles(`data/maps/${d}`)), ...incFiles('data/scripts'), ...incFiles('data/text')]) {
+  for (const f of [...mapDirsAll.flatMap((d) => incFiles(`data/maps/${d}`)), ...incFiles('data/scripts'), ...incFiles('data/text'), ...incFiles('data').filter((x) => !x.endsWith('/'))]) {
     if (!f.endsWith('.inc')) continue;
     let cur: string[] | undefined;
     let curText: string[] | undefined;
@@ -272,25 +281,33 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   };
 
   // --- trainers --------------------------------------------------------------------------------
-  const classNames = new Map([...read(dir, 'src/data/text/trainer_class_names.h').matchAll(/\[(TRAINER_CLASS_\w+)\]\s*=\s*_\("([^"]*)"\)/g)].map((m) => [m[1], title(m[2].replace(/\{PKMN\}/g, 'Pokémon').toLowerCase())]));
+  const classNames = new Map<string, string>();
+  const classText = read(dir, pick('src/data/text/trainer_class_names.h', 'src/data/text/trainer_class_names_en.h'));
+  const prettyClass = (n: string) => title(n.replace(/\{PKMN\}/g, 'Pokémon').toLowerCase());
+  for (const m of classText.matchAll(/\[(TRAINER_CLASS_\w+)\]\s*=\s*_\("([^"]*)"\)/g)) classNames.set(m[1], prettyClass(m[2]));
+  if (!classNames.size) {
+    // Ruby: a positional array, in the order of the TRAINER_CLASS enum
+    const order = [...(/enum[^{]*\{([^}]*TRAINER_CLASS_[^}]*)\}/.exec(read(dir, 'include/constants/trainers.h'))?.[1] ?? '').matchAll(/TRAINER_CLASS_\w+/g)].map((x) => x[0]);
+    [...classText.matchAll(/_\("([^"]*)"\)/g)].forEach((m, i) => order[i] && classNames.set(order[i], prettyClass(m[1])));
+  }
   const partySrc = read(dir, 'src/data/trainer_parties.h');
   interface RawMon { iv: number; lvl: number; species: string; heldItem?: string; moves?: string[] }
   const parties = new Map<string, RawMon[]>();
-  for (const m of partySrc.matchAll(/(sParty_\w+)\[\]\s*=\s*\{/g)) {
+  for (const m of partySrc.matchAll(/((?:sParty|gTrainerParty)_\w+)\[\]\s*=\s*\{/g)) {
     const body = block(partySrc, m.index! + m[0].length - 1);
     const mons: RawMon[] = [];
     for (const b of body.matchAll(/\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g)) {
       const f = fields(b[1]);
       if (!f.species) continue;
       mons.push({
-        iv: Number(f.iv), lvl: Number(f.lvl), species: f.species,
+        iv: Number(f.iv), lvl: Number(f.lvl ?? f.level), species: f.species,
         ...(f.heldItem && f.heldItem !== 'ITEM_NONE' ? { heldItem: f.heldItem } : {}),
         ...(f.moves ? { moves: [...f.moves.matchAll(/MOVE_\w+/g)].map((x) => x[0]).filter((x) => x !== 'MOVE_NONE') } : {}),
       });
     }
     parties.set(m[1], mons);
   }
-  const trainersSrc = read(dir, 'src/data/trainers.h');
+  const trainersSrc = read(dir, pick('src/data/trainers.h', 'src/data/trainers_en.h'));
   const trainerOrder: string[] = [];
   const trainers: Record<string, AtlasTrainer> = {};
   const unverified: Record<string, string[]> = {};
@@ -298,7 +315,8 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   const rematchOf = new Map<string, { base: string; n: number }>();
   // Emerald: REMATCH(T1, T2, …, MAP) in battle_setup.c; FireRed: { {T1, T2, SKIP, T3}, MAP(..) } in vs_seeker.c
   const rematchSrc = existsSync(resolve(dir, 'src/vs_seeker.c')) ? read(dir, 'src/vs_seeker.c') : read(dir, 'src/battle_setup.c');
-  const groups = [...rematchSrc.matchAll(/REMATCH\(([^)]*)\)/g)].map((m) => m[1]).concat([...rematchSrc.matchAll(/\{\s*\{([^{}]*TRAINER_[^{}]*)\}\s*,\s*MAP\(/g)].map((m) => m[1]));
+  const eyeGroups = [...rematchSrc.matchAll(/\{\s*\{(TRAINER_[^{}]*)\}\s*,\s*MAP_GROUP/g)].map((m) => m[1]);
+  const groups = [...rematchSrc.matchAll(/REMATCH\(([^)]*)\)/g)].map((m) => m[1]).concat(eyeGroups).concat([...rematchSrc.matchAll(/\{\s*\{([^{}]*TRAINER_[^{}]*)\}\s*,\s*MAP\(/g)].map((m) => m[1]));
   for (const g of groups) {
     const ids = [...g.matchAll(/TRAINER_\w+/g)].map((x) => x[0]);
     let n = 0;
@@ -312,7 +330,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
     if (tid === 'TRAINER_NONE' || tid === 'TRAINER_SECRET_BASE') continue;
     const body = block(trainersSrc, m.index! + m[0].length - 1);
     const f = fields(body);
-    const partyMacro = /(NO_ITEM_DEFAULT_MOVES|NO_ITEM_CUSTOM_MOVES|ITEM_DEFAULT_MOVES|ITEM_CUSTOM_MOVES)\((sParty_\w+)\)/.exec(body);
+    const partyMacro = /(NO_ITEM_DEFAULT_MOVES|NO_ITEM_CUSTOM_MOVES|ITEM_DEFAULT_MOVES|ITEM_CUSTOM_MOVES)\(((?:sParty|gTrainerParty)_\w+)\)/.exec(body) ?? (/\.party\s*=\s*\{\s*\.\w+\s*=\s*(gTrainerParty_\w+)/.exec(body) ? [, '', /\.party\s*=\s*\{\s*\.\w+\s*=\s*(gTrainerParty_\w+)/.exec(body)![1]] : null);
     if (!partyMacro) continue;
     const raw = parties.get(partyMacro[2]) ?? [];
     if (!raw.length) continue;

@@ -192,6 +192,8 @@ export interface AtlasGame {
 export const ATLAS_GAMES: AtlasGame[] = [
   { id: 'platinum', name: 'Pokémon Platinum', shortName: 'Platinum', book: 'gen4', formatId: 'gen4', dexGame: 'platinum', mapIds: ['sinnoh-pt'], available: true },
   { id: 'emerald', name: 'Pokémon Emerald', shortName: 'Emerald', book: 'gen3', formatId: 'gen3', dexGame: 'emerald', mapIds: ['hoenn-rse'], available: true },
+  { id: 'ruby', name: 'Pokémon Ruby', shortName: 'Ruby', book: 'gen3', formatId: 'gen3', dexGame: 'ruby', mapIds: ['hoenn-rse'], available: true },
+  { id: 'sapphire', name: 'Pokémon Sapphire', shortName: 'Sapphire', book: 'gen3', formatId: 'gen3', dexGame: 'sapphire', mapIds: ['hoenn-rse'], file: 'ruby', available: true },
   { id: 'firered', name: 'Pokémon FireRed', shortName: 'FireRed', book: 'gen3', formatId: 'gen3', dexGame: 'firered', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], available: true },
   { id: 'leafgreen', name: 'Pokémon LeafGreen', shortName: 'LeafGreen', book: 'gen3', formatId: 'gen3', dexGame: 'leafgreen', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], file: 'firered', available: true },
 ];
