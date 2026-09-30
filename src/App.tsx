@@ -60,7 +60,7 @@ const PRIMARY: Dest[] = [
   { id: 'builder', label: 'Build', icon: Users },
   { id: 'calc', label: 'Calc', icon: Calculator },
   { id: 'dex', label: 'Pokédex', icon: BookOpen },
-  { id: 'atlas', label: 'Atlas', icon: MapIcon },
+  { id: 'atlas', label: 'Pokénav', icon: MapIcon },
 ];
 const SECONDARY: Dest[] = [
   { id: 'matches', label: 'Match log', icon: Swords },
@@ -116,7 +116,7 @@ export default function App() {
 
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
-  else if (view === 'atlas') content = <Suspense fallback={loading('Loading Atlas…')}><AtlasView /></Suspense>;
+  else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;

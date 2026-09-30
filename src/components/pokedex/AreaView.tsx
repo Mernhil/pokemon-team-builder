@@ -42,7 +42,7 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
     return [...m.entries()];
   }, [here]);
 
-  // Games with an Atlas link each location to the interactive map with the spot highlighted.
+  // Games with a Pokénav link each location to the interactive map with the spot highlighted.
   const atlasGame = ATLAS_GAMES.find((a) => a.available && a.dexGame === game.id);
   const prevo = species.prevo ? dex.species(species.prevo) : undefined;
 
@@ -103,7 +103,7 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
                         useTeamStore.getState().setView('atlas');
                       }}
                     >
-                      <MapIcon size={12} aria-hidden /> Show in Atlas
+                      <MapIcon size={12} aria-hidden /> Show in Pokénav
                     </button>
                   )}
                 </h3>

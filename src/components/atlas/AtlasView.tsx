@@ -19,6 +19,7 @@ import { useMedia } from '../ui/useMedia';
 import { AtlasMap } from './AtlasMap';
 import { ItemsPage, ProgressPage, TrainersPage } from './AtlasPages';
 import { AtlasProvider, useAtlasCtx, type AtlasCtx } from './context';
+import { GameBadge } from '../ui/GameBadge';
 import { LocationPanel } from './LocationPanel';
 import { TrainerDetail } from './TrainerDetail';
 
@@ -85,20 +86,21 @@ export function AtlasView() {
               role="radio"
               aria-checked={g.id === game.id}
               onClick={() => { setGame(g.id); setPinned(undefined); }}
-              className={cn('h-8 rounded-md border px-2.5 text-xs font-semibold transition-colors', g.id === game.id ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}
+              className={cn('inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold transition-colors', g.id === game.id ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}
             >
+              <GameBadge color={g.color} />
               {g.name}
             </button>
           ))}
           <span className="inline-flex h-8 items-center rounded-md border border-dashed border-border px-2.5 text-xs text-muted" title="The other games follow in the next phases">More games soon</span>
         </div>
-        <Tabs label="Atlas page" size="sm" value={page} onChange={setPage} tabs={PAGES.map((p) => ({ id: p.id, label: p.label, icon: p.icon }))} className="ml-auto" />
+        <Tabs label="Pokénav page" size="sm" value={page} onChange={setPage} tabs={PAGES.map((p) => ({ id: p.id, label: p.label, icon: p.icon }))} className="ml-auto" />
       </div>
 
       {file === false || dexState.status === 'error' ? (
-        <Notice tone="bad">The atlas for {game.name} couldn’t load.</Notice>
+        <Notice tone="bad">The Pokénav for {game.name} couldn’t load.</Notice>
       ) : !ctx ? (
-        <LoadingState label={`Loading the ${game.shortName} atlas…`} />
+        <LoadingState label={`Loading the ${game.shortName} Pokénav…`} />
       ) : (
         <AtlasProvider value={ctx}>
           {page === 'map' && <MapPage pinned={pinned} setPinned={setPinned} />}
