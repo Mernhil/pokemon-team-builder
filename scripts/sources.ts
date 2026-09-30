@@ -20,6 +20,8 @@ export const REPOS = {
   pokeemerald: { url: 'https://github.com/pret/pokeemerald', dir: '.cache/pret/pokeemerald', commit: 'c925b8482d05fb882d6b64e523653cae599e025f', full: true },
   pokefirered: { url: 'https://github.com/pret/pokefirered', dir: '.cache/pret/pokefirered', commit: '037335f4c725d7c9aecdac87066f2002b4bd7e14', full: true },
   /** `full`: one plain shallow fetch; a blob-less clone checks files out one request at a time, far slower for the atlas' ~3000 files. */
+  /** Ruby / Sapphire: the Gen 3 atlas (scripts/atlas/gba.ts). */
+  pokeruby: { url: 'https://github.com/pret/pokeruby', dir: '.cache/pret/pokeruby', commit: '5784633ce4ef7ade1a7f2d2d0c288e3d5e6cdd7f', full: true },
   pokeplatinum: { url: 'https://github.com/pret/pokeplatinum', dir: '.cache/pret/pokeplatinum', commit: 'c248fb3f8cc9934ded800e489567c5c0eeee92eb', full: true },
 } as const;
 
