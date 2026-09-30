@@ -83,7 +83,7 @@ export function TrainerDetail({ group, initial }: { group: string; initial?: str
       </ol>
 
       {trainer.bag && (
-        <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
           Uses in battle:
           {trainer.bag.map((it, i) => (
             <span key={i} className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5">
@@ -91,7 +91,7 @@ export function TrainerDetail({ group, initial }: { group: string; initial?: str
               {file.items[it]?.name ?? it}
             </span>
           ))}
-        </p>
+        </div>
       )}
 
       <DefenseMatrix team={team} dex={dex} format={format} />

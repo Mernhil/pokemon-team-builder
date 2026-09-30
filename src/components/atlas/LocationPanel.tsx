@@ -214,13 +214,13 @@ function Npcs({ loc }: { loc: AtlasLocation }) {
       </div>
       {n.says.map((t, j) => <p key={j} className="mt-1 whitespace-pre-line text-muted">“{t}”</p>)}
       {n.gives?.map((g, j) => (
-        <p key={j} className="mt-1 flex items-center gap-1 text-xs">
+        <div key={j} className="mt-1 flex items-center gap-1 text-xs">
           <Gift size={12} aria-hidden /> Gives
           <button type="button" className="inline-flex items-center gap-1 font-semibold text-accent hover:underline" onClick={() => openItem(g.item)}>
             <ItemSprite itemId={g.item} size={16} />
             {file.items[g.item]?.name ?? g.item}{g.qty > 1 ? ` ×${g.qty}` : ''}
           </button>
-        </p>
+        </div>
       ))}
       {n.giftMon && <p className="mt-1 text-xs">Gift Pokémon: <b>{speciesName(n.giftMon.species)}</b> Lv {n.giftMon.level}{n.giftMon.item ? ` holding ${file.items[n.giftMon.item]?.name ?? n.giftMon.item}` : ''}</p>}
       {n.trade && <p className="mt-1 text-xs">Trade: your <b>{speciesName(n.trade.give)}</b> for <b>{n.trade.nickname ? `${n.trade.nickname} the ` : ''}{speciesName(n.trade.get)}</b>{n.trade.item ? ` holding ${file.items[n.trade.item]?.name ?? n.trade.item}` : ''}</p>}

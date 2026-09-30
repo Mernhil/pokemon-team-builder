@@ -51,6 +51,8 @@ export interface RegionMapOut {
   style: 'nest' | 'area' | 'schematic';
   /** PokeAPI location identifier → rectangles in map pixels. */
   places: Record<string, Rect[]>;
+  /** Icons the game draws on its map, in map pixels: [x, y, role] with role city (red square), landmark (blue) or special (a place inside a city). */
+  markers?: [number, number, 'city' | 'landmark' | 'special'][];
   /** Nest-style maps: the game's 8×8 nest sprite, one string per row ('#' dark, '+' mid, '.' transparent). */
   nestIcon?: string[];
   /** Schematic maps only: land shapes and place kinds/labels for drawing. */
@@ -642,12 +644,16 @@ async function sinnohPt(): Promise<RegionMapOut> {
 
   const known = gameLocations(['diamond', 'pearl', 'platinum', 'brilliant-diamond', 'shining-pearl']);
   const data = JSON.parse(readFileSync(resolve(dir, 'res/town_map/town_map_data.json'), 'utf8')) as {
-    blocks: { x: number; z: number; area: string | null; landmark: string | null }[];
+    blocks: { x: number; z: number; area: string | null; landmark: string | null; signpost_type: string }[];
   };
   const places: Record<string, Rect[]> = {};
+  const markers: NonNullable<RegionMapOut['markers']> = [];
   // Each block is a 7×7 px cell; the cursor centres on (7x + 25, 7z − 34) (include/applications/town_map/defs.h).
   for (const b of data.blocks) {
     const rect: Rect = [7 * b.x + 22 - CROP_X, 7 * b.z - 37, 7, 7];
+    // The game marks city blocks (signpost type MAP) red, lake / island / mountain blocks (LANDMARK) blue, and a landmark inside a city as a small special icon.
+    if (b.signpost_type === 'SIGNPOST_TYPE_MAP') markers.push([rect[0], rect[1], 'city'], ...(b.landmark ? ([[rect[0], rect[1], 'special']] as typeof markers) : []));
+    else if (b.signpost_type === 'SIGNPOST_TYPE_LANDMARK' && b.landmark) markers.push([rect[0], rect[1], 'landmark']);
     for (const name of [b.area, b.landmark]) {
       if (!name) continue;
       const aliased = SINNOH_NAMES[name];
@@ -657,7 +663,7 @@ async function sinnohPt(): Promise<RegionMapOut> {
       else place(places, name.replace(/_(north|south)$/, ''), 'sinnoh', known, rect);
     }
   }
-  const map: RegionMapOut = { id: 'sinnoh-pt', name: 'Sinnoh', width: W, height: H, image: 'maps/sinnoh-pt.webp', style: 'area', places, source: 'pret/pokeplatinum' };
+  const map: RegionMapOut = { id: 'sinnoh-pt', name: 'Sinnoh', width: W, height: H, image: 'maps/sinnoh-pt.webp', style: 'area', places, markers, source: 'pret/pokeplatinum' };
   anchor(map, 7);
   report(map, known);
   return map;
