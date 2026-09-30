@@ -35,7 +35,8 @@ scripts/build-games.ts       Let's Go / BDSP / Legends: Arceus / Legends: Z-A da
 scripts/build-pokedex.ts     Pokédex entries, regional numbers, wild encounters (PokeAPI CSVs + PKHeX)
 scripts/pkhex-encounters.ts  Reads PKHeX's wild-encounter tables (BDSP, Legends, SV, ORAS, SM/USUM)
 scripts/sources.ts           Pinned Showdown / PKHeX checkouts the build scripts read from
-scripts/build-atlas.ts       Atlas data: locations, items, NPCs, shops and all trainers' teams per game (pret/pokeplatinum so far), writes atlas-<game>.json + docs/data-gaps/<game>.md
+scripts/build-atlas.ts       Atlas driver: `npm run atlas [-- game]` writes atlas-<game>.json + docs/data-gaps/<game>.md
+scripts/atlas/               one builder per engine: gen1 (Red/Blue/Yellow), gen2 (Gold/Silver/Crystal), gba (Ruby/Emerald/FireRed), platinum
 scripts/build-maps.ts        Area maps: renders the Gen 1–4 in-game maps from pret, validates the schematics, writes docs/MAP_COVERAGE.md
 src/
   domain/                    Framework-free core (100% unit-testable)
@@ -182,7 +183,7 @@ In both Legends games, move power and accuracy are Showdown's Sword/Shield and S
 
 ### Atlas
 
-The **Atlas** tab (`#atlas`) is a game database built around the game's own map. Pokémon Platinum is done; the other games follow (Gen 4 remakes and Gen 1–3 next, then Gen 5 onward).
+The **Atlas** tab (`#atlas`) is a game database built around the game's own map. Every main-series game with a public decompilation is covered: Red / Blue / Yellow, Gold / Silver / Crystal, Ruby / Sapphire / Emerald, FireRed / LeafGreen and Platinum (from [pret](https://github.com/pret)'s Red, Yellow, Gold, Crystal, Ruby, Emerald, FireRed and Platinum decompilations). Diamond / Pearl and HeartGold / SoulSilver are next; Generation 5 onward has no decompilation to read, so those games need a different source.
 
 - **Map:** the Sinnoh Town Map rendered from [pret/pokeplatinum](https://github.com/pret/pokeplatinum) (whole-number upscale, pixel-perfect), with the game's red city, blue landmark and teal special markers. Every place is a focusable shape: hover for a preview, click / Enter / tap to open, arrow keys move between places. Filters (has Gym / Mart / Pokémon Center, has item, Pokémon appears here, trainer uses move, free text) make the matches glow.
 - **Location panel** (side panel; bottom sheet on phones): Overview (Gym leader, badge and level cap, Poké Mart stock with prices and badge tiers, connections, obstacles), Items (every visible, hidden, gift and TM spot with tile coordinates), NPCs (dialogue, gifts, trades), Wild Pokémon (from the Pokédex tables, linked to the Pokédex), Trainers and Notes.

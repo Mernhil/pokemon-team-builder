@@ -5,7 +5,7 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 ## 0.8.0 — 2026-09-30
 
 ### New
-- **Atlas tab** with Pokémon Platinum complete: an interactive Sinnoh Town Map (whole-number pixel scale,
+- **Atlas tab** for Red / Blue / Yellow, Gold / Silver / Crystal, Ruby / Sapphire / Emerald, FireRed / LeafGreen and Platinum, from the pret decompilations. Platinum in detail: an interactive Sinnoh Town Map (whole-number pixel scale,
   the game's red city / blue landmark / teal special markers). Hover a place for a preview; click, tap or
   press Enter to open it; arrow keys move between places. Filters (has Gym / Mart / Pokémon Center, has
   item, Pokémon appears here, trainer uses move, free text) make matches glow.
@@ -24,7 +24,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 - Bundle budget: the largest lazy chunk may be 320 KB gzipped (a game's Atlas file is ~280 KB).
 
 ### Known limits
-- Only Platinum has an Atlas so far; other games follow.
+- Diamond / Pearl, HeartGold / SoulSilver and Generation 5 onward have no Atlas yet.
+- Ruby / Sapphire, LeafGreen and Blue / Silver reuse their sibling's data; version-only differences are not applied (see each game's `docs/data-gaps` file).
 - 245 trainer entries (unused / daily Pokémon Center trainers) and 15 hidden items sit on maps the
   Town Map does not show; story requirements for reaching areas are not listed.
 
