@@ -189,6 +189,7 @@ export interface AtlasGame {
 }
 
 export const ATLAS_GAMES: AtlasGame[] = [
+  { id: 'emerald', name: 'Pokémon Emerald', shortName: 'Emerald', book: 'gen3', formatId: 'gen3', dexGame: 'emerald', mapId: 'hoenn-rse', skin: 'rse', available: true },
   { id: 'platinum', name: 'Pokémon Platinum', shortName: 'Platinum', book: 'gen4', formatId: 'gen4', dexGame: 'platinum', mapId: 'sinnoh-pt', skin: 'dppt', available: true },
 ];
 

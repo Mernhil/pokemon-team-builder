@@ -23,6 +23,8 @@ export interface MapSkin {
   };
   /** The game's cursor: a square frame (Platinum Town Map), a pointing hand, or a filled marker. */
   cursor: 'frame' | 'marker';
+  /** Size in map pixels of one grid cell (a place is a run of cells); the selection outline merges them. */
+  cell: number;
   /** Pixel map: always upscale by whole numbers. */
   pixelPerfect: boolean;
   /** Stylized recreation of a 3D / open-world region (label shown under the map). */
@@ -35,7 +37,17 @@ export const MAP_SKINS: Record<string, MapSkin> = {
     label: 'Sinnoh Town Map',
     resolution: [216, 168],
     palette: { cursor: '#ffffff', match: '#fff2a8', done: '#57d26b', dim: '#0b1a3a99', focus: '#ffffff' },
+    cell: 7,
     cursor: 'frame',
+    pixelPerfect: true,
+  },
+  rse: {
+    id: 'rse',
+    label: 'Hoenn Pokédex area map',
+    resolution: [240, 160],
+    palette: { cursor: '#ffffff', match: '#fff2a8', done: '#57d26b', dim: '#0b1a3a99', focus: '#ffffff' },
+    cell: 8,
+    cursor: 'marker',
     pixelPerfect: true,
   },
 };

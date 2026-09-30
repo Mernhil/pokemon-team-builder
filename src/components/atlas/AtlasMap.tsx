@@ -42,7 +42,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
   const scale = fixedScale && Math.min(fixedScale, Math.max(1, Math.floor((typeof window === 'undefined' ? 900 : window.innerHeight * 0.8) / map.height)));
 
   const places = useMemo(() => Object.fromEntries(Object.entries(map.places).filter(([l]) => locations.has(l))), [map, locations]);
-  const outlines = useMemo(() => Object.fromEntries(Object.entries(places).map(([l, r]) => [l, unionOutline(r)])), [places]);
+  const outlines = useMemo(() => Object.fromEntries(Object.entries(places).map(([l, r]) => [l, unionOutline(r, skin.cell)])), [places, skin.cell]);
   const [broken, setBroken] = useState(false);
 
   const focusLoc = (loc: string) => document.getElementById(`atlas-loc-${loc}`)?.focus();

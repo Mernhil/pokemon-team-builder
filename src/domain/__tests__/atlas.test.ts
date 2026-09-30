@@ -24,8 +24,9 @@ describe('Atlas · Platinum data', () => {
   });
 
   it('every location is on the map and every map place resolves to data', () => {
-    const places = maps.maps[ATLAS_GAMES[0].mapId].places;
-    expect(maps.games.platinum).toContain(ATLAS_GAMES[0].mapId);
+    const plat = ATLAS_GAMES.find((g) => g.id === 'platinum')!;
+    const places = maps.maps[plat.mapId].places;
+    expect(maps.games.platinum).toContain(plat.mapId);
     for (const id of Object.keys(file.locations)) expect(places[id], `${id} is not on the Platinum map`).toBeDefined();
     for (const id of Object.keys(places)) expect(file.locations[id], `map place ${id} has no atlas data`).toBeDefined();
   });
@@ -164,5 +165,38 @@ describe('Place outlines', () => {
     // an L of three blocks is one six-corner shape, a lone block stays a square
     expect(unionOutline([[0, 0, 7, 7], [0, 7, 7, 7], [7, 7, 7, 7]]).split('L').length).toBe(6);
     expect(unionOutline([[5, 5, 7, 7]])).toBe('M5 5L12 5L12 12L5 12Z');
+  });
+});
+
+// Every game with an atlas must satisfy the same invariants.
+const atlasFiles = import.meta.glob('@/data/generated/atlas-*.json', { eager: true, import: 'default' }) as Record<string, AtlasFile>;
+describe.each(ATLAS_GAMES.filter((g) => g.available))('Atlas · $name', (g) => {
+  const f = Object.entries(atlasFiles).find(([k]) => k.endsWith(`atlas-${g.id}.json`))?.[1];
+  it('has a built file', () => expect(f, `run npm run atlas -- ${g.id}`).toBeDefined());
+  it('puts every location on the map and every place in the data', () => {
+    const places = maps.maps[g.mapId].places;
+    expect(maps.games[g.dexGame]).toContain(g.mapId);
+    for (const id of Object.keys(f!.locations)) expect(places[id], `${g.id}: ${id} is not on map ${g.mapId}`).toBeDefined();
+    for (const id of Object.keys(places)) expect(f!.locations[id], `${g.id}: map place ${id} has no atlas data`).toBeDefined();
+  });
+  it('keeps references valid and teams legal for the dex', async () => {
+    const dex = await loadDex(g.formatId);
+    const bad: string[] = [];
+    for (const l of Object.values(f!.locations)) {
+      for (const c of l.connections) if (!f!.locations[c]) bad.push(`${l.id} → ${c}`);
+      for (const i of l.items) if (!f!.items[i.item]) bad.push(`${l.id}: item ${i.item}`);
+      for (const s of l.shops) for (const i of s.items) if (!f!.items[i.item]) bad.push(`${l.id} shop: ${i.item}`);
+      for (const t of l.trainers) if (f!.trainers[t]?.loc !== l.id) bad.push(`${l.id} lists ${t}`);
+    }
+    for (const t of Object.values(f!.trainers)) {
+      if (!t.party.length || t.party.length > 6) bad.push(`${t.id}: party of ${t.party.length}`);
+      for (const m of t.party) {
+        if (!dex.species(m.species)) bad.push(`${t.id}: species ${m.species}`);
+        if (m.level < 1 || m.level > 100) bad.push(`${t.id}: level ${m.level}`);
+        for (const mv of m.moves) if (!dex.move(mv)) bad.push(`${t.id}: move ${mv}`);
+        if (m.item && !f!.items[m.item]) bad.push(`${t.id}: item ${m.item}`);
+      }
+    }
+    expect(bad.slice(0, 20)).toEqual([]);
   });
 });

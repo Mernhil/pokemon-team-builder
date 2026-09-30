@@ -240,7 +240,7 @@ function Npcs({ loc }: { loc: AtlasLocation }) {
 }
 
 export function WildList({ rows }: { rows: WildRow[] }) {
-  const { dex, format, speciesName } = useAtlasCtx();
+  const { dex, format, speciesName, game } = useAtlasCtx();
   const setView = useTeamStore((s) => s.setView);
   const byMethod = useMemo(() => {
     const m = new Map<string, WildRow[]>();
@@ -261,7 +261,7 @@ export function WildList({ rows }: { rows: WildRow[] }) {
                     type="button"
                     className="min-w-0 flex-1 truncate text-left text-sm font-semibold hover:text-accent hover:underline"
                     onClick={() => {
-                      usePokedexStore.getState().select('gen4', r.species);
+                      usePokedexStore.getState().select(game.book, r.species);
                       usePokedexStore.getState().setTab('info');
                       setView('dex');
                     }}
@@ -286,8 +286,9 @@ export function WildList({ rows }: { rows: WildRow[] }) {
 }
 
 function Wild({ rows, loading }: { rows: WildRow[]; loading: boolean }) {
+  const { game } = useAtlasCtx();
   if (loading) return <div className="h-24 animate-pulse rounded-lg bg-surface-2" />;
-  if (!rows.length) return <EmptyState icon={CircleDot} title="No wild Pokémon">No wild encounter table lists this location in Platinum.</EmptyState>;
+  if (!rows.length) return <EmptyState icon={CircleDot} title="No wild Pokémon">No wild encounter table lists this location in {game.shortName}.</EmptyState>;
   return <WildList rows={rows} />;
 }
 
