@@ -29,6 +29,7 @@ export const REPOS = {
   /** Ruby / Sapphire: the Gen 3 atlas (scripts/atlas/gba.ts). */
   pokeruby: { url: 'https://github.com/pret/pokeruby', dir: '.cache/pret/pokeruby', commit: '5784633ce4ef7ade1a7f2d2d0c288e3d5e6cdd7f', full: true },
   pokeplatinum: { url: 'https://github.com/pret/pokeplatinum', dir: '.cache/pret/pokeplatinum', commit: 'c248fb3f8cc9934ded800e489567c5c0eeee92eb', full: true },
+  pokediamond: { url: 'https://github.com/pret/pokediamond', dir: '.cache/pret/pokediamond', commit: '5bc4b1a3d8f100f77a4c64e59a0d544a0e29b3ec', full: true },
 } as const;
 
 /** Make sure `paths` of `repo` are on disk; returns the repo directory. */
