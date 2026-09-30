@@ -19,13 +19,28 @@ export const REPOS = {
   pokecrystal: { url: 'https://github.com/pret/pokecrystal', dir: '.cache/pret/pokecrystal', commit: 'e058e4f50b3bbf7377e036b81c25a72c54656c5c' },
   pokeemerald: { url: 'https://github.com/pret/pokeemerald', dir: '.cache/pret/pokeemerald', commit: 'c925b8482d05fb882d6b64e523653cae599e025f' },
   pokefirered: { url: 'https://github.com/pret/pokefirered', dir: '.cache/pret/pokefirered', commit: '037335f4c725d7c9aecdac87066f2002b4bd7e14' },
-  pokeplatinum: { url: 'https://github.com/pret/pokeplatinum', dir: '.cache/pret/pokeplatinum', commit: 'c248fb3f8cc9934ded800e489567c5c0eeee92eb' },
+  /** `full`: one plain shallow fetch; a blob-less clone checks files out one request at a time, far slower for the atlas' ~3000 files. */
+  pokeplatinum: { url: 'https://github.com/pret/pokeplatinum', dir: '.cache/pret/pokeplatinum', commit: 'c248fb3f8cc9934ded800e489567c5c0eeee92eb', full: true },
 } as const;
 
 /** Make sure `paths` of `repo` are on disk; returns the repo directory. */
 export function ensure(repo: keyof typeof REPOS, paths: string[]): string {
   const { url, dir, commit } = REPOS[repo];
   const abs = resolve(ROOT, dir);
+  if ('full' in REPOS[repo]) {
+    if (!existsSync(resolve(abs, '.git'))) {
+      mkdirSync(abs, { recursive: true });
+      execSync(`git init -q && git remote add origin ${url}`, { cwd: abs, stdio: 'inherit' });
+    }
+    try {
+      execSync(`git cat-file -e ${commit}`, { cwd: abs, stdio: 'ignore' });
+    } catch {
+      execSync(`git fetch -q --depth 1 origin ${commit}`, { cwd: abs, stdio: 'inherit' });
+    }
+    const missing = paths.filter((p) => !existsSync(resolve(abs, p)));
+    if (missing.length) execSync(`git checkout ${commit} -- ${missing.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
+    return abs;
+  }
   if (!existsSync(resolve(abs, '.git'))) {
     mkdirSync(dirname(abs), { recursive: true });
     execSync(`git clone -q --depth 1 --filter=blob:none --no-checkout ${url} ${abs}`, { stdio: 'inherit' });

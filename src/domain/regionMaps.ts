@@ -67,3 +67,32 @@ export function zoomAt(v: MapView, factor: number, px: number, py: number, w: nu
 export function centerOn(v: MapView, cx: number, cy: number, w: number, h: number): MapView {
   return clampView({ scale: v.scale, x: w / 2 - cx * w * v.scale, y: h / 2 - cy * h * v.scale }, w, h);
 }
+
+// ---------------------------------------------------------------------------
+// Keyboard navigation between locations
+// ---------------------------------------------------------------------------
+
+export type Dir = 'left' | 'right' | 'up' | 'down';
+
+const centre = (r: Rect[]) => placeCenter(r);
+
+/**
+ * The location an arrow key moves to: the nearest candidate whose centre lies in that direction
+ * (within a 45° cone, sideways drift weighted double), or undefined at the edge.
+ */
+export function neighbour(places: Record<string, Rect[]>, from: string, dir: Dir, candidates: Iterable<string> = Object.keys(places)): string | undefined {
+  const origin = places[from];
+  if (!origin) return undefined;
+  const [fx, fy] = centre(origin);
+  let best: { id: string; score: number } | undefined;
+  for (const id of candidates) {
+    if (id === from || !places[id]) continue;
+    const [x, y] = centre(places[id]);
+    const along = dir === 'left' ? fx - x : dir === 'right' ? x - fx : dir === 'up' ? fy - y : y - fy;
+    const across = Math.abs(dir === 'left' || dir === 'right' ? y - fy : x - fx);
+    if (along <= 0 || across > along) continue;
+    const score = along + across * 2;
+    if (!best || score < best.score || (score === best.score && id < best.id)) best = { id, score };
+  }
+  return best?.id;
+}
