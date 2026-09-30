@@ -5,7 +5,7 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 ## 0.9.0 — 2026-09-30
 
 ### New
-- **Atlas tab** for Red / Blue / Yellow, Gold / Silver / Crystal, Ruby / Sapphire / Emerald, FireRed / LeafGreen, HeartGold / SoulSilver, Diamond / Pearl (trainers only: its decompilation has no readable map data) and Platinum, from the pret decompilations. Platinum in detail: an interactive Sinnoh Town Map (whole-number pixel scale,
+- **Atlas tab** for Red / Blue / Yellow, Gold / Silver / Crystal, Ruby / Sapphire / Emerald, FireRed / LeafGreen, HeartGold / SoulSilver, Diamond / Pearl (map, trainers, gyms; its scripts are binary, so no items, NPCs or shops) and Platinum, from the pret decompilations. Platinum in detail: an interactive Sinnoh Town Map (whole-number pixel scale,
   the game's red city / blue landmark / teal special markers). Hover a place for a preview; click, tap or
   press Enter to open it; arrow keys move between places. Filters (has Gym / Mart / Pokémon Center, has
   item, Pokémon appears here, trainer uses move, free text) make matches glow.

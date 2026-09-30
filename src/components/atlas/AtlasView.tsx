@@ -191,12 +191,7 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_26rem]">
       <div className="min-w-0 space-y-2">
         <FilterBar filter={filter} setFilter={setFilter} matchCount={matches?.size} />
-        {!game.mapIds.length ? (
-          <div className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
-            <p className="font-semibold text-fg">No map for {game.shortName}.</p>
-            <p className="mt-1">The Diamond / Pearl decompilation keeps its map events and scripts as compiled binaries, so locations, items and NPCs can't be read. Every trainer's full team is in the Trainers page; Platinum has the same region with the full map.</p>
-          </div>
-        ) : !map ? <div className="aspect-[216/168] w-full animate-pulse rounded-xl bg-surface-2" /> : (
+        {!map ? <div className="aspect-[216/168] w-full animate-pulse rounded-xl bg-surface-2" /> : (
           <div className="relative">
             {gameMaps.length > 1 && (
               <div className="mb-2 flex gap-1" role="tablist" aria-label="Region">

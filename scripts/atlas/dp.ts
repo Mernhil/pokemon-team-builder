@@ -4,14 +4,17 @@
  *   files/poketool/personal/{personal,wotbl}.json   types, abilities, gender ratios; level-up learnsets
  *   files/msgdata/msg/narc_0344 (item names), narc_0560 (trainer classes)
  *   arm9/src/trainer_data.c              how the game derives a trainer mon's personality → nature, ability, gender
- * The decompilation keeps zone events and scripts as compiled binaries, so nothing can be placed on the map:
- * there are no locations, items, NPCs or shops, and every trainer is listed as unplaced.
+ *   arm9/src/map_header.c                every map's Town Map section (mapsec) and its zone-event file
+ *   files/fielddata/eventdata/zone_event_release/narc_NNNN.bin   per-zone objects and warps (binary; same layout as Platinum's)
+ * Zone scripts are compiled bytecode, so what they give (items, mart stock, NPC text) isn't read: locations, the trainers
+ * standing in them, warps between places, Pokémon Centers and gyms are.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { AtlasFile, AtlasItemInfo, AtlasMon, AtlasTrainer, TrainerKind } from '../../src/domain/atlasTypes.ts';
+import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasLocation, AtlasMon, AtlasTrainer, LocationKind, TrainerKind } from '../../src/domain/atlasTypes.ts';
 import { ensure } from '../sources.ts';
-import { NATURES, cid, cleanText, readJSON, title } from './common.ts';
+import { Dex } from '@pkmn/dex';
+import { NATURES, OUT, cid, cleanText, readJSON, title } from './common.ts';
 
 const COMMIT = '5bc4b1a3d8f100f77a4c64e59a0d544a0e29b3ec';
 const read = (dir: string, f: string) => readFileSync(resolve(dir, f), 'utf8');
@@ -30,6 +33,33 @@ function bank(dir: string, n: string): Map<number, string> {
   for (const m of src.matchAll(/<row id="[^"]+" index="(\d+)"[^>]*>[\s\S]*?<language name="English">([\s\S]*?)<\/language>/g)) out.set(Number(m[1]), dec(m[2]));
   return out;
 }
+
+/** Scripted battles aren't trainer objects, so these are placed by hand: class → the map they're fought in (and the badge a gym leader gives). */
+const SCRIPTED: Record<string, { map: string; badge?: string }> = {
+  LEADER_ROARK: { map: 'MAP_OREBURGH_GYM', badge: 'Coal Badge' },
+  LEADER_GARDENIA: { map: 'MAP_ETERNA_GYM', badge: 'Forest Badge' },
+  LEADER_MAYLENE: { map: 'MAP_VEILSTONE_GYM', badge: 'Cobble Badge' },
+  LEADER_WAKE: { map: 'MAP_PASTORIA_GYM', badge: 'Fen Badge' },
+  LEADER_FANTINA: { map: 'MAP_HEARTHOME_GYM_LEADER_ROOM', badge: 'Relic Badge' },
+  LEADER_BYRON: { map: 'MAP_CANALAVE_GYM', badge: 'Mine Badge' },
+  LEADER_CANDICE: { map: 'MAP_SNOWPOINT_GYM', badge: 'Icicle Badge' },
+  LEADER_VOLKNER: { map: 'MAP_SUNYSHORE_GYM_ROOM_3', badge: 'Beacon Badge' },
+  ELITE_FOUR_AARON: { map: 'MAP_POKEMON_LEAGUE_AARON_ROOM' },
+  ELITE_FOUR_BERTHA: { map: 'MAP_POKEMON_LEAGUE_BERTHA_ROOM' },
+  ELITE_FOUR_FLINT: { map: 'MAP_POKEMON_LEAGUE_FLINT_ROOM' },
+  ELITE_FOUR_LUCIEN: { map: 'MAP_POKEMON_LEAGUE_LUCIAN_ROOM' },
+  CHAMPION: { map: 'MAP_POKEMON_LEAGUE_CYNTHIA_ROOM' },
+};
+
+const kindOf = (id: string): LocationKind => {
+  if (/sea-route/.test(id)) return 'sea-route';
+  if (/route/.test(id) && !/cabin|house|move-tutor|coffee/.test(id)) return 'route';
+  if (/-city$/.test(id)) return 'city';
+  if (/-town$/.test(id)) return 'town';
+  if (/cave|mine|tunnel|ruins|forest|chamber|mt-|mountain|island|path|marsh|victory-road|pillar|hall-of-origin|distortion|lake(?!front)|hq|spring|lost-tower|windworks|ironworks|chateau/.test(id)) return /hq|lost-tower|chateau|windworks|ironworks/.test(id) ? 'dungeon' : 'cave';
+  if (/lakefront|meadow|garden|area|square|paradise|lighthouse|league|frontier|pal-park|great-marsh|fight|museum|statue|pier|gateway/.test(id)) return 'landmark';
+  return 'building';
+};
 
 const kindFor = (cls: string): TrainerKind =>
   /LEADER_/.test(cls) ? 'leader' : /ELITE_FOUR/.test(cls) ? 'elite-four' : /CHAMPION/.test(cls) ? 'champion' : /BARRY|RIVAL/.test(cls) ? 'rival' : /COMMANDER|GALACTIC/.test(cls) ? 'boss' : /PKMN_TRAINER_/.test(cls) ? 'other' : 'trainer';
@@ -110,10 +140,93 @@ export function buildDp(): { file: AtlasFile; gaps: string } {
     };
   }
 
+  // --- maps: header table → place, zone events → trainers and warps ---------------------------
+  const maps = readJSON<{ maps: Record<string, { places: Record<string, unknown>; labels?: Record<string, string> }> }>(resolve(OUT, 'maps.json')).maps['sinnoh-pt'];
+  const pokedex = readJSON<{ areas: { loc: string; name: string }[] }>(resolve(OUT, 'pokedex-gen4.json'));
+  const areaName = new Map(pokedex.areas.map((a) => [a.loc, a.name]));
+  const placeIds = new Set(Object.keys(maps.places));
+  const locations: Record<string, AtlasLocation> = {};
+  for (const id of placeIds) {
+    locations[id] = { id, name: areaName.get(id) ?? maps.labels?.[id] ?? title(id.replace(/^sinnoh-/, '')), kind: kindOf(id), maps: [], connections: [], pokecenter: false, shops: [], obstacles: [], items: [], npcs: [], trainers: [], events: [] };
+  }
+  const sectionPlace = (sec: string): string | undefined => {
+    const k = sec.replace('MAPSEC_', '').toLowerCase().replace(/_/g, '-');
+    return [k, `sinnoh-${k}`].find((c) => placeIds.has(c));
+  };
+  const headerSrc = read(dir, 'arm9/src/map_header.c');
+  const headers = [...headerSrc.matchAll(/NARC_zone_event_release_narc_(\d+)_bin,\s*(MAPSEC_\w+),[^}]*\},\s*\/\/\s*(MAP_\w+)/g)].map((m) => ({ ev: m[1], sec: m[2], map: m[3] }));
+  const placeOfMap = headers.map((h) => sectionPlace(h.sec));
+  const unmappedSections = new Set<string>();
+  const trainerPlace = new Map<string, string>();
+  const connections = new Map<string, Set<string>>();
+  const trainerOfIndex = new Map(tj.map((t) => [t.index, constById.get(t.index)]));
+  headers.forEach((h, mapIdx) => {
+    const place = placeOfMap[mapIdx];
+    if (!place) {
+      if (h.sec !== 'MAPSEC_MYSTERY_ZONE') unmappedSections.add(h.sec);
+      return;
+    }
+    const loc = locations[place];
+    loc.maps.push(h.map.replace('MAP_', '').toLowerCase());
+    if (/POKECENTER(_1F)?$/.test(h.map)) loc.pokecenter = true;
+    const d = readFileSync(resolve(dir, `files/fielddata/eventdata/zone_event_release/narc_${h.ev}.bin`));
+    if (d.length < 4) return;
+    let o = 4 + d.readUInt32LE(0) * 20; // bg events
+    const objN = d.readUInt32LE(o);
+    for (let k = 0; k < objN; k++) {
+      const at = o + 4 + k * 32;
+      const trainerType = d.readUInt16LE(at + 6);
+      const script = d.readUInt16LE(at + 10);
+      if (trainerType && script >= 3000 && script < 3000 + 1000) {
+        const tid = trainerOfIndex.get(script - 3000 + 1);
+        if (tid && !trainerPlace.has(tid)) trainerPlace.set(tid, place);
+      }
+    }
+    o += 4 + objN * 32;
+    const warpN = d.readUInt32LE(o);
+    for (let k = 0; k < warpN; k++) {
+      const dest = placeOfMap[d.readUInt16LE(o + 4 + k * 12 + 4)];
+      if (dest && dest !== place) (connections.get(place) ?? connections.set(place, new Set()).get(place)!).add(dest);
+    }
+  });
+  const classOf = new Map(tj.map((t) => [constById.get(t.index), t.class.replace('TRAINER_CLASS_', '')]));
+  for (const t of Object.values(trainers)) {
+    const sc = SCRIPTED[classOf.get(t.group) ?? ''];
+    const at = sc && headers.findIndex((h) => h.map === sc.map);
+    if (sc && at !== undefined && at >= 0 && placeOfMap[at] && !trainerPlace.has(t.group)) trainerPlace.set(t.group, placeOfMap[at]!);
+  }
+  const unplaced: string[] = [];
+  for (const t of Object.values(trainers)) {
+    const p = trainerPlace.get(t.id) ?? trainerPlace.get(t.group);
+    if (p) {
+      t.loc = p;
+      locations[p].trainers.push(t.id);
+    } else unplaced.push(t.id);
+  }
+  const order = [...constById.values()];
+  for (const l of Object.values(locations)) l.trainers.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const gen4 = Dex.forGen(4);
+  const badges: string[] = [];
+  for (const l of Object.values(locations)) {
+    const leader = l.trainers.map((id) => trainers[id]).find((t) => t.kind === 'leader' && t.order === 0);
+    const badge = SCRIPTED[classOf.get(leader?.id) ?? '']?.badge;
+    if (!leader || !badge) continue;
+    const counts = new Map<string, number>();
+    for (const m of leader.party) for (const ty of gen4.species.get(m.species)?.types ?? []) counts.set(ty, (counts.get(ty) ?? 0) + 1);
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || Number(a[0] === 'Normal') - Number(b[0] === 'Normal'))[0]?.[0];
+    const gym: AtlasGym = { leader: leader.name, badge, levelCap: Math.max(...leader.party.map((m) => m.level)), ...(top ? { type: top } : {}) };
+    l.gym = gym;
+    if (!badges.includes(badge)) badges.push(badge);
+  }
+  for (const [pl, dests] of connections) locations[pl].connections = [...dests].sort();
+  const sorted: Record<string, AtlasLocation> = {};
+  for (const id of Object.keys(locations).sort()) sorted[id] = locations[id];
+
   const file: AtlasFile = {
     version: 1, game: 'diamond', name: 'Pokémon Diamond', generation: 4, source: { repo: 'pret/pokediamond', commit: COMMIT },
-    locations: {}, trainers, items, unplaced: Object.keys(trainers), badges: [], unverified: {},
+    locations: sorted, trainers, items, unplaced, badges, unverified: {},
   };
+  const L = Object.values(sorted);
   const gaps = [
     '# Atlas data gaps — Pokémon Diamond / Pearl',
     '',
@@ -121,12 +234,15 @@ export function buildDp(): { file: AtlasFile; gaps: string } {
     '',
     '| What | Found | Expected | Notes |',
     '|---|---|---|---|',
-    `| Trainers with full teams | ${Object.keys(trainers).length} | ${tj.filter((t) => t.party.length).length} | none are placed on a location |`,
-    '| Locations, items, NPCs, shops, gyms | 0 | — | the decompilation keeps zone events and scripts as compiled binaries (`files/fielddata/**/narc_*.bin`), so none of it can be read |',
+    `| Town-map places with data | ${L.filter((l) => l.maps.length).length} | ${L.length} | no zone folded in: ${L.filter((l) => !l.maps.length).map((l) => l.id).join(', ') || '—'} |`,
+    `| Trainers with full teams | ${Object.keys(trainers).length} | ${tj.filter((t) => t.party.length).length} | unplaced on a location: ${unplaced.length} |`,
+    `| Gyms with leader, badge, level cap | ${L.filter((l) => l.gym).length} | 8 | badge names are hand-written (the scripts that give them are binary) |`,
+    '| Items, NPCs, shops | 0 | — | zone scripts are compiled bytecode, so what they give, say or sell is not read |',
+    `| Map sections without a Town Map place | ${unmappedSections.size} | — | ${[...unmappedSections].slice(0, 40).join(', ') || '—'} |`,
     '',
     '## Known limits',
     '',
-    '- Trainers only: use Platinum for the same region with locations, items and NPCs.',
+    '- Trainers are placed by the trainer objects in each zone (script id 3000 + trainer number − 1); use Platinum for items, NPCs and shops.',
     '- Nature, ability and gender of trainer mons use the same personality rule as arm9/src/trainer_data.c; not cross-checked against a second source.',
     '- The rival is named after the player-chosen / story name; the data holds a placeholder ("Cedric"), so the Barry class is shown as Barry.',
     '- Trainer quotes are not read (the trainer message archive is binary).',
