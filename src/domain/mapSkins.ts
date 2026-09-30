@@ -41,6 +41,15 @@ export const MAP_SKINS: Record<string, MapSkin> = {
     cursor: 'frame',
     pixelPerfect: true,
   },
+  frlg: {
+    id: 'frlg',
+    label: 'Kanto / Sevii region map',
+    resolution: [240, 160],
+    palette: { cursor: '#ffffff', match: '#fff2a8', done: '#57d26b', dim: '#0b1a3a99', focus: '#ffffff' },
+    cell: 8,
+    cursor: 'marker',
+    pixelPerfect: true,
+  },
   rse: {
     id: 'rse',
     label: 'Hoenn Pokédex area map',
@@ -53,3 +62,6 @@ export const MAP_SKINS: Record<string, MapSkin> = {
 };
 
 export const skinFor = (id: string): MapSkin => MAP_SKINS[id] ?? MAP_SKINS.dppt;
+
+/** The skin of a maps.json map. */
+export const skinOfMap = (mapId: string): MapSkin => skinFor(mapId === 'hoenn-rse' ? 'rse' : /^(kanto-frlg|sevii-)/.test(mapId) ? 'frlg' : 'dppt');

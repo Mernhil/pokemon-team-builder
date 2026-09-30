@@ -6,7 +6,7 @@ import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
 import { ATLAS_GAMES, atlasGame, matchLocations, wildAt, wildLocations, type AtlasLocation, type MapFilter } from '@/domain/atlas';
 import { getFormat } from '@/domain/formats';
-import { skinFor } from '@/domain/mapSkins';
+import { skinOfMap } from '@/domain/mapSkins';
 import { useAtlasStore, type AtlasPage } from '@/store/atlasStore';
 import { useProgress } from '@/store/atlasStore';
 import { loadMaps, type MapsFile } from '../pokedex/RegionMap';
@@ -36,7 +36,7 @@ export function AtlasView() {
   const page = useAtlasStore((s) => s.page);
   const setPage = useAtlasStore((s) => s.setPage);
   const game = atlasGame(gameId);
-  const file = useAtlas(game.id);
+  const file = useAtlas(game.file ?? game.id);
   const format = getFormat(game.formatId);
   const dexState = useDex(format.datasetId);
   const pd = usePokedexData(game.book);
@@ -170,7 +170,16 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
     return matchLocations(file, f, (l) => l.name);
   }, [file, filter, pokedex, game.dexGame, speciesName, dex]);
 
-  const map = maps?.maps[game.mapId];
+  // Region switcher (Kanto / Sevii, …): the map that shows the pinned place, else the one picked.
+  const [pickedMap, setPickedMap] = useState<string>();
+  const gameMaps = game.mapIds.map((id) => maps?.maps[id]).filter((m): m is NonNullable<typeof m> => !!m);
+  const holder = pinned ? gameMaps.find((m) => m.places[pinned]) : undefined;
+  // A place opened from elsewhere (Pokédex, a connection link) switches to the region that holds it.
+  useEffect(() => {
+    if (holder) setPickedMap(holder.id);
+  }, [holder?.id, pinned]); // eslint-disable-line react-hooks/exhaustive-deps
+  const map = gameMaps.find((m) => m.id === pickedMap) ?? holder ?? gameMaps[0];
+  const regionCount = (m: { places: Record<string, unknown> }) => Object.keys(m.places).filter((l) => file.locations[l]).length;
   const locations = useMemo(() => new Set(Object.keys(file.locations)), [file]);
   const done = useMemo(() => new Set(progress.locations), [progress.locations]);
   const pin = useCallback((l: string) => setPinned(pinned === l ? undefined : l), [pinned, setPinned]);
@@ -184,7 +193,17 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
         <FilterBar filter={filter} setFilter={setFilter} matchCount={matches?.size} />
         {!map ? <div className="aspect-[216/168] w-full animate-pulse rounded-xl bg-surface-2" /> : (
           <div className="relative">
-            <AtlasMap map={map} skin={skinFor(game.skin)} locations={locations} names={locName} pinned={pinned} onPin={pin} hovered={hovered} onHover={hover} matches={matches} done={done} />
+            {gameMaps.length > 1 && (
+              <div className="mb-2 flex gap-1" role="tablist" aria-label="Region">
+                {gameMaps.map((m) => (
+                  <button key={m.id} type="button" role="tab" aria-selected={m.id === map.id} onClick={() => { setPickedMap(m.id); if (pinned && !m.places[pinned]) setPinned(undefined); }} className={cn('h-8 flex-1 rounded-md border px-2 text-xs font-semibold', m.id === map.id ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}>
+                    {m.name}
+                    <span className="ml-1 font-mono font-normal text-muted">{regionCount(m)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <AtlasMap key={map.id} map={map} skin={skinOfMap(map.id)} locations={locations} names={locName} pinned={pinned} onPin={pin} hovered={hovered} onHover={hover} matches={matches} done={done} />
             {hoverLoc && wide && <PreviewCard loc={hoverLoc} onEnter={() => hover(hoverLoc.id)} onLeave={() => hover(undefined)} />}
           </div>
         )}

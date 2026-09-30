@@ -1,6 +1,6 @@
 /**
- * Pokémon Emerald atlas (Ruby and Sapphire share the Hoenn map; Emerald is the one decompilation with
- * complete, readable data), from the pret/pokeemerald decompilation:
+ * Gen 3 atlases (Emerald, FireRed / LeafGreen), from the pret/pokeemerald and pret/pokefirered decompilations,
+ * which share one engine and data layout:
  *   src/data/trainers.h + trainer_parties.h   trainer classes, names, parties (levels, items, explicit moves)
  *   src/data/pokemon/*                        species types, abilities, gender ratios, level-up learnsets
  *   src/battle_main.c                         how the game derives a trainer mon's personality → nature, ability, gender
@@ -17,12 +17,27 @@ import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasLocation, AtlasMon, Atlas
 import { ensure } from '../sources.ts';
 import { NATURES, OUT, cid, cleanText, readJSON, spaced, title } from './common.ts';
 
-const COMMIT = 'c925b8482d05fb882d6b64e523653cae599e025f';
-const BADGES = ['Stone', 'Knuckle', 'Dynamo', 'Heat', 'Balance', 'Feather', 'Mind', 'Rain'];
+interface GbaConfig {
+  game: string;
+  name: string;
+  repo: 'pokeemerald' | 'pokefirered';
+  url: string;
+  commit: string;
+  /** PokeAPI region prefix of place ids ("hoenn-route-104"). */
+  prefix: string;
+  /** maps.json map ids whose places are this game's locations. */
+  mapIds: string[];
+  dexGame: string;
+  badges: string[];
+  /** Region-map section → place id, where the kebab-case rule doesn't apply. */
+  aliases: Record<string, string>;
+  /** Extra text at the top of the gaps report. */
+  note: string;
+}
 const read = (dir: string, f: string) => readFileSync(resolve(dir, f), 'utf8');
 
-/** Decomp region-map sections whose PokeAPI place id isn't the obvious kebab-case. */
-const SECTION_ALIASES: Record<string, string> = {
+/** Hoenn region-map sections whose PokeAPI place id isn't the obvious kebab-case. */
+const HOENN_ALIASES: Record<string, string> = {
   MAPSEC_SAFARI_ZONE: 'hoenn-safari-zone',
   MAPSEC_BATTLE_FRONTIER: 'hoenn-battle-frontier',
   MAPSEC_VICTORY_ROAD: 'hoenn-victory-road',
@@ -71,11 +86,53 @@ function fields(body: string): Kv {
   return out;
 }
 
-export function buildEmerald(): { file: AtlasFile; gaps: string } {
-  const dir = ensure('pokeemerald', ['data', 'src', 'include', 'charmap.txt']);
+const KANTO_ALIASES: Record<string, string> = {
+  MAPSEC_SAFARI_ZONE: 'kanto-safari-zone',
+  MAPSEC_POWER_PLANT: 'kanto-power-plant',
+  MAPSEC_VICTORY_ROAD: 'kanto-victory-road-1',
+  MAPSEC_ROUTE_19: 'kanto-sea-route-19',
+  MAPSEC_ROUTE_20: 'kanto-sea-route-20',
+  MAPSEC_ROUTE_21: 'kanto-sea-route-21',
+  MAPSEC_ROUTE_21_NORTH: 'kanto-sea-route-21',
+  MAPSEC_ROUTE_21_SOUTH: 'kanto-sea-route-21',
+  MAPSEC_ROCKET_HIDEOUT: 'celadon-city',
+  MAPSEC_SILPH_CO: 'saffron-city',
+  MAPSEC_POKEMON_LEAGUE: 'indigo-plateau',
+  MAPSEC_CERULEAN_CAVE: 'cerulean-cave',
+  MAPSEC_ALTERING_CAVE: 'kanto-altering-cave',
+  MAPSEC_S_S_ANNE: 'ss-anne',
+  MAPSEC_KANTO_VICTORY_ROAD: 'kanto-victory-road-1',
+  MAPSEC_TRAINER_TOWER_2: 'trainer-tower',
+  MAPSEC_UNDERGROUND_PATH_2: 'kanto-underground-path',
+  MAPSEC_EMBER_SPA: 'kindle-road',
+  MAPSEC_ROCKET_WAREHOUSE: 'five-island',
+  MAPSEC_VIAPOIS_CHAMBER: 'viapos-chamber',
+};
+
+export const EMERALD: GbaConfig = {
+  game: 'emerald', name: 'Pokémon Emerald', repo: 'pokeemerald', url: 'pret/pokeemerald', commit: 'c925b8482d05fb882d6b64e523653cae599e025f',
+  prefix: 'hoenn', mapIds: ['hoenn-rse'], dexGame: 'emerald', badges: ['Stone', 'Knuckle', 'Dynamo', 'Heat', 'Balance', 'Feather', 'Mind', 'Rain'],
+  aliases: HOENN_ALIASES,
+  note: "Ruby and Sapphire share Hoenn's map and most of its data; their own differences (version exclusives, trainer teams) are not in this file.",
+};
+export const FIRERED: GbaConfig = {
+  game: 'firered', name: 'Pokémon FireRed', repo: 'pokefirered', url: 'pret/pokefirered', commit: '037335f4c725d7c9aecdac87066f2002b4bd7e14',
+  prefix: 'kanto', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], dexGame: 'firered', badges: ['Boulder', 'Cascade', 'Thunder', 'Rainbow', 'Soul', 'Marsh', 'Volcano', 'Earth'],
+  aliases: KANTO_ALIASES,
+  note: 'LeafGreen uses this file too: the decompilation builds both from shared data, and only the `#if defined(LEAFGREEN)` differences (wild Pokémon, a few gift and shop items) are not applied.',
+};
+
+export const buildEmerald = () => buildGba(EMERALD);
+export const buildFireRed = () => buildGba(FIRERED);
+
+function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
+  const COMMIT = cfg.commit;
+  const BADGES = cfg.badges;
+  const SECTION_ALIASES = cfg.aliases;
+  const dir = ensure(cfg.repo, ['data', 'src', 'include', 'charmap.txt']);
   const gen3 = Dex.forGen(3);
-  const maps = readJSON<{ maps: Record<string, { places: Record<string, unknown> }> }>(resolve(OUT, 'maps.json')).maps['hoenn-rse'];
-  const placeIds = new Set(Object.keys(maps.places));
+  const allMaps = readJSON<{ maps: Record<string, { places: Record<string, unknown> }> }>(resolve(OUT, 'maps.json')).maps;
+  const placeIds = new Set(cfg.mapIds.flatMap((m) => Object.keys(allMaps[m].places)));
   const pokedex = readJSON<{ games: { id: string }[]; areas: { loc: string; name: string }[]; encounters: Record<string, number[][]> }>(resolve(OUT, 'pokedex-gen3.json'));
   const areaName = new Map(pokedex.areas.map((a) => [a.loc, a.name]));
 
@@ -111,31 +168,48 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
 
   // --- items -----------------------------------------------------------------------------------
   const descText = new Map<string, string>();
+  if (existsSync(resolve(dir, 'src/data/text/item_descriptions.h')))
   for (const m of read(dir, 'src/data/text/item_descriptions.h').matchAll(/(\w+)\[\]\s*=\s*_\(([^;]*?)\);/gs))
     descText.set(m[1], [...m[2].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((x) => x[1]).join('').replace(/\\n/g, ' '));
-  const tmMoves = [...read(dir, 'include/constants/tms_hms.h').matchAll(/F\((\w+)\)/g)].map((m) => m[1]);
-  const tmCount = read(dir, 'include/constants/tms_hms.h').split('FOREACH_HM')[0].match(/F\(/g)?.length ?? 50;
-  const itemsSrc = read(dir, 'src/data/items.h');
+  // TM / HM moves: `#define ITEM_TM01_FOCUS_PUNCH ITEM_TM01` (FireRed) or the FOREACH_TM list (Emerald)
+  const constItems = read(dir, 'include/constants/items.h');
+  const tmByNumber = new Map<string, string>();
+  for (const m of constItems.matchAll(/#define ITEM_(TM|HM)(\d+)_(\w+)/g)) tmByNumber.set(`${m[1]}${Number(m[2])}`, `MOVE_${m[3]}`);
+  if (!tmByNumber.size && existsSync(resolve(dir, 'include/constants/tms_hms.h'))) {
+    const tmsSrc = read(dir, 'include/constants/tms_hms.h');
+    const tms = [...tmsSrc.split('FOREACH_HM')[0].matchAll(/F\((\w+)\)/g)].map((m) => `MOVE_${m[1]}`);
+    const hms = [...(tmsSrc.split('FOREACH_HM')[1] ?? '').matchAll(/F\((\w+)\)/g)].map((m) => `MOVE_${m[1]}`);
+    tms.forEach((mv, i) => tmByNumber.set(`TM${i + 1}`, mv));
+    hms.forEach((mv, i) => tmByNumber.set(`HM${i + 1}`, mv));
+  }
   const items: Record<string, AtlasItemInfo> = {};
   /** TMs and HMs are keyed tm01 / hm01 (their constants carry the move: ITEM_TM01_FOCUS_PUNCH). */
   const itemId = (c: string) => {
     const t = /^ITEM_(TM|HM)(\d+)/.exec(c);
     return t ? `${t[1].toLowerCase()}${t[2]}` : cid(c);
   };
-  for (const m of itemsSrc.matchAll(/\[(ITEM_\w+)\]\s*=\s*\{/g)) {
-    const f = fields(block(itemsSrc, m.index! + m[0].length - 1));
-    if (!f.name || m[1] === 'ITEM_NONE') continue;
-    const name = /_\("([^"]*)"\)/.exec(f.name)?.[1] ?? m[1];
-    if (/^\?+$/.test(name)) continue; // unused slots
-    const pretty = title(name.toLowerCase().replace(/pok[eé]mon/g, 'Pokémon')).replace(/Pokémon/g, 'Pokémon');
-    const tm = /^ITEM_(TM|HM)(\d+)/.exec(m[1]);
-    const moveConst = tm ? (tm[1] === 'TM' ? tmMoves[Number(tm[2]) - 1] : tmMoves[tmCount + Number(tm[2]) - 1]) : undefined;
+  interface RawItem { c: string; name: string; price: number; description: string; pocket: string }
+  const rawItems: RawItem[] = [];
+  if (existsSync(resolve(dir, 'src/data/items.h'))) {
+    const itemsSrc = read(dir, 'src/data/items.h');
+    for (const m of itemsSrc.matchAll(/\[(ITEM_\w+)\]\s*=\s*\{/g)) {
+      const f = fields(block(itemsSrc, m.index! + m[0].length - 1));
+      if (!f.name) continue;
+      rawItems.push({ c: m[1], name: /_\("([^"]*)"\)/.exec(f.name)?.[1] ?? m[1], price: Number(f.price ?? 0), description: (f.description && descText.get(f.description)) || '', pocket: (f.pocket ?? '').replace('POCKET_', '').toLowerCase() });
+    }
+  } else {
+    // FireRed: src/data/items.json
+    for (const it of readJSON<{ items: { english: string; itemId: string; price: number; description_english: string | string[]; pocket: string }[] }>(resolve(dir, 'src/data/items.json')).items)
+      rawItems.push({ c: it.itemId, name: it.english, price: it.price, description: Array.isArray(it.description_english) ? it.description_english.join(' ') : String(it.description_english ?? '').replace(/\\n/g, ' '), pocket: it.pocket.replace('POCKET_', '').toLowerCase() });
+  }
+  for (const r of rawItems) {
+    if (r.c === 'ITEM_NONE' || /^\?+$/.test(r.name)) continue; // unused slots
+    const pretty = title(r.name.toLowerCase().replace(/pok[eé]mon/g, 'Pokémon')).replace(/Pokémon/g, 'Pokémon');
+    const tm = /^ITEM_(TM|HM)(\d+)/.exec(r.c);
+    const moveConst = tm ? tmByNumber.get(`${tm[1]}${Number(tm[2])}`) : undefined;
     const moveId = moveConst ? cid(moveConst) : undefined;
-    items[itemId(m[1])] = {
-      name: tm ? `${tm[1]}${tm[2]}` : pretty,
-      price: Number(f.price ?? 0),
-      description: (f.description && descText.get(f.description)) || '',
-      pocket: (f.pocket ?? '').replace('POCKET_', '').toLowerCase(),
+    items[itemId(r.c)] = {
+      name: tm ? `${tm[1]}${tm[2]}` : pretty, price: r.price, description: r.description.replace(/\s+/g, ' ').trim(), pocket: r.pocket,
       ...(moveId ? { move: moveId, moveType: gen3.moves.get(moveId).type } : {}),
     };
   }
@@ -143,8 +217,9 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
   // --- scripts (all labels in one table) + text -----------------------------------------------
   const labels = new Map<string, string[]>();
   const texts = new Map<string, string>();
-  const scriptFiles = readdirSync(resolve(dir, 'data/maps')).map((d) => `data/maps/${d}/scripts.inc`).filter((f) => existsSync(resolve(dir, f)));
-  for (const f of [...scriptFiles, ...readdirSync(resolve(dir, 'data/scripts')).map((x) => `data/scripts/${x}`), ...readdirSync(resolve(dir, 'data/text')).map((x) => `data/text/${x}`)]) {
+  const mapDirsAll = readdirSync(resolve(dir, 'data/maps')).filter((d) => existsSync(resolve(dir, 'data/maps', d, 'map.json')));
+  const incFiles = (rel: string) => (existsSync(resolve(dir, rel)) ? readdirSync(resolve(dir, rel)).map((x) => `${rel}/${x}`) : []);
+  for (const f of [...mapDirsAll.flatMap((d) => incFiles(`data/maps/${d}`)), ...incFiles('data/scripts'), ...incFiles('data/text')]) {
     if (!f.endsWith('.inc')) continue;
     let cur: string[] | undefined;
     let curText: string[] | undefined;
@@ -221,13 +296,17 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
   const unverified: Record<string, string[]> = {};
   const unknownSpecies = new Set<string>();
   const rematchOf = new Map<string, { base: string; n: number }>();
-  for (const m of read(dir, 'src/battle_setup.c').matchAll(/REMATCH\(([^)]*)\)/g)) {
-    const ids = [...m[1].matchAll(/TRAINER_\w+/g)].map((x) => x[0]);
-    ids.forEach((id, n) => n > 0 && rematchOf.set(id, { base: ids[0], n }));
+  // Emerald: REMATCH(T1, T2, …, MAP) in battle_setup.c; FireRed: { {T1, T2, SKIP, T3}, MAP(..) } in vs_seeker.c
+  const rematchSrc = existsSync(resolve(dir, 'src/vs_seeker.c')) ? read(dir, 'src/vs_seeker.c') : read(dir, 'src/battle_setup.c');
+  const groups = [...rematchSrc.matchAll(/REMATCH\(([^)]*)\)/g)].map((m) => m[1]).concat([...rematchSrc.matchAll(/\{\s*\{([^{}]*TRAINER_[^{}]*)\}\s*,\s*MAP\(/g)].map((m) => m[1]));
+  for (const g of groups) {
+    const ids = [...g.matchAll(/TRAINER_\w+/g)].map((x) => x[0]);
+    let n = 0;
+    for (const id of ids) if (id !== ids[0] && !rematchOf.has(id)) rematchOf.set(id, { base: ids[0], n: ++n });
   }
   const trainerIds = [...trainersSrc.matchAll(/\[(TRAINER_\w+)\]\s*=\s*\{/g)].map((m) => m[1]);
   const kindFor = (cls: string): TrainerKind =>
-    cls === 'TRAINER_CLASS_LEADER' ? 'leader' : cls === 'TRAINER_CLASS_ELITE_FOUR' ? 'elite-four' : cls === 'TRAINER_CLASS_CHAMPION' ? 'champion' : cls === 'TRAINER_CLASS_RIVAL' ? 'rival' : /TEAM_AQUA|TEAM_MAGMA|AQUA_ADMIN|AQUA_LEADER|MAGMA_ADMIN|MAGMA_LEADER/.test(cls) ? 'boss' : 'trainer';
+    cls === 'TRAINER_CLASS_LEADER' ? 'leader' : cls === 'TRAINER_CLASS_ELITE_FOUR' ? 'elite-four' : cls === 'TRAINER_CLASS_CHAMPION' ? 'champion' : cls === 'TRAINER_CLASS_RIVAL' ? 'rival' : /TEAM_AQUA|TEAM_MAGMA|AQUA_ADMIN|AQUA_LEADER|MAGMA_ADMIN|MAGMA_LEADER|ROCKET/.test(cls) ? 'boss' : 'trainer';
   for (const m of trainersSrc.matchAll(/\[(TRAINER_\w+)\]\s*=\s*\{/g)) {
     const tid = m[1];
     if (tid === 'TRAINER_NONE' || tid === 'TRAINER_SECRET_BASE') continue;
@@ -282,15 +361,15 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
   // --- map pass --------------------------------------------------------------------------------
   const locations: Record<string, AtlasLocation> = {};
   const kindOf = (id: string): LocationKind =>
-    /route/.test(id) ? (/underwater|sea/.test(id) ? 'sea-route' : 'route') : /-city$/.test(id) ? 'city' : /-town$/.test(id) ? 'town' : /cave|tunnel|tomb|hideout|cavern|pillar|ruins|chamber|tower|ship|mt-|meteor|passage|jagged|fiery|victory|safari|woods|tunnel/.test(id) ? 'cave' : 'landmark';
+    /island$|-island-|-isle/.test(id) && !/cave|tunnel/.test(id) ? 'town' : /route/.test(id) ? (/underwater|sea/.test(id) ? 'sea-route' : 'route') : /-city$/.test(id) ? 'city' : /-town$/.test(id) ? 'town' : /cave|tunnel|tomb|hideout|cavern|pillar|ruins|chamber|tower|ship|mt-|meteor|passage|jagged|fiery|victory|safari|woods|tunnel/.test(id) ? 'cave' : 'landmark';
   for (const id of placeIds)
-    locations[id] = { id, name: areaName.get(id) ?? title(id.replace(/^hoenn-/, '')), kind: kindOf(id), maps: [], connections: [], pokecenter: false, shops: [], obstacles: [], items: [], npcs: [], trainers: [], events: [] };
+    locations[id] = { id, name: areaName.get(id) ?? title(id.replace(new RegExp(`^${cfg.prefix}-`), '')), kind: kindOf(id), maps: [], connections: [], pokecenter: false, shops: [], obstacles: [], items: [], npcs: [], trainers: [], events: [] };
   const sectionPlace = (sec: string): string | undefined => {
     if (SECTION_ALIASES[sec]) return placeIds.has(SECTION_ALIASES[sec]) ? SECTION_ALIASES[sec] : undefined;
     const k = sec.replace('MAPSEC_', '').toLowerCase().replace(/_/g, '-');
-    return [k, `hoenn-${k}`].find((c) => placeIds.has(c));
+    return [k, `${cfg.prefix}-${k}`, `${cfg.prefix}-sea-${k}`].find((c) => placeIds.has(c));
   };
-  const OBSTACLE_GFX: Record<string, string> = { OBJ_EVENT_GFX_CUTTABLE_TREE: 'Cut', OBJ_EVENT_GFX_BREAKABLE_ROCK: 'Rock Smash', OBJ_EVENT_GFX_PUSHABLE_BOULDER: 'Strength' };
+  const OBSTACLE_GFX: Record<string, string> = { OBJ_EVENT_GFX_CUTTABLE_TREE: 'Cut', OBJ_EVENT_GFX_CUT_TREE: 'Cut', OBJ_EVENT_GFX_BREAKABLE_ROCK: 'Rock Smash', OBJ_EVENT_GFX_ROCK_SMASH_ROCK: 'Rock Smash', OBJ_EVENT_GFX_PUSHABLE_BOULDER: 'Strength' };
   const SIGN_TYPES = new Set(['sign', 'secret_base']);
   const trainerPlace = new Map<string, { place: string; sub?: string }>();
   const unmappedSections = new Map<string, string[]>();
@@ -300,7 +379,7 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
   let npcTotal = 0;
   let npcWithText = 0;
 
-  const mapDirs = readdirSync(resolve(dir, 'data/maps')).filter((d) => existsSync(resolve(dir, 'data/maps', d, 'map.json')));
+  const mapDirs = mapDirsAll;
   const mapJson = new Map(mapDirs.map((d) => [d, readJSON<{ id: string; region_map_section?: string; object_events?: { graphics_id: string; x: number; y: number; script: string; trainer_type: string; flag: string }[]; bg_events?: { type: string; x: number; y: number; item?: string; script?: string }[]; warp_events?: { dest_map: string }[] }>(resolve(dir, 'data/maps', d, 'map.json'))]));
   for (const mj of mapJson.values()) if (mj.region_map_section) { const p = sectionPlace(mj.region_map_section); if (p) mapPlace.set(mj.id, p); }
 
@@ -314,17 +393,18 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
     const loc = locations[place];
     loc.maps.push(d);
     if (/PokemonCenter_1F$/.test(d)) loc.pokecenter = true;
-    const base = place.replace(/^hoenn-/, '').replace(/-/g, '');
+    const base = place.replace(new RegExp(`^${cfg.prefix}-`), '').replace(/-/g, '');
     const sub = d.toLowerCase().startsWith(base) && d.length > base.length ? title(spaced(d.slice(base.length).replace(/^_/, '')).toLowerCase()) : undefined;
     for (const w of mj.warp_events ?? []) (connectionsRaw.get(place) ?? connectionsRaw.set(place, new Set()).get(place)!).add(w.dest_map);
 
     for (const b of mj.bg_events ?? []) {
-      if (b.type === 'hidden_item' && b.item) {
+      if (b.type === 'hidden_item' && b.item && items[itemId(b.item)]) {
         const id = itemId(b.item);
         loc.items.push({ item: id, qty: 1, how: 'hidden', where: `${sub ? `${sub}: ` : ''}buried at tile (${b.x}, ${b.y}); the Itemfinder points to it`, at: [b.x, b.y], respawns: false, ...(sub ? { sub } : {}) });
       }
     }
     for (const o of mj.object_events ?? []) {
+      if (!o.script || !o.graphics_id) continue; // FireRed's "clone" objects have neither
       if (OBSTACLE_GFX[o.graphics_id]) {
         if (!loc.obstacles.includes(OBSTACLE_GFX[o.graphics_id])) loc.obstacles.push(OBSTACLE_GFX[o.graphics_id]);
         continue;
@@ -333,7 +413,7 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
       for (const line of body) for (const t of line.matchAll(/\bTRAINER_\w+/g)) if (trainers[t[0]] && !trainerPlace.has(t[0])) trainerPlace.set(t[0], { place, sub });
       if (o.graphics_id === 'OBJ_EVENT_GFX_ITEM_BALL') {
         const fi = body.map((l) => /^finditem\s+(ITEM_\w+)(?:,\s*(\d+))?/.exec(l)).find(Boolean);
-        if (fi) {
+        if (fi && items[itemId(fi[1])]) {
           const id = itemId(fi[1]);
           const tm = items[id]?.move;
           loc.items.push({ item: id, qty: Number(fi[2] ?? 1), how: tm ? (/^hm/.test(id) ? 'hm' : 'tm') : 'visible', where: `${sub ? `${sub}: ` : ''}on the ground at tile (${o.x}, ${o.y})`, at: [o.x, o.y], respawns: false, ...(sub ? { sub } : {}) });
@@ -354,7 +434,7 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
       const gives: { item: string; qty: number }[] = [];
       for (const line of body) {
         const g = /^(?:giveitem|giveitem_std|finditem)\s+(ITEM_\w+)(?:,\s*(\d+))?/.exec(line);
-        if (g && !gives.some((x) => x.item === itemId(g[1]))) gives.push({ item: itemId(g[1]), qty: Number(g[2] ?? 1) });
+        if (g && g[1] !== 'ITEM_NONE' && items[itemId(g[1])] && !gives.some((x) => x.item === itemId(g[1]))) gives.push({ item: itemId(g[1]), qty: Number(g[2] ?? 1) });
       }
       const gm = body.map((l) => /^givemon\s+(SPECIES_\w+),\s*(\d+)(?:,\s*(ITEM_\w+))?/.exec(l)).find(Boolean);
       const isShop = body.some((l) => /^pokemart\b/.test(l));
@@ -385,7 +465,7 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
     for (const bm of src.matchAll(/setflag FLAG_BADGE0(\d)_GET/g)) badgeOf.set(place, BADGES[Number(bm[1]) - 1]);
     for (const pm of src.matchAll(/^\s*pokemart\s+(\w+)/gm)) {
       const list = labels.get(pm[1]) ?? [];
-      const stock = list.filter((l) => /^\.2byte\s+ITEM_/.test(l)).map((l) => itemId(/ITEM_\w+/.exec(l)![0]));
+      const stock = list.filter((l) => /^\.2byte\s+ITEM_/.test(l)).map((l) => itemId(/ITEM_\w+/.exec(l)![0])).filter((id) => items[id]);
       if (!stock.length) continue;
       const variant = /Expanded/.test(pm[1]) ? ' · after the game starts' : /Basic/.test(pm[1]) ? ' · at the start' : '';
       const shop: AtlasShop = { name: `${sub && sub !== 'Mart' ? `${sub} ` : ''}Poké Mart${variant}`, items: stock.map((id) => ({ item: id, price: items[id]?.price ?? 0 })) };
@@ -441,25 +521,25 @@ export function buildEmerald(): { file: AtlasFile; gaps: string } {
   }
   // keep every item the game defines: the item database lists all of them
   const file: AtlasFile = {
-    version: 1, game: 'emerald', name: 'Pokémon Emerald', generation: 3, source: { repo: 'pret/pokeemerald', commit: COMMIT },
+    version: 1, game: cfg.game, name: cfg.name, generation: 3, source: { repo: cfg.url, commit: COMMIT },
     locations: sorted, trainers, items, unplaced, badges, unverified,
   };
   const L = Object.values(sorted);
   const encounterLocs = new Set<string>();
-  for (const rows of Object.values(pokedex.encounters)) for (const [g, a] of rows) if (pokedex.games[g].id === 'emerald') encounterLocs.add(pokedex.areas[a].loc);
+  for (const rows of Object.values(pokedex.encounters)) for (const [g, a] of rows) if (pokedex.games[g].id === cfg.dexGame) encounterLocs.add(pokedex.areas[a].loc);
   const missing = [...encounterLocs].filter((l) => !sorted[l]);
   const hiddenN = L.flatMap((l) => l.items).filter((i) => i.how === 'hidden').length;
   const visibleN = L.flatMap((l) => l.items).filter((i) => i.how === 'visible' || i.how === 'tm' || i.how === 'hm').length;
   const gapsMd = [
-    '# Atlas data gaps — Pokémon Emerald',
+    `# Atlas data gaps — ${cfg.name}`,
     '',
-    `Generated by \`npm run atlas\` (scripts/atlas/emerald.ts); do not edit. Source: pret/pokeemerald @ \`${COMMIT.slice(0, 10)}\`. Ruby and Sapphire share Hoenn's map and most of its data; their own differences (version exclusives, trainer teams) are not in this file.`,
+    `Generated by \`npm run atlas\` (scripts/atlas/gba.ts); do not edit. Source: ${cfg.url} @ \`${COMMIT.slice(0, 10)}\`. ${cfg.note}`,
     '',
     '| What | Found | Expected | Notes |',
     '|---|---|---|---|',
     `| Town-map places with data | ${L.filter((l) => l.maps.length).length} | ${L.length} | no map folded in: ${L.filter((l) => !l.maps.length).map((l) => l.id).join(', ') || '—'} |`,
     `| Wild-encounter locations present | ${encounterLocs.size - missing.length} | ${encounterLocs.size} | missing: ${missing.join(', ') || '—'} |`,
-    `| Trainers with full teams | ${Object.keys(trainers).length} | ${trainerIds.filter((t) => t !== 'TRAINER_NONE' && t !== 'TRAINER_SECRET_BASE').length} | unplaced on a location: ${unplaced.length} |`,
+    `| Trainers with full teams | ${Object.keys(trainers).length} | ${trainerIds.filter((t) => t !== 'TRAINER_NONE' && t !== 'TRAINER_SECRET_BASE').length} | unplaced on a location: ${unplaced.length}; the rest of trainers.h are unused slots without a party |`,
     `| Hidden items | ${hiddenN} | — | bg events of type hidden_item |`,
     `| Visible items (balls, TMs) | ${visibleN} | — | item-ball objects whose script finds an item |`,
     `| NPCs with dialogue | ${npcWithText} | ${npcTotal} | NPCs whose reachable script shows text |`,

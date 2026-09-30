@@ -18,7 +18,7 @@ export const REPOS = {
   pokered: { url: 'https://github.com/pret/pokered', dir: '.cache/pret/pokered', commit: 'd2704a63c26f9ba046ade877445216b3de0519a4' },
   pokecrystal: { url: 'https://github.com/pret/pokecrystal', dir: '.cache/pret/pokecrystal', commit: 'e058e4f50b3bbf7377e036b81c25a72c54656c5c' },
   pokeemerald: { url: 'https://github.com/pret/pokeemerald', dir: '.cache/pret/pokeemerald', commit: 'c925b8482d05fb882d6b64e523653cae599e025f', full: true },
-  pokefirered: { url: 'https://github.com/pret/pokefirered', dir: '.cache/pret/pokefirered', commit: '037335f4c725d7c9aecdac87066f2002b4bd7e14' },
+  pokefirered: { url: 'https://github.com/pret/pokefirered', dir: '.cache/pret/pokefirered', commit: '037335f4c725d7c9aecdac87066f2002b4bd7e14', full: true },
   /** `full`: one plain shallow fetch; a blob-less clone checks files out one request at a time, far slower for the atlas' ~3000 files. */
   pokeplatinum: { url: 'https://github.com/pret/pokeplatinum', dir: '.cache/pret/pokeplatinum', commit: 'c248fb3f8cc9934ded800e489567c5c0eeee92eb', full: true },
 } as const;

@@ -11,12 +11,13 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { AtlasFile } from '../src/domain/atlasTypes.ts';
 import { GAPS, OUT } from './atlas/common.ts';
-import { buildEmerald } from './atlas/emerald.ts';
+import { buildEmerald, buildFireRed } from './atlas/gba.ts';
 import { buildPlatinum } from './atlas/platinum.ts';
 
 const BUILDERS: Record<string, () => { file: AtlasFile; gaps: string }> = {
   platinum: buildPlatinum,
   emerald: buildEmerald,
+  firered: buildFireRed,
 };
 
 function main() {

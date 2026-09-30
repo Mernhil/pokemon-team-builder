@@ -181,16 +181,19 @@ export interface AtlasGame {
   formatId: string;
   /** Pokédex game id whose encounters apply. */
   dexGame: string;
-  /** maps.json map id + skin shown. */
-  mapId: string;
-  skin: string;
+  /** maps.json map ids of the game's regions, the first one shown by default (region switcher when several). */
+  mapIds: string[];
+  /** The atlas file, when it isn't `atlas-<id>.json` (LeafGreen reads FireRed's). */
+  file?: string;
   /** False until the game's atlas data is built. */
   available: boolean;
 }
 
 export const ATLAS_GAMES: AtlasGame[] = [
-  { id: 'emerald', name: 'Pokémon Emerald', shortName: 'Emerald', book: 'gen3', formatId: 'gen3', dexGame: 'emerald', mapId: 'hoenn-rse', skin: 'rse', available: true },
-  { id: 'platinum', name: 'Pokémon Platinum', shortName: 'Platinum', book: 'gen4', formatId: 'gen4', dexGame: 'platinum', mapId: 'sinnoh-pt', skin: 'dppt', available: true },
+  { id: 'platinum', name: 'Pokémon Platinum', shortName: 'Platinum', book: 'gen4', formatId: 'gen4', dexGame: 'platinum', mapIds: ['sinnoh-pt'], available: true },
+  { id: 'emerald', name: 'Pokémon Emerald', shortName: 'Emerald', book: 'gen3', formatId: 'gen3', dexGame: 'emerald', mapIds: ['hoenn-rse'], available: true },
+  { id: 'firered', name: 'Pokémon FireRed', shortName: 'FireRed', book: 'gen3', formatId: 'gen3', dexGame: 'firered', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], available: true },
+  { id: 'leafgreen', name: 'Pokémon LeafGreen', shortName: 'LeafGreen', book: 'gen3', formatId: 'gen3', dexGame: 'leafgreen', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], file: 'firered', available: true },
 ];
 
 export const atlasGame = (id: string): AtlasGame => ATLAS_GAMES.find((g) => g.id === id) ?? ATLAS_GAMES[0];

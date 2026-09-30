@@ -25,8 +25,8 @@ describe('Atlas · Platinum data', () => {
 
   it('every location is on the map and every map place resolves to data', () => {
     const plat = ATLAS_GAMES.find((g) => g.id === 'platinum')!;
-    const places = maps.maps[plat.mapId].places;
-    expect(maps.games.platinum).toContain(plat.mapId);
+    const places = maps.maps[plat.mapIds[0]].places;
+    expect(maps.games.platinum).toContain(plat.mapIds[0]);
     for (const id of Object.keys(file.locations)) expect(places[id], `${id} is not on the Platinum map`).toBeDefined();
     for (const id of Object.keys(places)) expect(file.locations[id], `map place ${id} has no atlas data`).toBeDefined();
   });
@@ -171,12 +171,12 @@ describe('Place outlines', () => {
 // Every game with an atlas must satisfy the same invariants.
 const atlasFiles = import.meta.glob('@/data/generated/atlas-*.json', { eager: true, import: 'default' }) as Record<string, AtlasFile>;
 describe.each(ATLAS_GAMES.filter((g) => g.available))('Atlas · $name', (g) => {
-  const f = Object.entries(atlasFiles).find(([k]) => k.endsWith(`atlas-${g.id}.json`))?.[1];
+  const f = Object.entries(atlasFiles).find(([k]) => k.endsWith(`atlas-${g.file ?? g.id}.json`))?.[1];
   it('has a built file', () => expect(f, `run npm run atlas -- ${g.id}`).toBeDefined());
   it('puts every location on the map and every place in the data', () => {
-    const places = maps.maps[g.mapId].places;
-    expect(maps.games[g.dexGame]).toContain(g.mapId);
-    for (const id of Object.keys(f!.locations)) expect(places[id], `${g.id}: ${id} is not on map ${g.mapId}`).toBeDefined();
+    const places: Record<string, unknown> = Object.assign({}, ...g.mapIds.map((m) => maps.maps[m].places));
+    for (const m of g.mapIds) expect(maps.games[g.dexGame], `${g.id}: map ${m} is not shown for ${g.dexGame}`).toContain(m);
+    for (const id of Object.keys(f!.locations)) expect(places[id], `${g.id}: ${id} is not on any of its maps`).toBeDefined();
     for (const id of Object.keys(places)) expect(f!.locations[id], `${g.id}: map place ${id} has no atlas data`).toBeDefined();
   });
   it('keeps references valid and teams legal for the dex', async () => {
