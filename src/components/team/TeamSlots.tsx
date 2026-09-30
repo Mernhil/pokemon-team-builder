@@ -117,10 +117,6 @@ function SlotCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const sp = set ? dex.species(set.speciesId) : undefined;
-  const mega = set && format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
-  const sys = format.statSystem;
-  const cap = sys.kind === 'champions-sp' || sys.kind === 'modern-ev' ? sys.totalCap : 0;
-  const used = set ? sumStats(sys.kind === 'champions-sp' ? set.sp : set.evs) : 0;
 
   return (
     <li
@@ -142,53 +138,67 @@ function SlotCard({
         <GripVertical size={15} aria-hidden />
       </button>
       <button type="button" onClick={onClick} className="flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-r-xl py-1.5 pr-3 text-left" aria-current={active}>
-        {sp ? (
-          <Sprite speciesId={sp.id} name={sp.name} types={sp.types} set={format.spriteSet} size={52} backdrop />
-        ) : (
-          <MonAvatar size={42} />
-        )}
-        {sp && set ? (
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="truncate font-semibold">{set.nickname || sp.name}</span>
-              {mega && <Sparkles size={12} className="shrink-0 text-accent" aria-label="Mega Evolution ready" />}
-              {errors > 0 && (
-                <span className="ml-auto flex shrink-0 items-center gap-0.5 text-xs font-semibold text-bad" aria-label={`${errors} errors`}>
-                  <AlertCircle size={13} aria-hidden /> {errors}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1 truncate text-xs text-muted">
-              <ItemSprite itemId={set.itemId} name={dex.item(set.itemId)?.name} size={14} />
-              <span className="truncate">
-                {format.generation >= 3 || format.statSystem.kind === 'champions-sp'
-                  ? `${dex.item(set.itemId)?.name ?? 'No item'} · ${dex.ability(set.abilityId)?.name ?? '—'}`
-                  : format.generation === 2
-                    ? `${dex.item(set.itemId)?.name ?? 'No item'} · Lv ${set.level}`
-                    : `Lv ${set.level} · ${set.moves.filter(Boolean).length}/4 moves`}
-              </span>
-            </div>
-            <div className="mt-1 flex min-w-0 items-center gap-1">
-              {sp.types.map((t) => (
-                <TypeBadge key={t} type={t} size="xs" />
-              ))}
-              {cap > 0 && (
-                <span
-                  className={cn('ml-auto shrink-0 font-mono text-[11px] tabular-nums', used === cap ? 'text-good' : used > cap ? 'text-bad' : 'text-muted')}
-                  title={`${used} of ${cap} ${sys.kind === 'champions-sp' ? 'Stat Points' : 'EVs'} used`}
-                >
-                  {used}/{cap}
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 text-sm text-muted">
-            <span className="font-mono text-xs">{index + 1}.</span> Empty slot
-          </div>
-        )}
+        <SlotSummary index={index} set={set} dex={dex} format={format} errors={errors} />
       </button>
     </li>
+  );
+}
+
+/** A roster slot's content (sprite, name, item · ability, types, stat budget): the Builder's slot card, reused wherever a team is shown read-only. */
+export function SlotSummary({ index, set, dex, format, errors = 0, hideBudget }: { index: number; set: PokemonSet | null; dex: Dex; format: FormatRules; errors?: number; hideBudget?: boolean }) {
+  const sp = set ? dex.species(set.speciesId) : undefined;
+  const mega = set && format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
+  const sys = format.statSystem;
+  const cap = !hideBudget && (sys.kind === 'champions-sp' || sys.kind === 'modern-ev') ? sys.totalCap : 0;
+  const used = set ? sumStats(sys.kind === 'champions-sp' ? set.sp : set.evs) : 0;
+  return (
+    <>
+    {sp ? (
+      <Sprite speciesId={sp.id} name={sp.name} types={sp.types} set={format.spriteSet} size={52} backdrop />
+    ) : (
+      <MonAvatar size={42} />
+    )}
+    {sp && set ? (
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="truncate font-semibold">{set.nickname || sp.name}</span>
+          {mega && <Sparkles size={12} className="shrink-0 text-accent" aria-label="Mega Evolution ready" />}
+          {errors > 0 && (
+            <span className="ml-auto flex shrink-0 items-center gap-0.5 text-xs font-semibold text-bad" aria-label={`${errors} errors`}>
+              <AlertCircle size={13} aria-hidden /> {errors}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 truncate text-xs text-muted">
+          <ItemSprite itemId={set.itemId} name={dex.item(set.itemId)?.name} size={14} />
+          <span className="truncate">
+            {format.generation >= 3 || format.statSystem.kind === 'champions-sp'
+              ? `${dex.item(set.itemId)?.name ?? 'No item'} · ${dex.ability(set.abilityId)?.name ?? '—'}`
+              : format.generation === 2
+                ? `${dex.item(set.itemId)?.name ?? 'No item'} · Lv ${set.level}`
+                : `Lv ${set.level} · ${set.moves.filter(Boolean).length}/4 moves`}
+          </span>
+        </div>
+        <div className="mt-1 flex min-w-0 items-center gap-1">
+          {sp.types.map((t) => (
+            <TypeBadge key={t} type={t} size="xs" />
+          ))}
+          {cap > 0 && (
+            <span
+              className={cn('ml-auto shrink-0 font-mono text-[11px] tabular-nums', used === cap ? 'text-good' : used > cap ? 'text-bad' : 'text-muted')}
+              title={`${used} of ${cap} ${sys.kind === 'champions-sp' ? 'Stat Points' : 'EVs'} used`}
+            >
+              {used}/{cap}
+            </span>
+          )}
+        </div>
+      </div>
+    ) : (
+      <div className="flex-1 text-sm text-muted">
+        <span className="font-mono text-xs">{index + 1}.</span> Empty slot
+      </div>
+    )}
+    </>
   );
 }
 

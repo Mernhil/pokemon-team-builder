@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Coins, Package, RotateCcw, Search, Swords } from 'lucide-react';
+import { Coins, Package, RotateCcw, Search, Swords, Users } from 'lucide-react';
 import { completion, itemSources, searchTrainers } from '@/domain/atlas';
 import { toID } from '@/data/dex';
 import { useAtlasStore, useProgress } from '@/store/atlasStore';
@@ -102,6 +102,7 @@ export function TrainersPage() {
                 <span className="block truncate text-sm font-semibold">{t.name} <span className="font-normal text-muted">{t.cls}</span></span>
                 <span className="block truncate text-xs text-muted">{KIND_LABEL[t.kind]} · {t.loc ? locName(t.loc) : 'location not in the game’s map data'}</span>
               </span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-accent"><Users size={12} aria-hidden /> Team</span>
               <span className="flex shrink-0">{t.party.map((m, i) => <Sprite key={i} speciesId={m.species} name={speciesName(m.species)} types={dex.species(m.species)?.types} set={format.spriteSet} size={28} className="-ml-2 first:ml-0" />)}</span>
             </button>
           </li>

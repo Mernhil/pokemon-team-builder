@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Crosshair, Download, MapPin, Shield, Swords } from 'lucide-react';
+import { cn } from '../ui/styles';
 import type { Dex } from '@/data/dex';
 import { importShowdown } from '@/domain/codecs';
 import { defaultSide } from '@/domain/battle/conditions';
@@ -8,6 +9,7 @@ import { validateTeam } from '@/domain/validation';
 import { useCalcStore, type SideKey } from '@/store/calcStore';
 import { toast } from '@/store/toastStore';
 import { useTeamStore } from '@/store/teamStore';
+import { SlotSummary } from '../team/TeamSlots';
 import { DefenseMatrix } from '../analysis/DefenseMatrix';
 import { OffenseMatrix } from '../analysis/OffenseMatrix';
 import { AdvancedDetails } from '../editor/AdvancedDetails';
@@ -37,8 +39,10 @@ export function TrainerDetail({ group, initial }: { group: string; initial?: str
   const { file, dex, format, locName, openLocation } = useAtlasCtx();
   const variants = useMemo(() => trainerVariants(file, group), [file, group]);
   const [pickedId, setPickedId] = useState(initial ?? variants[0]?.id);
+  const [sel, setSel] = useState(0);
   const trainer = variants.find((v) => v.id === pickedId) ?? variants[0];
   const team = useMemo(() => (trainer ? trainerToTeam(trainer, dex, format) : undefined), [trainer, dex, format]);
+  const active = Math.min(sel, (trainer?.party.length ?? 1) - 1);
   if (!trainer || !team) return <p className="text-sm text-muted">No data for this trainer.</p>;
 
   const toBuilder = () => loadIntoBuilder(trainer, dex, format, true);
@@ -76,11 +80,26 @@ export function TrainerDetail({ group, initial }: { group: string; initial?: str
         <span className="self-center text-xs text-muted">Opens as a {format.shortName} team.</span>
       </div>
 
-      <ol className="grid gap-2 sm:grid-cols-2">
-        {trainer.party.map((mon, i) => (
-          <MonCard key={i} mon={mon} index={i} trainer={trainer} />
-        ))}
-      </ol>
+      {/* The Builder's own layout: the roster on the left, the selected Pokémon on the right. */}
+      <div className="grid gap-3 md:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
+        <ol className="flex flex-col gap-1.5" aria-label={`${trainer.name}'s team, ${trainer.party.length} Pokémon`}>
+          {team.slots.map((s, i) => s && (
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => setSel(i)}
+                aria-current={i === active}
+                className={cn('flex min-h-16 w-full items-center gap-3 rounded-xl py-1.5 pr-3 pl-3 text-left', i === active ? 'bg-surface-2 ring-2 ring-accent' : 'hover:bg-surface-2')}
+              >
+                <SlotSummary index={i} set={s} dex={dex} format={format} hideBudget />
+              </button>
+            </li>
+          ))}
+        </ol>
+        <ul>
+          <MonCard key={`${trainer.id}:${active}`} mon={trainer.party[active]} index={active} trainer={trainer} />
+        </ul>
+      </div>
 
       {trainer.bag && (
         <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">

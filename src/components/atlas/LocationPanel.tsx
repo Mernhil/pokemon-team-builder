@@ -314,6 +314,7 @@ export function TrainerList({ ids }: { ids: string[] }) {
                 <span className="block truncate text-sm font-semibold">{t.cls === t.name ? t.name : `${t.cls} ${t.name}`}</span>
                 <span className="text-[11px] text-muted">{KIND_LABEL[t.kind]}{t.double ? ' · double' : ''} · {trainerVariantCount(file.trainers, t.group)} battle{trainerVariantCount(file.trainers, t.group) > 1 ? 's' : ''}</span>
               </span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-accent"><Users size={12} aria-hidden /> Team</span>
               <span className="flex shrink-0">
                 {t.party.map((m, i) => <Sprite key={i} speciesId={m.species} name={m.species} types={dex.species(m.species)?.types} set={format.spriteSet} size={28} className="-ml-2 first:ml-0" />)}
               </span>
