@@ -49,7 +49,7 @@ export const MAP_SKINS: Record<string, MapSkin> = {
     icons: {
       city: { shape: 'square', size: 5, fill: '#e8383d', stroke: '#fff' },
       landmark: { shape: 'square', size: 5, fill: '#3b6de0', stroke: '#fff' },
-      special: { shape: 'dot', size: 3, fill: '#1fb8a6', stroke: '#fff' },
+      special: { shape: 'dot', size: 2, fill: '#1fb8a6', stroke: 'transparent' },
     },
     cursor: 'frame',
     pixelPerfect: true,

@@ -17,7 +17,8 @@ import { gzipSync } from 'node:zlib';
 const KB = 1024;
 const BUDGET = {
   firstLoadGzip: 260 * KB,
-  chunkGzip: 250 * KB,
+  // The largest lazy chunk is a game's Atlas file (atlas-<game>.json, ~280 KB gzipped: every NPC's dialogue is ~115 KB of it); it loads only when that game's Atlas opens.
+  chunkGzip: 320 * KB,
   precache: 45 * KB * KB,
 };
 
