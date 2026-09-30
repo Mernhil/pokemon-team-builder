@@ -2,7 +2,7 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## 0.9.0 — 2026-09-30
+## 0.9.2 — 2026-09-30
 
 ### New
 - **Atlas tab** for Red / Blue / Yellow, Gold / Silver / Crystal, Ruby / Sapphire / Emerald, FireRed / LeafGreen, HeartGold / SoulSilver, Diamond / Pearl (map, trainers, gyms; its scripts are binary, so no items, NPCs or shops) and Platinum, from the pret decompilations. Platinum in detail: an interactive Sinnoh Town Map (whole-number pixel scale,
