@@ -12,7 +12,7 @@ import { resolve } from 'node:path';
 import type { AtlasFile } from '../src/domain/atlasTypes.ts';
 import { GAPS, OUT } from './atlas/common.ts';
 import { buildEmerald, buildFireRed, buildRuby } from './atlas/gba.ts';
-import { buildRed } from './atlas/gen1.ts';
+import { buildRed, buildYellow } from './atlas/gen1.ts';
 import { buildPlatinum } from './atlas/platinum.ts';
 
 const BUILDERS: Record<string, () => { file: AtlasFile; gaps: string }> = {
@@ -21,6 +21,7 @@ const BUILDERS: Record<string, () => { file: AtlasFile; gaps: string }> = {
   firered: buildFireRed,
   ruby: buildRuby,
   red: buildRed,
+  yellow: buildYellow,
 };
 
 function main() {

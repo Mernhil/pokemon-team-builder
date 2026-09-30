@@ -30,7 +30,7 @@ const gid = (c: string) => {
 interface Gen1Config {
   game: string;
   name: string;
-  repo: 'pokered';
+  repo: 'pokered' | 'pokeyellow';
   url: string;
   commit: string;
   dexGame: string;
@@ -42,6 +42,12 @@ export const RED: Gen1Config = {
   game: 'red', name: 'Pokémon Red', repo: 'pokered', url: 'pret/pokered', commit: 'd2704a63c26f9ba046ade877445216b3de0519a4', dexGame: 'red', mapId: 'kanto-rby',
   note: 'Blue uses this file too: Red and Blue share all the data in the decompilation (only wild Pokémon and a few trades differ).',
 };
+
+export const YELLOW: Gen1Config = {
+  game: 'yellow', name: 'Pokémon Yellow', repo: 'pokeyellow', url: 'pret/pokeyellow', commit: 'e89ead154b9968aa50eed9328ff2b38b6c194382', dexGame: 'yellow', mapId: 'kanto-rby',
+  note: "Yellow's own trainer parties, Pikachu and gift changes come from its decompilation.",
+};
+export const buildYellow = () => buildGen1(YELLOW);
 
 const BADGES = ['Boulder', 'Cascade', 'Thunder', 'Rainbow', 'Soul', 'Marsh', 'Volcano', 'Earth'];
 const LEADERS = ['BROCK', 'MISTY', 'LT_SURGE', 'ERIKA', 'KOGA', 'SABRINA', 'BLAINE', 'GIOVANNI'];
@@ -229,8 +235,21 @@ function buildGen1(cfg: Gen1Config): { file: AtlasFile; gaps: string } {
     }
     partiesByLabel.set(m[1], parties);
   }
-  const loneMoves = [...read(dir, 'data/trainers/special_moves.asm').split('TeamMoves:')[0].matchAll(/^\tdb (\d+), (\w+)/gm)].map((m) => ({ idx: Number(m[1]), move: m[2] }));
-  const teamMoves = [...(read(dir, 'data/trainers/special_moves.asm').split('TeamMoves:')[1] ?? '').matchAll(/^\tdb (\w+),\s*(\w+)/gm)].map((m) => ({ cls: m[1], move: m[2] })).filter((m) => m.cls !== '-1');
+  // Yellow: explicit `db class, party` blocks of `db mon, slot, move` rows
+  const specialSrc = read(dir, 'data/trainers/special_moves.asm');
+  const yellowSpecial = new Map<string, { mon: number; slot: number; move: string }[]>();
+  if (specialSrc.includes('SpecialTrainerMoves:')) {
+    let cur: { mon: number; slot: number; move: string }[] | undefined;
+    for (const raw of specialSrc.split('SpecialTrainerMoves:')[1].split('\n')) {
+      const l = code(raw);
+      const head = /^db\s+([A-Z_0-9]+),\s*(\d+)$/.exec(l);
+      const row = /^db\s+(\d+),\s*(\d+),\s*([A-Z_0-9]+)$/.exec(l);
+      if (head) yellowSpecial.set(`${head[1]}_${head[2]}`, (cur = []));
+      else if (row && cur) cur.push({ mon: Number(row[1]), slot: Number(row[2]), move: row[3] });
+    }
+  }
+  const loneMoves = [...specialSrc.split('TeamMoves:')[0].matchAll(/^\tdb (\d+), (\w+)/gm)].map((m) => ({ idx: Number(m[1]), move: m[2] }));
+  const teamMoves = [...(specialSrc.split('TeamMoves:')[1] ?? '').matchAll(/^\tdb (\w+),\s*(\w+)/gm)].map((m) => ({ cls: m[1], move: m[2] })).filter((m) => m.cls !== '-1');
 
   const classKind = (c: string): TrainerKind =>
     LEADERS.includes(c) && c !== 'GIOVANNI' ? 'leader' : ['LORELEI', 'BRUNO', 'AGATHA', 'LANCE'].includes(c) ? 'elite-four' : c === 'RIVAL3' ? 'champion' : /RIVAL/.test(c) ? 'rival' : c === 'GIOVANNI' || c === 'ROCKET' || c === 'CHIEF' ? 'boss' : /PROF_OAK/.test(c) ? 'other' : 'trainer';
@@ -255,10 +274,19 @@ function buildGen1(cfg: Gen1Config): { file: AtlasFile; gaps: string } {
       mon.moves = moves.filter((m) => m !== 'nomove');
       mon.movesDerived = false;
     };
-    const leaderNo = LEADERS.indexOf(clsConst);
+    for (const r of yellowSpecial.get(`${clsConst}_${n}`) ?? []) {
+      const mon = party[r.mon - 1];
+      if (!mon) continue;
+      const moves = [...mon.moves];
+      while (moves.length < r.slot) moves.push('nomove');
+      moves[r.slot - 1] = gid(r.move);
+      mon.moves = moves.filter((m) => m !== 'nomove');
+      mon.movesDerived = false;
+    }
+    const leaderNo = yellowSpecial.size ? -1 : LEADERS.indexOf(clsConst);
     // LoneMoves counts Pokémon from zero (`wEnemyMon1Moves + 2` plus index × struct size)
     if (leaderNo >= 0 && loneMoves[leaderNo] && (clsConst !== 'GIOVANNI' || /GYM/.test(loc ?? ''))) setSlot3(loneMoves[leaderNo].idx + 1, loneMoves[leaderNo].move);
-    const tm = teamMoves.find((t) => t.cls === clsConst);
+    const tm = yellowSpecial.size ? undefined : teamMoves.find((t) => t.cls === clsConst);
     if (tm) setSlot3(5, tm.move);
     const dispName = title((classDisplay[ci - 1] ?? clsConst).toLowerCase());
     return {
