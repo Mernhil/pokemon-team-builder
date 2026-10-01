@@ -2,7 +2,7 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## Unreleased
+## 0.11.0 — 2026-10-01
 
 ### New
 - **HeartGold / SoulSilver use their own Pokégear map** (Johto and Kanto on one screen, from the pokeheartgold decompilation) in Pokénav and the Pokédex Area page, instead of the Gold / Silver / Crystal map.
