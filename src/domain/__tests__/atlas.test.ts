@@ -218,6 +218,10 @@ describe.each(ATLAS_GAMES.filter((g) => g.lite))('Pokénav (encounters only) · 
     expect(here.size).toBeGreaterThan(0);
     for (const id of here) expect(f!.locations[id], `${g.id}: ${id} has encounters but no atlas place`).toBeDefined();
     expect(Object.keys(f!.trainers)).toEqual([]);
-    expect(g.mapIds).toEqual([]);
+    expect(g.mapIds, `${g.id}: mapIds must be the maps shown for ${g.dexGame}`).toEqual(maps.games[g.dexGame]);
+    const places = new Set(g.mapIds.flatMap((m) => Object.keys(maps.maps[m].places)));
+    const off = Object.keys(f!.locations).filter((id) => !places.has(id));
+    // A few places (roaming, region-wide, event areas) have no spot on a map; they stay in the list.
+    expect(off.length, `${g.id}: not on the map: ${off.join(', ')}`).toBeLessThanOrEqual(Math.ceil(Object.keys(f!.locations).length * 0.2));
   });
 });

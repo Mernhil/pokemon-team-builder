@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## Unreleased
+
+### New
+- The encounters-only Pokénav games now have a **map behind the list**: the game's own for Omega Ruby / Alpha Sapphire (Hoenn), Let's Go (Kanto) and Brilliant Diamond / Shining Pearl (Sinnoh), and the labelled schematic regions for Unova, Kalos, Alola, Galar (with Isle of Armor and Crown Tundra), Hisui, Paldea (with Kitakami and the Terarium) and Lumiose. Click a place on the map or in the list; filters make matches glow.
+
 ## 0.10.0 — 2026-10-01
 
 ### New

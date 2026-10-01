@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Filter, List, Map as MapIcon, MapPin, Package, Search, ShoppingBag, Swords, Trophy, X } from 'lucide-react';
+import { Filter, Map as MapIcon, MapPin, Package, Search, ShoppingBag, Swords, Trophy, X } from 'lucide-react';
 import { useAtlas } from '@/data/atlas';
 import { toID } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
@@ -30,8 +30,8 @@ const PAGES: { id: AtlasPage; label: string; icon: typeof MapIcon }[] = [
   { id: 'progress', label: 'Progress', icon: Trophy },
 ];
 
-/** Pokénav pages: an encounters-only game has a location list in place of the map, and no items or trainers. */
-const LITE_PAGES = [{ ...PAGES[0], label: 'Locations', icon: List }, PAGES[3]];
+/** Pokénav pages: an encounters-only game has no items or trainers. */
+const LITE_PAGES = [PAGES[0], PAGES[3]];
 
 /** The Pokénav tab: interactive game maps with full location, item, NPC, wild and trainer data. */
 export function AtlasView() {
@@ -111,7 +111,7 @@ export function AtlasView() {
         <LoadingState label={`Loading the ${game.shortName} Pokénav…`} />
       ) : (
         <AtlasProvider value={ctx}>
-          {page === 'map' && (game.lite ? <LocationsPage pinned={pinned} setPinned={setPinned} /> : <MapPage pinned={pinned} setPinned={setPinned} />)}
+          {page === 'map' && <MapPage pinned={pinned} setPinned={setPinned} />}
           {page === 'items' && !game.lite && <ItemsPage focus={itemFocus} />}
           {page === 'trainers' && !game.lite && <TrainersPage />}
           {page === 'progress' && <ProgressPage />}
@@ -154,6 +154,7 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
   }, []);
   const progress = useProgress(game.id);
   const wide = useMedia('(min-width: 1024px)');
+  const lite = !!game.lite;
 
   const matches = useMemo(() => {
     const f: MapFilter = { text: filter.text || undefined };
@@ -200,7 +201,8 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_26rem]">
       <div className="min-w-0 space-y-2">
-        <FilterBar filter={filter} setFilter={setFilter} matchCount={matches?.size} />
+        {lite && <Notice tone="accent">{game.name} has encounters only: the places and every wild, static, gift and trade Pokémon in them. Its items, trainers and shops aren’t available.</Notice>}
+        <FilterBar filter={filter} setFilter={setFilter} matchCount={matches?.size} lite={lite} />
         {!map ? <div className="aspect-[216/168] w-full animate-pulse rounded-xl bg-surface-2" /> : (
           <div className="relative">
             {gameMaps.length > 1 && (
@@ -219,10 +221,11 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
         )}
         {anyFilter && <p className="text-xs text-muted" aria-live="polite">{matches!.size} location{matches!.size === 1 ? '' : 's'} match; they glow on the map.</p>}
         <p className="text-xs text-muted">Hover or focus a place for a preview; click, tap or press Enter to open it. Arrow keys move between places.</p>
+        {lite && <LocationList matches={matches} pinned={pinned} setPinned={setPinned} />}
       </div>
       {wide ? (
         <aside className="sticky top-16 hidden max-h-[calc(100dvh-6rem)] min-h-64 rounded-xl border border-border bg-surface p-3 lg:block" aria-label="Location details">
-          {loc ? <LocationPanel key={loc.id} loc={loc} onClose={() => setPinned(undefined)} /> : <p className="p-4 text-sm text-muted">Pick a place on the map to see its items, NPCs, wild Pokémon and trainers.</p>}
+          {loc ? <LocationPanel key={loc.id} loc={loc} onClose={() => setPinned(undefined)} /> : <p className="p-4 text-sm text-muted">{lite ? 'Pick a place on the map or in the list to see the Pokémon found there.' : 'Pick a place on the map to see its items, NPCs, wild Pokémon and trainers.'}</p>}
         </aside>
       ) : (
         <Modal open={!!loc} onOpenChange={(o) => !o && setPinned(undefined)} title={loc?.name ?? ''} description="Location details" wide>
@@ -233,69 +236,37 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
   );
 }
 
-/** Encounters-only games: the places that have encounters, searchable by name or by Pokémon, in place of a map. */
-function LocationsPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string | undefined) => void }) {
-  const { file, game, pokedex, locName, speciesName } = useAtlasCtx();
-  const [text, setText] = useState('');
-  const [mon, setMon] = useState('');
+/** Encounters-only games: the places with encounters as a list under the map, narrowed by the same filter. */
+function LocationList({ matches, pinned, setPinned }: { matches: Set<string> | null; pinned?: string; setPinned: (l: string | undefined) => void }) {
+  const { file, game, pokedex, locName } = useAtlasCtx();
   const progress = useProgress(game.id);
-  const wide = useMedia('(min-width: 1024px)');
-  const monLocs = useMemo(() => {
-    if (!mon || !pokedex) return undefined;
-    const t = toID(mon);
-    const ids = Object.keys(pokedex.encounters).filter((s) => toID(speciesName(s)).includes(t));
-    return new Set(ids.flatMap((s) => [...wildLocations(pokedex, game.dexGame, s)]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mon, pokedex, game.dexGame]);
   const rows = useMemo(
-    () =>
-      Object.values(file.locations)
-        .filter((l) => (!text || toID(l.name).includes(toID(text))) && (!monLocs || monLocs.has(l.id)))
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
-    [file, text, monLocs],
+    () => Object.values(file.locations).filter((l) => !matches || matches.has(l.id)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
+    [file, matches],
   );
   const speciesCount = useMemo(() => {
     const n = new Map<string, number>();
     if (pokedex) for (const l of rows) n.set(l.id, new Set(wildAt(pokedex, game.dexGame, l.id).map((w) => w.species)).size);
     return n;
   }, [pokedex, game.dexGame, rows]);
-  const loc = pinned ? file.locations[pinned] : undefined;
   const done = new Set(progress.locations);
   return (
-    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_26rem]">
-      <div className="min-w-0 space-y-2">
-        <Notice tone="accent">{game.name} has encounters only: the places and every wild, static, gift and trade Pokémon in them. Its map, items, trainers and shops aren’t available.</Notice>
-        <div className="grid gap-1.5 sm:grid-cols-2" role="search" aria-label="Location filters">
-          <Input placeholder="Find a place…" value={text} onChange={(e) => setText(e.target.value)} aria-label="Find a place" />
-          <Input placeholder="Pokémon appears here…" value={mon} onChange={(e) => setMon(e.target.value)} aria-label="Pokémon appears in the wild here" />
-        </div>
-        <ul className="divide-y divide-border/60 rounded-xl border border-border">
-          {rows.map((l) => (
-            <li key={l.id}>
-              <button type="button" onClick={() => setPinned(pinned === l.id ? undefined : l.id)} aria-current={pinned === l.id} className={cn('flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-surface-2', pinned === l.id && 'bg-surface-2 ring-2 ring-accent ring-inset')}>
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{locName(l.id)}</span>
-                {done.has(l.id) && <span className="text-[11px] font-semibold text-good">Visited</span>}
-                <span className="shrink-0 font-mono text-xs text-muted">{speciesCount.get(l.id) ?? 0} Pokémon</span>
-              </button>
-            </li>
-          ))}
-          {!rows.length && <li className="p-4 text-sm text-muted">No place matches.</li>}
-        </ul>
-      </div>
-      {wide ? (
-        <aside className="sticky top-16 hidden max-h-[calc(100dvh-6rem)] min-h-64 rounded-xl border border-border bg-surface p-3 lg:block" aria-label="Location details">
-          {loc ? <LocationPanel key={loc.id} loc={loc} onClose={() => setPinned(undefined)} /> : <p className="p-4 text-sm text-muted">Pick a place to see the Pokémon found there.</p>}
-        </aside>
-      ) : (
-        <Modal open={!!loc} onOpenChange={(o) => !o && setPinned(undefined)} title={loc?.name ?? ''} description="Location details" wide>
-          {loc && <div className="h-[70dvh]"><LocationPanel key={loc.id} loc={loc} /></div>}
-        </Modal>
-      )}
-    </div>
+    <ul className="divide-y divide-border/60 rounded-xl border border-border" aria-label="Places">
+      {rows.map((l) => (
+        <li key={l.id}>
+          <button type="button" onClick={() => setPinned(pinned === l.id ? undefined : l.id)} aria-current={pinned === l.id} className={cn('flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-surface-2', pinned === l.id && 'bg-surface-2 ring-2 ring-accent ring-inset')}>
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold">{locName(l.id)}</span>
+            {done.has(l.id) && <span className="text-[11px] font-semibold text-good">Visited</span>}
+            <span className="shrink-0 font-mono text-xs text-muted">{speciesCount.get(l.id) ?? 0} Pokémon</span>
+          </button>
+        </li>
+      ))}
+      {!rows.length && <li className="p-4 text-sm text-muted">No place matches.</li>}
+    </ul>
   );
 }
 
-function FilterBar({ filter, setFilter, matchCount }: { filter: FilterState; setFilter: (f: FilterState) => void; matchCount?: number }) {
+function FilterBar({ filter, setFilter, matchCount, lite }: { filter: FilterState; setFilter: (f: FilterState) => void; matchCount?: number; lite?: boolean }) {
   const set = (p: Partial<typeof filter>) => setFilter({ ...filter, ...p });
   const toggle = (k: 'gym' | 'shop' | 'pokecenter', label: string, Icon: typeof MapPin) => (
     <button key={k} type="button" aria-pressed={filter[k]} onClick={() => set({ [k]: !filter[k] })} className={cn('inline-flex h-8 items-center gap-1 rounded-md border px-2 text-xs font-semibold', filter[k] ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}>
@@ -310,16 +281,16 @@ function FilterBar({ filter, setFilter, matchCount }: { filter: FilterState; set
           <Search size={14} className="pointer-events-none absolute top-2.5 left-2 text-muted" aria-hidden />
           <Input className="pl-7" placeholder="Find a place…" value={filter.text} onChange={(e) => set({ text: e.target.value })} aria-label="Find a place" />
         </label>
-        {toggle('gym', 'Has Gym', Swords)}
-        {toggle('shop', 'Has Mart', ShoppingBag)}
-        {toggle('pokecenter', 'Pokémon Center', MapPin)}
+        {!lite && toggle('gym', 'Has Gym', Swords)}
+        {!lite && toggle('shop', 'Has Mart', ShoppingBag)}
+        {!lite && toggle('pokecenter', 'Pokémon Center', MapPin)}
         {active && <button type="button" className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-muted hover:text-fg" onClick={() => setFilter(NO_FILTER)}><X size={13} aria-hidden /> Clear</button>}
         <Chip icon={Filter} className="hidden sm:inline-flex">{matchCount === undefined ? 'No filter' : `${matchCount} match`}</Chip>
       </div>
-      <div className="grid gap-1.5 sm:grid-cols-3">
-        <Input placeholder="Has item… (e.g. Rare Candy)" value={filter.item} onChange={(e) => set({ item: e.target.value })} aria-label="Location has item" />
+      <div className={cn('grid gap-1.5', !lite && 'sm:grid-cols-3')}>
+        {!lite && <Input placeholder="Has item… (e.g. Rare Candy)" value={filter.item} onChange={(e) => set({ item: e.target.value })} aria-label="Location has item" />}
         <Input placeholder="Pokémon appears here…" value={filter.mon} onChange={(e) => set({ mon: e.target.value })} aria-label="Pokémon appears in the wild here" />
-        <Input placeholder="Trainer uses move…" value={filter.move} onChange={(e) => set({ move: e.target.value })} aria-label="A trainer here uses the move" />
+        {!lite && <Input placeholder="Trainer uses move…" value={filter.move} onChange={(e) => set({ move: e.target.value })} aria-label="A trainer here uses the move" />}
       </div>
     </div>
   );
@@ -342,12 +313,12 @@ function PreviewCard({ loc, onEnter, onLeave }: { loc: AtlasLocation; onEnter: (
         {loc.pokecenter && <span>Pokémon Center</span>}
         {loc.shops.length > 0 && <span>Mart</span>}
       </p>
-      <PreviewList title={`Items (${loc.items.length})`}>
+      {loc.items.length > 0 && <PreviewList title={`Items (${loc.items.length})`}>
         {loc.items.map((it, i) => <li key={i} className="flex items-center gap-1"><ItemSprite itemId={it.item} size={16} />{file.items[it.item]?.name ?? it.item}<span className="text-muted"> · {it.how}</span></li>)}
-      </PreviewList>
-      <PreviewList title={`Trainers (${trainers.length})`}>
+      </PreviewList>}
+      {trainers.length > 0 && <PreviewList title={`Trainers (${trainers.length})`}>
         {trainers.map((t) => <li key={t.id} className="truncate">{t.cls} {t.name !== t.cls ? t.name : ''} <span className="text-muted">Lv {Math.max(...t.party.map((m) => m.level))}</span></li>)}
-      </PreviewList>
+      </PreviewList>}
       <PreviewList title={`Wild Pokémon (${species.length})`}>
         {species.map((s) => <li key={s} className="flex items-center gap-1"><Sprite speciesId={s} name={speciesName(s)} types={dex.species(s)?.types} set={format.spriteSet} size={20} />{speciesName(s)}</li>)}
       </PreviewList>

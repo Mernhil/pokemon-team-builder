@@ -171,11 +171,27 @@ export interface AtlasGame {
   file?: string;
   /** The game's signature colour (its icon in the game picker). */
   color: string;
-  /** Encounters only: no map, items, NPCs, shops or trainers (games without a decompilation to read). */
+  /** Encounters only: no items, NPCs, shops or trainers (games without a decompilation to read); the map is the game's own or a schematic. */
   lite?: boolean;
   /** False until the game's atlas data is built. */
   available: boolean;
 }
+
+/** Maps behind the encounters-only games: Hoenn, Kanto and Sinnoh have the games' own, the rest hand-placed schematics (maps.json `games`). */
+const GALAR = ['galar', 'galar-isle-of-armor', 'galar-crown-tundra'];
+const PALDEA = ['paldea', 'paldea-kitakami', 'paldea-terarium'];
+const LITE_MAPS: Record<string, string[]> = {
+  black: ['unova'], white: ['unova'], 'black-2': ['unova'], 'white-2': ['unova'],
+  x: ['kalos'], y: ['kalos'],
+  'omega-ruby': ['hoenn-rse'], 'alpha-sapphire': ['hoenn-rse'],
+  sun: ['alola'], moon: ['alola'], 'ultra-sun': ['alola'], 'ultra-moon': ['alola'],
+  'lets-go-pikachu': ['kanto-frlg'], 'lets-go-eevee': ['kanto-frlg'],
+  sword: GALAR, shield: GALAR,
+  'brilliant-diamond': ['sinnoh-pt'], 'shining-pearl': ['sinnoh-pt'],
+  'legends-arceus': ['hisui'],
+  scarlet: PALDEA, violet: PALDEA,
+  'legends-za': ['lumiose'],
+};
 
 export const ATLAS_GAMES: AtlasGame[] = [
   { id: 'red', name: 'Pokémon Red', shortName: 'Red', book: 'gen1', formatId: 'gen1', dexGame: 'red', mapIds: ['kanto-rby'],color: '#d8302f', available: true },
@@ -209,7 +225,7 @@ export const ATLAS_GAMES: AtlasGame[] = [
     ['scarlet', 'Scarlet', 'gen9', 'scarlet', '#e0452e'], ['violet', 'Violet', 'gen9', 'violet', '#7b45c9', 'scarlet'],
     ['legendsza', 'Legends: Z-A', 'za', 'legends-za', '#3f9a8a'],
   ].map(([id, shortName, book, dexGame, color, file]): AtlasGame => ({
-    id, name: `Pokémon ${shortName}`, shortName, book, formatId: book, dexGame, mapIds: [], file, color, lite: true, available: true,
+    id, name: `Pokémon ${shortName}`, shortName, book, formatId: book, dexGame, mapIds: LITE_MAPS[dexGame], file, color, lite: true, available: true,
   })),
 ];
 
