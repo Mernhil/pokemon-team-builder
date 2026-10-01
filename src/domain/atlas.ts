@@ -171,6 +171,8 @@ export interface AtlasGame {
   file?: string;
   /** The game's signature colour (its icon in the game picker). */
   color: string;
+  /** Encounters only: no map, items, NPCs, shops or trainers (games without a decompilation to read). */
+  lite?: boolean;
   /** False until the game's atlas data is built. */
   available: boolean;
 }
@@ -192,7 +194,29 @@ export const ATLAS_GAMES: AtlasGame[] = [
   { id: 'sapphire', name: 'Pokémon Sapphire', shortName: 'Sapphire', book: 'gen3', formatId: 'gen3', dexGame: 'sapphire', mapIds: ['hoenn-rse'], file: 'ruby',color: '#2b5fc4', available: true },
   { id: 'firered', name: 'Pokémon FireRed', shortName: 'FireRed', book: 'gen3', formatId: 'gen3', dexGame: 'firered', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'],color: '#e8532a', available: true },
   { id: 'leafgreen', name: 'Pokémon LeafGreen', shortName: 'LeafGreen', book: 'gen3', formatId: 'gen3', dexGame: 'leafgreen', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], file: 'firered',color: '#57b947', available: true },
+  // Generation 5 onward: encounters only (scripts/atlas/encounters.ts), no map.
+  ...[
+    ['black', 'Black', 'gen5', 'black', '#2a2a2e'], ['white', 'White', 'gen5', 'white', '#e6e6ea', 'black'],
+    ['black2', 'Black 2', 'gen5', 'black-2', '#3a3f4a'], ['white2', 'White 2', 'gen5', 'white-2', '#d4d8e0', 'black2'],
+    ['x', 'X', 'gen6', 'x', '#2e6fd0'], ['y', 'Y', 'gen6', 'y', '#d03a4a', 'x'],
+    ['omegaruby', 'Omega Ruby', 'gen6', 'omega-ruby', '#b3202f'], ['alphasapphire', 'Alpha Sapphire', 'gen6', 'alpha-sapphire', '#1f55b8', 'omegaruby'],
+    ['sun', 'Sun', 'gen7', 'sun', '#f08a24'], ['moon', 'Moon', 'gen7', 'moon', '#5b4fc4', 'sun'],
+    ['ultrasun', 'Ultra Sun', 'gen7', 'ultra-sun', '#e8762a'], ['ultramoon', 'Ultra Moon', 'gen7', 'ultra-moon', '#4a3fb0', 'ultrasun'],
+    ['letsgopikachu', 'Let’s Go, Pikachu!', 'lgpe', 'lets-go-pikachu', '#f2c200'], ['letsgoeevee', 'Let’s Go, Eevee!', 'lgpe', 'lets-go-eevee', '#b07a3a', 'letsgopikachu'],
+    ['sword', 'Sword', 'gen8', 'sword', '#2f9fd8'], ['shield', 'Shield', 'gen8', 'shield', '#d8335a', 'sword'],
+    ['brilliantdiamond', 'Brilliant Diamond', 'bdsp', 'brilliant-diamond', '#7fb0e8'], ['shiningpearl', 'Shining Pearl', 'bdsp', 'shining-pearl', '#e8a8c8', 'brilliantdiamond'],
+    ['legendsarceus', 'Legends: Arceus', 'pla', 'legends-arceus', '#6a7f93'],
+    ['scarlet', 'Scarlet', 'gen9', 'scarlet', '#e0452e'], ['violet', 'Violet', 'gen9', 'violet', '#7b45c9', 'scarlet'],
+    ['legendsza', 'Legends: Z-A', 'za', 'legends-za', '#3f9a8a'],
+  ].map(([id, shortName, book, dexGame, color, file]): AtlasGame => ({
+    id, name: `Pokémon ${shortName}`, shortName, book, formatId: book, dexGame, mapIds: [], file, color, lite: true, available: true,
+  })),
 ];
+
+/** The generation a game belongs to (the picker groups by it). */
+export function atlasGameGen(g: AtlasGame): number {
+  return /^gen(\d)$/.test(g.book) ? Number(g.book.slice(3)) : g.book === 'lgpe' ? 7 : g.book === 'za' ? 9 : 8;
+}
 
 export const atlasGame = (id: string): AtlasGame => ATLAS_GAMES.find((g) => g.id === id) ?? ATLAS_GAMES[0];
 

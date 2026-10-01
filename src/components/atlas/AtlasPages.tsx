@@ -121,8 +121,7 @@ export function ProgressPage() {
   const c = completion(file, progress);
   const rows = [
     { label: 'Locations visited', v: c.locations },
-    { label: 'Items collected', v: c.items },
-    { label: 'Trainers beaten', v: c.trainers },
+    ...(game.lite ? [] : [{ label: 'Items collected', v: c.items }, { label: 'Trainers beaten', v: c.trainers }]),
   ];
   return (
     <Panel title={`${game.name} progress`} actions={<Button size="sm" variant="danger" onClick={() => window.confirm('Clear all progress for this game?') && reset(game.id)}><RotateCcw size={13} aria-hidden /> Reset</Button>}>

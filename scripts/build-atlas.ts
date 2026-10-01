@@ -17,6 +17,7 @@ import { buildCrystal, buildGold } from './atlas/gen2.ts';
 import { buildHgss } from './atlas/hgss.ts';
 import { buildDp } from './atlas/dp.ts';
 import { buildPlatinum } from './atlas/platinum.ts';
+import { LITE_GAMES, buildEncounters } from './atlas/encounters.ts';
 
 const BUILDERS: Record<string, () => { file: AtlasFile; gaps: string }> = {
   platinum: buildPlatinum,
@@ -29,6 +30,8 @@ const BUILDERS: Record<string, () => { file: AtlasFile; gaps: string }> = {
   gold: buildGold,
   heartgold: buildHgss,
   diamond: buildDp,
+  // Generation 5 onward: encounters only (scripts/atlas/encounters.ts).
+  ...Object.fromEntries(LITE_GAMES.map((g) => [g.id, () => buildEncounters(g)])),
 };
 
 function main() {
@@ -40,6 +43,10 @@ function main() {
     writeFileSync(resolve(OUT, `atlas-${game}.json`), JSON.stringify(file));
     writeFileSync(resolve(GAPS, `${game}.md`), gaps);
     const L = Object.values(file.locations);
+    if (LITE_GAMES.some((g) => g.id === game)) {
+      console.log(`${game}: ${Object.keys(file.locations).length} locations (encounters only)`);
+      continue;
+    }
     console.log(
       `${game}: ${L.length} locations, ${Object.keys(file.trainers).length} trainers (${file.unplaced.length} unplaced), ` +
         `${L.reduce((n, l) => n + l.items.length, 0)} item spots, ${L.reduce((n, l) => n + l.npcs.length, 0)} NPCs, ${L.reduce((n, l) => n + l.shops.length, 0)} shops`,

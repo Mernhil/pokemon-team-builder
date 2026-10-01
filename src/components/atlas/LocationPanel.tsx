@@ -28,7 +28,7 @@ const TABS: { id: LocationTab; label: string; icon: typeof MapPin }[] = [
 /** Everything about one location, in tabs. Used as the desktop side panel and the phone bottom sheet. */
 export function LocationPanel({ loc, onClose }: { loc: AtlasLocation; onClose?: () => void }) {
   const { game, pokedex } = useAtlasCtx();
-  const [tab, setTab] = useState<LocationTab>('overview');
+  const [tab, setTab] = useState<LocationTab>(game.lite ? 'wild' : 'overview');
   const wild = useMemo(() => (pokedex ? wildAt(pokedex, game.dexGame, loc.id) : []), [pokedex, game.dexGame, loc.id]);
   const progress = useProgress(game.id);
   const toggle = useAtlasStore((s) => s.toggle);
@@ -57,7 +57,7 @@ export function LocationPanel({ loc, onClose }: { loc: AtlasLocation; onClose?: 
         value={tab}
         onChange={setTab}
         className="-mx-1 overflow-x-auto"
-        tabs={TABS.map((t) => ({ id: t.id, icon: t.icon, label: <>{t.label}{counts[t.id] ? <span className="ml-0.5 font-mono font-normal text-muted">{counts[t.id]}</span> : null}</> }))}
+        tabs={(game.lite ? TABS.filter((t) => t.id === 'wild') : TABS).map((t) => ({ id: t.id, icon: t.icon, label: <>{t.label}{counts[t.id] ? <span className="ml-0.5 font-mono font-normal text-muted">{counts[t.id]}</span> : null}</> }))}
       />
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto pr-1" role="tabpanel" aria-label={TABS.find((t) => t.id === tab)?.label}>
         {tab === 'overview' && <Overview loc={loc} />}

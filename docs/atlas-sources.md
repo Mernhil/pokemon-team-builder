@@ -14,4 +14,6 @@ Candidate sources that would unblock it (none are pinned yet, each needs a decis
 - pkNX (kwsch/pkNX) reads trainer / item / map data from a game dump, so it needs ROM files.
 - A community trainer-team dataset (e.g. derived from Bulbapedia / Serebii), which must be reachable from the build environment and acceptable to redistribute.
 
-Nothing is invented: until one of these is chosen, Gen 5+ games stay out of `ATLAS_GAMES`.
+Nothing is invented. Until one of these is chosen, Gen 5+ games are **encounters only** (`AtlasGame.lite`,
+`scripts/atlas/encounters.ts`): a searchable list of the places that have encounters, with every wild, static, gift
+and trade Pokémon from the Pokédex data, plus a visited-places tracker. No map, items, NPCs, shops or trainers.

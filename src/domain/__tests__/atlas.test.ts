@@ -4,6 +4,7 @@ import mapsJson from '@/data/generated/maps.json';
 import { loadDex } from '@/data/dex';
 import { importShowdown } from '@/domain/codecs';
 import { getFormat } from '@/domain/formats';
+import type { PokedexData } from '@/domain/pokedex';
 import { ATLAS_GAMES, completion, itemSources, matchLocations, monToSet, searchTrainers, trainerToShowdown, trainerToTeam, trainerVariants, type AtlasFile } from '@/domain/atlas';
 import { neighbour } from '@/domain/regionMaps';
 import { validateTeam } from '@/domain/validation';
@@ -170,7 +171,7 @@ describe('Place outlines', () => {
 
 // Every game with an atlas must satisfy the same invariants.
 const atlasFiles = import.meta.glob('@/data/generated/atlas-*.json', { eager: true, import: 'default' }) as Record<string, AtlasFile>;
-describe.each(ATLAS_GAMES.filter((g) => g.available))('Atlas · $name', (g) => {
+describe.each(ATLAS_GAMES.filter((g) => g.available && !g.lite))('Atlas · $name', (g) => {
   const f = Object.entries(atlasFiles).find(([k]) => k.endsWith(`atlas-${g.file ?? g.id}.json`))?.[1];
   it('has a built file', () => expect(f, `run npm run atlas -- ${g.id}`).toBeDefined());
   it('puts every location on the map and every place in the data', () => {
@@ -198,5 +199,25 @@ describe.each(ATLAS_GAMES.filter((g) => g.available))('Atlas · $name', (g) => {
       }
     }
     expect(bad.slice(0, 20)).toEqual([]);
+  });
+});
+
+// Encounters-only games (Generation 5 onward): every place has wild / static / gift encounters in the Pokédex data.
+const pokedexFiles = import.meta.glob('@/data/generated/pokedex-*.json', { eager: true, import: 'default' }) as Record<string, PokedexData>;
+describe.each(ATLAS_GAMES.filter((g) => g.lite))('Pokénav (encounters only) · $name', (g) => {
+  const f = Object.entries(atlasFiles).find(([k]) => k.endsWith(`atlas-${g.file ?? g.id}.json`))?.[1];
+  const pd = Object.entries(pokedexFiles).find(([k]) => k.endsWith(`pokedex-${g.book}.json`))?.[1];
+  it('has a built file and Pokédex data', () => {
+    expect(f, `run npm run atlas -- ${g.file ?? g.id}`).toBeDefined();
+    expect(pd).toBeDefined();
+    expect(pd!.games.some((x) => x.id === g.dexGame)).toBe(true);
+  });
+  it('lists places with encounters, and only those', () => {
+    const gi = pd!.games.findIndex((x) => x.id === g.dexGame);
+    const here = new Set(Object.values(pd!.encounters).flatMap((e) => e.filter((r) => r[0] === gi).map((r) => pd!.areas[r[1]].loc)));
+    expect(here.size).toBeGreaterThan(0);
+    for (const id of here) expect(f!.locations[id], `${g.id}: ${id} has encounters but no atlas place`).toBeDefined();
+    expect(Object.keys(f!.trainers)).toEqual([]);
+    expect(g.mapIds).toEqual([]);
   });
 });

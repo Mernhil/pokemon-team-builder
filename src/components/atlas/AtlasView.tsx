@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Filter, Map as MapIcon, MapPin, Package, Search, ShoppingBag, Swords, Trophy, X } from 'lucide-react';
+import { Filter, List, Map as MapIcon, MapPin, Package, Search, ShoppingBag, Swords, Trophy, X } from 'lucide-react';
 import { useAtlas } from '@/data/atlas';
 import { toID } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
-import { ATLAS_GAMES, atlasGame, matchLocations, wildAt, wildLocations, type AtlasLocation, type MapFilter } from '@/domain/atlas';
+import { ATLAS_GAMES, atlasGame, atlasGameGen, matchLocations, wildAt, wildLocations, type AtlasLocation, type MapFilter } from '@/domain/atlas';
 import { getFormat } from '@/domain/formats';
 import { skinOfMap } from '@/domain/mapSkins';
 import { useAtlasStore, type AtlasPage } from '@/store/atlasStore';
@@ -30,13 +30,17 @@ const PAGES: { id: AtlasPage; label: string; icon: typeof MapIcon }[] = [
   { id: 'progress', label: 'Progress', icon: Trophy },
 ];
 
-/** The Atlas tab: interactive game maps with full location, item, NPC, wild and trainer data. */
+/** Pokénav pages: an encounters-only game has a location list in place of the map, and no items or trainers. */
+const LITE_PAGES = [{ ...PAGES[0], label: 'Locations', icon: List }, PAGES[3]];
+
+/** The Pokénav tab: interactive game maps with full location, item, NPC, wild and trainer data. */
 export function AtlasView() {
   const gameId = useAtlasStore((s) => s.game);
   const setGame = useAtlasStore((s) => s.setGame);
-  const page = useAtlasStore((s) => s.page);
+  const storedPage = useAtlasStore((s) => s.page);
   const setPage = useAtlasStore((s) => s.setPage);
   const game = atlasGame(gameId);
+  const page: AtlasPage = game.lite && (storedPage === 'items' || storedPage === 'trainers') ? 'map' : storedPage;
   const file = useAtlas(game.file ?? game.id);
   const format = getFormat(game.formatId);
   const dexState = useDex(format.datasetId);
@@ -78,23 +82,27 @@ export function AtlasView() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Game">
-          {ATLAS_GAMES.map((g) => (
-            <button
-              key={g.id}
-              type="button"
-              role="radio"
-              aria-checked={g.id === game.id}
-              onClick={() => { setGame(g.id); setPinned(undefined); }}
-              className={cn('inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold transition-colors', g.id === game.id ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}
-            >
-              <GameBadge color={g.color} />
-              {g.name}
-            </button>
+        <div className="flex w-full flex-col gap-1.5" role="radiogroup" aria-label="Game">
+          {[...new Set(ATLAS_GAMES.map(atlasGameGen))].sort((a, b) => a - b).map((gen) => (
+            <div key={gen} className="flex flex-wrap items-center gap-1">
+              <span className="w-10 shrink-0 text-[11px] font-semibold tracking-wide text-muted uppercase">Gen {gen}</span>
+              {ATLAS_GAMES.filter((g) => atlasGameGen(g) === gen).map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={g.id === game.id}
+                  onClick={() => { setGame(g.id); setPinned(undefined); }}
+                  className={cn('inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold transition-colors', g.id === game.id ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}
+                >
+                  <GameBadge color={g.color} />
+                  {g.name}
+                </button>
+              ))}
+            </div>
           ))}
-          <span className="inline-flex h-8 items-center rounded-md border border-dashed border-border px-2.5 text-xs text-muted" title="The other games follow in the next phases">More games soon</span>
         </div>
-        <Tabs label="Pokénav page" size="sm" value={page} onChange={setPage} tabs={PAGES.map((p) => ({ id: p.id, label: p.label, icon: p.icon }))} className="ml-auto" />
+        <Tabs label="Pokénav page" size="sm" value={page} onChange={setPage} tabs={(game.lite ? LITE_PAGES : PAGES).map((p) => ({ id: p.id, label: p.label, icon: p.icon }))} className="ml-auto" />
       </div>
 
       {file === false || dexState.status === 'error' ? (
@@ -103,9 +111,9 @@ export function AtlasView() {
         <LoadingState label={`Loading the ${game.shortName} Pokénav…`} />
       ) : (
         <AtlasProvider value={ctx}>
-          {page === 'map' && <MapPage pinned={pinned} setPinned={setPinned} />}
-          {page === 'items' && <ItemsPage focus={itemFocus} />}
-          {page === 'trainers' && <TrainersPage />}
+          {page === 'map' && (game.lite ? <LocationsPage pinned={pinned} setPinned={setPinned} /> : <MapPage pinned={pinned} setPinned={setPinned} />)}
+          {page === 'items' && !game.lite && <ItemsPage focus={itemFocus} />}
+          {page === 'trainers' && !game.lite && <TrainersPage />}
           {page === 'progress' && <ProgressPage />}
           <Modal open={!!trainerGroup} onOpenChange={(o) => !o && setTrainerGroup(undefined)} title={trainerGroup ? (Object.values(ctx.file.trainers).find((t) => t.group === trainerGroup)?.name ?? 'Trainer') : 'Trainer'} wide>
             {trainerGroup && <TrainerDetail group={trainerGroup} />}
@@ -215,6 +223,68 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
       {wide ? (
         <aside className="sticky top-16 hidden max-h-[calc(100dvh-6rem)] min-h-64 rounded-xl border border-border bg-surface p-3 lg:block" aria-label="Location details">
           {loc ? <LocationPanel key={loc.id} loc={loc} onClose={() => setPinned(undefined)} /> : <p className="p-4 text-sm text-muted">Pick a place on the map to see its items, NPCs, wild Pokémon and trainers.</p>}
+        </aside>
+      ) : (
+        <Modal open={!!loc} onOpenChange={(o) => !o && setPinned(undefined)} title={loc?.name ?? ''} description="Location details" wide>
+          {loc && <div className="h-[70dvh]"><LocationPanel key={loc.id} loc={loc} /></div>}
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/** Encounters-only games: the places that have encounters, searchable by name or by Pokémon, in place of a map. */
+function LocationsPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string | undefined) => void }) {
+  const { file, game, pokedex, locName, speciesName } = useAtlasCtx();
+  const [text, setText] = useState('');
+  const [mon, setMon] = useState('');
+  const progress = useProgress(game.id);
+  const wide = useMedia('(min-width: 1024px)');
+  const monLocs = useMemo(() => {
+    if (!mon || !pokedex) return undefined;
+    const t = toID(mon);
+    const ids = Object.keys(pokedex.encounters).filter((s) => toID(speciesName(s)).includes(t));
+    return new Set(ids.flatMap((s) => [...wildLocations(pokedex, game.dexGame, s)]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mon, pokedex, game.dexGame]);
+  const rows = useMemo(
+    () =>
+      Object.values(file.locations)
+        .filter((l) => (!text || toID(l.name).includes(toID(text))) && (!monLocs || monLocs.has(l.id)))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
+    [file, text, monLocs],
+  );
+  const speciesCount = useMemo(() => {
+    const n = new Map<string, number>();
+    if (pokedex) for (const l of rows) n.set(l.id, new Set(wildAt(pokedex, game.dexGame, l.id).map((w) => w.species)).size);
+    return n;
+  }, [pokedex, game.dexGame, rows]);
+  const loc = pinned ? file.locations[pinned] : undefined;
+  const done = new Set(progress.locations);
+  return (
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_26rem]">
+      <div className="min-w-0 space-y-2">
+        <Notice tone="accent">{game.name} has encounters only: the places and every wild, static, gift and trade Pokémon in them. Its map, items, trainers and shops aren’t available.</Notice>
+        <div className="grid gap-1.5 sm:grid-cols-2" role="search" aria-label="Location filters">
+          <Input placeholder="Find a place…" value={text} onChange={(e) => setText(e.target.value)} aria-label="Find a place" />
+          <Input placeholder="Pokémon appears here…" value={mon} onChange={(e) => setMon(e.target.value)} aria-label="Pokémon appears in the wild here" />
+        </div>
+        <ul className="divide-y divide-border/60 rounded-xl border border-border">
+          {rows.map((l) => (
+            <li key={l.id}>
+              <button type="button" onClick={() => setPinned(pinned === l.id ? undefined : l.id)} aria-current={pinned === l.id} className={cn('flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-surface-2', pinned === l.id && 'bg-surface-2 ring-2 ring-accent ring-inset')}>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{locName(l.id)}</span>
+                {done.has(l.id) && <span className="text-[11px] font-semibold text-good">Visited</span>}
+                <span className="shrink-0 font-mono text-xs text-muted">{speciesCount.get(l.id) ?? 0} Pokémon</span>
+              </button>
+            </li>
+          ))}
+          {!rows.length && <li className="p-4 text-sm text-muted">No place matches.</li>}
+        </ul>
+      </div>
+      {wide ? (
+        <aside className="sticky top-16 hidden max-h-[calc(100dvh-6rem)] min-h-64 rounded-xl border border-border bg-surface p-3 lg:block" aria-label="Location details">
+          {loc ? <LocationPanel key={loc.id} loc={loc} onClose={() => setPinned(undefined)} /> : <p className="p-4 text-sm text-muted">Pick a place to see the Pokémon found there.</p>}
         </aside>
       ) : (
         <Modal open={!!loc} onOpenChange={(o) => !o && setPinned(undefined)} title={loc?.name ?? ''} description="Location details" wide>

@@ -2,6 +2,16 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## Unreleased
+
+### New
+- **Pokénav for Generation 5 onward (encounters only):** Black / White, Black 2 / White 2, X / Y, Omega Ruby / Alpha Sapphire, Sun / Moon, Ultra Sun / Ultra Moon, Let's Go, Sword / Shield, Brilliant Diamond / Shining Pearl, Legends: Arceus, Scarlet / Violet and Legends: Z-A. A searchable list of the places with every wild, static, gift and trade Pokémon (search by place or by Pokémon) and a visited-places tracker. No map, items, NPCs, shops or trainer teams: no pinned source has them (`docs/atlas-sources.md`).
+- A **Team** button on every trainer row opens the trainer's team in the Builder's own roster layout.
+- Each game button has a colour icon, and the games are grouped by generation.
+
+### Changed
+- The Atlas tab is now called **Pokénav**.
+
 ## 0.9.2 — 2026-09-30
 
 ### New
