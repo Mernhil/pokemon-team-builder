@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## Unreleased
+
+### Changed
+- **Redrawn schematic maps** (Unova, Kalos, Alola, Galar, Hisui, Paldea, Lumiose and the DLC regions) in Pokénav and the Pokédex Area page: an organic coastline with shallow water, textured land, trails for routes, small icons for towns, cities, forests, mountains, caves, ruins, lakes and landmarks, proper place names (they showed raw ids before), and a compass. Still labelled schematic: no decompiled map exists for these games.
+
 ## 0.11.0 — 2026-10-01
 
 ### New

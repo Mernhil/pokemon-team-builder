@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { neighbour, unionOutline, type Dir } from '@/domain/regionMaps';
 import type { MapSkin } from '@/domain/mapSkins';
-import { MapViewport, SchematicBase, asset, type RegionMapData } from '../pokedex/RegionMap';
+import { MapViewport, asset, type RegionMapData } from '../pokedex/RegionMap';
+import { SchematicBase } from '../pokedex/SchematicMap';
 import { cn } from '../ui/styles';
 
 interface Props {
@@ -89,7 +90,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
           <svg
             viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
             className="block h-full w-full"
-            style={{ imageRendering: 'pixelated', cursor: hovered ? 'pointer' : 'default' }}
+            style={{ imageRendering: schematic ? 'auto' : 'pixelated', cursor: hovered ? 'pointer' : 'default' }}
             onClick={(e) => {
               const l = locAt(e, e.currentTarget);
               if (l) onPin(l);
