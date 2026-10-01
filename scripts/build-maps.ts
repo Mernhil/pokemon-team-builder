@@ -10,6 +10,8 @@
  *                glowing squares from region_map_sections.json
  *   kanto-frlg,  FireRed/LeafGreen region maps (pokefirered: graphics/region_map/*.bin),
  *   sevii-*      squares from src/data/region_map/region_map_layout_*.h
+ *   johto-kanto-hgss  HeartGold/SoulSilver Pokégear map (pokeheartgold: files/application/pokegear/map, the 64×64
+ *                tilemap over an 8bpp tile sheet with the day palette; squares from sLocationSpecs in pokegear_map.c)
  *   sinnoh-pt    Platinum Town Map, top screen with every hidden location revealed (pokeplatinum:
  *                res/graphics/town_map/*), squares from the 7×7 px blocks in res/town_map/town_map_data.json;
  *                also shown for Diamond/Pearl and Brilliant Diamond/Shining Pearl
@@ -69,6 +71,7 @@ const PRET_PATHS: Record<string, string[]> = {
   pokecrystal: ['gfx/pokegear', 'data/maps/landmarks.asm'],
   pokeemerald: ['graphics/pokedex/region_map.bin', 'graphics/pokedex/region_map.png', 'graphics/pokedex/region_map.pal', 'src/data/region_map/region_map_sections.json'],
   pokefirered: ['graphics/region_map', 'src/data/region_map'],
+  pokeheartgold: ['files/application/pokegear/map/pgmap_gra', 'src/application/pokegear/map/pokegear_map.c'],
   pokeplatinum: ['res/graphics/town_map', 'res/town_map/town_map_data.json', 'src/applications/town_map/fly_locations.c'],
 };
 
@@ -293,6 +296,16 @@ const ANCHORS: Record<string, [string, string, number, number][]> = {
     ['safari-zone-gate', 'cianwood-city', -2, -2],
     ['team-rocket-hq', 'mahogany-town', 0, 0],
     ['sinjoh-ruins', 'ruins-of-alph', 0, 0],
+  ],
+  'johto-kanto-hgss': [
+    ['embedded-tower', 'johto-route-47', 0, 0],
+    ['safari-zone-gate', 'johto-safari-zone', 0, 0],
+    ['dragons-den', 'blackthorn-city', 0, 0],
+    ['team-rocket-hq', 'mahogany-town', 0, 0],
+    // Places the Pokégear map has no square for, next to the one they belong to (as on the Gold / Silver map).
+    ['lav-radio-tower', 'lavender-town', 0, 0],
+    ['underground', 'goldenrod-city', 0, 0],
+    ['kanto-route-23', 'kanto-route-22', 0, 0],
   ],
   'kanto-gsc': [
     ['viridian-forest', 'kanto-route-2', 0, 0],
@@ -692,6 +705,69 @@ async function sinnohPt(): Promise<RegionMapOut> {
 }
 
 // ---------------------------------------------------------------------------
+// HeartGold / SoulSilver: the remakes' own Pokégear map (Johto and Kanto on one screen)
+// ---------------------------------------------------------------------------
+
+/** HGSS map ids (include/constants/maps.h) that the Pokégear places, as a decomp-style name and the region for route ids. */
+const HGSS_NAMES: Record<string, string> = {
+  MAP_SINJOH_RUINS_EXTERIOR: 'SinjohRuins', MAP_SS_AQUA_1F: 'SsAqua', MAP_ICE_PATH_1F: 'IcePath', MAP_DARK_CAVE_ROUTE_45_SIDE: 'DarkCave',
+  MAP_SPROUT_TOWER_1F: 'SproutTower', MAP_UNION_CAVE_1F: 'UnionCave', MAP_SLOWPOKE_WELL_ENTRANCE: 'SlowpokeWell', MAP_ILEX_FOREST: 'IlexForest',
+  MAP_NATIONAL_PARK: 'NationalPark', MAP_BELL_TOWER_1F: 'BellTower', MAP_BURNED_TOWER_1F: 'BurnedTower', MAP_MOUNT_MORTAR_1F_ENTRANCE: 'MtMortar',
+  MAP_WHIRL_ISLANDS_1F: 'WhirlIslands', MAP_TOHJO_FALLS: 'TohjoFalls', MAP_VICTORY_ROAD_1F: 'VictoryRoad', MAP_VIRIDIAN_FOREST: 'ViridianForest',
+  MAP_DIGLETT_CAVE: 'DiglettsCave', MAP_MOUNT_MOON: 'MtMoon', MAP_CERULEAN_CAVE_1F: 'CeruleanCave', MAP_ROCK_TUNNEL_1F: 'RockTunnel',
+  MAP_ROUTE_10_POWER_PLANT_BROKEN: 'PowerPlant', MAP_SEAFOAM_ISLANDS_1F: 'SeafoamIslands', MAP_BATTLE_FRONTIER: 'BattleFrontier',
+  MAP_FUCHSIA_PAL_PARK_ENTRANCE: 'FuchsiaPalPark', MAP_OLIVINE_LIGHTHOUSE_2F: 'OlivineLighthouse',
+  MAP_PALLET: 'PalletTown', MAP_VIRIDIAN: 'ViridianCity', MAP_PEWTER: 'PewterCity', MAP_CERULEAN: 'CeruleanCity', MAP_LAVENDER: 'LavenderTown',
+  MAP_VERMILION: 'VermilionCity', MAP_CELADON: 'CeladonCity', MAP_FUCHSIA: 'FuchsiaCity', MAP_CINNABAR_ISLAND: 'CinnabarIsland', MAP_SAFFRON: 'SaffronCity',
+  MAP_NEW_BARK: 'NewBarkTown', MAP_CHERRYGROVE: 'CherrygroveCity', MAP_VIOLET: 'VioletCity', MAP_AZALEA: 'AzaleaTown', MAP_CIANWOOD: 'CianwoodCity',
+  MAP_GOLDENROD: 'GoldenrodCity', MAP_OLIVINE: 'OlivineCity', MAP_ECRUTEAK: 'EcruteakCity', MAP_MAHOGANY: 'MahoganyTown', MAP_BLACKTHORN: 'BlackthornCity',
+  MAP_INDIGO_PLATEAU: 'IndigoPlateau', MAP_LAKE_OF_RAGE: 'LakeOfRage', MAP_MOUNT_SILVER: 'MtSilver', MAP_RUINS_OF_ALPH_UNUSED: 'RuinsOfAlph',
+  MAP_SAFARI_ZONE_GATE: 'SafariZone',
+};
+
+async function johtoKantoHGSS(): Promise<RegionMapOut> {
+  const dir = ensureRepo('pokeheartgold');
+  const gfx = (f: string) => resolve(dir, 'files/application/pokegear/map/pgmap_gra', f);
+  const sheet = decodePNG(gfx('pgmap_gra_00000010.png')); // 8bpp tile sheet, 64 tiles wide
+  // Palette 20 is the normal (day) map; 14–19 are the dark Fly Map variants. BGR555 from byte 40.
+  const nclr = readFileSync(gfx('pgmap_gra_00000020.NCLR'));
+  const pal: RGB[] = Array.from({ length: (nclr.length - 40) >> 1 }, (_, i) => {
+    const c = nclr.readUInt16LE(40 + i * 2);
+    return [(c & 31) * 255 / 31, ((c >> 5) & 31) * 255 / 31, ((c >> 10) & 31) * 255 / 31].map(Math.round) as RGB;
+  });
+  // The tilemap is stored row by row (64×64); the map proper is the top-left 47×20 tiles.
+  const nscr = readFileSync(gfx('pgmap_gra_00000011.NSCR'));
+  const cols = nscr.readUInt16LE(0x18) / 8;
+  const W = 376, H = 160;
+  const c = new Canvas(W, H);
+  for (let ty = 0; ty < H / 8; ty++)
+    for (let tx = 0; tx < W / 8; tx++) {
+      const e = nscr.readUInt16LE(36 + (ty * cols + tx) * 2), t = e & 0x3ff, hf = e & 0x400, vf = e & 0x800;
+      for (let y = 0; y < 8; y++)
+        for (let x = 0; x < 8; x++) c.set(tx * 8 + x, ty * 8 + y, pal[tilePixel(sheet, t, hf ? 7 - x : x, vf ? 7 - y : y)] ?? [0, 0, 0]);
+    }
+  await c.save(resolve(OUT_IMG, 'johto-kanto-hgss.webp'));
+
+  const known = gameLocations(['heartgold', 'soulsilver']);
+  const src = readFileSync(resolve(dir, 'src/application/pokegear/map/pokegear_map.c'), 'utf8');
+  const specs = src.slice(src.indexOf('sLocationSpecs[PGMAP_NUM_LOCATIONS]'));
+  const places: Record<string, Rect[]> = {};
+  for (const m of specs.matchAll(/\.mapId = (\w+),\s*\.x = (\d+),\s*\.y = (\d+),\s*\.width = (\d+),\s*\.height = (\d+)/g)) {
+    const [, id, x, y, w, h] = m;
+    const route = id.match(/^MAP_ROUTE_(\d+)$/);
+    const name = route ? `Route${route[1]}` : HGSS_NAMES[id];
+    if (!name) throw new Error(`HeartGold Pokégear map: no name for ${id}`);
+    // Routes 1–28 are Kanto's, 29–48 Johto's; the other places are told apart by name.
+    const region = route ? (+route[1] <= 28 ? 'kanto' : 'johto') : /Pallet|Viridian|Pewter|Cerulean|Lavender|Vermilion|Celadon|Fuchsia|Cinnabar|Saffron|Diglett|MtMoon|RockTunnel|PowerPlant|Seafoam|VictoryRoad/.test(name) ? 'kanto' : 'johto';
+    place(places, name, region, known, [+x * 8, +y * 8, +w * 8, +h * 8]);
+  }
+  const map: RegionMapOut = { id: 'johto-kanto-hgss', name: 'Johto & Kanto', width: W, height: H, image: 'maps/johto-kanto-hgss.webp', style: 'area', places, source: 'pret/pokeheartgold' };
+  anchor(map, 8);
+  report(map, known);
+  return map;
+}
+
+// ---------------------------------------------------------------------------
 // Schematic maps (Gen 4+): src/data/maps/<id>.json, validated against the encounter data
 // ---------------------------------------------------------------------------
 
@@ -743,7 +819,7 @@ export const GAME_MAPS: Record<string, string[]> = {
   gold: ['johto-gsc', 'kanto-gsc'], silver: ['johto-gsc', 'kanto-gsc'], crystal: ['johto-gsc', 'kanto-gsc'],
   ruby: ['hoenn-rse'], sapphire: ['hoenn-rse'], emerald: ['hoenn-rse'],
   firered: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], leafgreen: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'],
-  heartgold: ['johto-gsc', 'kanto-gsc'], soulsilver: ['johto-gsc', 'kanto-gsc'],
+  heartgold: ['johto-kanto-hgss'], soulsilver: ['johto-kanto-hgss'],
   'omega-ruby': ['hoenn-rse'], 'alpha-sapphire': ['hoenn-rse'],
   diamond: ['sinnoh-pt'], pearl: ['sinnoh-pt'], platinum: ['sinnoh-pt'],
   'brilliant-diamond': ['sinnoh-pt'], 'shining-pearl': ['sinnoh-pt'],
@@ -754,7 +830,7 @@ export const GAME_MAPS: Record<string, string[]> = {
 async function main() {
   mkdirSync(OUT_IMG, { recursive: true });
   for (const f of readdirSync(OUT_IMG)) if (f.endsWith('.png')) rmSync(resolve(OUT_IMG, f)); // pre-0.7 output
-  const maps: RegionMapOut[] = [await kantoRBY(), ...(await crystal()), await hoennRSE(), ...(await frlg()), await sinnohPt(), ...schematics()];
+  const maps: RegionMapOut[] = [await kantoRBY(), ...(await crystal()), await hoennRSE(), ...(await frlg()), await sinnohPt(), await johtoKantoHGSS(), ...schematics()];
   const games: Record<string, string[]> = { ...GAME_MAPS };
   for (const s of schematicFiles()) for (const v of s.games ?? s.versions) games[v] = [...(games[v] ?? []).filter((m) => m !== s.id), s.id];
   writeFileSync(OUT_JSON, JSON.stringify({ maps: Object.fromEntries(maps.map((m) => [m.id, m])), games }));

@@ -77,6 +77,15 @@ export const MAP_SKINS: Record<string, MapSkin> = {
     cursor: 'marker',
     pixelPerfect: true,
   },
+  hgss: {
+    id: 'hgss',
+    label: 'Pokégear map (HeartGold / SoulSilver)',
+    resolution: [376, 160],
+    palette: { cursor: '#ffffff', match: '#fff2a8', done: '#57d26b', dim: '#0b1a3a99', focus: '#ffffff' },
+    cell: 8,
+    cursor: 'frame',
+    pixelPerfect: true,
+  },
   /** Hand-placed schematic regions (Generation 5 onward): one unit per grid cell, drawn as vectors. */
   schematic: {
     id: 'schematic',
@@ -93,4 +102,4 @@ export const MAP_SKINS: Record<string, MapSkin> = {
 export const skinFor = (id: string): MapSkin => MAP_SKINS[id] ?? MAP_SKINS.dppt;
 
 /** The skin of a maps.json map. */
-export const skinOfMap = (mapId: string): MapSkin => skinFor(mapId === 'hoenn-rse' ? 'rse' : mapId === 'kanto-rby' ? 'rby' : /-gsc$/.test(mapId) ? 'gsc' : /^(kanto-frlg|sevii-)/.test(mapId) ? 'frlg' : mapId === 'sinnoh-pt' ? 'dppt' : 'schematic');
+export const skinOfMap = (mapId: string): MapSkin => skinFor(mapId === 'hoenn-rse' ? 'rse' : mapId === 'kanto-rby' ? 'rby' : /-gsc$/.test(mapId) ? 'gsc' : /^(kanto-frlg|sevii-)/.test(mapId) ? 'frlg' : mapId === 'sinnoh-pt' ? 'dppt' : mapId === 'johto-kanto-hgss' ? 'hgss' : 'schematic');
