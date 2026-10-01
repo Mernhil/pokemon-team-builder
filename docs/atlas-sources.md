@@ -17,3 +17,16 @@ Candidate sources that would unblock it (none are pinned yet, each needs a decis
 Nothing is invented. Until one of these is chosen, Gen 5+ games are **encounters only** (`AtlasGame.lite`,
 `scripts/atlas/encounters.ts`): a searchable list of the places that have encounters, with every wild, static, gift
 and trade Pokémon from the Pokédex data, plus a visited-places tracker. No map, items, NPCs, shops or trainers.
+
+## Map artwork (Generation 5 onward)
+
+No decompilation means no map to render, so the maps behind the lists come from two places:
+
+- **Supplied screenshots** in `src-assets/maps/<name>.png` with a `<name>.json` next to each (crop, output width, the map whose places
+  are carried over, the games that show it, and control points: where known towns sit on the picture). `npm run maps` crops and resizes
+  the image to `public/maps/<id>.webp` and fits the source map's places onto it (least squares plus a smooth correction that makes each
+  control point exact). Currently: Hoenn (ORAS), Kanto (Let's Go), Sinnoh (BDSP), Unova (B2W2), Kalos and Paldea.
+- **Drawn schematics** (`src/data/maps/*.json`, rendered by `src/components/pokedex/SchematicMap.tsx`) for the rest.
+
+A clean, full-size image with no UI or icons burned in makes a much better map than a screenshot: drop it in `src-assets/maps/`,
+copy a `.json` next to an existing one, and pick control points with the grid in the scratch tool (any image viewer with pixel coordinates works).

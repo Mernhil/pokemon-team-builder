@@ -13,6 +13,8 @@ export interface RegionMapData {
   width: number;
   height: number;
   image?: string;
+  /** Painted artwork: scale smoothly instead of pixelated. */
+  smooth?: boolean;
   style: 'nest' | 'area' | 'schematic';
   places: Record<string, Rect[]>;
   nestIcon?: string[];
@@ -304,8 +306,8 @@ function MapCanvas({ map, found, names, selected, onSelect }: { map: RegionMapDa
     );
 
   return (
-    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="block h-full w-full" style={{ imageRendering: 'pixelated' }} role="group" aria-label={`${map.name} map`}>
-      <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: 'pixelated' }} onError={() => setBroken(true)} />
+    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="block h-full w-full" style={{ imageRendering: map.smooth ? 'auto' : 'pixelated' }} role="group" aria-label={`${map.name} map`}>
+      <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: map.smooth ? 'auto' : 'pixelated' }} onError={() => setBroken(true)} />
       {Object.entries(map.places)
         .filter(([loc]) => !found.has(loc))
         .map(([loc, rects]) =>

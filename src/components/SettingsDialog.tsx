@@ -65,7 +65,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               Wild encounter tables: <b>PKHeX</b> encounter data.
             </li>
             <li>
-              Gen 1–4 region maps: rendered from the <b>pret</b> disassemblies (pokered, pokecrystal, pokeemerald, pokefirered, pokeplatinum). Later regions are schematics.
+              Gen 1–4 region maps: rendered from the <b>pret</b> disassemblies (pokered, pokecrystal, pokeemerald, pokefirered, pokeplatinum). HeartGold / SoulSilver: the <b>pokeheartgold</b> decompilation. Omega Ruby / Alpha Sapphire, Let’s Go, Brilliant Diamond / Shining Pearl, Black 2 / White 2, X / Y and Scarlet / Violet: screenshots of the games’ own maps, supplied by the project owner (positions approximate). The other regions are drawn schematics.
             </li>
             <li>Champions regulations: official Pokémon announcements, cross-checked as listed in each regulation’s sources.</li>
           </ul>

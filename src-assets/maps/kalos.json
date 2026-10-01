@@ -1,0 +1,24 @@
+{
+  "id": "kalos-art",
+  "name": "Kalos",
+  "image": "kalos.png",
+  "crop": [10, 18, 320, 203],
+  "width": 960,
+  "from": "kalos",
+  "games": ["x", "y"],
+  "source": "supplied screenshot (X / Y)",
+  "minSize": 26,
+  "control": [
+    ["lumiose-city", 175, 95],
+    ["shalour-city", 57, 92],
+    ["ambrette-town", 38, 118],
+    ["cyllage-city", 66, 137],
+    ["coumarine-city", 118, 80],
+    ["dendemille-town", 230, 80],
+    ["santalune-city", 206, 136],
+    ["aquacorde-town", 222, 173],
+    ["vaniville-town", 222, 197],
+    ["couriway-town", 291, 97],
+    ["snowbelle-city", 281, 134]
+  ]
+}

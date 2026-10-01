@@ -10,18 +10,24 @@ wild-encounter locations of the map's games that it places; "unplaced" ones are 
 | kanto-rby | pret/pokered | 53 | 45 | — | red, blue, yellow |
 | johto-gsc | pret/pokecrystal | 53 | 48 | — | gold, silver, crystal |
 | kanto-gsc | pret/pokecrystal | 52 | 46 | — | gold, silver, crystal |
-| hoenn-rse | pret/pokeemerald | 93 | 80 | birth-island, crescent-isle, fabled-cave, faraway-island, gnarled-den, marine-cave, mirage-spot-cave, mirage-spot-forest, mirage-spot-island, mirage-spot-mountain, nameless-cavern, navel-rock, pathless-plain, soaring-in-the-sky, terra-cave, trackless-forest | ruby, sapphire, emerald, omega-ruby, alpha-sapphire |
-| kanto-frlg + sevii | pret/pokefirered | 91 | 81 | — | firered, leafgreen, lets-go-pikachu, lets-go-eevee |
-| sinnoh-pt | pret/pokeplatinum | 127 | 78 | sinnoh-grand-underground | diamond, pearl, platinum, brilliant-diamond, shining-pearl |
+| hoenn-rse | pret/pokeemerald | 93 | 80 | birth-island, crescent-isle, fabled-cave, faraway-island, gnarled-den, marine-cave, mirage-spot-cave, mirage-spot-forest, mirage-spot-island, mirage-spot-mountain, nameless-cavern, navel-rock, pathless-plain, soaring-in-the-sky, terra-cave, trackless-forest | ruby, sapphire, emerald |
+| kanto-frlg + sevii | pret/pokefirered | 91 | 81 | — | firered, leafgreen |
+| sinnoh-pt | pret/pokeplatinum | 127 | 78 | sinnoh-grand-underground | diamond, pearl, platinum |
 | johto-kanto-hgss | pret/pokeheartgold | 104 | 94 | — | heartgold, soulsilver |
 | alola | schematic (hand-placed, approximate) | 81 | 81 | new-mauville, ultra-megalopolis, ultra-space, ultra-space-wilds | sun, moon, ultra-sun, ultra-moon |
 | galar | schematic (hand-placed, approximate) | 47 | 47 | — | sword, shield |
 | hisui | schematic (hand-placed, approximate) | 106 | 105 | — | legends-arceus |
-| kalos | schematic (hand-placed, approximate) | 55 | 45 | — | x, y |
+| kalos | schematic (hand-placed, approximate) | 55 | 45 | — |  |
 | lumiose | schematic (hand-placed, approximate) | 98 | 90 | — | legends-za |
-| paldea | schematic (hand-placed, approximate) | 48 | 48 | — | scarlet, violet |
-| unova | schematic (hand-placed, approximate) | 79 | 75 | team-flare-secret-hq | black, white, black-2, white-2 |
+| paldea | schematic (hand-placed, approximate) | 48 | 48 | apple-hills, canyon-biome, canyon-plaza, central-plaza, chargestone-cavern, chilling-waterhead, coastal-biome, coastal-plaza, crystal-pool, dreaded-den, fellhorn-gorge, infernal-pass, kitakami-hall, kitakami-road, kitakami-wilds, loyalty-plaza, mossfell-confluence, mossui-town, oni-mountain, onis-maw, paldea-terarium, paradise-barrens, polar-biome, polar-plaza, revelers-road, savanna-biome, savanna-plaza, timeless-woods, torchlit-labyrinth, wistful-fields |  |
+| unova | schematic (hand-placed, approximate) | 79 | 75 | team-flare-secret-hq | black, white |
 | galar-isle-of-armor | schematic (hand-placed, approximate) | 18 | 18 | — | sword, shield |
 | paldea-kitakami | schematic (hand-placed, approximate) | 18 | 18 | — | scarlet, violet |
 | galar-crown-tundra | schematic (hand-placed, approximate) | 21 | 21 | — | sword, shield |
 | paldea-terarium | schematic (hand-placed, approximate) | 12 | 12 | — | scarlet, violet |
+| hoenn-oras | supplied screenshot (Omega Ruby / Alpha Sapphire) | 93 | 70 | crescent-isle, fabled-cave, gnarled-den, mirage-spot-cave, mirage-spot-forest, mirage-spot-island, mirage-spot-mountain, nameless-cavern, pathless-plain, soaring-in-the-sky, trackless-forest | omega-ruby, alpha-sapphire |
+| kalos-art | supplied screenshot (X / Y) | 55 | 45 | — | x, y |
+| kanto-lgpe | supplied screenshot (Let's Go, Pikachu! / Eevee!) | 50 | 44 | — | lets-go-pikachu, lets-go-eevee |
+| paldea-art | supplied screenshot (Scarlet / Violet) | 48 | 48 | — | scarlet, violet |
+| sinnoh-bdsp | supplied screenshot (Brilliant Diamond / Shining Pearl) | 127 | 64 | sinnoh-grand-underground | brilliant-diamond, shining-pearl |
+| unova-art | supplied screenshot (Black 2 / White 2) | 79 | 68 | — | black-2, white-2 |
