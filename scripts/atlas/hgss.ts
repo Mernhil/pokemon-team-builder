@@ -25,6 +25,10 @@ const SECTION_ALIASES: Record<string, string> = {
   MAPSEC_UNDERGROUND_PATH: 'underground',
   MAPSEC_VICTORY_ROAD: 'kanto-victory-road-1',
   MAPSEC_INDIGO_PLATEAU: 'indigo-plateau',
+  // The Pokégear map has no square of its own for these: they belong to the place it does show.
+  MAPSEC_RADIO_TOWER: 'goldenrod-city',
+  MAPSEC_LIGHTHOUSE: 'olivine-lighthouse',
+  MAPSEC_BATTLE_TOWER: 'battle-frontier',
 };
 
 /** All `#define NAME value` of a header with a plain integer value. */
@@ -75,7 +79,7 @@ export function buildHgss(): { file: AtlasFile; gaps: string } {
   const dir = ensure('pokeheartgold', ['files/poketool', 'files/fielddata', 'files/msgdata', 'files/itemtool', 'include', 'src/data', 'src/item.c', 'src/trainer_data.c', 'src/scrcmd_mart.c']);
   const gen4 = Dex.forGen(4);
   const allMaps = readJSON<{ maps: Record<string, { places: Record<string, unknown> }> }>(resolve(OUT, 'maps.json')).maps;
-  const mapIds = ['johto-gsc', 'kanto-gsc'];
+  const mapIds = ['johto-kanto-hgss'];
   const placeIds = new Set(mapIds.flatMap((m) => Object.keys(allMaps[m].places)));
   const pokedex = readJSON<{ games: { id: string }[]; areas: { loc: string; name: string }[]; encounters: Record<string, number[][]> }>(resolve(OUT, 'pokedex-gen4.json'));
   const areaName = new Map(pokedex.areas.map((a) => [a.loc, a.name]));

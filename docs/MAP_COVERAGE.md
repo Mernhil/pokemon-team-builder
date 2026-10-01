@@ -8,11 +8,12 @@ wild-encounter locations of the map's games that it places; "unplaced" ones are 
 | Map | Source | Places | Encounter locations placed | Unplaced | Games |
 |---|---|---|---|---|---|
 | kanto-rby | pret/pokered | 53 | 45 | — | red, blue, yellow |
-| johto-gsc | pret/pokecrystal | 53 | 48 | — | gold, silver, crystal, heartgold, soulsilver |
-| kanto-gsc | pret/pokecrystal | 52 | 46 | — | gold, silver, crystal, heartgold, soulsilver |
+| johto-gsc | pret/pokecrystal | 53 | 48 | — | gold, silver, crystal |
+| kanto-gsc | pret/pokecrystal | 52 | 46 | — | gold, silver, crystal |
 | hoenn-rse | pret/pokeemerald | 93 | 80 | birth-island, crescent-isle, fabled-cave, faraway-island, gnarled-den, marine-cave, mirage-spot-cave, mirage-spot-forest, mirage-spot-island, mirage-spot-mountain, nameless-cavern, navel-rock, pathless-plain, soaring-in-the-sky, terra-cave, trackless-forest | ruby, sapphire, emerald, omega-ruby, alpha-sapphire |
 | kanto-frlg + sevii | pret/pokefirered | 91 | 81 | — | firered, leafgreen, lets-go-pikachu, lets-go-eevee |
 | sinnoh-pt | pret/pokeplatinum | 127 | 78 | sinnoh-grand-underground | diamond, pearl, platinum, brilliant-diamond, shining-pearl |
+| johto-kanto-hgss | pret/pokeheartgold | 104 | 94 | — | heartgold, soulsilver |
 | alola | schematic (hand-placed, approximate) | 81 | 81 | new-mauville, ultra-megalopolis, ultra-space, ultra-space-wilds | sun, moon, ultra-sun, ultra-moon |
 | galar | schematic (hand-placed, approximate) | 47 | 47 | — | sword, shield |
 | hisui | schematic (hand-placed, approximate) | 106 | 105 | — | legends-arceus |

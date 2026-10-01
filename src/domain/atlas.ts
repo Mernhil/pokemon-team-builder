@@ -171,29 +171,45 @@ export interface AtlasGame {
   file?: string;
   /** The game's signature colour (its icon in the game picker). */
   color: string;
-  /** Encounters only: no map, items, NPCs, shops or trainers (games without a decompilation to read). */
+  /** Encounters only: no items, NPCs, shops or trainers (games without a decompilation to read); the map is the game's own or a schematic. */
   lite?: boolean;
   /** False until the game's atlas data is built. */
   available: boolean;
 }
 
+/** Maps behind the encounters-only games: Hoenn, Kanto and Sinnoh have the games' own, the rest hand-placed schematics (maps.json `games`). */
+const GALAR = ['galar', 'galar-isle-of-armor', 'galar-crown-tundra'];
+const PALDEA = ['paldea', 'paldea-kitakami', 'paldea-terarium'];
+const LITE_MAPS: Record<string, string[]> = {
+  black: ['unova'], white: ['unova'], 'black-2': ['unova'], 'white-2': ['unova'],
+  x: ['kalos'], y: ['kalos'],
+  'omega-ruby': ['hoenn-rse'], 'alpha-sapphire': ['hoenn-rse'],
+  sun: ['alola'], moon: ['alola'], 'ultra-sun': ['alola'], 'ultra-moon': ['alola'],
+  'lets-go-pikachu': ['kanto-frlg'], 'lets-go-eevee': ['kanto-frlg'],
+  sword: GALAR, shield: GALAR,
+  'brilliant-diamond': ['sinnoh-pt'], 'shining-pearl': ['sinnoh-pt'],
+  'legends-arceus': ['hisui'],
+  scarlet: PALDEA, violet: PALDEA,
+  'legends-za': ['lumiose'],
+};
+
 export const ATLAS_GAMES: AtlasGame[] = [
-  { id: 'red', name: 'Pokémon Red', shortName: 'Red', book: 'gen1', formatId: 'gen1', dexGame: 'red', mapIds: ['kanto-rby'],color: '#d8302f', available: true },
-  { id: 'blue', name: 'Pokémon Blue', shortName: 'Blue', book: 'gen1', formatId: 'gen1', dexGame: 'blue', mapIds: ['kanto-rby'], file: 'red',color: '#2f62c6', available: true },
-  { id: 'yellow', name: 'Pokémon Yellow', shortName: 'Yellow', book: 'gen1', formatId: 'gen1', dexGame: 'yellow', mapIds: ['kanto-rby'],color: '#f1c232', available: true },
-  { id: 'gold', name: 'Pokémon Gold', shortName: 'Gold', book: 'gen2', formatId: 'gen2', dexGame: 'gold', mapIds: ['johto-gsc', 'kanto-gsc'],color: '#d4a017', available: true },
-  { id: 'silver', name: 'Pokémon Silver', shortName: 'Silver', book: 'gen2', formatId: 'gen2', dexGame: 'silver', mapIds: ['johto-gsc', 'kanto-gsc'], file: 'gold',color: '#aeb7c2', available: true },
-  { id: 'crystal', name: 'Pokémon Crystal', shortName: 'Crystal', book: 'gen2', formatId: 'gen2', dexGame: 'crystal', mapIds: ['johto-gsc', 'kanto-gsc'],color: '#6ec6e6', available: true },
-  { id: 'diamond', name: 'Pokémon Diamond', shortName: 'Diamond', book: 'gen4', formatId: 'gen4', dexGame: 'diamond', mapIds: ['sinnoh-pt'],color: '#8fb8e8', available: true },
-  { id: 'pearl', name: 'Pokémon Pearl', shortName: 'Pearl', book: 'gen4', formatId: 'gen4', dexGame: 'pearl', mapIds: ['sinnoh-pt'], file: 'diamond',color: '#e8a8c8', available: true },
-  { id: 'heartgold', name: 'Pokémon HeartGold', shortName: 'HeartGold', book: 'gen4', formatId: 'gen4', dexGame: 'heartgold', mapIds: ['johto-gsc', 'kanto-gsc'],color: '#e3a72f', available: true },
-  { id: 'soulsilver', name: 'Pokémon SoulSilver', shortName: 'SoulSilver', book: 'gen4', formatId: 'gen4', dexGame: 'soulsilver', mapIds: ['johto-gsc', 'kanto-gsc'], file: 'heartgold',color: '#b8c2cf', available: true },
-  { id: 'platinum', name: 'Pokémon Platinum', shortName: 'Platinum', book: 'gen4', formatId: 'gen4', dexGame: 'platinum', mapIds: ['sinnoh-pt'],color: '#8a93a0', available: true },
-  { id: 'emerald', name: 'Pokémon Emerald', shortName: 'Emerald', book: 'gen3', formatId: 'gen3', dexGame: 'emerald', mapIds: ['hoenn-rse'],color: '#2fa65a', available: true },
-  { id: 'ruby', name: 'Pokémon Ruby', shortName: 'Ruby', book: 'gen3', formatId: 'gen3', dexGame: 'ruby', mapIds: ['hoenn-rse'],color: '#c8283c', available: true },
-  { id: 'sapphire', name: 'Pokémon Sapphire', shortName: 'Sapphire', book: 'gen3', formatId: 'gen3', dexGame: 'sapphire', mapIds: ['hoenn-rse'], file: 'ruby',color: '#2b5fc4', available: true },
-  { id: 'firered', name: 'Pokémon FireRed', shortName: 'FireRed', book: 'gen3', formatId: 'gen3', dexGame: 'firered', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'],color: '#e8532a', available: true },
-  { id: 'leafgreen', name: 'Pokémon LeafGreen', shortName: 'LeafGreen', book: 'gen3', formatId: 'gen3', dexGame: 'leafgreen', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], file: 'firered',color: '#57b947', available: true },
+  { id: 'red', name: 'Pokémon Red', shortName: 'Red', book: 'gen1', formatId: 'gen1', dexGame: 'red', mapIds: ['kanto-rby'], color: '#d8302f', available: true },
+  { id: 'blue', name: 'Pokémon Blue', shortName: 'Blue', book: 'gen1', formatId: 'gen1', dexGame: 'blue', mapIds: ['kanto-rby'], file: 'red', color: '#2f62c6', available: true },
+  { id: 'yellow', name: 'Pokémon Yellow', shortName: 'Yellow', book: 'gen1', formatId: 'gen1', dexGame: 'yellow', mapIds: ['kanto-rby'], color: '#f1c232', available: true },
+  { id: 'gold', name: 'Pokémon Gold', shortName: 'Gold', book: 'gen2', formatId: 'gen2', dexGame: 'gold', mapIds: ['johto-gsc', 'kanto-gsc'], color: '#d4a017', available: true },
+  { id: 'silver', name: 'Pokémon Silver', shortName: 'Silver', book: 'gen2', formatId: 'gen2', dexGame: 'silver', mapIds: ['johto-gsc', 'kanto-gsc'], file: 'gold', color: '#aeb7c2', available: true },
+  { id: 'crystal', name: 'Pokémon Crystal', shortName: 'Crystal', book: 'gen2', formatId: 'gen2', dexGame: 'crystal', mapIds: ['johto-gsc', 'kanto-gsc'], color: '#6ec6e6', available: true },
+  { id: 'diamond', name: 'Pokémon Diamond', shortName: 'Diamond', book: 'gen4', formatId: 'gen4', dexGame: 'diamond', mapIds: ['sinnoh-pt'], color: '#8fb8e8', available: true },
+  { id: 'pearl', name: 'Pokémon Pearl', shortName: 'Pearl', book: 'gen4', formatId: 'gen4', dexGame: 'pearl', mapIds: ['sinnoh-pt'], file: 'diamond', color: '#e8a8c8', available: true },
+  { id: 'heartgold', name: 'Pokémon HeartGold', shortName: 'HeartGold', book: 'gen4', formatId: 'gen4', dexGame: 'heartgold', mapIds: ['johto-kanto-hgss'], color: '#e3a72f', available: true },
+  { id: 'soulsilver', name: 'Pokémon SoulSilver', shortName: 'SoulSilver', book: 'gen4', formatId: 'gen4', dexGame: 'soulsilver', mapIds: ['johto-kanto-hgss'], file: 'heartgold', color: '#b8c2cf', available: true },
+  { id: 'platinum', name: 'Pokémon Platinum', shortName: 'Platinum', book: 'gen4', formatId: 'gen4', dexGame: 'platinum', mapIds: ['sinnoh-pt'], color: '#8a93a0', available: true },
+  { id: 'emerald', name: 'Pokémon Emerald', shortName: 'Emerald', book: 'gen3', formatId: 'gen3', dexGame: 'emerald', mapIds: ['hoenn-rse'], color: '#2fa65a', available: true },
+  { id: 'ruby', name: 'Pokémon Ruby', shortName: 'Ruby', book: 'gen3', formatId: 'gen3', dexGame: 'ruby', mapIds: ['hoenn-rse'], color: '#c8283c', available: true },
+  { id: 'sapphire', name: 'Pokémon Sapphire', shortName: 'Sapphire', book: 'gen3', formatId: 'gen3', dexGame: 'sapphire', mapIds: ['hoenn-rse'], file: 'ruby', color: '#2b5fc4', available: true },
+  { id: 'firered', name: 'Pokémon FireRed', shortName: 'FireRed', book: 'gen3', formatId: 'gen3', dexGame: 'firered', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], color: '#e8532a', available: true },
+  { id: 'leafgreen', name: 'Pokémon LeafGreen', shortName: 'LeafGreen', book: 'gen3', formatId: 'gen3', dexGame: 'leafgreen', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], file: 'firered', color: '#57b947', available: true },
   // Generation 5 onward: encounters only (scripts/atlas/encounters.ts), no map.
   ...[
     ['black', 'Black', 'gen5', 'black', '#2a2a2e'], ['white', 'White', 'gen5', 'white', '#e6e6ea', 'black'],
@@ -209,7 +225,7 @@ export const ATLAS_GAMES: AtlasGame[] = [
     ['scarlet', 'Scarlet', 'gen9', 'scarlet', '#e0452e'], ['violet', 'Violet', 'gen9', 'violet', '#7b45c9', 'scarlet'],
     ['legendsza', 'Legends: Z-A', 'za', 'legends-za', '#3f9a8a'],
   ].map(([id, shortName, book, dexGame, color, file]): AtlasGame => ({
-    id, name: `Pokémon ${shortName}`, shortName, book, formatId: book, dexGame, mapIds: [], file, color, lite: true, available: true,
+    id, name: `Pokémon ${shortName}`, shortName, book, formatId: book, dexGame, mapIds: LITE_MAPS[dexGame], file, color, lite: true, available: true,
   })),
 ];
 

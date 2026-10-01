@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Pokemon Team Builder",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "identifier": "com.mernhil.pokemonteambuilder",
   "build": {
     "frontendDist": "../dist",

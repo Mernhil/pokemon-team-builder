@@ -368,6 +368,35 @@ function MapCanvas({ map, found, names, selected, onSelect }: { map: RegionMapDa
 
 const FALLBACK_NEST = ['.######.', '#......#', '#.####.#', '#.#..#.#', '#.#..#.#', '#.####.#', '#......#', '.######.'];
 
+/** The schematic map's backdrop: sea, land, and every place drawn plain (no highlight); callers lay their own interaction on top. */
+export function SchematicBase({ map, label }: { map: RegionMapData; label: (loc: string) => string }) {
+  const order = ['zone', 'sea', 'snow', 'route', 'forest', 'lake', 'mountain', 'landmark', 'cave', 'dungeon', 'town'];
+  const entries = Object.entries(map.places).sort(([a], [b]) => order.indexOf(map.kinds?.[a] ?? 'route') - order.indexOf(map.kinds?.[b] ?? 'route'));
+  return (
+    <>
+      <rect x={-1} y={-1} width={map.width + 2} height={map.height + 2} fill="#2c5d8a" />
+      {map.land?.map((d, i) => <path key={i} d={d} fill="#6f9a52" stroke="#e8dfb0" strokeWidth={0.25} strokeLinejoin="round" />)}
+      {entries.map(([loc, rects]) =>
+        rects.map(([x, y, w, h], i) => {
+          const kind = map.kinds?.[loc] ?? 'route';
+          return kind === 'zone' ? (
+            <rect key={loc + i} x={x} y={y} width={w} height={h} rx={0.6} fill="none" stroke="#ffffff55" strokeWidth={0.18} strokeDasharray="0.6 0.5" />
+          ) : (
+            <rect key={loc + i} x={x + 0.1} y={y + 0.1} width={w - 0.2} height={h - 0.2} rx={kind === 'town' ? 0.25 : kind === 'lake' ? 0.8 : 0.15} fill={SCHEMATIC_FILL[kind] ?? SCHEMATIC_FILL.route} stroke={kind === 'town' ? '#3b2a1a' : 'none'} strokeWidth={0.15} opacity={0.95} />
+          );
+        }),
+      )}
+      {entries
+        .filter(([loc]) => map.kinds?.[loc] === 'town')
+        .map(([loc, [[x, y, w]]]) => (
+          <text key={loc} x={x + w / 2} y={y - 0.3} fontSize={0.9} textAnchor="middle" fill="#fff" stroke="#0008" strokeWidth={0.18} paintOrder="stroke" className="pointer-events-none select-none">
+            {label(loc).replace(/ (City|Town)$/, '')}
+          </text>
+        ))}
+    </>
+  );
+}
+
 const SCHEMATIC_FILL: Record<string, string> = {
   town: '#e9e2c4',
   route: '#d8b56a',
