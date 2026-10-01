@@ -15,17 +15,41 @@ export const REPOS = {
   /** PKHeX: every game's wild-encounter tables, location and item names. */
   pkhex: { url: 'https://github.com/kwsch/PKHeX', dir: '.cache/pkhex', commit: '09e7f18fbb33635e35cf9ffcbfd3322403780f8e' },
   /** pret disassemblies / decompilations: the in-game region maps (scripts/build-maps.ts). */
-  pokered: { url: 'https://github.com/pret/pokered', dir: '.cache/pret/pokered', commit: 'd2704a63c26f9ba046ade877445216b3de0519a4' },
-  pokecrystal: { url: 'https://github.com/pret/pokecrystal', dir: '.cache/pret/pokecrystal', commit: 'e058e4f50b3bbf7377e036b81c25a72c54656c5c' },
-  pokeemerald: { url: 'https://github.com/pret/pokeemerald', dir: '.cache/pret/pokeemerald', commit: 'c925b8482d05fb882d6b64e523653cae599e025f' },
-  pokefirered: { url: 'https://github.com/pret/pokefirered', dir: '.cache/pret/pokefirered', commit: '037335f4c725d7c9aecdac87066f2002b4bd7e14' },
-  pokeplatinum: { url: 'https://github.com/pret/pokeplatinum', dir: '.cache/pret/pokeplatinum', commit: 'c248fb3f8cc9934ded800e489567c5c0eeee92eb' },
+  pokered: { url: 'https://github.com/pret/pokered', dir: '.cache/pret/pokered', commit: 'd2704a63c26f9ba046ade877445216b3de0519a4', full: true },
+  pokecrystal: { url: 'https://github.com/pret/pokecrystal', dir: '.cache/pret/pokecrystal', commit: 'e058e4f50b3bbf7377e036b81c25a72c54656c5c', full: true },
+  pokeemerald: { url: 'https://github.com/pret/pokeemerald', dir: '.cache/pret/pokeemerald', commit: 'c925b8482d05fb882d6b64e523653cae599e025f', full: true },
+  pokefirered: { url: 'https://github.com/pret/pokefirered', dir: '.cache/pret/pokefirered', commit: '037335f4c725d7c9aecdac87066f2002b4bd7e14', full: true },
+  /** `full`: one plain shallow fetch; a blob-less clone checks files out one request at a time, far slower for the atlas' ~3000 files. */
+  /** HeartGold / SoulSilver (scripts/atlas/*). */
+  pokeheartgold: { url: 'https://github.com/pret/pokeheartgold', dir: '.cache/pret/pokeheartgold', commit: '9d8b7591f09b65804da2fb2dfd56f320633e0d36', full: true },
+  /** Gold / Silver: the Gen 2 atlas (scripts/atlas/gen2.ts). */
+  pokegold: { url: 'https://github.com/pret/pokegold', dir: '.cache/pret/pokegold', commit: '62388c7204e5d13aa05b4231e220b6760584d1b5', full: true },
+  /** Yellow: the Gen 1 atlas (scripts/atlas/gen1.ts). */
+  pokeyellow: { url: 'https://github.com/pret/pokeyellow', dir: '.cache/pret/pokeyellow', commit: 'e89ead154b9968aa50eed9328ff2b38b6c194382', full: true },
+  /** Ruby / Sapphire: the Gen 3 atlas (scripts/atlas/gba.ts). */
+  pokeruby: { url: 'https://github.com/pret/pokeruby', dir: '.cache/pret/pokeruby', commit: '5784633ce4ef7ade1a7f2d2d0c288e3d5e6cdd7f', full: true },
+  pokeplatinum: { url: 'https://github.com/pret/pokeplatinum', dir: '.cache/pret/pokeplatinum', commit: 'c248fb3f8cc9934ded800e489567c5c0eeee92eb', full: true },
+  pokediamond: { url: 'https://github.com/pret/pokediamond', dir: '.cache/pret/pokediamond', commit: '5bc4b1a3d8f100f77a4c64e59a0d544a0e29b3ec', full: true },
 } as const;
 
 /** Make sure `paths` of `repo` are on disk; returns the repo directory. */
 export function ensure(repo: keyof typeof REPOS, paths: string[]): string {
   const { url, dir, commit } = REPOS[repo];
   const abs = resolve(ROOT, dir);
+  if ('full' in REPOS[repo]) {
+    if (!existsSync(resolve(abs, '.git'))) {
+      mkdirSync(abs, { recursive: true });
+      execSync(`git init -q && git remote add origin ${url}`, { cwd: abs, stdio: 'inherit' });
+    }
+    try {
+      execSync(`git cat-file -e ${commit}`, { cwd: abs, stdio: 'ignore' });
+    } catch {
+      execSync(`git fetch -q --depth 1 origin ${commit}`, { cwd: abs, stdio: 'inherit' });
+    }
+    const missing = paths.filter((p) => !existsSync(resolve(abs, p)));
+    if (missing.length) execSync(`git checkout ${commit} -- ${missing.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
+    return abs;
+  }
   if (!existsSync(resolve(abs, '.git'))) {
     mkdirSync(dirname(abs), { recursive: true });
     execSync(`git clone -q --depth 1 --filter=blob:none --no-checkout ${url} ${abs}`, { stdio: 'inherit' });

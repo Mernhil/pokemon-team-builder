@@ -9,12 +9,14 @@
  * and compares against the Showdown id; a handful of items whose PokeAPI identifier isn't just a
  * de-hyphenated form of the name go through OVERRIDES.
  *
+ * The Atlas' item databases add their bag items (Potions, TMs, key items) so every item shows an icon.
+ *
  * Some items are exclusive to Pokémon Champions (the new Mega-Z stones, e.g. Absolite Z) and have
  * no official artwork anywhere. Those get a neutral placeholder (a grey gem) generated in-process
  * so the UI never shows a broken image, and the item is logged so the override table can be
  * extended once real art exists.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -104,12 +106,22 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Prom
 
 async function main() {
   const data = JSON.parse(readFileSync(resolve(ROOT, 'src/data/generated/champions.json'), 'utf8'));
-  const itemIds: string[] = Object.keys(data.items).sort();
+  // Champions' items plus every bag item the Atlas databases list (src/data/generated/atlas-*.json).
+  const ids = new Set<string>(Object.keys(data.items));
+  const generated = resolve(ROOT, 'src/data/generated');
+  for (const f of readdirSync(generated).filter((f) => /^atlas-.*\.json$/.test(f)))
+    for (const id of Object.keys(JSON.parse(readFileSync(resolve(generated, f), 'utf8')).items ?? {})) if (id !== 'none') ids.add(id);
+  const itemIds: string[] = [...ids].sort();
+  // TM / HM icons are per move type in PokeAPI's sprites (tm-fighting, hm-normal…).
+  const machineIcon = new Map<string, string>();
+  for (const f of readdirSync(generated).filter((f) => /^atlas-.*\.json$/.test(f)))
+    for (const [id, it] of Object.entries<{ moveType?: string }>(JSON.parse(readFileSync(resolve(generated, f), 'utf8')).items ?? {}))
+      if (it.moveType) machineIcon.set(id, `${id.startsWith('hm') ? 'hm' : 'tm'}-${it.moveType.toLowerCase()}`);
   const byStripped = await loadPokeApiIdentifiers();
   const placeholders: string[] = [];
 
   const icons = await pool(itemIds, 16, async (id) => {
-    const identifier = OVERRIDES[id] ?? byStripped.get(id);
+    const identifier = OVERRIDES[id] ?? machineIcon.get(id) ?? byStripped.get(id);
     const buf = identifier ? await fetchIcon(identifier) : null;
     if (buf) return buf;
     placeholders.push(id);

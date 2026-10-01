@@ -1,7 +1,7 @@
 {
   "name": "pokemon-team-builder",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
     "pokedex": "tsx scripts/build-pokedex.ts",
     "pokedex:champions": "tsx scripts/build-champions-pokedex.ts",
     "maps": "tsx scripts/build-maps.ts",
+    "atlas": "tsx scripts/build-atlas.ts",
     "sprites": "tsx scripts/build-sprites.ts",
     "sprites:items": "tsx scripts/build-items.ts",
     "icons": "node scripts/build-icons.mjs",

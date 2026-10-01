@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   BookOpen,
+  Map as MapIcon,
   Calculator,
   Check,
   ChevronDown,
@@ -45,6 +46,7 @@ import { buttonClass, cn, controlClass } from './components/ui/styles';
 // Heavier screens load when first opened.
 const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').then((m) => ({ default: m.DamageCalcView })));
 const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
+const AtlasView = lazy(() => import('./components/atlas/AtlasView').then((m) => ({ default: m.AtlasView })));
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
 
@@ -58,12 +60,13 @@ const PRIMARY: Dest[] = [
   { id: 'builder', label: 'Build', icon: Users },
   { id: 'calc', label: 'Calc', icon: Calculator },
   { id: 'dex', label: 'Pokédex', icon: BookOpen },
+  { id: 'atlas', label: 'Pokénav', icon: MapIcon },
 ];
 const SECONDARY: Dest[] = [
   { id: 'matches', label: 'Match log', icon: Swords },
   { id: 'meta', label: 'Meta', icon: BarChart3 },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'matches', 'meta'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -113,6 +116,7 @@ export default function App() {
 
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
+  else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;

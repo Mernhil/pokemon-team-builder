@@ -6,7 +6,7 @@ import { IDENTITY_VIEW, MAX_ZOOM, centerOn, clampView, placeCenter, resolveLocat
 import { Button, Notice } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
-interface RegionMapData {
+export interface RegionMapData {
   id: string;
   name: string;
   width: number;
@@ -20,16 +20,16 @@ interface RegionMapData {
   labels?: Record<string, string>;
   source: string;
 }
-interface MapsFile {
+export interface MapsFile {
   maps: Record<string, RegionMapData>;
   /** PokeAPI version id → map ids shown for that game. */
   games: Record<string, string[]>;
 }
 
 let mapsPromise: Promise<MapsFile> | undefined;
-const loadMaps = () =>
+export const loadMaps = () =>
   (mapsPromise ??= SIDE_LOADED_DATA ? fetchGenerated<MapsFile>('maps') : import('@/data/generated/maps.json').then((m) => m.default as unknown as MapsFile));
-const asset = (path: string) => `${import.meta.env.BASE_URL ?? './'}${path}`.replace(/^\/\//, '/');
+export const asset = (path: string) => `${import.meta.env.BASE_URL ?? './'}${path}`.replace(/^\/\//, '/');
 
 const SOURCE_LABEL: Record<string, string> = {
   'pret/pokered': 'Red / Blue town map',
@@ -113,7 +113,7 @@ export function RegionMaps({ game, encounters, selected, onSelect }: { game: str
 }
 
 /** Zoom / pan frame around a map: buttons, pinch, ctrl/⌘ + wheel, drag, double-click. */
-function MapViewport({ map, focus, children }: { map: RegionMapData; focus?: string; children: ReactNode }) {
+export function MapViewport({ map, focus, fixedScale, children }: { map: RegionMapData; focus?: string; /** Integer pixel scale (pixel-perfect maps): the map is exactly this many CSS px per map pixel, or the full width when that doesn't fit. */ fixedScale?: number; children: ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<MapView>(IDENTITY_VIEW);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -207,8 +207,11 @@ function MapViewport({ map, focus, children }: { map: RegionMapData; focus?: str
       <div className="flex justify-center p-2 sm:p-3">
         <div
           ref={box}
-          className={cn('relative w-full overflow-hidden', map.style === 'schematic' ? 'max-w-3xl' : 'max-w-2xl', zoomed ? 'cursor-grab touch-none active:cursor-grabbing' : 'touch-pan-y')}
-          style={{ aspectRatio: map.style === 'schematic' ? `${map.width + 2} / ${map.height + 2}` : `${map.width} / ${map.height}`, maxHeight: '70vh' }}
+          className={cn('relative w-full overflow-hidden', fixedScale ? '' : map.style === 'schematic' ? 'max-w-3xl' : 'max-w-2xl', zoomed ? 'cursor-grab touch-none active:cursor-grabbing' : 'touch-pan-y')}
+          style={{
+            aspectRatio: map.style === 'schematic' ? `${map.width + 2} / ${map.height + 2}` : `${map.width} / ${map.height}`,
+            ...(fixedScale ? { width: map.width * fixedScale, maxWidth: '100%' } : { maxHeight: '70vh' }),
+          }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

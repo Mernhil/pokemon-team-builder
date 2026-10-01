@@ -2,6 +2,43 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.10.0 — 2026-10-01
+
+### New
+- **Pokénav for Generation 5 onward (encounters only):** Black / White, Black 2 / White 2, X / Y, Omega Ruby / Alpha Sapphire, Sun / Moon, Ultra Sun / Ultra Moon, Let's Go, Sword / Shield, Brilliant Diamond / Shining Pearl, Legends: Arceus, Scarlet / Violet and Legends: Z-A. A searchable list of the places with every wild, static, gift and trade Pokémon (search by place or by Pokémon) and a visited-places tracker. No map, items, NPCs, shops or trainer teams: no pinned source has them (`docs/atlas-sources.md`).
+- A **Team** button on every trainer row opens the trainer's team in the Builder's own roster layout.
+- Each game button has a colour icon, and the games are grouped by generation.
+
+### Changed
+- The Atlas tab is now called **Pokénav**.
+
+## 0.9.2 — 2026-09-30
+
+### New
+- **Atlas tab** for Red / Blue / Yellow, Gold / Silver / Crystal, Ruby / Sapphire / Emerald, FireRed / LeafGreen, HeartGold / SoulSilver, Diamond / Pearl (map, trainers, gyms; its scripts are binary, so no items, NPCs or shops) and Platinum, from the pret decompilations. Platinum in detail: an interactive Sinnoh Town Map (whole-number pixel scale,
+  the game's red city / blue landmark / teal special markers). Hover a place for a preview; click, tap or
+  press Enter to open it; arrow keys move between places. Filters (has Gym / Mart / Pokémon Center, has
+  item, Pokémon appears here, trainer uses move, free text) make matches glow.
+- **Location details** in a side panel (bottom sheet on phones): Overview (Gym leader, badge, level cap,
+  Poké Mart stock with prices and badge tiers, connections, obstacles), Items (visible, hidden, gift and
+  TM spots with tile coordinates), NPCs (dialogue, gifts, trades), Wild Pokémon and Trainers.
+- **All 927 Platinum trainers with full teams**, built from the pret/pokeplatinum decompilation: level,
+  item, moves, ability, nature and IVs as the game computes them, rematch and starter-dependent
+  versions, defensive and offensive matrices, **Load into Builder** and **Calc as attacker / defender**.
+- Item database, trainer index (name, class, location, Pokémon, move) and a progress tracker saved on
+  the device. The Pokédex Area page links each location to the Atlas.
+- `npm run atlas` builds the data; `docs/data-gaps/platinum.md` reports coverage and what is unverified.
+
+### Changed
+- The item icon atlas now includes bag items and type-coloured TM/HM icons.
+- Bundle budget: the largest lazy chunk may be 320 KB gzipped (a game's Atlas file is ~280 KB).
+
+### Known limits
+- Diamond / Pearl, HeartGold / SoulSilver and Generation 5 onward have no Atlas yet.
+- Ruby / Sapphire, LeafGreen and Blue / Silver reuse their sibling's data; version-only differences are not applied (see each game's `docs/data-gaps` file).
+- 245 trainer entries (unused / daily Pokémon Center trainers) and 15 hidden items sit on maps the
+  Town Map does not show; story requirements for reaching areas are not listed.
+
 ## 0.7.0 — 2026-09-28
 
 ### New

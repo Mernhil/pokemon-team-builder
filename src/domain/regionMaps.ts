@@ -67,3 +67,91 @@ export function zoomAt(v: MapView, factor: number, px: number, py: number, w: nu
 export function centerOn(v: MapView, cx: number, cy: number, w: number, h: number): MapView {
   return clampView({ scale: v.scale, x: w / 2 - cx * w * v.scale, y: h / 2 - cy * h * v.scale }, w, h);
 }
+
+// ---------------------------------------------------------------------------
+// Keyboard navigation between locations
+// ---------------------------------------------------------------------------
+
+export type Dir = 'left' | 'right' | 'up' | 'down';
+
+const centre = (r: Rect[]) => placeCenter(r);
+
+/**
+ * The location an arrow key moves to: the nearest candidate whose centre lies in that direction
+ * (within a 45° cone, sideways drift weighted double), or undefined at the edge.
+ */
+export function neighbour(places: Record<string, Rect[]>, from: string, dir: Dir, candidates: Iterable<string> = Object.keys(places)): string | undefined {
+  const origin = places[from];
+  if (!origin) return undefined;
+  const [fx, fy] = centre(origin);
+  let best: { id: string; score: number } | undefined;
+  for (const id of candidates) {
+    if (id === from || !places[id]) continue;
+    const [x, y] = centre(places[id]);
+    const along = dir === 'left' ? fx - x : dir === 'right' ? x - fx : dir === 'up' ? fy - y : y - fy;
+    const across = Math.abs(dir === 'left' || dir === 'right' ? y - fy : x - fx);
+    if (along <= 0 || across > along) continue;
+    const score = along + across * 2;
+    if (!best || score < best.score || (score === best.score && id < best.id)) best = { id, score };
+  }
+  return best?.id;
+}
+
+// ---------------------------------------------------------------------------
+// Outline of a place made of several blocks
+// ---------------------------------------------------------------------------
+
+/**
+ * One SVG path around the union of a place's blocks, so a route drawn as a row of 7×7 blocks
+ * selects as a single rectangle (an L-shaped route as one L). Rects are split into `cell`-sized
+ * cells, interior edges cancel, and the remaining edges are chained into closed loops with collinear
+ * points dropped.
+ */
+export function unionOutline(rects: Rect[], cell = 7): string {
+  type P = [number, number];
+  const key = ([x, y]: P) => `${x},${y}`;
+  // Directed edges, clockwise around each cell; a shared edge appears in both directions and cancels.
+  const edges = new Map<string, P[]>();
+  const cancel = new Set<string>();
+  const add = (a: P, b: P) => {
+    const back = `${key(b)}>${key(a)}`;
+    if (cancel.has(back)) {
+      cancel.delete(back);
+      const list = edges.get(key(b))!;
+      list.splice(list.findIndex((q) => key(q) === key(a)), 1);
+      return;
+    }
+    cancel.add(`${key(a)}>${key(b)}`);
+    (edges.get(key(a)) ?? edges.set(key(a), []).get(key(a))!).push(b);
+  };
+  for (const [x, y, w, h] of rects)
+    for (let cx = 0; cx < Math.max(1, Math.round(w / cell)); cx++)
+      for (let cy = 0; cy < Math.max(1, Math.round(h / cell)); cy++) {
+        const x0 = x + cx * cell, y0 = y + cy * cell, x1 = x0 + Math.min(cell, w), y1 = y0 + Math.min(cell, h);
+        add([x0, y0], [x1, y0]);
+        add([x1, y0], [x1, y1]);
+        add([x1, y1], [x0, y1]);
+        add([x0, y1], [x0, y0]);
+      }
+  const parts: string[] = [];
+  for (const [startKey, outs] of edges) {
+    while (outs.length) {
+      const start = startKey.split(',').map(Number) as P;
+      const pts: P[] = [start];
+      let cur: P = outs.shift()!;
+      while (key(cur) !== startKey) {
+        pts.push(cur);
+        const next = edges.get(key(cur));
+        if (!next?.length) break;
+        cur = next.shift()!;
+      }
+      // drop points on straight runs
+      const tidy = pts.filter((p, i) => {
+        const a = pts[(i + pts.length - 1) % pts.length], b = pts[(i + 1) % pts.length];
+        return (p[0] - a[0]) * (b[1] - p[1]) !== (p[1] - a[1]) * (b[0] - p[0]);
+      });
+      parts.push(`M${tidy.map((q) => q.join(' ')).join('L')}Z`);
+    }
+  }
+  return parts.join('');
+}

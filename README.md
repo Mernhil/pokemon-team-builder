@@ -17,6 +17,7 @@ npm run build:single  # one self-contained index.html (works offline)
 npm run data          # regenerate src/data/generated/*.json (Showdown data + regulation files + Gen 1–9 datasets)
 npm run pokedex       # Pokédex entries + wild encounters per book (PokeAPI CSVs + PKHeX encounter tables)
 npm run maps          # Area maps: in-game maps from the pret disassemblies + src/data/maps/*.json schematics
+npm run atlas         # Atlas databases per game (locations, items, NPCs, shops, every trainer's team) from the pret decompilations; needs `npm run data`, `pokedex` and `maps` first
 npm run sprites       # rebuild sprite atlases in public/sprites/ (PokeAPI)
 npm run reg:status    # regulation calendar: live set, end date, announced sets
 npm run build:artifact  # single-file build for the hosted claude.ai app
@@ -34,6 +35,8 @@ scripts/build-games.ts       Let's Go / BDSP / Legends: Arceus / Legends: Z-A da
 scripts/build-pokedex.ts     Pokédex entries, regional numbers, wild encounters (PokeAPI CSVs + PKHeX)
 scripts/pkhex-encounters.ts  Reads PKHeX's wild-encounter tables (BDSP, Legends, SV, ORAS, SM/USUM)
 scripts/sources.ts           Pinned Showdown / PKHeX checkouts the build scripts read from
+scripts/build-atlas.ts       Atlas driver: `npm run atlas [-- game]` writes atlas-<game>.json + docs/data-gaps/<game>.md
+scripts/atlas/               one builder per engine: gen1 (Red/Blue/Yellow), gen2 (Gold/Silver/Crystal), gba (Ruby/Emerald/FireRed), platinum
 scripts/build-maps.ts        Area maps: renders the Gen 1–4 in-game maps from pret, validates the schematics, writes docs/MAP_COVERAGE.md
 src/
   domain/                    Framework-free core (100% unit-testable)
@@ -61,6 +64,7 @@ src/
     team/TeamSlots           6-slot roster with drag-and-drop (dnd-kit)
     analysis/                Validation panel, defensive type matrix
     io/                      Import/export dialog, saved-teams dialog
+    atlas/                   Pokénav tab: interactive game maps, location panel, trainer detail, item database, trainer index, progress
     pokedex/                 Pokédex list + entry (Info / Moves / Area) and the region map renderer
 ```
 
@@ -176,6 +180,19 @@ The rest of the main series has one format each. Every game has its own dataset,
 
 The damage calculator uses Gen 7 mechanics for Let's Go, with the game's own AV and friendship stats. Legends: Arceus (Agile/Strong Styles) and Legends: Z-A (real-time battles) aren't turn-based Showdown mechanics, so for those two the calculator and in-battle details explain that instead of showing numbers that would be wrong.
 In both Legends games, move power and accuracy are Showdown's Sword/Shield and Scarlet/Violet values, because Showdown has no data for those games' own move changes.
+
+### Pokénav
+
+The **Pokénav** tab (`#atlas`, formerly Atlas) is a game database built around the game's own map. Every main-series game with a public decompilation is covered: Red / Blue / Yellow, Gold / Silver / Crystal, Ruby / Sapphire / Emerald, FireRed / LeafGreen, HeartGold / SoulSilver, Diamond / Pearl and Platinum (from [pret](https://github.com/pret)'s Red, Yellow, Gold, Crystal, Ruby, Emerald, FireRed, HeartGold and Platinum decompilations; HeartGold's scripted counters (apricorn, Game Corner) aren't read, see `docs/data-gaps/heartgold.md`). Diamond / Pearl's scripts are compiled binaries, so it has the map, places, every trainer's team, gyms and Pokémon Centers but no items, NPCs or shop stock (`docs/data-gaps/diamond.md`); Generation 5 onward has no decompilation to read, so those games need a different source.
+
+- **Map:** the Sinnoh Town Map rendered from [pret/pokeplatinum](https://github.com/pret/pokeplatinum) (whole-number upscale, pixel-perfect), with the game's red city, blue landmark and teal special markers. Every place is a focusable shape: hover for a preview, click / Enter / tap to open, arrow keys move between places. Filters (has Gym / Mart / Pokémon Center, has item, Pokémon appears here, trainer uses move, free text) make the matches glow.
+- **Location panel** (side panel; bottom sheet on phones): Overview (Gym leader, badge and level cap, Poké Mart stock with prices and badge tiers, connections, obstacles), Items (every visible, hidden, gift and TM spot with tile coordinates), NPCs (dialogue, gifts, trades), Wild Pokémon (from the Pokédex tables, linked to the Pokédex), Trainers and Notes.
+- **Trainers:** all 927 trainers with full teams: level, item, moves, ability, nature and IVs as the game computes them, rematch and starter-dependent versions, the team's defensive and offensive matrices, **Load into Builder** (through the Showdown importer, in the game's Gen format) and **Calc as attacker / defender**.
+- **Items**, **Trainers** and **Progress** pages: item database with every place to get an item, trainer index searchable by name, class, location, Pokémon or move, and a progress tracker (visited / collected / beaten, saved in this browser).
+
+Data is generated by `npm run atlas` from the decompilation and never edited by hand. Anything the source doesn't settle is listed as unverified; [`docs/data-gaps/`](docs/data-gaps) reports what was found against what the source holds, per game.
+
+Generation 5 onward (Black / White … Scarlet / Violet, Legends: Arceus and Z-A) has no decompilation to read, so those games are **encounters only**: a searchable list of places with every wild, static, gift and trade Pokémon, built from the Pokédex data by `scripts/atlas/encounters.ts`. No map, items, NPCs, shops or trainer teams ([`docs/atlas-sources.md`](docs/atlas-sources.md)).
 
 ### Pokédex
 

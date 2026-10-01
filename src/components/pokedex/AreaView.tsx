@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapPin } from 'lucide-react';
+import { Map as MapIcon, MapPin } from 'lucide-react';
+import { ATLAS_GAMES } from '@/domain/atlas';
+import { useAtlasStore } from '@/store/atlasStore';
+import { useTeamStore } from '@/store/teamStore';
 import type { Dex } from '@/data/dex';
 import type { DexBook } from '@/domain/games';
 import { evolutionMethod, type Encounter, type PokedexData } from '@/domain/pokedex';
@@ -39,6 +42,8 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
     return [...m.entries()];
   }, [here]);
 
+  // Games with a Pokénav link each location to the interactive map with the spot highlighted.
+  const atlasGame = ATLAS_GAMES.find((a) => a.available && a.dexGame === game.id);
   const prevo = species.prevo ? dex.species(species.prevo) : undefined;
 
   // The location picked on the map (or in the list): highlighted in both.
@@ -89,6 +94,18 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
                   >
                     <MapPin size={13} className="text-accent" aria-hidden /> {g.name}
                   </button>
+                  {atlasGame && (
+                    <button
+                      type="button"
+                      className="hit ml-2 inline-flex items-center gap-1 rounded text-xs font-semibold text-accent hover:underline"
+                      onClick={() => {
+                        useAtlasStore.getState().setFocus({ game: atlasGame.id, loc });
+                        useTeamStore.getState().setView('atlas');
+                      }}
+                    >
+                      <MapIcon size={12} aria-hidden /> Show in Pokénav
+                    </button>
+                  )}
                 </h3>
                 <div className="-mx-1 overflow-x-auto">
                   <table className="w-full text-xs">
