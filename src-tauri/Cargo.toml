@@ -1,6 +1,6 @@
 [package]
 name = "pokemon-team-builder"
-version = "0.9.2"
+version = "0.10.0"
 description = "Pokémon Champions team builder, stat calculator and damage calc"
 authors = ["Mernhil"]
 license = ""

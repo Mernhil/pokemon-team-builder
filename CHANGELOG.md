@@ -2,7 +2,7 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## Unreleased
+## 0.10.0 — 2026-10-01
 
 ### New
 - **Pokénav for Generation 5 onward (encounters only):** Black / White, Black 2 / White 2, X / Y, Omega Ruby / Alpha Sapphire, Sun / Moon, Ultra Sun / Ultra Moon, Let's Go, Sword / Shield, Brilliant Diamond / Shining Pearl, Legends: Arceus, Scarlet / Violet and Legends: Z-A. A searchable list of the places with every wild, static, gift and trade Pokémon (search by place or by Pokémon) and a visited-places tracker. No map, items, NPCs, shops or trainer teams: no pinned source has them (`docs/atlas-sources.md`).
