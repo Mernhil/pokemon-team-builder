@@ -1,0 +1,28 @@
+{
+  "id": "unova-art",
+  "name": "Unova",
+  "image": "unova.png",
+  "crop": [13, 14, 255, 166],
+  "width": 900,
+  "from": "unova",
+  "games": ["black", "white", "black-2", "white-2"],
+  "source": "supplied screenshot (Black / White, Black 2 / White 2)",
+  "minSize": 24,
+  "control": [
+    ["aspertia-city", 26, 166],
+    ["floccesy-town", 45, 140],
+    ["virbank-city", 82, 140],
+    ["castelia-city", 143, 142],
+    ["nimbasa-city", 144, 104],
+    ["driftveil-city", 87, 104],
+    ["mistralton-city", 87, 57],
+    ["icirrus-city", 144, 57],
+    ["opelucid-city", 203, 57],
+    ["lacunosa-town", 247, 49],
+    ["undella-town", 237, 80],
+    ["nuvema-town", 245, 171],
+    ["accumula-town", 245, 150],
+    ["striaton-city", 241, 130],
+    ["nacrene-city", 215, 130]
+  ]
+}

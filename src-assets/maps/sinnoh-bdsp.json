@@ -1,0 +1,31 @@
+{
+  "id": "sinnoh-bdsp",
+  "name": "Sinnoh",
+  "image": "sinnoh-bdsp.png",
+  "crop": [28, 25, 639, 342],
+  "width": 1000,
+  "from": "sinnoh-pt",
+  "games": ["brilliant-diamond", "shining-pearl"],
+  "source": "supplied screenshot (Brilliant Diamond / Shining Pearl)",
+  "minSize": 24,
+  "control": [
+    ["snowpoint-city", 310, 58],
+    ["eterna-city", 290, 202],
+    ["floaroma-town", 226, 238],
+    ["canalave-city", 166, 274],
+    ["jubilife-city", 220, 286],
+    ["oreburgh-city", 278, 285],
+    ["hearthome-city", 352, 263],
+    ["solaceon-town", 400, 245],
+    ["veilstone-city", 460, 226],
+    ["pastoria-city", 424, 322],
+    ["sunyshore-city", 520, 286],
+    ["sandgem-town", 226, 329],
+    ["twinleaf-town", 190, 340],
+    ["sinnoh-pokemon-league", 514, 196],
+    ["celestic-town", 346, 196],
+    ["fight-area", 416, 160],
+    ["survival-area", 430, 124],
+    ["resort-area", 493, 172]
+  ]
+}

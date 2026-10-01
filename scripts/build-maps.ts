@@ -49,6 +49,8 @@ export interface RegionMapOut {
   height: number;
   /** Path under public/ of the rendered in-game map (schematic maps have none). */
   image?: string;
+  /** Painted / photographic image: scale smoothly instead of pixelated. */
+  smooth?: boolean;
   /** How the game marked a Pokémon's area: blinking nest icons (Gen 1–2) or glowing squares (Gen 3+). */
   style: 'nest' | 'area' | 'schematic';
   /** PokeAPI location identifier → rectangles in map pixels. */
@@ -768,6 +770,132 @@ async function johtoKantoHGSS(): Promise<RegionMapOut> {
 }
 
 // ---------------------------------------------------------------------------
+// Supplied images (src-assets/maps): screenshots of the games' own maps, with the places of an existing
+// map of the same region carried over by a least-squares fit on landmark control points
+// ---------------------------------------------------------------------------
+
+interface SuppliedConfig {
+  id: string;
+  name: string;
+  /** Image file in src-assets/maps. */
+  image: string;
+  /** Crop of the source image [x, y, w, h] (drops UI, borders and captions). */
+  crop: [number, number, number, number];
+  /** Output width in px (the crop is resized to it). */
+  width: number;
+  /** The map whose places are carried over (a real map of the same region, or its schematic). */
+  from: string;
+  /** Games (PokeAPI versions) that show this map in place of `from`. */
+  games: string[];
+  source: string;
+  /** [place id, x, y] in the ORIGINAL image's pixels: where that place's centre is. */
+  control: [string, number, number][];
+  /** Smallest drawn size of a place, in output px (default 18). */
+  minSize?: number;
+  /** Paint over a UI element: copy the rect `from` [x, y, w, h] onto `to` [x, y] (original pixels). */
+  patches?: { from: [number, number, number, number]; to: [number, number] }[];
+}
+
+function suppliedConfigs(): SuppliedConfig[] {
+  const dir = resolve(ROOT, 'src-assets/maps');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).filter((f) => f.endsWith('.json')).sort().map((f) => JSON.parse(readFileSync(resolve(dir, f), 'utf8')) as SuppliedConfig);
+}
+
+/** Solve the 3×3 normal equations of a least-squares fit `target = a·x + b·y + t`. */
+function fitAffine(pairs: { sx: number; sy: number; tx: number; ty: number }[]) {
+  const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], bx = [0, 0, 0], by = [0, 0, 0];
+  for (const { sx, sy, tx, ty } of pairs) {
+    const v = [sx, sy, 1];
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) A[i][j] += v[i] * v[j];
+      bx[i] += v[i] * tx;
+      by[i] += v[i] * ty;
+    }
+  }
+  const solve = (b: number[]) => {
+    const M = A.map((row, i) => [...row, b[i]]);
+    for (let c = 0; c < 3; c++) {
+      let p = c;
+      for (let r = c + 1; r < 3; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]];
+      for (let r = 0; r < 3; r++) {
+        if (r === c) continue;
+        const f = M[r][c] / M[c][c];
+        for (let k = c; k < 4; k++) M[r][k] -= f * M[c][k];
+      }
+    }
+    return [0, 1, 2].map((i) => M[i][3] / M[i][i]);
+  };
+  const [a, b, tx] = solve(bx), [c, d, ty] = solve(by);
+  return { a, b, tx, c, d, ty };
+}
+
+const bbox = (rects: Rect[]): Rect => {
+  const x0 = Math.min(...rects.map((r) => r[0])), y0 = Math.min(...rects.map((r) => r[1]));
+  const x1 = Math.max(...rects.map((r) => r[0] + r[2])), y1 = Math.max(...rects.map((r) => r[1] + r[3]));
+  return [x0, y0, x1 - x0, y1 - y0];
+};
+
+async function suppliedMaps(built: RegionMapOut[], configs: SuppliedConfig[]): Promise<RegionMapOut[]> {
+  const out: RegionMapOut[] = [];
+  for (const cfg of configs) {
+    const src = built.find((m) => m.id === cfg.from);
+    if (!src) throw new Error(`${cfg.id}: source map ${cfg.from} not found`);
+    const [cx, cy, cw, ch] = cfg.crop;
+    const k = cfg.width / cw, W = cfg.width, H = Math.round(ch * k);
+    const file = resolve(ROOT, 'src-assets/maps', cfg.image);
+    let base = await sharp(file).png().toBuffer();
+    for (const p of cfg.patches ?? []) {
+      const piece = await sharp(base).extract({ left: p.from[0], top: p.from[1], width: p.from[2], height: p.from[3] }).png().toBuffer();
+      base = await sharp(base).composite([{ input: piece, left: p.to[0], top: p.to[1] }]).png().toBuffer();
+    }
+    await sharp(base).extract({ left: cx, top: cy, width: cw, height: ch }).resize({ width: W, height: H, kernel: 'lanczos3' }).webp({ quality: 92 }).toFile(resolve(OUT_IMG, `${cfg.id}.webp`));
+
+    const pairs = cfg.control.map(([id, x, y]) => {
+      const rects = src.places[id];
+      if (!rects) throw new Error(`${cfg.id}: control place ${id} is not on ${cfg.from}`);
+      const [bx, by, bw, bh] = bbox(rects);
+      return { id, sx: bx + bw / 2, sy: by + bh / 2, tx: (x - cx) * k, ty: (y - cy) * k };
+    });
+    if (pairs.length < 3) throw new Error(`${cfg.id}: need at least 3 control points`);
+    const f = fitAffine(pairs);
+    const err = pairs.map((p) => ({ id: p.id, e: Math.hypot(f.a * p.sx + f.b * p.sy + f.tx - p.tx, f.c * p.sx + f.d * p.sy + f.ty - p.ty) }));
+    const rms = Math.sqrt(err.reduce((n, p) => n + p.e * p.e, 0) / err.length);
+    console.log(`  ${cfg.id}: fit rms ${rms.toFixed(1)} px of ${W} (worst ${err.sort((a, b) => b.e - a.e).slice(0, 2).map((p) => `${p.id} ${p.e.toFixed(0)}`).join(', ')})`);
+
+    // The fit is affine, but the two pictures of a region are rarely the same projection: spread each control
+    // point's leftover error smoothly (inverse-distance weights), so those places land exactly and their neighbours follow.
+    const resid = pairs.map((p) => ({ sx: p.sx, sy: p.sy, dx: p.tx - (f.a * p.sx + f.b * p.sy + f.tx), dy: p.ty - (f.c * p.sx + f.d * p.sy + f.ty) }));
+    const warp = (sx: number, sy: number): [number, number] => {
+      let wsum = 0, dx = 0, dy = 0;
+      for (const r of resid) {
+        const w = 1 / ((sx - r.sx) ** 2 + (sy - r.sy) ** 2 + 1e-3) ** 1.5;
+        wsum += w;
+        dx += w * r.dx;
+        dy += w * r.dy;
+      }
+      return [f.a * sx + f.b * sy + f.tx + dx / wsum, f.c * sx + f.d * sy + f.ty + dy / wsum];
+    };
+    const scaleX = Math.hypot(f.a, f.c), scaleY = Math.hypot(f.b, f.d), min = cfg.minSize ?? 18;
+    const places: Record<string, Rect[]> = {};
+    for (const [id, rects] of Object.entries(src.places))
+      places[id] = rects.map(([x, y, w, h]) => {
+        const mx = x + w / 2, my = y + h / 2;
+        const [X, Y] = warp(mx, my);
+        const rw = Math.max(min, w * scaleX), rh = Math.max(min, h * scaleY);
+        const rx = Math.min(Math.max(0, Math.round(X - rw / 2)), W - 2), ry = Math.min(Math.max(0, Math.round(Y - rh / 2)), H - 2);
+        return [rx, ry, Math.min(Math.round(rw), W - rx), Math.min(Math.round(rh), H - ry)] as Rect;
+      });
+    const known = gameLocations(cfg.games);
+    const map: RegionMapOut = { id: cfg.id, name: cfg.name, width: W, height: H, image: `maps/${cfg.id}.webp`, style: 'area', smooth: true, places, source: cfg.source };
+    report(map, known);
+    out.push(map);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Schematic maps (Gen 4+): src/data/maps/<id>.json, validated against the encounter data
 // ---------------------------------------------------------------------------
 
@@ -830,9 +958,13 @@ export const GAME_MAPS: Record<string, string[]> = {
 async function main() {
   mkdirSync(OUT_IMG, { recursive: true });
   for (const f of readdirSync(OUT_IMG)) if (f.endsWith('.png')) rmSync(resolve(OUT_IMG, f)); // pre-0.7 output
-  const maps: RegionMapOut[] = [await kantoRBY(), ...(await crystal()), await hoennRSE(), ...(await frlg()), await sinnohPt(), await johtoKantoHGSS(), ...schematics()];
+  const base: RegionMapOut[] = [await kantoRBY(), ...(await crystal()), await hoennRSE(), ...(await frlg()), await sinnohPt(), await johtoKantoHGSS(), ...schematics()];
+  const configs = suppliedConfigs();
+  const maps: RegionMapOut[] = [...base, ...(await suppliedMaps(base, configs))];
   const games: Record<string, string[]> = { ...GAME_MAPS };
   for (const s of schematicFiles()) for (const v of s.games ?? s.versions) games[v] = [...(games[v] ?? []).filter((m) => m !== s.id), s.id];
+  // A supplied screenshot takes the place of the map it was fitted to, for the games it lists.
+  for (const c of configs) for (const v of c.games) games[v] = [c.id, ...(games[v] ?? []).filter((m) => m !== c.from)];
   writeFileSync(OUT_JSON, JSON.stringify({ maps: Object.fromEntries(maps.map((m) => [m.id, m])), games }));
   writeCoverage(games, maps);
   console.log(`wrote ${maps.length} maps → public/maps/, src/data/generated/maps.json, docs/MAP_COVERAGE.md`);

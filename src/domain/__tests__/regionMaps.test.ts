@@ -13,8 +13,11 @@ describe('location resolution', () => {
     expect(r.offMap).toEqual(['roaming-kanto']);
   });
 
-  it('places Sinnoh from the Platinum Town Map for Diamond/Pearl, Platinum and BDSP', () => {
-    for (const game of ['diamond', 'platinum', 'brilliant-diamond']) expect(maps.games[game]).toEqual(['sinnoh-pt']);
+  it('places Sinnoh from the Platinum Town Map for Diamond/Pearl and Platinum, and BDSP from its own artwork', () => {
+    for (const game of ['diamond', 'platinum']) expect(maps.games[game]).toEqual(['sinnoh-pt']);
+    expect(maps.games['brilliant-diamond']).toEqual(['sinnoh-bdsp']);
+    // The BDSP map carries every place of the Platinum one.
+    expect(Object.keys(maps.maps['sinnoh-bdsp'].places).sort()).toEqual(Object.keys(maps.maps['sinnoh-pt'].places).sort());
     const sinnoh = maps.maps['sinnoh-pt'];
     expect(sinnoh.source).toBe('pret/pokeplatinum');
     expect(sinnoh.image).toBe('maps/sinnoh-pt.webp');

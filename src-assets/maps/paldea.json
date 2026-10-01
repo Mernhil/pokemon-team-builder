@@ -1,0 +1,23 @@
+{
+  "id": "paldea-art",
+  "name": "Paldea",
+  "image": "paldea.png",
+  "crop": [3, 13, 510, 498],
+  "width": 1000,
+  "from": "paldea",
+  "games": ["scarlet", "violet"],
+  "source": "supplied screenshot (Scarlet / Violet)",
+  "minSize": 28,
+  "control": [
+    ["mesagoza", 247, 397],
+    ["cascarrafa", 152, 282],
+    ["porto-marinada", 50, 258],
+    ["levincia", 432, 305],
+    ["alfornada", 90, 462],
+    ["area-zero", 245, 320],
+    ["glaseado-mountain", 290, 175],
+    ["asado-desert", 90, 280],
+    ["cabo-poco", 250, 495],
+    ["artazon", 207, 245]
+  ]
+}

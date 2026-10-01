@@ -3,6 +3,7 @@ import { Map as MapIcon, Maximize2, Minus, Plus } from 'lucide-react';
 import { SIDE_LOADED_DATA, fetchGenerated } from '@/data/generated-loader';
 import type { Encounter } from '@/domain/pokedex';
 import { IDENTITY_VIEW, MAX_ZOOM, centerOn, clampView, placeCenter, resolveLocations, zoomAt, type MapView, type Rect } from '@/domain/regionMaps';
+import { SchematicBase } from './SchematicMap';
 import { Button, Notice } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
@@ -12,6 +13,8 @@ export interface RegionMapData {
   width: number;
   height: number;
   image?: string;
+  /** Painted artwork: scale smoothly instead of pixelated. */
+  smooth?: boolean;
   style: 'nest' | 'area' | 'schematic';
   places: Record<string, Rect[]>;
   nestIcon?: string[];
@@ -269,55 +272,27 @@ function MapCanvas({ map, found, names, selected, onSelect }: { map: RegionMapDa
       : null;
 
   if (map.style === 'schematic') {
-    const order = ['zone', 'sea', 'snow', 'route', 'forest', 'lake', 'mountain', 'landmark', 'cave', 'dungeon', 'town'];
-    const entries = Object.entries(map.places).sort(([a], [b]) => order.indexOf(map.kinds?.[a] ?? 'route') - order.indexOf(map.kinds?.[b] ?? 'route'));
+    const lit = Object.entries(map.places).filter(([loc]) => found.has(loc));
     return (
       <svg viewBox={`-1 -1 ${map.width + 2} ${map.height + 2}`} className="block h-full w-full" role="group" aria-label={`${map.name} schematic map`}>
-        <rect x={-1} y={-1} width={map.width + 2} height={map.height + 2} fill="#2c5d8a" />
-        {map.land?.map((d, i) => <path key={i} d={d} fill="#6f9a52" stroke="#e8dfb0" strokeWidth={0.25} strokeLinejoin="round" />)}
-        {entries.map(([loc, rects]) =>
-          rects.map(([x, y, w, h], i) => {
-            const kind = map.kinds?.[loc] ?? 'route';
-            const on = found.has(loc);
-            if (kind === 'zone')
-              // Whole areas (Obsidian Fieldlands, a Lumiose district…): an outline, lit as an outline.
-              return (
-                <g key={loc + i} {...(on ? pick(loc) : {})}>
-                  <title>{label(loc)}</title>
-                  <rect x={x} y={y} width={w} height={h} rx={0.6} fill={on ? '#ff5d5d18' : 'none'} stroke={on ? '#ff5d5d' : '#ffffff55'} strokeWidth={on ? 0.35 : 0.18} strokeDasharray={on ? undefined : '0.6 0.5'} className={on ? 'area-glow' : undefined} />
-                </g>
-              );
-            return (
-              <g key={loc + i} {...(on ? pick(loc) : {})}>
+        <SchematicBase map={map} label={label} />
+        {lit.map(([loc, rects]) =>
+          rects.map(([x, y, w, h], i) =>
+            map.kinds?.[loc] === 'zone' ? (
+              // Whole areas (Obsidian Fieldlands, a Lumiose district…): lit as an outline.
+              <g key={loc + i} {...pick(loc)}>
                 <title>{label(loc)}</title>
-                <rect
-                  x={x + 0.1}
-                  y={y + 0.1}
-                  width={w - 0.2}
-                  height={h - 0.2}
-                  rx={kind === 'town' ? 0.25 : kind === 'lake' ? 0.8 : 0.15}
-                  fill={SCHEMATIC_FILL[kind] ?? SCHEMATIC_FILL.route}
-                  stroke={kind === 'town' ? '#3b2a1a' : 'none'}
-                  strokeWidth={0.15}
-                  opacity={on ? 0.35 : 0.95}
-                />
-                {on && (
-                  <>
-                    <rect className="area-glow" x={x} y={y} width={w} height={h} rx={0.2} fill="#ff5d5d" />
-                    <circle className="area-ring pointer-events-none" cx={x + w / 2} cy={y + h / 2} r={Math.min(Math.max(w, h) / 2 + 0.9, 3)} fill="none" stroke="#ff5d5d" strokeWidth={0.3} />
-                  </>
-                )}
+                <rect x={x} y={y} width={w} height={h} rx={0.8} fill="#ff5d5d18" stroke="#ff5d5d" strokeWidth={0.35} className="area-glow" />
               </g>
-            );
-          }),
+            ) : (
+              <g key={loc + i} {...pick(loc)}>
+                <title>{label(loc)}</title>
+                <rect className="area-glow" x={x - 0.1} y={y - 0.1} width={w + 0.2} height={h + 0.2} rx={0.3} fill="#ff5d5d" fillOpacity={0.55} stroke="#ff5d5d" strokeWidth={0.15} />
+                <circle className="area-ring pointer-events-none" cx={x + w / 2} cy={y + h / 2} r={Math.min(Math.max(w, h) / 2 + 0.9, 3)} fill="none" stroke="#ff5d5d" strokeWidth={0.3} />
+              </g>
+            ),
+          ),
         )}
-        {entries
-          .filter(([loc]) => map.kinds?.[loc] === 'town')
-          .map(([loc, [[x, y, w]]]) => (
-            <text key={loc} x={x + w / 2} y={y - 0.3} fontSize={0.9} textAnchor="middle" fill="#fff" stroke="#0008" strokeWidth={0.18} paintOrder="stroke" className="pointer-events-none select-none">
-              {label(loc).replace(/ (City|Town)$/, '')}
-            </text>
-          ))}
         {outline(0.3)}
       </svg>
     );
@@ -331,8 +306,8 @@ function MapCanvas({ map, found, names, selected, onSelect }: { map: RegionMapDa
     );
 
   return (
-    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="block h-full w-full" style={{ imageRendering: 'pixelated' }} role="group" aria-label={`${map.name} map`}>
-      <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: 'pixelated' }} onError={() => setBroken(true)} />
+    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="block h-full w-full" style={{ imageRendering: map.smooth ? 'auto' : 'pixelated' }} role="group" aria-label={`${map.name} map`}>
+      <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: map.smooth ? 'auto' : 'pixelated' }} onError={() => setBroken(true)} />
       {Object.entries(map.places)
         .filter(([loc]) => !found.has(loc))
         .map(([loc, rects]) =>
@@ -368,44 +343,3 @@ function MapCanvas({ map, found, names, selected, onSelect }: { map: RegionMapDa
 
 const FALLBACK_NEST = ['.######.', '#......#', '#.####.#', '#.#..#.#', '#.#..#.#', '#.####.#', '#......#', '.######.'];
 
-/** The schematic map's backdrop: sea, land, and every place drawn plain (no highlight); callers lay their own interaction on top. */
-export function SchematicBase({ map, label }: { map: RegionMapData; label: (loc: string) => string }) {
-  const order = ['zone', 'sea', 'snow', 'route', 'forest', 'lake', 'mountain', 'landmark', 'cave', 'dungeon', 'town'];
-  const entries = Object.entries(map.places).sort(([a], [b]) => order.indexOf(map.kinds?.[a] ?? 'route') - order.indexOf(map.kinds?.[b] ?? 'route'));
-  return (
-    <>
-      <rect x={-1} y={-1} width={map.width + 2} height={map.height + 2} fill="#2c5d8a" />
-      {map.land?.map((d, i) => <path key={i} d={d} fill="#6f9a52" stroke="#e8dfb0" strokeWidth={0.25} strokeLinejoin="round" />)}
-      {entries.map(([loc, rects]) =>
-        rects.map(([x, y, w, h], i) => {
-          const kind = map.kinds?.[loc] ?? 'route';
-          return kind === 'zone' ? (
-            <rect key={loc + i} x={x} y={y} width={w} height={h} rx={0.6} fill="none" stroke="#ffffff55" strokeWidth={0.18} strokeDasharray="0.6 0.5" />
-          ) : (
-            <rect key={loc + i} x={x + 0.1} y={y + 0.1} width={w - 0.2} height={h - 0.2} rx={kind === 'town' ? 0.25 : kind === 'lake' ? 0.8 : 0.15} fill={SCHEMATIC_FILL[kind] ?? SCHEMATIC_FILL.route} stroke={kind === 'town' ? '#3b2a1a' : 'none'} strokeWidth={0.15} opacity={0.95} />
-          );
-        }),
-      )}
-      {entries
-        .filter(([loc]) => map.kinds?.[loc] === 'town')
-        .map(([loc, [[x, y, w]]]) => (
-          <text key={loc} x={x + w / 2} y={y - 0.3} fontSize={0.9} textAnchor="middle" fill="#fff" stroke="#0008" strokeWidth={0.18} paintOrder="stroke" className="pointer-events-none select-none">
-            {label(loc).replace(/ (City|Town)$/, '')}
-          </text>
-        ))}
-    </>
-  );
-}
-
-const SCHEMATIC_FILL: Record<string, string> = {
-  town: '#e9e2c4',
-  route: '#d8b56a',
-  sea: '#8cc4ee',
-  cave: '#7a5a3a',
-  dungeon: '#7a5a3a',
-  forest: '#2f6b35',
-  lake: '#5aa6e0',
-  mountain: '#8d8a7e',
-  landmark: '#b77fd1',
-  snow: '#e3eef7',
-};

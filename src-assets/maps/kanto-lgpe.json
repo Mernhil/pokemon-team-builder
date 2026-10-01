@@ -1,0 +1,27 @@
+{
+  "id": "kanto-lgpe",
+  "name": "Kanto",
+  "image": "kanto-lgpe.png",
+  "crop": [8, 4, 436, 386],
+  "width": 900,
+  "from": "kanto-frlg",
+  "games": ["lets-go-pikachu", "lets-go-eevee"],
+  "source": "supplied screenshot (Let's Go, Pikachu! / Eevee!)",
+  "minSize": 22,
+  "patches": [{ "from": [6, 316, 38, 38], "to": [6, 354] }],
+  "control": [
+    ["pallet-town", 90, 272],
+    ["viridian-city", 90, 203],
+    ["pewter-city", 90, 88],
+    ["indigo-plateau", 45, 62],
+    ["cerulean-city", 275, 63],
+    ["saffron-city", 275, 134],
+    ["celadon-city", 205, 134],
+    ["lavender-town", 370, 134],
+    ["vermilion-city", 275, 228],
+    ["fuchsia-city", 230, 320],
+    ["cinnabar-island", 90, 366],
+    ["mt-moon", 185, 63],
+    ["rock-tunnel", 370, 87]
+  ]
+}

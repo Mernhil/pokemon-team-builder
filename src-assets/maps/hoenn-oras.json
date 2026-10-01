@@ -1,0 +1,29 @@
+{
+  "id": "hoenn-oras",
+  "name": "Hoenn",
+  "image": "hoenn-oras.png",
+  "crop": [4, 4, 589, 394],
+  "width": 1000,
+  "from": "hoenn-rse",
+  "games": ["omega-ruby", "alpha-sapphire"],
+  "source": "supplied screenshot (Omega Ruby / Alpha Sapphire)",
+  "minSize": 22,
+  "patches": [{ "from": [490, 6, 44, 54], "to": [546, 6] }],
+  "control": [
+    ["rustboro-city", 25, 165],
+    ["petalburg-city", 45, 258],
+    ["oldale-town", 106, 258],
+    ["littleroot-town", 106, 300],
+    ["dewford-town", 65, 360],
+    ["slateport-city", 190, 290],
+    ["mauville-city", 200, 176],
+    ["verdanturf-town", 106, 176],
+    ["lavaridge-town", 127, 134],
+    ["fortree-city", 271, 51],
+    ["fallarbor-town", 86, 51],
+    ["lilycove-city", 427, 114],
+    ["mossdeep-city", 528, 147],
+    ["sootopolis-city", 467, 225],
+    ["pacifidlog-town", 395, 278]
+  ]
+}

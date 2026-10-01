@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { neighbour, unionOutline, type Dir } from '@/domain/regionMaps';
 import type { MapSkin } from '@/domain/mapSkins';
-import { MapViewport, SchematicBase, asset, type RegionMapData } from '../pokedex/RegionMap';
+import { MapViewport, asset, type RegionMapData } from '../pokedex/RegionMap';
+import { SchematicBase } from '../pokedex/SchematicMap';
 import { cn } from '../ui/styles';
 
 interface Props {
@@ -89,7 +90,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
           <svg
             viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
             className="block h-full w-full"
-            style={{ imageRendering: 'pixelated', cursor: hovered ? 'pointer' : 'default' }}
+            style={{ imageRendering: schematic || map.smooth ? 'auto' : 'pixelated', cursor: hovered ? 'pointer' : 'default' }}
             onClick={(e) => {
               const l = locAt(e, e.currentTarget);
               if (l) onPin(l);
@@ -107,7 +108,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
                 </mask>
               )}
             </defs>
-            {schematic ? <SchematicBase map={map} label={names} /> : <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: 'pixelated' }} onError={() => setBroken(true)} />}
+            {schematic ? <SchematicBase map={map} label={names} /> : <image href={asset(map.image!)} width={map.width} height={map.height} style={{ imageRendering: map.smooth ? 'auto' : 'pixelated' }} onError={() => setBroken(true)} />}
             {matches && <rect x={vb.x} y={vb.y} width={vb.w} height={vb.h} fill={pal.dim} mask="url(#atlas-dim)" className="pointer-events-none" />}
             {Object.entries(places).map(([loc, rects]) => {
               const isPinned = pinned === loc;
@@ -150,7 +151,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
         )}
       </MapViewport>
       <p className={cn('flex flex-wrap justify-between gap-x-3 px-3 py-1.5 text-xs text-muted')}>
-        <span>{schematic ? `${map.name} · schematic map, not the game’s own; positions approximate` : `${skin.label} · the game’s own map, from the pret decompilation`}</span>
+        <span>{schematic ? `${map.name} · schematic map, not the game’s own; positions approximate` : map.smooth ? `${map.name} · the game’s own artwork (supplied screenshot); positions approximate` : `${skin.label} · the game’s own map, from the pret decompilation`}</span>
         {fixedScale ? <span>{scale}× pixel scale</span> : null}
       </p>
     </div>

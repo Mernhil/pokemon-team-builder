@@ -177,17 +177,17 @@ export interface AtlasGame {
   available: boolean;
 }
 
-/** Maps behind the encounters-only games: Hoenn, Kanto and Sinnoh have the games' own, the rest hand-placed schematics (maps.json `games`). */
+/** Maps behind the encounters-only games: screenshots of the games' own maps where one was supplied (src-assets/maps), else the hand-placed schematic (maps.json `games`). */
 const GALAR = ['galar', 'galar-isle-of-armor', 'galar-crown-tundra'];
-const PALDEA = ['paldea', 'paldea-kitakami', 'paldea-terarium'];
+const PALDEA = ['paldea-art', 'paldea-kitakami', 'paldea-terarium'];
 const LITE_MAPS: Record<string, string[]> = {
-  black: ['unova'], white: ['unova'], 'black-2': ['unova'], 'white-2': ['unova'],
-  x: ['kalos'], y: ['kalos'],
-  'omega-ruby': ['hoenn-rse'], 'alpha-sapphire': ['hoenn-rse'],
+  black: ['unova-art'], white: ['unova-art'], 'black-2': ['unova-art'], 'white-2': ['unova-art'],
+  x: ['kalos-art'], y: ['kalos-art'],
+  'omega-ruby': ['hoenn-oras'], 'alpha-sapphire': ['hoenn-oras'],
   sun: ['alola'], moon: ['alola'], 'ultra-sun': ['alola'], 'ultra-moon': ['alola'],
-  'lets-go-pikachu': ['kanto-frlg'], 'lets-go-eevee': ['kanto-frlg'],
+  'lets-go-pikachu': ['kanto-lgpe'], 'lets-go-eevee': ['kanto-lgpe'],
   sword: GALAR, shield: GALAR,
-  'brilliant-diamond': ['sinnoh-pt'], 'shining-pearl': ['sinnoh-pt'],
+  'brilliant-diamond': ['sinnoh-bdsp'], 'shining-pearl': ['sinnoh-bdsp'],
   'legends-arceus': ['hisui'],
   scarlet: PALDEA, violet: PALDEA,
   'legends-za': ['lumiose'],
