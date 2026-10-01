@@ -2,7 +2,7 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## Unreleased
+## 0.11.1 — 2026-10-01
 
 ### New
 - **The games' own map artwork** (from screenshots you supplied, in `src-assets/maps/`) for Omega Ruby / Alpha Sapphire (Hoenn), Let's Go (Kanto), Brilliant Diamond / Shining Pearl (Sinnoh), Black / White and Black 2 / White 2 (Unova), X / Y (Kalos) and Scarlet / Violet (Paldea), in Pokénav and the Pokédex Area page. Places are carried over from the existing map of the region and fitted to landmarks on the picture, so positions are approximate. Sun / Moon, Sword / Shield and Legends: Arceus keep the redrawn schematics (no usable image yet).
