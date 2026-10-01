@@ -5,8 +5,8 @@
   "crop": [13, 14, 255, 166],
   "width": 900,
   "from": "unova",
-  "games": ["black-2", "white-2"],
-  "source": "supplied screenshot (Black 2 / White 2)",
+  "games": ["black", "white", "black-2", "white-2"],
+  "source": "supplied screenshot (Black / White, Black 2 / White 2)",
   "minSize": 24,
   "control": [
     ["aspertia-city", 26, 166],

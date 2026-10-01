@@ -20,7 +20,7 @@ wild-encounter locations of the map's games that it places; "unplaced" ones are 
 | kalos | schematic (hand-placed, approximate) | 55 | 45 | — |  |
 | lumiose | schematic (hand-placed, approximate) | 98 | 90 | — | legends-za |
 | paldea | schematic (hand-placed, approximate) | 48 | 48 | apple-hills, canyon-biome, canyon-plaza, central-plaza, chargestone-cavern, chilling-waterhead, coastal-biome, coastal-plaza, crystal-pool, dreaded-den, fellhorn-gorge, infernal-pass, kitakami-hall, kitakami-road, kitakami-wilds, loyalty-plaza, mossfell-confluence, mossui-town, oni-mountain, onis-maw, paldea-terarium, paradise-barrens, polar-biome, polar-plaza, revelers-road, savanna-biome, savanna-plaza, timeless-woods, torchlit-labyrinth, wistful-fields |  |
-| unova | schematic (hand-placed, approximate) | 79 | 75 | team-flare-secret-hq | black, white |
+| unova | schematic (hand-placed, approximate) | 79 | 75 | team-flare-secret-hq |  |
 | galar-isle-of-armor | schematic (hand-placed, approximate) | 18 | 18 | — | sword, shield |
 | paldea-kitakami | schematic (hand-placed, approximate) | 18 | 18 | — | scarlet, violet |
 | galar-crown-tundra | schematic (hand-placed, approximate) | 21 | 21 | — | sword, shield |
@@ -30,4 +30,4 @@ wild-encounter locations of the map's games that it places; "unplaced" ones are 
 | kanto-lgpe | supplied screenshot (Let's Go, Pikachu! / Eevee!) | 50 | 44 | — | lets-go-pikachu, lets-go-eevee |
 | paldea-art | supplied screenshot (Scarlet / Violet) | 48 | 48 | — | scarlet, violet |
 | sinnoh-bdsp | supplied screenshot (Brilliant Diamond / Shining Pearl) | 127 | 64 | sinnoh-grand-underground | brilliant-diamond, shining-pearl |
-| unova-art | supplied screenshot (Black 2 / White 2) | 79 | 68 | — | black-2, white-2 |
+| unova-art | supplied screenshot (Black / White, Black 2 / White 2) | 79 | 75 | team-flare-secret-hq | black, white, black-2, white-2 |

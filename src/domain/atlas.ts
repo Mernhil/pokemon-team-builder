@@ -181,7 +181,7 @@ export interface AtlasGame {
 const GALAR = ['galar', 'galar-isle-of-armor', 'galar-crown-tundra'];
 const PALDEA = ['paldea-art', 'paldea-kitakami', 'paldea-terarium'];
 const LITE_MAPS: Record<string, string[]> = {
-  black: ['unova'], white: ['unova'], 'black-2': ['unova-art'], 'white-2': ['unova-art'],
+  black: ['unova-art'], white: ['unova-art'], 'black-2': ['unova-art'], 'white-2': ['unova-art'],
   x: ['kalos-art'], y: ['kalos-art'],
   'omega-ruby': ['hoenn-oras'], 'alpha-sapphire': ['hoenn-oras'],
   sun: ['alola'], moon: ['alola'], 'ultra-sun': ['alola'], 'ultra-moon': ['alola'],
