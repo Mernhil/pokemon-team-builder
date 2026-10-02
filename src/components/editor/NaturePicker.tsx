@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Leaf } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { STAT_LABELS, type StatId } from '@/domain/types';
 import { usePickerPrefs, usePrefsStore } from '@/store/prefsStore';
@@ -48,8 +48,9 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
-        className="flex h-9 w-full items-center gap-1.5 rounded-lg border border-border-strong/60 bg-surface-2 px-2.5 pointer-coarse:h-11 text-left text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/25"
+        className="flex h-9 w-full items-center gap-1.5 rounded-full border-2 border-accent/50 bg-accent/10 px-2.5 pointer-coarse:h-11 text-left text-sm outline-none hover:border-accent/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
       >
+        <Leaf size={14} className="shrink-0 text-accent" aria-hidden />
         <span className="min-w-0 flex-1 truncate">
           <b className="font-semibold">{current?.name ?? value}</b>{' '}
           {neutral ? (
