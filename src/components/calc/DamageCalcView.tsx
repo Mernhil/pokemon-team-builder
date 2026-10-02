@@ -3,7 +3,7 @@ import { AlertCircle, ArrowLeftRight, Calculator, Check, Copy, Crosshair, Info, 
 import type { Dex } from '@/data/dex';
 import { gameInfo } from '@/domain/games';
 import { GEN_GAMES } from '@/domain/generations';
-import { calcMoves, calcSpeed, type MoveResult } from '@/domain/battle/damage';
+import { calcMoves, calcSpeed, type FormResult, type MoveResult, type SpeedResult } from '@/domain/battle/damage';
 import type { FormatRules, Team } from '@/domain/types';
 import { useCalcStore, type CalcSide, type SideKey } from '@/store/calcStore';
 import { FieldControls } from '../battle/Controls';
@@ -52,7 +52,7 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
         error: null as string | null,
       };
     } catch (e) {
-      return { forward: [], backward: [], speedA: 0, speedD: 0, error: (e as Error).message };
+      return { forward: [], backward: [], speedA: [], speedD: [], error: (e as Error).message };
     }
   }, [ready, attacker, defender, field, dex]);
 
@@ -126,6 +126,23 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
   );
 }
 
+/** One side's speed(s): one number, or "Base 100 · Mega 130" when its Mega mode is "Both". */
+function SpeedBadge({ speeds, speciesId, name, types, format }: { speeds: SpeedResult[]; speciesId: string; name: string; types: string[]; format: FormatRules }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <Sprite speciesId={speciesId} name={name} types={types as never} set={format.spriteSet} size={24} />
+      {speeds.map((s, i) => (
+        <span key={s.form} className="font-mono tabular-nums">
+          {i > 0 && <span className="text-muted"> · </span>}
+          {speeds.length > 1 && <span className="text-muted">{s.form === 'mega' ? 'Mega ' : 'Base '}</span>}
+          <b>{s.speed}</b>
+        </span>
+      ))}
+      <span className="text-muted">Spe</span>
+    </span>
+  );
+}
+
 function TurnOrder({
   attacker,
   defender,
@@ -137,31 +154,35 @@ function TurnOrder({
 }: {
   attacker: CalcSide;
   defender: CalcSide;
-  speedA: number;
-  speedD: number;
+  speedA: SpeedResult[];
+  speedD: SpeedResult[];
   trickRoom: boolean;
   dex: Dex;
   format: FormatRules;
 }) {
   const a = dex.species(attacker.set!.speciesId)!;
   const d = dex.species(defender.set!.speciesId)!;
-  const first = speedA === speedD ? null : (speedA > speedD) !== trickRoom ? 'attacker' : 'defender';
+  // One combo each (the common case): a single "who moves first" sentence. Either side on "Both":
+  // one line per attacker-speed × defender-speed combo, since the two formes can tie differently.
+  const combos = speedA.flatMap((sa) => speedD.map((sd) => ({ sa, sd })));
+  const firstMover = (sa: number, sd: number) => (sa === sd ? null : (sa > sd) !== trickRoom ? 'attacker' : 'defender');
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-surface-2 px-3 py-2 text-xs">
       <Timer size={14} className="text-muted" />
-      <span className="flex items-center gap-1.5">
-        <Sprite speciesId={a.id} name={a.name} types={a.types} set={format.spriteSet} size={24} />
-        <b className="font-mono tabular-nums">{speedA}</b>
-        <span className="text-muted">Spe</span>
-      </span>
+      <SpeedBadge speeds={speedA} speciesId={a.id} name={a.name} types={a.types} format={format} />
       <span className="text-muted">vs</span>
-      <span className="flex items-center gap-1.5">
-        <Sprite speciesId={d.id} name={d.name} types={d.types} set={format.spriteSet} size={24} />
-        <b className="font-mono tabular-nums">{speedD}</b>
-        <span className="text-muted">Spe</span>
-      </span>
-      <span className="ml-auto font-medium">
-        {first === null ? 'Speed tie: 50/50' : `${first === 'attacker' ? a.name : d.name} moves first`}
+      <SpeedBadge speeds={speedD} speciesId={d.id} name={d.name} types={d.types} format={format} />
+      <span className="ml-auto text-right font-medium">
+        {combos.map(({ sa, sd }, i) => {
+          const first = firstMover(sa.speed, sd.speed);
+          const label = combos.length > 1 ? `${sa.form === 'mega' ? 'Mega' : 'Base'}→${sd.form === 'mega' ? 'Mega' : 'Base'}: ` : '';
+          return (
+            <span key={i} className="block">
+              {label}
+              {first === null ? 'Speed tie: 50/50' : `${first === 'attacker' ? a.name : d.name} moves first`}
+            </span>
+          );
+        })}
         {trickRoom && <span className="text-accent"> (Trick Room)</span>}
         <span className="text-muted"> · same priority bracket</span>
       </span>
@@ -202,22 +223,7 @@ function ResultList({
 }
 
 function ResultRow({ r, dex, onToggleCrit }: { r: MoveResult; dex: Dex; onToggleCrit: () => void }) {
-  const [copied, setCopied] = useState(false);
   const status = r.category === 'Status';
-  const [lo, hi] = r.percent;
-  const cur = (r.defenderCurHP / r.defenderHP) * 100;
-  const koColor = hi >= cur ? (lo >= cur ? 'text-bad' : 'text-warn') : 'text-fg';
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(r.desc);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* blocked */
-    }
-  };
-
   return (
     <li className="rounded-lg border border-border px-3 py-2">
       <div className="flex items-center gap-2">
@@ -226,54 +232,79 @@ function ResultRow({ r, dex, onToggleCrit }: { r: MoveResult; dex: Dex; onToggle
         </MoveTooltip>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">{r.name}</span>
         {!status && (
-          <>
-            <span className={cn('font-mono text-sm font-bold tabular-nums', koColor)}>
-              {lo}–{hi}%
-            </span>
-            <button
-              type="button"
-              aria-pressed={r.crit}
-              aria-label={`Critical hit: ${r.name}`}
-              title={r.crit ? 'Critical hit on: click for a normal hit' : 'Calculate as a critical hit'}
-              onClick={onToggleCrit}
-              className={cn(
-                'flex h-6 shrink-0 items-center gap-1 rounded-md border px-1.5 text-[10px] font-bold transition-colors',
-                r.crit ? 'border-warn bg-warn/15 text-warn' : 'border-border text-muted hover:border-muted/60 hover:text-fg',
-              )}
-            >
-              <Crosshair size={11} /> CRIT
-            </button>
-          </>
+          <button
+            type="button"
+            aria-pressed={r.crit}
+            aria-label={`Critical hit: ${r.name}`}
+            title={r.crit ? 'Critical hit on: click for a normal hit' : 'Calculate as a critical hit'}
+            onClick={onToggleCrit}
+            className={cn(
+              'flex h-6 shrink-0 items-center gap-1 rounded-md border px-1.5 text-[10px] font-bold transition-colors',
+              r.crit ? 'border-warn bg-warn/15 text-warn' : 'border-border text-muted hover:border-muted/60 hover:text-fg',
+            )}
+          >
+            <Crosshair size={11} /> CRIT
+          </button>
         )}
       </div>
-      {!status && (
-        <>
-          {/* Damage bar: remaining HP with the min–max band */}
-          <div className="relative mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden>
-            <div className="absolute inset-y-0 left-0 bg-good/35" style={{ width: `${Math.min(100, cur)}%` }} />
-            <div
-              className="absolute inset-y-0 bg-bad/70"
-              style={{ left: `${Math.max(0, cur - Math.min(cur, hi))}%`, width: `${Math.min(cur, hi) - Math.min(cur, lo)}%` }}
-            />
-            <div className="absolute inset-y-0 bg-bad" style={{ left: `${Math.max(0, cur - Math.min(cur, lo))}%`, width: `${Math.min(cur, lo)}%` }} />
-          </div>
-          <div className="mt-1 flex items-center justify-between gap-2 text-xs">
-            <span className="text-muted">
-              {r.range[0]}–{r.range[1]} HP of {r.defenderHP}
-              {r.koText && <b className="ml-1.5 text-fg">· {r.koText}</b>}
-            </span>
-            <button type="button" onClick={copy} className="flex shrink-0 items-center gap-1 text-muted hover:text-fg" title="Copy calc text">
-              {copied ? <Check size={11} /> : <Copy size={11} />}
-            </button>
-          </div>
-          <details className="mt-0.5">
-            <summary className="cursor-pointer text-[10px] text-muted">Details & rolls</summary>
-            <p className="mt-1 text-xs leading-relaxed">{r.desc}</p>
-            <p className="mt-1 font-mono text-[10px] text-muted">{r.rolls.join(', ')}</p>
-          </details>
-        </>
+      {status ? (
+        <p className="mt-1 text-xs text-muted">Status move: no damage</p>
+      ) : (
+        <div className="mt-1.5 space-y-1.5">
+          {r.forms.map((f, i) => <FormRow key={i} f={f} />)}
+        </div>
       )}
-      {status && <p className="mt-1 text-xs text-muted">Status move: no damage</p>}
     </li>
+  );
+}
+
+function FormRow({ f }: { f: FormResult }) {
+  const [copied, setCopied] = useState(false);
+  const [lo, hi] = f.percent;
+  const cur = (f.defenderCurHP / f.defenderHP) * 100;
+  const koColor = hi >= cur ? (lo >= cur ? 'text-bad' : 'text-warn') : 'text-fg';
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(f.desc);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* blocked */
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        {f.label && <span className="shrink-0 rounded bg-surface-2 px-1 py-0.5 text-[10px] font-semibold text-muted">{f.label}</span>}
+        <span className={cn('ml-auto font-mono text-sm font-bold tabular-nums', koColor)}>
+          {lo}–{hi}%
+        </span>
+      </div>
+      {/* Damage bar: remaining HP with the min–max band */}
+      <div className="relative mt-1 h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+        <div className="absolute inset-y-0 left-0 bg-good/35" style={{ width: `${Math.min(100, cur)}%` }} />
+        <div
+          className="absolute inset-y-0 bg-bad/70"
+          style={{ left: `${Math.max(0, cur - Math.min(cur, hi))}%`, width: `${Math.min(cur, hi) - Math.min(cur, lo)}%` }}
+        />
+        <div className="absolute inset-y-0 bg-bad" style={{ left: `${Math.max(0, cur - Math.min(cur, lo))}%`, width: `${Math.min(cur, lo)}%` }} />
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+        <span className="text-muted">
+          {f.range[0]}–{f.range[1]} HP of {f.defenderHP}
+          {f.koText && <b className="ml-1.5 text-fg">· {f.koText}</b>}
+        </span>
+        <button type="button" onClick={copy} className="flex shrink-0 items-center gap-1 text-muted hover:text-fg" title="Copy calc text">
+          {copied ? <Check size={11} /> : <Copy size={11} />}
+        </button>
+      </div>
+      <details className="mt-0.5">
+        <summary className="cursor-pointer text-[10px] text-muted">Details & rolls</summary>
+        <p className="mt-1 text-xs leading-relaxed">{f.desc}</p>
+        <p className="mt-1 font-mono text-[10px] text-muted">{f.rolls.join(', ')}</p>
+      </details>
+    </div>
   );
 }

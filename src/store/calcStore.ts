@@ -31,6 +31,8 @@ interface CalcState {
  * v2: Terastallization exists only in Scarlet/Violet. The calculator's two sides are scratch sets
  * not tied to a format (and Champions sets used to get a default Tera Type), so v2 clears the Tera
  * toggle and Tera Type on both; a Scarlet/Violet user just re-picks it.
+ * v3: the "Mega Evolved" toggle (cond.mega: boolean) became a Base/Mega/Both control
+ * (cond.megaMode: 'base' | 'mega' | 'both').
  */
 export function migrateCalcState(persisted: unknown, version: number): CalcState {
   const p = (persisted ?? {}) as Partial<CalcState>;
@@ -43,6 +45,14 @@ export function migrateCalcState(persisted: unknown, version: number): CalcState
         const { teraType: _dropped, ...rest } = side.set;
         side.set = rest;
       }
+    }
+  }
+  if (version < 3) {
+    for (const k of ['attacker', 'defender'] as const) {
+      const side = p[k];
+      if (!side || typeof side !== 'object' || !side.cond || typeof side.cond !== 'object') continue;
+      const { mega, ...rest } = side.cond as SideConditions & { mega?: boolean };
+      side.cond = { ...rest, megaMode: mega ? 'both' : 'base' };
     }
   }
   return p as CalcState;
@@ -65,6 +75,6 @@ export const useCalcStore = create<CalcState>()(
       setField: (patch) => set((s) => ({ field: { ...s.field, ...patch } })),
       swap: () => set((s) => ({ attacker: s.defender, defender: s.attacker })),
     }),
-    { name: 'ptb:calc:v1', version: 2, storage: createJSONStorage(() => safeStorage), migrate: migrateCalcState },
+    { name: 'ptb:calc:v1', version: 3, storage: createJSONStorage(() => safeStorage), migrate: migrateCalcState },
   ),
 );

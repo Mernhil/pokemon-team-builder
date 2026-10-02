@@ -119,7 +119,10 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
   const battle: Record<string, SlotBattleState> = {};
   if (p.battle && typeof p.battle === 'object') {
     for (const [uid, b] of Object.entries(p.battle)) {
-      if (liveUids.has(uid) && b && typeof b === 'object' && b.side && b.field) battle[uid] = b;
+      if (!liveUids.has(uid) || !b || typeof b !== 'object' || !b.side || !b.field) continue;
+      // Pre-0.12 saves: the "Mega Evolved" toggle was side.mega (boolean), now side.megaMode.
+      const side = b.side as SideConditions & { mega?: boolean };
+      battle[uid] = side.megaMode ? b : { ...b, side: { ...side, megaMode: side.mega ? 'both' : 'base' } };
     }
   }
   const topLevelIds = ids.filter((id) => !teams[id].groupId);

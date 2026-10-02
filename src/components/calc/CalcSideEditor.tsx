@@ -37,7 +37,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
   const movePicker = useMovePicker(dex, format, set);
   const species = set ? dex.species(set.speciesId) : undefined;
   const mega = set && format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
-  const forme = side.cond.mega && mega ? mega : species;
+  const forme = side.cond.megaMode !== 'base' && mega ? mega : species;
 
   const loadFromTeam = (i: number) => {
     const s = team.slots[i];
@@ -154,7 +154,10 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                   icon={<ItemSprite itemId={set.itemId} name={dex.item(set.itemId)?.name} size={18} />}
                   onChange={(id) => {
                     itemPicker.remember(id);
+                    const hadMega = !!mega;
+                    const willMega = format.capabilities.mega && !!dex.megaFor(set.speciesId, id);
                     patchSet(role, { itemId: id || undefined });
+                    if (willMega !== hadMega) patchCond(role, { megaMode: willMega ? 'both' : 'base' });
                   }}
                 />
               </Field>
@@ -304,8 +307,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                     onIV={format.fixedIVs ? undefined : (stat, v) => patchSet(role, withSpreadValue(set, sys, 'ivs', stat, v))}
                     onFriendship={sys.kind === 'lgpe-av' ? (friendship) => patchSet(role, { friendship }) : undefined}
                     onNature={(nature) => patchSet(role, { nature })}
-                    megaActive={side.cond.mega}
-                    onMegaActive={(mega) => patchCond(role, { mega })}
+                    megaActive={side.cond.megaMode !== 'base'}
+                    onMegaActive={(on) => patchCond(role, { megaMode: on ? 'mega' : 'base' })}
                   />
                 </div>
               </details>

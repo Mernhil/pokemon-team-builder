@@ -19,7 +19,7 @@ function mk(species: string, patch: Partial<PokemonSet> = {}): PokemonSet {
 function eff(set: PokemonSet, side: Partial<SideConditions> = {}, field: Partial<FieldConditions> = {}, crit = false) {
   const sp = dex.species(set.speciesId)!;
   const cond = { ...defaultSide(), ...side };
-  const forme = cond.mega ? dex.megaFor(sp.id, set.itemId) ?? sp : sp;
+  const forme = cond.megaMode !== 'base' ? dex.megaFor(sp.id, set.itemId) ?? sp : sp;
   return effectiveStats({
     species: forme,
     stats: calcStats(forme.baseStats, set, fmt, dex.nature(set.nature)),
@@ -89,7 +89,7 @@ describe('effective stats', () => {
       const set = mk(id, { sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 2, spe: 32 }, nature: 'Timid', ...patch });
       const cond = { ...defaultSide(), ...side };
       const f = { ...defaultField(), ...field };
-      expect(eff(set, side, field).stats.spe.final, id).toBe(calcSpeed(dex, { set, cond }, f));
+      expect(eff(set, side, field).stats.spe.final, id).toBe(calcSpeed(dex, { set, cond }, f)[0].speed);
     }
   });
 });
@@ -99,7 +99,7 @@ describe('damage calculator adapter', () => {
     const gen = Generations.get(0 as never);
     const att = mk('garchomp', { itemId: 'garchompite', nature: 'Jolly', sp: { hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 }, moves: ['earthquake', 'dragonclaw', '', ''] });
     const def = mk('incineroar', { abilityId: 'intimidate', nature: 'Careful', sp: { hp: 32, atk: 0, def: 20, spa: 0, spd: 14, spe: 0 } });
-    const [eq] = calcMoves(dex, { set: att, cond: defaultSide(true) }, { set: def, cond: defaultSide() }, defaultField());
+    const [eq] = calcMoves(dex, { set: att, cond: { ...defaultSide(), megaMode: 'mega' } }, { set: def, cond: defaultSide() }, defaultField());
     const direct = calculate(
       gen,
       new Pokemon(gen, 'Garchomp-Mega', { item: 'Garchompite' as never, nature: 'Jolly' as never, ability: 'Sand Force' as never, evs: { hp: 2, atk: 32, spe: 32 } }),
@@ -107,16 +107,16 @@ describe('damage calculator adapter', () => {
       new Move(gen, 'Earthquake'),
       new Field({ gameType: 'Doubles' }),
     );
-    expect(eq.range).toEqual(direct.range());
-    expect(eq.koText).toMatch(/2HKO/);
+    expect(eq.forms[0].range).toEqual(direct.range());
+    expect(eq.forms[0].koText).toMatch(/2HKO/);
   });
 
   it('uses the Z Mega forme and its announced ability', () => {
     const att = mk('garchomp', { itemId: 'garchompitez', moves: ['dracometeor', '', '', ''], nature: 'Modest', sp: { hp: 2, atk: 0, def: 0, spa: 32, spd: 0, spe: 32 } });
     const def = mk('incineroar');
-    const [r] = calcMoves(dex, { set: att, cond: defaultSide(true) }, { set: def, cond: defaultSide() }, defaultField());
-    expect(r.desc).toContain('Garchomp-Mega-Z');
-    expect(r.range[1]).toBeGreaterThan(0);
+    const [r] = calcMoves(dex, { set: att, cond: { ...defaultSide(), megaMode: 'mega' } }, { set: def, cond: defaultSide() }, defaultField());
+    expect(r.forms[0].desc).toContain('Garchomp-Mega-Z');
+    expect(r.forms[0].range[1]).toBeGreaterThan(0);
   });
 
   it('crits ignore Reflect and are bigger', () => {
@@ -124,6 +124,34 @@ describe('damage calculator adapter', () => {
     const def = mk('sinistcha');
     const normal = calcMoves(dex, { set: att, cond: defaultSide() }, { set: def, cond: { ...defaultSide(), reflect: true } }, defaultField())[0];
     const crit = calcMoves(dex, { set: att, cond: defaultSide() }, { set: def, cond: { ...defaultSide(), reflect: true } }, defaultField(), [true])[0];
-    expect(crit.range[0]).toBeGreaterThan(normal.range[1]);
+    expect(crit.forms[0].range[0]).toBeGreaterThan(normal.forms[0].range[1]);
+  });
+
+  it('shows Base and Mega results at once on "Both", matching @smogon/calc run on each forme alone', () => {
+    const att = mk('garchomp', { itemId: 'garchompite', moves: ['earthquake', '', '', ''], nature: 'Jolly', sp: { hp: 2, atk: 32, def: 0, spa: 0, spd: 0, spe: 32 } });
+    const def = mk('incineroar', { abilityId: 'intimidate', nature: 'Careful', sp: { hp: 32, atk: 0, def: 20, spa: 0, spd: 14, spe: 0 } });
+    const [eq] = calcMoves(dex, { set: att, cond: { ...defaultSide(), megaMode: 'both' } }, { set: def, cond: defaultSide() }, defaultField());
+    expect(eq.forms.map((f) => f.label)).toEqual(['Base', 'Mega']);
+    const [base, mega] = eq.forms;
+    expect(base.range).not.toEqual(mega.range);
+
+    const gen = Generations.get(0 as never);
+    const defPokemon = new Pokemon(gen, 'Incineroar', { nature: 'Careful' as never, ability: 'Intimidate' as never, evs: { hp: 32, def: 20, spd: 14 } });
+    const baseDirect = calculate(
+      gen,
+      new Pokemon(gen, 'Garchomp', { item: 'Garchompite' as never, nature: 'Jolly' as never, evs: { hp: 2, atk: 32, spe: 32 } }),
+      defPokemon,
+      new Move(gen, 'Earthquake'),
+      new Field({ gameType: 'Doubles' }),
+    );
+    const megaDirect = calculate(
+      gen,
+      new Pokemon(gen, 'Garchomp-Mega', { item: 'Garchompite' as never, nature: 'Jolly' as never, ability: 'Sand Force' as never, evs: { hp: 2, atk: 32, spe: 32 } }),
+      defPokemon,
+      new Move(gen, 'Earthquake'),
+      new Field({ gameType: 'Doubles' }),
+    );
+    expect(base.range).toEqual(baseDirect.range());
+    expect(mega.range).toEqual(megaDirect.range());
   });
 });

@@ -9,6 +9,7 @@ import {
   emptyBoosts,
   type BoostStat,
   type FieldConditions,
+  type MegaMode,
   type SideConditions,
 } from '@/domain/battle/conditions';
 import { formatMechanics } from '@/domain/games';
@@ -211,8 +212,19 @@ export function SideControls({
           <span className="w-9 text-right font-mono tabular-nums">{cond.hpPercent}%</span>
         </label>
       </div>
+      {canMega && (
+        <Segmented<MegaMode>
+          label="Forme"
+          value={cond.megaMode}
+          options={[
+            { id: 'base', label: 'Base' },
+            { id: 'mega', label: 'Mega' },
+            { id: 'both', label: 'Both' },
+          ]}
+          onChange={(megaMode) => onChange({ megaMode })}
+        />
+      )}
       <div className="flex flex-wrap gap-1">
-        {canMega && <Toggle on={cond.mega} onChange={(mega) => onChange({ mega })}>Mega Evolved</Toggle>}
         {canTera && <Toggle on={cond.tera} onChange={(tera) => onChange({ tera })}>Tera {teraType}</Toggle>}
         {abLabel && <Toggle on={cond.abilityOn} onChange={(abilityOn) => onChange({ abilityOn })}>{abLabel}</Toggle>}
         {mech.tailwind && <Toggle on={cond.tailwind} onChange={(tailwind) => onChange({ tailwind })}>Tailwind</Toggle>}
