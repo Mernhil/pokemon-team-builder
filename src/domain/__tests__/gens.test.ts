@@ -157,8 +157,8 @@ describe('damage calc per generation', () => {
     const tauros = { ...createSet(dex, 'tauros', f), moves: ['bodyslam', 'hyperbeam', 'blizzard', 'earthquake'] as PokemonSet['moves'] };
     const chansey = createSet(dex, 'chansey', f);
     const [bodySlam, , blizzard] = calcMoves(dex, { set: tauros, cond: defaultSide() }, { set: chansey, cond: defaultSide() }, defaultField());
-    expect(bodySlam.range[0]).toBeGreaterThan(0);
-    expect(bodySlam.percent[1]).toBeLessThan(blizzard.percent[1] * 10);
+    expect(bodySlam.forms[0].range[0]).toBeGreaterThan(0);
+    expect(bodySlam.forms[0].percent[1]).toBeLessThan(blizzard.forms[0].percent[1] * 10);
     expect(blizzard.category).toBe('Special');
   });
 });
@@ -199,7 +199,7 @@ describe("Let's Go, BDSP and Legends formats", () => {
     expect([trained.hp, trained.atk]).toEqual([310, 282]);
     // The damage calculator uses these stats, not its own EV formula.
     const cond = defaultSide();
-    expect(calcSpeed(dex, { set: { ...set, evs: stats(() => 200) }, cond }, defaultField())).toBe(trained.spe);
+    expect(calcSpeed(dex, { set: { ...set, evs: stats(() => 200) }, cond }, defaultField())[0].speed).toBe(trained.spe);
   });
 
   it('computes Legends: Arceus stats from Effort Levels (PKHeX PA8)', () => {

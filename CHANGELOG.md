@@ -2,6 +2,15 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.12.0 — 2026-10-02
+
+### New
+- **Base + Mega damage calc:** picking a Mega Stone now shows Base and Mega results together by default (a Base / Mega / Both control replaces the old "Mega Evolved" toggle), since only one Pokémon per team can Mega and the stone holder may fight unevolved. Each move shows a labelled line per forme combo in play, and turn order shows both speeds.
+
+### Changed
+- **Phone zoom lock:** pinch and double-tap zoom are now disabled for a fixed, native-feeling viewport.
+- **Desktop icons regenerate automatically** on `desktop:dev`/`desktop:build`, from `src-assets/logo-source.png`, instead of requiring a manual `npm run icons` step.
+
 ## 0.11.2 — 2026-10-02
 
 ### Fixed

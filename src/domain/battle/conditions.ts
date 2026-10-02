@@ -7,6 +7,8 @@ export type Weather = '' | 'Sun' | 'Rain' | 'Sand' | 'Snow';
 export type Terrain = '' | 'Electric' | 'Grassy' | 'Psychic' | 'Misty';
 export type Status = '' | 'brn' | 'par' | 'psn' | 'tox' | 'slp' | 'frz';
 export type GameType = 'Doubles' | 'Singles';
+/** Which forme(s) to use in battle when a Mega Stone is held. */
+export type MegaMode = 'base' | 'mega' | 'both';
 
 export const WEATHERS: { id: Weather; label: string }[] = [
   { id: '', label: 'None' },
@@ -38,8 +40,8 @@ export interface SideConditions {
   status: Status;
   /** Current HP as % of max (1–100). */
   hpPercent: number;
-  /** Use the Mega forme (when holding its stone). */
-  mega: boolean;
+  /** Which forme(s) to use (when holding a Mega Stone); ignored otherwise. */
+  megaMode: MegaMode;
   /** Terastallized (uses set.teraType). */
   tera: boolean;
   /** Ability condition is met: Unburden (item used), Protosynthesis/Quark Drive (booster), Flash Fire, Slow Start… */
@@ -63,11 +65,11 @@ export interface FieldConditions {
 
 export const emptyBoosts = (): Boosts => ({ atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
 
-export const defaultSide = (mega = false): SideConditions => ({
+export const defaultSide = (hasMega = false): SideConditions => ({
   boosts: emptyBoosts(),
   status: '',
   hpPercent: 100,
-  mega,
+  megaMode: hasMega ? 'both' : 'base',
   tera: false,
   abilityOn: false,
   tailwind: false,

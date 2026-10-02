@@ -49,7 +49,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
   const patchSide = (p: Partial<SideConditions>) => update({ side: { ...state.side, ...p } });
   const patchField = (p: Partial<FieldConditions>) => update({ field: { ...state.field, ...p } });
 
-  const forme = state.side.mega && mega ? mega : species;
+  const forme = state.side.megaMode !== 'base' && mega ? mega : species;
   const ability = forme !== species ? Object.values(forme.abilities)[0] ?? '' : dex.ability(set.abilityId)?.name ?? '';
 
   const result = useMemo(

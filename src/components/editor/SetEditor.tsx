@@ -342,8 +342,8 @@ function SlotStatDistributor(props: Omit<ComponentProps<typeof StatDistributor>,
   return (
     <StatDistributor
       {...props}
-      megaActive={battle.side.mega}
-      onMegaActive={(mega) => updateBattle({ side: { ...battle.side, mega } })}
+      megaActive={battle.side.megaMode !== 'base'}
+      onMegaActive={(on) => updateBattle({ side: { ...battle.side, megaMode: on ? 'mega' : 'base' } })}
     />
   );
 }
