@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Leaf } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { STAT_LABELS, type StatId } from '@/domain/types';
 import { usePickerPrefs, usePrefsStore } from '@/store/prefsStore';
@@ -48,8 +48,9 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
-        className="flex h-9 w-full items-center gap-1.5 rounded-lg border border-border-strong/60 bg-surface-2 px-2.5 pointer-coarse:h-11 text-left text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/25"
+        className="flex h-9 w-full items-center gap-1.5 rounded-full border-2 border-accent/50 bg-accent/10 px-2.5 pointer-coarse:h-11 text-left text-sm outline-none hover:border-accent/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
       >
+        <Leaf size={14} className="shrink-0 text-accent" aria-hidden />
         <span className="min-w-0 flex-1 truncate">
           <b className="font-semibold">{current?.name ?? value}</b>{' '}
           {neutral ? (
@@ -93,12 +94,17 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
           <table className="border-separate [border-spacing:2px]">
             <thead>
               <tr>
-                <th className="w-14 p-0" />
-                <th colSpan={GRID_STATS.length} className="pb-1 text-center text-[10px] font-semibold uppercase tracking-wider text-muted">
-                  raises
+                {/* Two leading spacer cells, matching the body's "lowers" label column (rowSpan from row 0) and each row's own stat-label column. */}
+                <th className="w-4 p-0" />
+                <th className="w-10 p-0" />
+                <th colSpan={GRID_STATS.length} className="pb-1 text-center text-[10px] font-semibold uppercase tracking-wider text-good">
+                  <span className="inline-flex items-center gap-0.5">
+                    <ArrowUp size={10} aria-hidden /> raises
+                  </span>
                 </th>
               </tr>
               <tr>
+                <th className="p-0" />
                 <th className="p-0" />
                 {GRID_STATS.map((s) => (
                   <th key={s} className="px-1 pb-1 text-center text-[10px] font-bold" style={{ color: STAT_COLOR_VAR[s] }}>
@@ -111,8 +117,13 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
               {GRID_STATS.map((minus, ri) => (
                 <tr key={minus}>
                   {ri === 0 && (
-                    <th rowSpan={GRID_STATS.length} className="w-4 p-0 align-middle text-[10px] font-semibold uppercase tracking-wider text-muted [writing-mode:vertical-lr]">
-                      <span className="rotate-180">lowers</span>
+                    <th rowSpan={GRID_STATS.length} className="w-4 p-0 align-middle text-bad">
+                      <span className="flex flex-col items-center gap-0.5">
+                        <ArrowDown size={10} aria-hidden />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider [writing-mode:vertical-lr]">
+                          <span className="rotate-180">lowers</span>
+                        </span>
+                      </span>
                     </th>
                   )}
                   <th className="px-1 text-right text-[10px] font-bold" style={{ color: STAT_COLOR_VAR[minus] }}>
