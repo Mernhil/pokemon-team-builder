@@ -1,8 +1,7 @@
 import { AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import type { Issue } from '@/domain/validation';
 import { useTeamStore } from '@/store/teamStore';
-import { Chip, Panel } from '../ui/primitives';
-import { cn } from '../ui/styles';
+import { Chip, Panel, SeverityIcon } from '../ui/primitives';
 
 /** Error/warning counts as chips (icon + words, never colour alone). */
 export function IssueCounts({ issues }: { issues: Issue[] }) {
@@ -43,7 +42,7 @@ export function IssueList({ issues, onSelectSlot }: { issues: Issue[]; onSelectS
               onClick={() => i.slot !== undefined && setActiveSlot(i.slot)}
               className="flex min-h-9 w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2 disabled:cursor-default disabled:hover:bg-transparent"
             >
-              <Icon size={15} className={cn('mt-0.5 shrink-0', i.severity === 'error' ? 'text-bad' : 'text-warn')} aria-label={i.severity} />
+              <SeverityIcon icon={Icon} tone={i.severity === 'error' ? 'bad' : 'warn'} />
               <span>{i.message}</span>
             </button>
           </li>

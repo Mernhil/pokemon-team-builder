@@ -85,6 +85,35 @@ export function teamVsTeam(attackers: Team, defenders: Team, dex: Dex): MatchupR
   });
 }
 
+export interface Suggestion {
+  id: string;
+  severity: 'high' | 'medium';
+  text: string;
+}
+
+/**
+ * Plain-language read of the offensive matrix: types nobody on the team threatens. Ranked worst
+ * first (no super-effective hit and most of the team is resisted/walled, before no hit but some
+ * neutral damage still gets through).
+ */
+export function offensiveSuggestions(rows: OffenseRow[]): Suggestion[] {
+  const out: Suggestion[] = [];
+  // Fewer than 3 attackers: a type-coverage gap is expected, not yet worth flagging.
+  if ((rows[0]?.hits.length ?? 0) < 3) return out;
+  for (const r of rows) {
+    if (!r.hits.length || r.superEffective > 0) continue;
+    const gap = r.walled * 2 >= r.hits.length;
+    out.push({
+      id: r.defType,
+      severity: gap ? 'high' : 'medium',
+      text: gap
+        ? `You have no super-effective attacks against ${r.defType}, and most of your team is resisted or walled by it — consider adding a move or Pokémon that hits it hard.`
+        : `Nothing on your team hits ${r.defType} super-effectively yet, though you can still land neutral damage.`,
+    });
+  }
+  return out.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'high' ? -1 : 1));
+}
+
 export interface DefenseRow {
   atkType: TypeName;
   /** One entry per member: its name and the multiplier it takes from this type. */
@@ -116,4 +145,29 @@ export function defensiveCoverage(team: Team, dex: Dex, megaTyping: boolean): De
     const resist = mults.filter((m) => m.mult < 1).length;
     return { atkType, mults, weak, resist, danger: weak >= 3 || (weak >= 2 && resist === 0) };
   });
+}
+
+/**
+ * Plain-language read of the defensive matrix: types that threaten a real chunk of the team.
+ * Ranked worst first (danger rows — 3+ weak, or 2+ weak with no one to switch in — before a
+ * smaller weakness that still has an answer on the team).
+ */
+export function defensiveSuggestions(rows: DefenseRow[], memberCount: number): Suggestion[] {
+  const out: Suggestion[] = [];
+  for (const r of rows) {
+    if (r.weak === 0 || memberCount < 2) continue;
+    if (r.danger) {
+      out.push({
+        id: r.atkType,
+        severity: 'high',
+        text:
+          r.weak >= 3
+            ? `${r.atkType} is a big problem for your team: ${r.weak} of your ${memberCount} Pokémon are weak to it${r.resist ? `, and only ${r.resist} resist it` : ''}.`
+            : `${r.atkType} is a real risk: ${r.weak} of your ${memberCount} Pokémon are weak to it, and none of them resist it either.`,
+      });
+    } else if (r.weak >= 2) {
+      out.push({ id: r.atkType, severity: 'medium', text: `${r.weak} of your Pokémon are weak to ${r.atkType}, though ${r.resist} can switch in.` });
+    }
+  }
+  return out.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'high' ? -1 : 1));
 }
