@@ -2,6 +2,15 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.13.0 — 2026-10-02
+
+### New
+- **Type matrix suggestions:** the Defensive and Offensive type matrices now call out your team's real problems in plain language, worst first — e.g. "Fire is a big problem for your team: 3 of your 6 Pokémon are weak to it" or "You have no super-effective attacks against Poison, and most of your team is resisted or walled by it."
+
+### Changed
+- **Move picker grouped by type:** STAB, Coverage and other attacking moves are now grouped by type (Normal, Fire, Water, …), strongest first within each type, instead of sorted by power across the whole list.
+- **Nature picker is easier to spot** in the team editor (pill shape with an accent border and a leaf icon, instead of matching the Held Item / Ability boxes) and its Mint grid's column headers, which had been misaligned (e.g. Modest highlighting under "SpD" instead of "SpA"), are fixed and now colour-coded (green "raises" / red "lowers", with arrows).
+
 ## 0.12.0 — 2026-10-02
 
 ### New
