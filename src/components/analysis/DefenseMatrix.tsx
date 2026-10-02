@@ -1,5 +1,5 @@
 import type { Dex } from '@/data/dex';
-import { defensiveCoverage, defensiveSuggestions } from '@/domain/coverage';
+import { defensiveCoverage, defensiveFixSuggestion, defensiveSuggestions } from '@/domain/coverage';
 import type { FormatRules, Team } from '@/domain/types';
 import { Panel } from '../ui/primitives';
 import { cn } from '../ui/styles';
@@ -15,6 +15,7 @@ export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; for
   if (!rows.length) return null;
   const memberCount = team.slots.filter((s) => !!s).length;
   const suggestions = defensiveSuggestions(rows, memberCount);
+  const fix = defensiveFixSuggestion(dex, suggestions);
 
   return (
     <Panel title="Defensive type matrix">
@@ -43,7 +44,7 @@ export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; for
         Members <span className="text-bad">weak</span> / <span className="text-good">resistant or immune</span> to each attacking type; red cells
         need cover. Hover or focus a cell for multipliers.
       </p>
-      <SuggestionList suggestions={suggestions} />
+      <SuggestionList suggestions={suggestions} fix={fix} />
     </Panel>
   );
 }

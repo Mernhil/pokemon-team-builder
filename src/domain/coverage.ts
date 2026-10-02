@@ -87,8 +87,21 @@ export function teamVsTeam(attackers: Team, defenders: Team, dex: Dex): MatchupR
 
 export interface Suggestion {
   id: string;
-  severity: 'high' | 'medium';
+  /** 'tip' is an actionable fix, not a problem — shown with its own icon/colour. */
+  severity: 'high' | 'medium' | 'tip';
   text: string;
+}
+
+const listJoin = (items: string[]) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+
+/** The type that would help most against a list of problem types — resisting (defense) or hitting them super-effectively (offense) — if at least 2 of them. */
+function bestTypeFix(dex: Dex, problemTypes: TypeName[], relation: (candidate: TypeName, problem: TypeName) => boolean): { type: TypeName; fixes: TypeName[] } | null {
+  let best: { type: TypeName; fixes: TypeName[] } | null = null;
+  for (const t of dex.types) {
+    const fixes = problemTypes.filter((p) => relation(t, p));
+    if (fixes.length >= 2 && (!best || fixes.length > best.fixes.length)) best = { type: t, fixes };
+  }
+  return best;
 }
 
 /**
@@ -112,6 +125,18 @@ export function offensiveSuggestions(rows: OffenseRow[]): Suggestion[] {
     });
   }
   return out.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'high' ? -1 : 1));
+}
+
+/** One move type that would hit several of the team's current coverage gaps super-effectively at once, if any does. */
+export function offensiveFixSuggestion(dex: Dex, suggestions: Suggestion[]): Suggestion | null {
+  const problems = suggestions.map((s) => s.id as TypeName);
+  const best = bestTypeFix(dex, problems, (candidate, problem) => dex.effectiveness(candidate, [problem]) > 1);
+  if (!best) return null;
+  return {
+    id: `fix-${best.type}`,
+    severity: 'tip',
+    text: `A ${best.type}-type move would hit ${best.fixes.length} of your coverage gaps super-effectively: ${listJoin(best.fixes)}.`,
+  };
 }
 
 export interface DefenseRow {
@@ -170,4 +195,16 @@ export function defensiveSuggestions(rows: DefenseRow[], memberCount: number): S
     }
   }
   return out.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'high' ? -1 : 1));
+}
+
+/** One defending type that would resist several of the team's current weaknesses at once, if any does. */
+export function defensiveFixSuggestion(dex: Dex, suggestions: Suggestion[]): Suggestion | null {
+  const problems = suggestions.map((s) => s.id as TypeName);
+  const best = bestTypeFix(dex, problems, (candidate, problem) => dex.effectiveness(problem, [candidate]) < 1);
+  if (!best) return null;
+  return {
+    id: `fix-${best.type}`,
+    severity: 'tip',
+    text: `A ${best.type}-type Pokémon would resist ${best.fixes.length} of your weak types: ${listJoin(best.fixes)}.`,
+  };
 }
