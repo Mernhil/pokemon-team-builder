@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadDex } from '@/data/dex';
 import { getFormat } from '@/domain/formats';
 import { PICKER_ORDER, matchRank, moveGroupOf, orderItems, orderMoves, orderSpecies, pushRecent, rankSearch } from '@/domain/pickerOrder';
+import { TYPE_NAMES } from '@/domain/types';
 
 const none = { favorites: [], recent: [] };
 const ids = (g: { entries: { id: string }[] }) => g.entries.map((e) => e.id);
@@ -76,7 +77,7 @@ describe('item order', () => {
 });
 
 describe('move order', () => {
-  it('STAB then coverage by power, then setup, support and fixed-power attacks', async () => {
+  it('STAB then coverage grouped by type (strongest first within a type), then setup, support and fixed-power attacks', async () => {
     const f = getFormat('gen9');
     const dex = await loadDex('gen9');
     const garchomp = dex.species('garchomp')!;
@@ -84,7 +85,14 @@ describe('move order', () => {
     expect(groups.map((g) => g.id)).toEqual(['stab', 'coverage', 'setup', 'support', 'other'].filter((id) => groups.some((g) => g.id === id)));
     const stab = groups[0].entries;
     expect(stab.every((m) => garchomp.types.includes(m.type as never))).toBe(true);
-    expect(stab.map((m) => m.basePower)).toEqual([...stab.map((m) => m.basePower)].sort((a, b) => b - a));
+    // Grouped by type (TYPE_NAMES order): every move of one type before the next type starts.
+    const typeOrder = stab.map((m) => TYPE_NAMES.indexOf(m.type as never));
+    expect(typeOrder).toEqual([...typeOrder].sort((a, b) => a - b));
+    // Strongest first within a type.
+    for (const t of new Set(stab.map((m) => m.type))) {
+      const powers = stab.filter((m) => m.type === t).map((m) => m.basePower);
+      expect(powers).toEqual([...powers].sort((a, b) => b - a));
+    }
     expect(ids(groups.find((g) => g.id === 'setup')!)).toContain('swordsdance');
     expect(ids(groups.find((g) => g.id === 'support')!)).toContain('protect');
   });

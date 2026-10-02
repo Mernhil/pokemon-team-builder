@@ -211,16 +211,18 @@ export function moveGroupOf(m: Move, stabTypes: readonly string[]): string {
   return stabTypes.includes(m.type) ? 'stab' : 'coverage';
 }
 
+/** Attacking moves: grouped by type (Normal, Fire, Water, …), strongest first within a type. */
+const byType = (a: Move, b: Move) => typeIndex(a.type) - typeIndex(b.type) || b.basePower - a.basePower || byName(a, b);
+
 export function orderMoves(moves: Move[], ctx: MoveOrderContext): PickerGroup<Move>[] {
   const cfg = PICKER_ORDER.moves;
   const labels = ctx.alphabetical ? [...cfg.groups.slice(0, 2), { id: 'all', label: 'All moves A–Z' }] : cfg.groups;
-  const byPower = (a: Move, b: Move) => b.basePower - a.basePower || byName(a, b);
   return group(moves, labels, ctx.prefs, (m) => (ctx.alphabetical ? 'all' : moveGroupOf(m, ctx.stabTypes)), {
-    stab: byPower,
-    coverage: byPower,
+    stab: byType,
+    coverage: byType,
     setup: byName,
     support: byName,
-    other: byName,
+    other: byType,
     all: byName,
   });
 }
