@@ -83,16 +83,24 @@ describe('move order', () => {
     const garchomp = dex.species('garchomp')!;
     const groups = orderMoves(dex.learnset('garchomp', f.regulationId), { prefs: none, stabTypes: garchomp.types });
     expect(groups.map((g) => g.id)).toEqual(['stab', 'coverage', 'setup', 'support', 'other'].filter((id) => groups.some((g) => g.id === id)));
-    const stab = groups[0].entries;
+
+    // Grouped by type (TYPE_NAMES order: every move of one type before the next type starts),
+    // strongest first within a type — for every attack group the new byType comparator covers.
+    const expectGroupedByType = (entries: { type: string; basePower: number }[]) => {
+      const typeOrder = entries.map((m) => TYPE_NAMES.indexOf(m.type as never));
+      expect(typeOrder).toEqual([...typeOrder].sort((a, b) => a - b));
+      for (const t of new Set(entries.map((m) => m.type))) {
+        const powers = entries.filter((m) => m.type === t).map((m) => m.basePower);
+        expect(powers).toEqual([...powers].sort((a, b) => b - a));
+      }
+    };
+    const stab = groups.find((g) => g.id === 'stab')!.entries;
     expect(stab.every((m) => garchomp.types.includes(m.type as never))).toBe(true);
-    // Grouped by type (TYPE_NAMES order): every move of one type before the next type starts.
-    const typeOrder = stab.map((m) => TYPE_NAMES.indexOf(m.type as never));
-    expect(typeOrder).toEqual([...typeOrder].sort((a, b) => a - b));
-    // Strongest first within a type.
-    for (const t of new Set(stab.map((m) => m.type))) {
-      const powers = stab.filter((m) => m.type === t).map((m) => m.basePower);
-      expect(powers).toEqual([...powers].sort((a, b) => b - a));
-    }
+    expectGroupedByType(stab);
+    const coverage = groups.find((g) => g.id === 'coverage')?.entries ?? [];
+    expect(coverage.every((m) => !garchomp.types.includes(m.type as never))).toBe(true);
+    expectGroupedByType(coverage);
+
     expect(ids(groups.find((g) => g.id === 'setup')!)).toContain('swordsdance');
     expect(ids(groups.find((g) => g.id === 'support')!)).toContain('protect');
   });
