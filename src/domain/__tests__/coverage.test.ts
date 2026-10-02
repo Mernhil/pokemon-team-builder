@@ -77,6 +77,11 @@ describe('defensiveSuggestions', () => {
   it('says nothing for a lone Pokémon (not enough of a team to judge)', () => {
     expect(defensiveSuggestions([row('Fire', 1, 0)], 1)).toEqual([]);
   });
+
+  it('orders its chip stats the same as the matrix cell: weak (bad) then resist (good)', () => {
+    const s = defensiveSuggestions([row('Fairy', 3, 1)], 3)[0];
+    expect(s.stats).toEqual([{ value: 3, tone: 'bad' }, { value: 1, tone: 'good' }]);
+  });
 });
 
 describe('defensiveFixSuggestion', () => {
@@ -115,6 +120,11 @@ describe('offensiveSuggestions', () => {
     expect(s[0].text).toContain('no super-effective attacks against Steel');
     expect(s[1].severity).toBe('medium');
     expect(s[1].text).toContain('still land neutral damage');
+  });
+
+  it('orders its chip stats the same as the matrix cell: super-effective (good) then walled (bad)', () => {
+    const s = offensiveSuggestions([row('Steel', 3, 0, 3)])[0];
+    expect(s.stats).toEqual([{ value: 0, tone: 'good' }, { value: 3, tone: 'bad' }]);
   });
 
   it('says nothing with fewer than 3 attackers (a coverage gap is still expected)', () => {

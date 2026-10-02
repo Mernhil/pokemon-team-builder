@@ -89,7 +89,15 @@ export interface Suggestion {
   id: string;
   /** 'tip' is an actionable fix, not a problem — shown with its own icon/colour. */
   severity: 'high' | 'medium' | 'tip';
+  /** The type this suggestion is about (a problem row) or recommends (a 'tip' row) — for a type badge. */
+  type: TypeName;
+  /** Full sentence: a 'tip' row's own text, or a problem row's tooltip/accessible label. */
   text: string;
+  /** A problem row's two counts for its compact chip, in the same left-to-right order and colour
+   *  ('good'/'bad') as the matrix cell they're drawn from. Absent on a 'tip' row. */
+  stats?: [{ value: number; tone: 'good' | 'bad' }, { value: number; tone: 'good' | 'bad' }];
+  /** A 'tip' row's problem types it would fix, for their own small badges. Absent on a problem row. */
+  related?: TypeName[];
 }
 
 const listJoin = (items: string[]) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
@@ -119,6 +127,9 @@ export function offensiveSuggestions(rows: OffenseRow[]): Suggestion[] {
     out.push({
       id: r.defType,
       severity: gap ? 'high' : 'medium',
+      type: r.defType,
+      // Same order as the matrix cell: super-effective (good) then walled (bad).
+      stats: [{ value: r.superEffective, tone: 'good' }, { value: r.walled, tone: 'bad' }],
       text: gap
         ? `You have no super-effective attacks against ${r.defType}, and most of your team is resisted or walled by it — consider adding a move or Pokémon that hits it hard.`
         : `Nothing on your team hits ${r.defType} super-effectively yet, though you can still land neutral damage.`,
@@ -129,12 +140,14 @@ export function offensiveSuggestions(rows: OffenseRow[]): Suggestion[] {
 
 /** One move type that would hit several of the team's current coverage gaps super-effectively at once, if any does. */
 export function offensiveFixSuggestion(dex: Dex, suggestions: Suggestion[]): Suggestion | null {
-  const problems = suggestions.map((s) => s.id as TypeName);
+  const problems = suggestions.map((s) => s.type);
   const best = bestTypeFix(dex, problems, (candidate, problem) => dex.effectiveness(candidate, [problem]) > 1);
   if (!best) return null;
   return {
     id: `fix-${best.type}`,
     severity: 'tip',
+    type: best.type,
+    related: best.fixes,
     text: `A ${best.type}-type move would hit ${best.fixes.length} of your coverage gaps super-effectively: ${listJoin(best.fixes)}.`,
   };
 }
@@ -185,13 +198,21 @@ export function defensiveSuggestions(rows: DefenseRow[], memberCount: number): S
       out.push({
         id: r.atkType,
         severity: 'high',
+        type: r.atkType,
+        stats: [{ value: r.weak, tone: 'bad' }, { value: r.resist, tone: 'good' }],
         text:
           r.weak >= 3
             ? `${r.atkType} is a big problem for your team: ${r.weak} of your ${memberCount} Pokémon are weak to it${r.resist ? `, and only ${r.resist} resist it` : ''}.`
             : `${r.atkType} is a real risk: ${r.weak} of your ${memberCount} Pokémon are weak to it, and none of them resist it either.`,
       });
     } else if (r.weak >= 2) {
-      out.push({ id: r.atkType, severity: 'medium', text: `${r.weak} of your Pokémon are weak to ${r.atkType}, though ${r.resist} can switch in.` });
+      out.push({
+        id: r.atkType,
+        severity: 'medium',
+        type: r.atkType,
+        stats: [{ value: r.weak, tone: 'bad' }, { value: r.resist, tone: 'good' }],
+        text: `${r.weak} of your Pokémon are weak to ${r.atkType}, though ${r.resist} can switch in.`,
+      });
     }
   }
   return out.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'high' ? -1 : 1));
@@ -199,12 +220,14 @@ export function defensiveSuggestions(rows: DefenseRow[], memberCount: number): S
 
 /** One defending type that would resist several of the team's current weaknesses at once, if any does. */
 export function defensiveFixSuggestion(dex: Dex, suggestions: Suggestion[]): Suggestion | null {
-  const problems = suggestions.map((s) => s.id as TypeName);
+  const problems = suggestions.map((s) => s.type);
   const best = bestTypeFix(dex, problems, (candidate, problem) => dex.effectiveness(problem, [candidate]) < 1);
   if (!best) return null;
   return {
     id: `fix-${best.type}`,
     severity: 'tip',
+    type: best.type,
+    related: best.fixes,
     text: `A ${best.type}-type Pokémon would resist ${best.fixes.length} of your weak types: ${listJoin(best.fixes)}.`,
   };
 }
