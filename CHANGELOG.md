@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.11.2 — 2026-10-02
+
+### Fixed
+- **Damage calc:** the Pokémon search now offers every species in the dataset, not only those legal in the team's regulation (Salamence, for instance, was missing on Reg M-A / M-B).
+- **Stat sliders on phones:** the coloured line was invisible on iOS Safari (only the thumb showed); it is now drawn on the slider track, with a taller touch area.
+
 ## 0.11.1 — 2026-10-01
 
 ### New

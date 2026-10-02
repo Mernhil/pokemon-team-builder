@@ -19,20 +19,23 @@ interface Props {
   className?: string;
   /** Show the generation filter row above the search box. */
   showGenFilter?: boolean;
+  /** Offer every species in the dataset, whatever the regulation (the damage calc). */
+  anyRegulation?: boolean;
 }
 
 /** Species search with sprites, generation symbols and a generation filter. */
-export function SpeciesPicker({ dex, format, value, onChange, placeholder, className, showGenFilter = true }: Props) {
+export function SpeciesPicker({ dex, format, value, onChange, placeholder, className, showGenFilter = true, anyRegulation = false }: Props) {
   const [gen, setGen] = useState<number | null>(null);
   const mega = format.capabilities.mega;
   const prefs = usePickerPrefs('species');
   const showUnavailable = usePrefsStore((s) => s.showUnavailableSpecies);
   const { addRecent, toggleFavorite, setShowUnavailableSpecies } = usePrefsStore.getState();
-  const pool = useMemo(() => dex.selectableSpecies(format.regulationId), [dex, format.regulationId]);
+  const regulationId = anyRegulation ? undefined : format.regulationId;
+  const pool = useMemo(() => dex.selectableSpecies(regulationId), [dex, regulationId]);
   // Only Champions regulations leave part of the dataset out.
   const unavailable = useMemo(
-    () => (format.regulationId ? dex.allSpecies().filter((s) => !s.isMega && !s.legalIn.includes(format.regulationId!)) : []),
-    [dex, format.regulationId],
+    () => (regulationId ? dex.allSpecies().filter((s) => !s.isMega && !s.legalIn.includes(regulationId)) : []),
+    [dex, regulationId],
   );
   const counts = useMemo(() => {
     const c = new Map<number, number>();
