@@ -2,10 +2,10 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## 0.14.0 — 2026-10-02
+## 0.15.0 — 2026-10-02
 
 ### New
-- **Type matrix suggestions:** the Defensive and Offensive type matrices now call out your team's real problems in plain language, worst first — e.g. "Fire is a big problem for your team: 3 of your 6 Pokémon are weak to it" or "You have no super-effective attacks against Poison, and most of your team is resisted or walled by it." When a single type would fix 2 or more of those problems at once, it's suggested directly — e.g. "A Water-type Pokémon would resist 3 of your weak types: Fire, Ice and Steel." The full problem list sits behind a collapsed disclosure so it doesn't crowd the matrix, except a high-severity problem, which stays visible without a tap.
+- **Type matrix suggestions:** the Defensive and Offensive type matrices now call out your team's real problems, worst first — e.g. "Fire is a big problem for your team." When a single type would fix 2 or more problems at once, it's suggested directly, with small type badges — e.g. "A Water-type Pokémon would resist 3 of your weak types" next to Fire/Ice/Steel badges. The full problem list sits behind a collapsed disclosure of compact type-badge chips (coloured and ordered like the matrix cell they're from) so it doesn't crowd the matrix on a phone — except a high-severity problem, which stays visible without a tap.
 
 ### Changed
 - **Move picker grouped by type:** STAB, Coverage and other attacking moves are now grouped by type (Normal, Fire, Water, …), strongest first within each type, instead of sorted by power across the whole list.
