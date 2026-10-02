@@ -276,7 +276,7 @@ export function Notice({ tone = 'warn', icon: Icon, title, children, className }
   );
 }
 
-/** The bad/warn icon that leads a severity-ranked list row (ValidationPanel's issues, coverage suggestions): same size, colour and label everywhere one appears. */
+/** The bad/warn icon that leads a severity-ranked list row (ValidationPanel's issues): same size, colour and label everywhere one appears. */
 export function SeverityIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: 'bad' | 'warn' }) {
   return <Icon size={15} className={cn('mt-0.5 shrink-0', tone === 'bad' ? 'text-bad' : 'text-warn')} aria-label={tone === 'bad' ? 'error' : 'warning'} />;
 }
