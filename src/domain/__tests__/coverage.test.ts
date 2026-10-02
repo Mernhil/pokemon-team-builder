@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
-import { defensiveSuggestions, offensiveCoverage, offensiveSuggestions } from '@/domain/coverage';
+import { defensiveFixSuggestion, defensiveSuggestions, offensiveCoverage, offensiveFixSuggestion, offensiveSuggestions } from '@/domain/coverage';
 import { getFormat } from '@/domain/formats';
 import { createSet, createTeam } from '@/domain/team';
 import type { Dataset, PokemonSet } from '@/domain/types';
@@ -79,6 +79,26 @@ describe('defensiveSuggestions', () => {
   });
 });
 
+describe('defensiveFixSuggestion', () => {
+  const row = (atkType: string, weak: number, resist: number) => ({
+    atkType: atkType as never,
+    mults: [],
+    weak,
+    resist,
+    danger: weak >= 3 || (weak >= 2 && resist === 0),
+  });
+
+  it('picks the type that resists the most current weaknesses at once', () => {
+    const rows = [row('Ground', 2, 0), row('Rock', 2, 0), row('Ice', 2, 1)];
+    const s = defensiveFixSuggestion(dex, defensiveSuggestions(rows, 3));
+    expect(s?.text).toContain('A Steel-type Pokémon would resist 2 of your weak types: Rock and Ice.');
+  });
+
+  it('says nothing when no single type resists 2+ of the problems', () => {
+    expect(defensiveFixSuggestion(dex, defensiveSuggestions([row('Ground', 2, 0)], 2))).toBeNull();
+  });
+});
+
 describe('offensiveSuggestions', () => {
   const row = (defType: string, hitCount: number, superEffective: number, walled: number) => ({
     defType: defType as never,
@@ -99,5 +119,24 @@ describe('offensiveSuggestions', () => {
 
   it('says nothing with fewer than 3 attackers (a coverage gap is still expected)', () => {
     expect(offensiveSuggestions([row('Steel', 2, 0, 2)])).toEqual([]);
+  });
+});
+
+describe('offensiveFixSuggestion', () => {
+  const row = (defType: string, hitCount: number, superEffective: number, walled: number) => ({
+    defType: defType as never,
+    hits: Array.from({ length: hitCount }, () => ({ name: '', mult: 1, move: '' })),
+    superEffective,
+    walled,
+  });
+
+  it('picks the move type that hits the most current gaps super-effectively at once', () => {
+    const rows = [row('Ghost', 3, 0, 1), row('Psychic', 3, 0, 1), row('Water', 3, 1, 0)];
+    const s = offensiveFixSuggestion(dex, offensiveSuggestions(rows));
+    expect(s?.text).toContain('A Ghost-type move would hit 2 of your coverage gaps super-effectively: Ghost and Psychic.');
+  });
+
+  it('says nothing when no single type covers 2+ of the gaps', () => {
+    expect(offensiveFixSuggestion(dex, offensiveSuggestions([row('Ghost', 3, 0, 1)]))).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Dex } from '@/data/dex';
-import { offensiveCoverage, offensiveSuggestions } from '@/domain/coverage';
+import { offensiveCoverage, offensiveFixSuggestion, offensiveSuggestions } from '@/domain/coverage';
 import type { Team } from '@/domain/types';
 import { Panel } from '../ui/primitives';
 import { cn } from '../ui/styles';
@@ -14,6 +14,7 @@ import { SuggestionList } from './SuggestionList';
 export function OffenseMatrix({ team, dex }: { team: Team; dex: Dex }) {
   const rows = useMemo(() => offensiveCoverage(team, dex), [team, dex]);
   const suggestions = useMemo(() => offensiveSuggestions(rows), [rows]);
+  const fix = useMemo(() => offensiveFixSuggestion(dex, suggestions), [dex, suggestions]);
   if (!rows[0]?.hits.length) return null;
 
   return (
@@ -47,7 +48,7 @@ export function OffenseMatrix({ team, dex }: { team: Team; dex: Dex }) {
         <span className="text-bad">only for resisted or no damage</span>, from their damaging moves. Hover a cell for each member's best
         move.
       </p>
-      <SuggestionList suggestions={suggestions} />
+      <SuggestionList suggestions={suggestions} fix={fix} />
     </Panel>
   );
 }
