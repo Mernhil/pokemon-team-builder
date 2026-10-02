@@ -1,8 +1,9 @@
 /**
  * Renders the PWA / home-screen icons in public/icons/ from src-assets/logo-source.png — the app's
  * icon artwork (transparent background, symbol only, no wordmark). Run with `npm run icons` after
- * replacing that source image. Desktop (Tauri) icons are regenerated separately, from the same
- * source, via `npx tauri icon src-assets/logo-source.png`.
+ * replacing that source image; that also regenerates the desktop (Tauri) icons in src-tauri/icons/
+ * via the `icons:tauri` script (`tauri icon`), which `desktop:dev`/`desktop:build` also run
+ * automatically (pre* npm hooks) so a new source image always propagates on the next build.
  */
 import sharp from 'sharp';
 
