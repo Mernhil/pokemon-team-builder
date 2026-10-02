@@ -1,9 +1,10 @@
 import type { Dex } from '@/data/dex';
-import { defensiveCoverage } from '@/domain/coverage';
+import { defensiveCoverage, defensiveSuggestions } from '@/domain/coverage';
 import type { FormatRules, Team } from '@/domain/types';
 import { Panel } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { TYPE_BADGE } from '../ui/color';
+import { SuggestionList } from './SuggestionList';
 
 /**
  * Compact defensive coverage: for each attacking type, how many team members are weak / resist.
@@ -12,6 +13,8 @@ import { TYPE_BADGE } from '../ui/color';
 export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; format: FormatRules }) {
   const rows = defensiveCoverage(team, dex, format.capabilities.mega);
   if (!rows.length) return null;
+  const memberCount = team.slots.filter((s) => !!s).length;
+  const suggestions = defensiveSuggestions(rows, memberCount);
 
   return (
     <Panel title="Defensive type matrix">
@@ -40,6 +43,7 @@ export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; for
         Members <span className="text-bad">weak</span> / <span className="text-good">resistant or immune</span> to each attacking type; red cells
         need cover. Hover or focus a cell for multipliers.
       </p>
+      <SuggestionList suggestions={suggestions} />
     </Panel>
   );
 }
