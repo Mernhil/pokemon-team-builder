@@ -185,9 +185,22 @@ input[type='range'].stat-range::-moz-range-thumb {
 /* Fingers need a bigger thumb (and a taller hit area) than a mouse pointer. */
 @media (pointer: coarse) {
   input[type='range'].stat-range {
+    height: 44px;
+    background: transparent;
+  }
+  /* iOS Safari drops an input's own background (clipped by padding), so paint the line on the track. */
+  input[type='range'].stat-range::-webkit-slider-runnable-track {
     height: 8px;
-    padding-block: 12px;
-    background-clip: content-box;
+    border-radius: 999px;
+    background: linear-gradient(to right, var(--fill) 0 var(--pct), var(--color-surface-2) var(--pct) 100%);
+  }
+  input[type='range'].stat-range::-moz-range-track {
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(to right, var(--fill) 0 var(--pct), var(--color-surface-2) var(--pct) 100%);
+  }
+  input[type='range'].stat-range::-webkit-slider-thumb {
+    margin-top: -9px;
   }
   input[type='range'].stat-range::-webkit-slider-thumb {
     width: 26px;

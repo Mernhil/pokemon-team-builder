@@ -104,6 +104,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
           )}
           <div className="min-w-0 flex-1 space-y-1.5">
             <SpeciesPicker
+              anyRegulation
               showGenFilter={!set}
               dex={dex}
               format={format}
