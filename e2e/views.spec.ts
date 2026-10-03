@@ -65,6 +65,19 @@ test('Pokénav: open Platinum, click a place on the map, the location panel open
   await expect(panel.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
 });
 
+test('Pokénav: tapping a place still picks it when the browser sizes the map box differently', async ({ page }) => {
+  // WebKit can give the svg another shape than the map (it then letterboxes the map inside it); the
+  // tap must still land on the place under it, not on where it would be in a stretched map.
+  await openApp(page, '#atlas');
+  await page.addStyleTag({ content: 'svg[role="group"] { height: 150px !important; }' });
+  await page.getByRole('radio', { name: 'Pokémon Platinum' }).check();
+  const map = page.getByRole('group', { name: /Sinnoh map/ });
+  const [m, s] = await Promise.all([map.getByRole('button', { name: 'Route 201', exact: true }).boundingBox(), map.boundingBox()]);
+  await map.click({ position: { x: m!.x - s!.x + m!.width / 2, y: m!.y - s!.y + m!.height / 2 } });
+  const panel = page.getByRole('complementary', { name: 'Location details' }).or(page.getByRole('dialog', { name: 'Route 201' }));
+  await expect(panel.getByRole('heading', { name: 'Route 201', level: 2 }).first()).toBeVisible();
+});
+
 test('theme toggle switches between light and dark', async ({ page }) => {
   await openApp(page);
   await expect(page.locator('html')).toHaveClass(/dark/);

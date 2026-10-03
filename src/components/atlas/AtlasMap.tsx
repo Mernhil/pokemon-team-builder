@@ -67,9 +67,18 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
 
   /** The place under a pointer: among those whose block contains it, the one whose centre is nearest (places can overlap on small maps). */
   const locAt = (e: { clientX: number; clientY: number }, svg: SVGSVGElement): string | undefined => {
-    const r = svg.getBoundingClientRect();
-    const x = vb.x + ((e.clientX - r.left) / r.width) * vb.w;
-    const y = vb.y + ((e.clientY - r.top) / r.height) * vb.h;
+    // Screen → map units through the svg's own transform: right however the browser sized the svg box
+    // (WebKit can give it another shape than the map, which is then letterboxed) and while zoomed.
+    const ctm = svg.getScreenCTM();
+    let x: number;
+    let y: number;
+    if (ctm) {
+      ({ x, y } = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse()));
+    } else {
+      const r = svg.getBoundingClientRect();
+      x = vb.x + ((e.clientX - r.left) / r.width) * vb.w;
+      y = vb.y + ((e.clientY - r.top) / r.height) * vb.h;
+    }
     let best: { id: string; d: number } | undefined;
     for (const [id, rects] of Object.entries(places))
       for (const [rx, ry, rw, rh] of rects) {
