@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "regulations": {
+    "champions-reg-ma": {
+      "patches": {}
+    },
+    "champions-reg-mb": {
+      "patches": {}
+    },
+    "champions-reg-mc": {
+      "patches": {
+        "absolmegaz": {
+          "name": "Absol-Mega-Z",
+          "abilities": {
+            "0": {
+              "before": "Magic Bounce",
+              "after": "Sharpness"
+            }
+          }
+        },
+        "garchompmegaz": {
+          "name": "Garchomp-Mega-Z",
+          "abilities": {
+            "0": {
+              "before": "Sand Force",
+              "after": "Levitate"
+            }
+          }
+        },
+        "lucariomegaz": {
+          "name": "Lucario-Mega-Z",
+          "abilities": {
+            "0": {
+              "before": "Adaptability",
+              "after": "Aura Guard"
+            }
+          }
+        },
+        "golisopodmega": {
+          "name": "Golisopod-Mega",
+          "abilities": {
+            "0": {
+              "before": "Emergency Exit",
+              "after": "Tough Claws"
+            }
+          }
+        },
+        "baxcaliburmega": {
+          "name": "Baxcalibur-Mega",
+          "abilities": {
+            "H": {
+              "before": "Ice Body"
+            }
+          }
+        }
+      },
+      "unconfirmed": {
+        "species": [
+          "farfetchdgalar",
+          "mrmimegalar"
+        ],
+        "note": "Listed by a single source (metavgc.com) only; not added. Re-check on the next update."
+      }
+    }
+  }
+}

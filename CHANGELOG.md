@@ -15,6 +15,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 - **Bring planner:** "Plan vs this team" suggests which four to bring and which two to lead against the opponent's six, with the three best plans, plain reasons and the main risk. Add their Pokémon as species, paste their team, load a logged match or use a saved enemy team; unknown sets use the most-used set, and what you know overrides it. Only one Mega per plan. "Use this plan" saves what you bring and lead onto the match. On a logged match and in the Matchup tab.
 
+- **Regulation changes:** a new **Regulation diff** page (More → Regulation diff) compares two regulations: what was added or removed (Pokémon, Megas, items, moves, abilities), species changes as before → after, and unconfirmed entries. Saved teams show a badge when they're not in the live regulation and which of their Pokémon, items or moves aren't legal in it. The regulation banner now shows what moving a team to the live regulation breaks, changes or newly allows, and **Copy to <regulation>** makes a variation with the illegal parts removed and a checklist (the original is untouched). A next regulation with a start date counts down in the banner.
+
 ### Fixed
 - Light theme: better contrast for the selected game in Pokénav, the map caption, the Losses archetype chip and the small-sample rows in the match stats; the saved-team picker in the match form now has a label.
 

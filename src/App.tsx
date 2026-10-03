@@ -10,6 +10,7 @@ import {
   Eraser,
   FolderOpen,
   Gauge,
+  GitCompare,
   MoreHorizontal,
   Plus,
   Save,
@@ -50,6 +51,7 @@ const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').the
 const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
 const AtlasView = lazy(() => import('./components/atlas/AtlasView').then((m) => ({ default: m.AtlasView })));
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
+const RegulationDiffView = lazy(() => import('./components/regulation/RegulationDiffView').then((m) => ({ default: m.RegulationDiffView })));
 const ThreatReportView = lazy(() => import('./components/threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
 const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
@@ -71,8 +73,9 @@ const SECONDARY: Dest[] = [
   { id: 'meta', label: 'Meta', icon: BarChart3 },
   { id: 'speed', label: 'Speed tiers', icon: Gauge },
   { id: 'threats', label: 'Threat report', icon: ShieldAlert },
+  { id: 'regdiff', label: 'Regulation diff', icon: GitCompare },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'regdiff'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -123,6 +126,7 @@ export default function App() {
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
   else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
+  else if (view === 'regdiff') content = <Suspense fallback={loading('Loading regulation diff…')}><RegulationDiffView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;

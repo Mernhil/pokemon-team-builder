@@ -93,6 +93,12 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoA11yViolations(page);
     });
 
+    test('Regulation diff', async ({ page }) => {
+      await page.goto('/#regdiff');
+      await page.getByRole('table', { name: /Species changes/ }).waitFor();
+      await expectNoA11yViolations(page);
+    });
+
     test('Meta', async ({ page }) => {
       await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More/ }).click();
       await page.getByRole('menuitem', { name: 'Meta' }).click();

@@ -1,10 +1,14 @@
-import { useState } from 'react';
-import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Copy, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { getFormat } from '@/domain/formats';
+import { useRegulationChanges } from '@/data/regulationChanges';
+import { useDex } from '@/data/useDex';
+import { getFormat, regulationInfo } from '@/domain/formats';
+import { relevantRegulations, teamImpact, type TeamImpact } from '@/domain/regulationImpact';
 import { teamVariations } from '@/domain/team';
 import type { SpriteSetId, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
+import { ImpactList, impactSummary } from '../analysis/ImpactList';
 import { Modal } from '../ui/Modal';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip } from '../ui/primitives';
@@ -146,12 +150,55 @@ function DeleteButton({
 }
 
 
+/** "Not live" when a team's regulation isn't the live one, and how many problems it would have in the live and the next one. */
+function RegulationChips({ team, impacts, live }: { team: Team; impacts?: Map<string, TeamImpact>; live?: string }) {
+  const f = getFormat(team.formatId);
+  if (f.datasetId !== 'champions') return null;
+  const notLive = !!live && f.regulationId !== live;
+  return (
+    <>
+      {notLive && <Chip tone="warn">Not live: {f.shortName}</Chip>}
+      {[...(impacts ?? [])].map(([reg, impact]) =>
+        impact.counts.breaks > 0 ? (
+          <Chip key={reg} tone="bad" icon={AlertTriangle}>
+            {impact.counts.breaks} {impact.counts.breaks === 1 ? 'problem' : 'problems'} in {regulationInfo(reg)?.shortName ?? reg}
+          </Chip>
+        ) : null,
+      )}
+    </>
+  );
+}
+
 export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpenChange: (o: boolean) => void; dex?: Dex }) {
   const teams = useTeamStore((s) => s.teams);
   const order = useTeamStore((s) => s.order);
   const activeTeamId = useTeamStore((s) => s.activeTeamId);
   const { selectTeam, duplicateTeam, deleteTeam, updateTeam, addVariation } = useTeamStore.getState();
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [showProblems, setShowProblems] = useState(false);
+
+  // Regulation impact: every Champions team (and variation) against the live regulation and the next
+  // announced one that has data, minus what was already wrong in its own regulation.
+  const champDex = useDex('champions');
+  const changes = useRegulationChanges();
+  const { live, next } = relevantRegulations();
+  const targets = [live, next].filter((x): x is string => !!x);
+  const impacts = useMemo(() => {
+    const out = new Map<string, Map<string, TeamImpact>>();
+    if (!open || champDex.status !== 'ready') return out;
+    for (const t of Object.values(teams)) {
+      if (getFormat(t.formatId).datasetId !== 'champions') continue;
+      const own = getFormat(t.formatId).regulationId;
+      const per = new Map<string, TeamImpact>();
+      for (const reg of targets) if (reg !== own) per.set(reg, teamImpact(t, reg, champDex.dex, changes));
+      out.set(t.id, per);
+    }
+    return out;
+    // targets is derived from the clock; the manifest only changes with a new build
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, teams, champDex, changes, live, next]);
+  // The furthest-ahead regulation with a team that breaks in it, for the headline.
+  const headline = [...targets].reverse().map((reg) => ({ reg, broken: [...impacts.entries()].filter(([, per]) => (per.get(reg)?.counts.breaks ?? 0) > 0) })).find((h) => h.broken.length > 0);
 
   const select = (id: string) => {
     selectTeam(id);
@@ -160,6 +207,35 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Saved teams" description="Stored on this device. Use Import / Export → JSON backup to move them to another one." wide>
+      {headline && champDex.status === 'ready' && (
+        <div className="mb-3 rounded-xl border border-warn/40 bg-warn/8 p-3 text-sm" role="region" aria-label="Teams with problems in a newer regulation">
+          <div className="flex flex-wrap items-center gap-2">
+            <AlertTriangle size={16} className="shrink-0 text-warn" aria-hidden />
+            <p className="min-w-0 flex-1 font-semibold">
+              {headline.broken.length} of your {Object.keys(teams).length === 1 ? 'team has' : 'teams have'} problems in {regulationInfo(headline.reg)?.shortName ?? headline.reg}
+            </p>
+            <Button size="sm" aria-expanded={showProblems} onClick={() => setShowProblems((v) => !v)}>
+              {showProblems ? 'Hide details' : 'Show details'}
+            </Button>
+          </div>
+          {showProblems && (
+            <ul className="mt-3 space-y-3">
+              {headline.broken.map(([teamId, per]) => (
+                <li key={teamId}>
+                  <p className="mb-1 text-sm font-semibold">
+                    {teams[teamId].name}
+                    {teams[teamId].variationLabel ? ` · ${teams[teamId].variationLabel}` : ''}: {impactSummary(per.get(headline.reg)!.counts)}
+                  </p>
+                  <ImpactList impact={per.get(headline.reg)!} dex={champDex.dex} format={getFormat(teams[teamId].formatId)} />
+                  <Button size="sm" className="mt-1.5" onClick={() => select(teamId)}>
+                    Open this team
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <ul className="space-y-3">
         {order.map((id) => {
           const t = teams[id];
@@ -177,6 +253,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                   <InlineEditable value={t.name} ariaLabel="Saved team name" textClassName="text-base font-semibold" onCommit={(name) => updateTeam(id, { name })} />
                   <Chip>{t.category || f.shortName}</Chip>
                   {variations.length > 0 && <Chip>{variations.length + 1} variations</Chip>}
+                  <RegulationChips team={t} impacts={impacts.get(t.id)} live={live} />
                   {groupIsActive && <Chip tone="accent">Editing</Chip>}
                 </div>
                 <Button size="icon" variant="ghost" aria-label={`Duplicate ${t.name}`} onClick={() => duplicateTeam(id)}>
@@ -194,6 +271,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                   {variations.map((v) => (
                     <li key={v.id} className={cn('flex items-center gap-2 rounded-xl border p-2', v.id === activeTeamId ? 'border-accent bg-accent/5' : 'border-transparent bg-surface-2')}>
                       <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                        <RegulationChips team={v} impacts={impacts.get(v.id)} live={live} />
                         <InlineEditable
                           value={v.variationLabel ?? 'Variation'}
                           ariaLabel="Variation label"

@@ -63,7 +63,7 @@ interface RegulationFile {
   /** Pokémon Showdown doesn't know these yet — full definitions from official announcements. */
   newSpecies?: CustomSpecies[];
   newItems?: CustomItem[];
-  unconfirmed?: unknown;
+  unconfirmed?: { species?: string[]; note?: string };
   sources?: string[];
   updatedAt?: string;
 }
@@ -391,6 +391,47 @@ async function main() {
     resolve(OUT, 'regulations.json'),
     JSON.stringify({ generatedAt, regulations, upcoming: schedule.upcoming ?? [], lastChecked: schedule.lastChecked }, null, 2),
   );
+
+  // What each regulation's species patches change, with the value before (Showdown's, or an earlier
+  // patch's) so the app can show "before → after" in the regulation diff.
+  type Snap = { types: string[]; abilities: Record<string, string>; baseStats: Record<string, number> };
+  const running = new Map<string, Snap>();
+  const changes: Record<string, { unconfirmed?: { species?: string[]; note?: string }; patches: Record<string, { name: string; types?: { before: string[]; after: string[] }; abilities?: Record<string, { before?: string; after?: string }>; baseStats?: Record<string, { before: number; after: number }> }> }> = {};
+  for (const r of [...regs].sort((a, b) => a.meta.start.localeCompare(b.meta.start))) {
+    const out: (typeof changes)[string]['patches'] = {};
+    for (const [id, p] of Object.entries(r.meta.speciesPatches ?? {})) {
+      const s = base.species.get(id);
+      const custom = customSpecies.get(id);
+      const before: Snap | undefined =
+        running.get(id) ??
+        (s.exists
+          ? { types: [...s.types], abilities: { ...s.abilities } as Record<string, string>, baseStats: Object.fromEntries(STAT_IDS.map((k) => [k, s.baseStats[k]])) }
+          : custom
+            ? { types: [...(custom.types ?? [])], abilities: { ...(custom.abilities ?? {}) } as Record<string, string>, baseStats: { ...(custom.baseStats ?? {}) } as Record<string, number> }
+            : undefined);
+      const entry: (typeof out)[string] = { name: s.exists ? s.name : (custom?.name ?? id) };
+      const after: Snap = { types: p.types ?? before?.types ?? [], abilities: p.abilities ?? before?.abilities ?? {}, baseStats: { ...(before?.baseStats ?? {}), ...(p.baseStats ?? {}) } };
+      if (p.types && JSON.stringify(p.types) !== JSON.stringify(before?.types)) entry.types = { before: before?.types ?? [], after: p.types };
+      if (p.abilities) {
+        const ab: NonNullable<typeof entry.abilities> = {};
+        for (const slot of new Set([...Object.keys(before?.abilities ?? {}), ...Object.keys(p.abilities)])) {
+          const b = before?.abilities?.[slot];
+          const a = p.abilities[slot];
+          if (b !== a) ab[slot] = { before: b, after: a };
+        }
+        if (Object.keys(ab).length) entry.abilities = ab;
+      }
+      if (p.baseStats) {
+        const bs: NonNullable<typeof entry.baseStats> = {};
+        for (const [k, v] of Object.entries(p.baseStats)) if (before?.baseStats?.[k] !== v) bs[k] = { before: before?.baseStats?.[k] ?? 0, after: v };
+        if (Object.keys(bs).length) entry.baseStats = bs;
+      }
+      running.set(id, after);
+      if (entry.types || entry.abilities || entry.baseStats) out[id] = entry;
+    }
+    changes[r.meta.id] = { patches: out, ...(r.meta.unconfirmed ? { unconfirmed: r.meta.unconfirmed } : {}) };
+  }
+  writeFileSync(resolve(OUT, 'regulation-changes.json'), JSON.stringify({ version: 1, regulations: changes }, null, 2));
 
   console.log(
     `wrote champions.json: ${Object.keys(species).length} species, ${Object.keys(moves).length} moves, ` +

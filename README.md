@@ -126,6 +126,11 @@ The Meta tab lists each Champions regulation's most-used Pokémon with their com
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
 
+### Regulation changes
+
+When a regulation changes, the app shows what it does. **More → Regulation diff** (`#regdiff`) compares any two Champions regulations: Pokémon, Megas, items, moves and abilities added or removed (with sprites and item icons), species patches as before → after (typing, stats, abilities) and the unconfirmed entries, labelled as such. Saved teams get a badge when their regulation isn't the live one and a "N problems in Reg M-D" chip when something of theirs isn't legal there; the Saved teams dialog gathers them under "3 of your teams have problems in Reg M-D". In the builder, the regulation banner shows the impact before "Move team to <live>" (what breaks, what changes, what is new, with the final-stat effect of a patched Pokémon) and **Copy to <regulation>** adds a variation with the illegal parts removed and a checklist of what to fix; the original is never modified. A next regulation with a start date counts down in the banner.
+`src/domain/regulationImpact.ts` (pure) computes legality from the Dex and from `validateTeam` for the target format, so it can't disagree with the validator, and works for Showdown-based sets as well as delta ones; only the patches and unconfirmed notes come from `src/data/generated/regulation-changes.json`, which `npm run data` builds from the delta files.
+
 ### Bring planner
 
 **Plan vs this team** (on a logged match with a saved team picked, and in the Matchup tab) suggests which four of your six to bring and which two to lead, in doubles (bring 4, lead 2; singles 3 and 1), with the best three plans, each with two to four plain reasons and a main risk ("Nothing in this four outspeeds Dragapult outside Tailwind"). It is a suggestion, not a prediction.
