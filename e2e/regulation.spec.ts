@@ -46,7 +46,7 @@ test('Banner: a team in an older regulation shows what moving to the live one do
   await expect(region.getByText('New:').first()).toBeVisible();
   await expect(region).toContainText('Garchomp can now Mega Evolve into Garchomp-Mega-Z');
 
-  const teamName = await page.getByRole('textbox', { name: 'Team name' }).locator('visible=true').first().inputValue();
+  const teamName = 'Imported Team';
   await page.getByRole('button', { name: /Copy to Reg M-C/ }).click();
   await expect(page.getByText(/as a variation. The original is unchanged/)).toBeVisible();
   // The copy is the active team now, in the live regulation; the original is still there, in M-B, as the folder.

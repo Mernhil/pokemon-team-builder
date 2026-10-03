@@ -30,7 +30,8 @@ import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { toast } from '@/store/toastStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
-import { isLocked, useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
+import { isSavedTeam } from '@/domain/team';
+import { useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
 import { OffenseMatrix } from './components/analysis/OffenseMatrix';
 import { TeamCheck } from './components/analysis/TeamCheck';
@@ -269,7 +270,7 @@ function FormatBadge({ format }: { format: FormatRules }) {
 }
 
 function Header({ team, format, dex, onOpenSettings }: { team: Team; format: FormatRules; dex?: Dex; onOpenSettings: () => void }) {
-  const { updateTeam, switchFormat, saveAsNew, clearTeam, restoreSlots } = useTeamStore.getState();
+  const { switchFormat, saveTeam, clearTeam, restoreSlots, newTeam, selectTeam, deleteTeam } = useTeamStore.getState();
   const isEmpty = team.slots.every((s) => s === null);
   const [teamsOpen, setTeamsOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
@@ -278,21 +279,25 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
   const liveRegId = currentRegulation()?.id;
 
   const clearWithUndo = () => {
+    // Edits save into the open team as you go, so wiping a saved or named team would wipe the saved one:
+    // start a fresh team instead and leave it where it is. Only the scratch draft is emptied in place.
+    if (isSavedTeam(team)) {
+      const kept = team;
+      const fresh = newTeam(team.formatId);
+      toast(`Started a new team. “${kept.name}” is still in Saved teams.`, {
+        label: 'Undo',
+        run: () => {
+          selectTeam(kept.id);
+          deleteTeam(fresh);
+        },
+      });
+      return;
+    }
     const before = team.slots;
     clearTeam(team.id);
-    toast(`Cleared ${team.name}.`, { label: 'Undo', run: () => restoreSlots(team.id, before) });
+    toast('Cleared the team.', { label: 'Undo', run: () => restoreSlots(team.id, before) });
   };
 
-  // Rendered in one of two places depending on width (only one is ever visible).
-  const nameInput = (
-    <input
-      value={team.name}
-      onChange={(e) => updateTeam(team.id, { name: e.target.value })}
-      aria-label="Team name"
-      readOnly={isLocked(team)}
-      className="h-9 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 text-base font-semibold outline-none hover:border-border focus:border-accent pointer-coarse:h-11 xl:max-w-xs"
-    />
-  );
   const formatSelect = (
     <select
       aria-label="Game and format"
@@ -333,15 +338,12 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
 
         {/* The team being edited and its format: inline from xl up, a second row below that. */}
         <div className="order-last flex w-full min-w-0 items-center gap-2 xl:order-none xl:w-auto xl:flex-1">
-          <span className="contents max-sm:hidden">{nameInput}</span>
           <span className="hidden sm:inline-flex">
             <FormatBadge format={format} />
           </span>
           {formatSelect}
         </div>
 
-        {/* Phones: the team name shares the first row with the actions. */}
-        <span className="flex min-w-0 flex-1 sm:hidden">{nameInput}</span>
         <div className="ml-auto flex items-center gap-1.5">
           <UpdateCheckButton />
           <Button variant="primary" onClick={() => setSaveOpen(true)}>
@@ -374,10 +376,10 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
         open={saveOpen}
         onOpenChange={setSaveOpen}
         currentName={team.name}
-        onSave={(name) => {
-          saveAsNew(name);
+        onSave={(name, mode, targetId) => {
+          saveTeam(name, mode, targetId);
           setJustSaved(true);
-          toast(`Saved “${name}” to your teams.`);
+          toast(mode === 'overwrite' ? `Overwrote “${name}”.` : mode === 'variation' ? `Added a variation to “${name}”.` : `Saved “${name}” to your teams.`);
           window.setTimeout(() => setJustSaved(false), 1500);
         }}
       />

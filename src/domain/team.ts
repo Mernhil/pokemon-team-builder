@@ -10,7 +10,12 @@ export const uid = (): string =>
 
 export const emptySlots = (): TeamSlots => [null, null, null, null, null, null];
 
-export function createTeam(format: FormatRules, name = 'Untitled Team'): Team {
+export const DEFAULT_TEAM_NAME = 'Untitled Team';
+
+/** Whether a team is more than the scratch draft: named, a variation, or shared. Clearing one must not wipe it. */
+export const isSavedTeam = (t: Pick<Team, 'name' | 'groupId' | 'shared'>): boolean => t.name !== DEFAULT_TEAM_NAME || !!t.groupId || !!t.shared;
+
+export function createTeam(format: FormatRules, name = DEFAULT_TEAM_NAME): Team {
   const now = Date.now();
   return {
     id: uid(),
