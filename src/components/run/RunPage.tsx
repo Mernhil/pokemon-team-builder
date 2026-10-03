@@ -16,8 +16,9 @@ type RunTab = 'encounters' | 'party' | 'boss' | 'rules';
 export function RunPage() {
   const { game, file, pokedex, speciesName, dex } = useAtlasCtx();
   const run = useActiveRun(game.id);
-  const runIds = useRunStore((s) => s.order.filter((id) => s.runs[id]?.game === game.id));
   const runs = useRunStore((s) => s.runs);
+  const order = useRunStore((s) => s.order);
+  const runIds = useMemo(() => order.filter((id) => runs[id]?.game === game.id), [order, runs, game.id]);
   const [tab, setTab] = useState<RunTab>('encounters');
   const [creating, setCreating] = useState(false);
 
