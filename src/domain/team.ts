@@ -58,6 +58,7 @@ export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: 
     name,
     groupId: undefined,
     variationLabel: undefined,
+    shared: undefined, // a copy is always mine
     ...overrides,
     slots: cloneSlots(team.slots),
     slotsByFormat: team.slotsByFormat && Object.fromEntries(Object.entries(team.slotsByFormat).map(([id, s]) => [id, cloneSlots(s)])),

@@ -224,6 +224,7 @@ export function localMetaFromMatches(
   matches: { regulationId?: string; opponentTeam: { speciesId: string; itemId?: string; abilityId?: string; moves?: string[] }[] }[],
   regulationId: string,
   today = new Date().toISOString().slice(0, 10),
+  sourceLabel = 'Your logged matches',
 ): MetaSnapshot | null {
   const relevant = matches.filter((m) => m.regulationId === regulationId);
   if (!relevant.length) return null;
@@ -248,7 +249,7 @@ export function localMetaFromMatches(
   return {
     regulationId,
     updatedAt: today,
-    source: { name: `Your logged matches (${relevant.length})`, battles: relevant.length },
+    source: { name: `${sourceLabel} (${relevant.length})`, battles: relevant.length },
     entries: [...bySpecies.entries()]
       .map(([speciesId, rec]) => ({
         speciesId,

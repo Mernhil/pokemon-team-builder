@@ -10,6 +10,7 @@ import {
   Eraser,
   FolderOpen,
   Gauge,
+  Columns2,
   GitCompare,
   MoreHorizontal,
   Plus,
@@ -29,12 +30,13 @@ import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { toast } from '@/store/toastStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
-import { useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
+import { isLocked, useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
 import { OffenseMatrix } from './components/analysis/OffenseMatrix';
 import { TeamCheck } from './components/analysis/TeamCheck';
 import { DesktopUpdater, UpdateCheckButton } from './components/DesktopUpdater';
 import { RegulationBanner } from './components/analysis/RegulationBanner';
+import { SharedTeamBanner } from './components/team/SharedTeamBanner';
 import { GenBadge } from './components/ui/GenBadge';
 import { SetEditor } from './components/editor/SetEditor';
 import { ImportExportDialog } from './components/io/ImportExportDialog';
@@ -55,6 +57,7 @@ const MatchesView = lazy(() => import('./components/matches/MatchesView').then((
 const RegulationDiffView = lazy(() => import('./components/regulation/RegulationDiffView').then((m) => ({ default: m.RegulationDiffView })));
 const ThreatReportView = lazy(() => import('./components/threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
 const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
+const CompareView = lazy(() => import('./components/compare/CompareView').then((m) => ({ default: m.CompareView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
 
 interface Dest {
@@ -74,9 +77,10 @@ const SECONDARY: Dest[] = [
   { id: 'meta', label: 'Meta', icon: BarChart3 },
   { id: 'speed', label: 'Speed tiers', icon: Gauge },
   { id: 'threats', label: 'Threat report', icon: ShieldAlert },
+  { id: 'compare', label: 'Compare teams', icon: Columns2 },
   { id: 'regdiff', label: 'Regulation diff', icon: GitCompare },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'regdiff'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'regdiff', 'compare'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -142,6 +146,7 @@ export default function App() {
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
   else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
+  else if (view === 'compare') content = <Suspense fallback={loading('Loading compare…')}><CompareView /></Suspense>;
   else if (view === 'regdiff') content = <Suspense fallback={loading('Loading regulation diff…')}><RegulationDiffView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
@@ -284,6 +289,7 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
       value={team.name}
       onChange={(e) => updateTeam(team.id, { name: e.target.value })}
       aria-label="Team name"
+      readOnly={isLocked(team)}
       className="h-9 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 text-base font-semibold outline-none hover:border-border focus:border-accent pointer-coarse:h-11 xl:max-w-xs"
     />
   );
@@ -393,6 +399,11 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
 
   return (
     <div className="grid content-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_300px]">
+      {team.shared && (
+        <div className="lg:col-span-2 xl:col-span-3">
+          <SharedTeamBanner team={team} />
+        </div>
+      )}
       <div className="lg:col-span-2 xl:col-span-3">
         <RegulationBanner team={team} format={format} />
       </div>

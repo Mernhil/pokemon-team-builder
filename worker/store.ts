@@ -36,6 +36,8 @@ export interface StoredDoc {
   deleted: boolean;
   /** Already-sanitised JSON text; null for a tombstone. */
   json: string | null;
+  /** A team's folder (its own id, or its groupId); undefined for matches and tombstones, which keep the row's. */
+  groupId?: string;
 }
 
 /**
@@ -48,13 +50,14 @@ export async function pushDoc(db: D1Like, owner: string, d: StoredDoc): Promise<
     db.prepare('INSERT INTO sync_seq (owner, value) VALUES (?1, 1) ON CONFLICT (owner) DO UPDATE SET value = value + 1').bind(owner),
     db
       .prepare(
-        `INSERT INTO documents (owner, kind, id, json, updated_at, deleted, server_seq)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, (SELECT value FROM sync_seq WHERE owner = ?1))
-         ON CONFLICT (owner, kind, id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at, deleted = excluded.deleted, server_seq = excluded.server_seq
+        `INSERT INTO documents (owner, kind, id, json, updated_at, deleted, server_seq, group_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, (SELECT value FROM sync_seq WHERE owner = ?1), ?7)
+         ON CONFLICT (owner, kind, id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at, deleted = excluded.deleted, server_seq = excluded.server_seq,
+           group_id = COALESCE(excluded.group_id, documents.group_id)
          WHERE excluded.updated_at > documents.updated_at
          RETURNING server_seq`,
       )
-      .bind(owner, d.kind, d.id, d.json, d.updatedAt, d.deleted ? 1 : 0),
+      .bind(owner, d.kind, d.id, d.json, d.updatedAt, d.deleted ? 1 : 0, d.groupId ?? null),
   ]);
   const seq = written?.results?.[0]?.server_seq;
   if (typeof seq === 'number') return { status: 'applied', seq };

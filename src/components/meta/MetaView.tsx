@@ -5,7 +5,9 @@ import { metaFor } from '@/data/meta';
 import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
 import { META_STALE_DAYS, localMetaFromMatches, metaAgeDays, metaDataDate, type MetaEntry, type MetaSnapshot } from '@/domain/meta';
 import { STAT_IDS, STAT_LABELS, type FormatRules } from '@/domain/types';
+import { MATCH_SOURCE_LABEL, matchesForSource, nameOf, type MatchSource } from '@/domain/sharing';
 import { useMatchStore } from '@/store/matchStore';
+import { useShareStore } from '@/sync/shareStore';
 import { useMetaStore } from '@/store/metaStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
@@ -51,7 +53,20 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const online = useOnline();
 
   const published = useMemo(() => metaFor(regId, refreshed), [regId, refreshed]);
-  const personal = useMemo(() => (published ? null : localMetaFromMatches(Object.values(matches), regId)), [published, matches, regId]);
+  // The player's own log, or (when a friend shares theirs) theirs or both of ours.
+  const theirs = useShareStore((s) => s.matches);
+  const names = useShareStore((s) => s.names);
+  const [source, setSource] = useState<MatchSource>('mine');
+  const effectiveSource = theirs.length ? source : 'mine';
+  const personal = useMemo(
+    () => (published ? null : localMetaFromMatches(
+            matchesForSource(Object.values(matches), theirs, effectiveSource),
+            regId,
+            undefined,
+            effectiveSource === 'mine' ? undefined : effectiveSource === 'both' ? 'Both our logged matches' : `${nameOf(theirs[0].owner, names)}'s logged matches`,
+          )),
+    [published, matches, theirs, effectiveSource, regId, names],
+  );
   const snapshot = published ?? personal ?? undefined;
   const reg = champRegs.find((r) => r.id === regId);
   // Newest other regulation that has published numbers, offered when this one has none.
@@ -67,6 +82,15 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
             </option>
           ))}
         </Select>
+        {!published && theirs.length > 0 && (
+          <Select aria-label="Whose matches the numbers come from" className="w-full sm:w-auto" value={effectiveSource} onChange={(e) => setSource(e.target.value as MatchSource)}>
+            {(Object.keys(MATCH_SOURCE_LABEL) as MatchSource[]).map((k) => (
+              <option key={k} value={k}>
+                {k === 'theirs' ? `${nameOf(theirs[0].owner, names)}'s matches` : k === 'mine' ? 'My matches' : 'Both of us'}
+              </option>
+            ))}
+          </Select>
+        )}
         {snapshot && <SourceLine snapshot={snapshot} />}
         {CAN_REFRESH && (
           <Button size="sm" className="ml-auto" onClick={refresh} disabled={status === 'loading' || !online} title="Fetch the newest data published with the app">

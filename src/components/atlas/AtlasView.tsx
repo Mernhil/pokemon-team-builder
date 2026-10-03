@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Filter, Map as MapIcon, MapPin, Package, Search, ShoppingBag, Swords, Trophy, X } from 'lucide-react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Filter, Flag, Map as MapIcon, MapPin, Package, Search, ShoppingBag, Swords, Trophy, X } from 'lucide-react';
 import { useAtlas } from '@/data/atlas';
 import { toID } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
-import { ATLAS_GAMES, atlasGame, atlasGameGen, matchLocations, wildAt, wildLocations, type AtlasLocation, type MapFilter } from '@/domain/atlas';
+import { ATLAS_GAMES, atlasGame, atlasGameGen, matchLocations, wildAt, wildByLocation, wildLocations, type AtlasLocation, type MapFilter } from '@/domain/atlas';
+import { areaStatus } from '@/domain/runs';
+import { useActiveRun } from '@/store/runStore';
 import { getFormat } from '@/domain/formats';
 import { skinOfMap } from '@/domain/mapSkins';
 import { useAtlasStore, type AtlasPage } from '@/store/atlasStore';
@@ -28,10 +30,13 @@ const PAGES: { id: AtlasPage; label: string; icon: typeof MapIcon }[] = [
   { id: 'items', label: 'Items', icon: Package },
   { id: 'trainers', label: 'Trainers', icon: Swords },
   { id: 'progress', label: 'Progress', icon: Trophy },
+  { id: 'run', label: 'Run', icon: Flag },
 ];
 
 /** Pokénav pages: an encounters-only game has no items or trainers. */
-const LITE_PAGES = [PAGES[0], PAGES[3]];
+const LITE_PAGES = [PAGES[0], PAGES[3], PAGES[4]];
+
+const RunPage = lazy(() => import('../run/RunPage').then((m) => ({ default: m.RunPage })));
 
 /** The Pokénav tab: interactive game maps with full location, item, NPC, wild and trainer data. */
 export function AtlasView() {
@@ -115,6 +120,11 @@ export function AtlasView() {
           {page === 'items' && !game.lite && <ItemsPage focus={itemFocus} />}
           {page === 'trainers' && !game.lite && <TrainersPage />}
           {page === 'progress' && <ProgressPage />}
+          {page === 'run' && (
+            <Suspense fallback={<LoadingState label="Loading the run tracker…" />}>
+              <RunPage />
+            </Suspense>
+          )}
           <Modal open={!!trainerGroup} onOpenChange={(o) => !o && setTrainerGroup(undefined)} title={trainerGroup ? (Object.values(ctx.file.trainers).find((t) => t.group === trainerGroup)?.name ?? 'Trainer') : 'Trainer'} wide>
             {trainerGroup && <TrainerDetail group={trainerGroup} />}
           </Modal>
@@ -155,6 +165,13 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
   const progress = useProgress(game.id);
   const wide = useMedia('(min-width: 1024px)');
   const lite = !!game.lite;
+  // With a run going, places show whether their wild encounter is available, used or absent.
+  const run = useActiveRun(game.id);
+  const marks = useMemo(() => {
+    if (!run || !pokedex) return undefined;
+    const wild = wildByLocation(pokedex, game.dexGame);
+    return Object.fromEntries(Object.keys(file.locations).map((id) => [id, areaStatus(run, id, (wild.get(id)?.length ?? 0) > 0)]));
+  }, [run, pokedex, game.dexGame, file]);
 
   const matches = useMemo(() => {
     const f: MapFilter = { text: filter.text || undefined };
@@ -215,11 +232,19 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
                 ))}
               </div>
             )}
-            <AtlasMap key={map.id} map={map} skin={skinOfMap(map.id)} locations={locations} names={locName} pinned={pinned} onPin={pin} hovered={hovered} onHover={hover} matches={matches} done={done} />
+            <AtlasMap key={map.id} map={map} skin={skinOfMap(map.id)} locations={locations} names={locName} pinned={pinned} onPin={pin} hovered={hovered} onHover={hover} matches={matches} done={done} marks={marks} />
             {hoverLoc && wide && <PreviewCard loc={hoverLoc} onEnter={() => hover(hoverLoc.id)} onLeave={() => hover(undefined)} />}
           </div>
         )}
         {anyFilter && <p className="text-xs text-muted" aria-live="polite">{matches!.size} location{matches!.size === 1 ? '' : 's'} match; they glow on the map.</p>}
+        {marks && (
+          <p role="group" aria-label="Run marks" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <b className="text-fg">{run!.name}:</b>
+            <span><span aria-hidden className="mr-1 inline-block size-2.5 rounded-full border-2 border-[#4cc9f0] align-middle" />encounter available</span>
+            <span><span aria-hidden className="mr-1 inline-block size-2.5 bg-[#ff9f1c] align-middle" />encounter used</span>
+            <span><span aria-hidden className="mr-1 inline-block h-0.5 w-2.5 bg-[#b6bcc9] align-middle" />no wild encounters</span>
+          </p>
+        )}
         <p className="text-xs text-muted">Hover or focus a place for a preview; click, tap or press Enter to open it. Arrow keys move between places.</p>
         {lite && <LocationList matches={matches} pinned={pinned} setPinned={setPinned} />}
       </div>

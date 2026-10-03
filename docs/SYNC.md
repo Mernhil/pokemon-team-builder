@@ -22,11 +22,29 @@ Until step 1 and 2 are done the app works exactly as before and `/api/sync` answ
 
 1. **Create the D1 database** (Cloudflare dashboard → Workers & Pages → D1 → Create database, or `npx wrangler d1 create pokemon-team-builder`). Copy its **database id**.
 2. **Bind it** in `wrangler.jsonc`: uncomment the `d1_databases` line at the bottom and paste the id (and add the comma shown on the line above it). Commit and push; Workers Builds redeploys.
-3. **Apply the migration** once: `npx wrangler d1 migrations apply pokemon-team-builder --remote`. (Or paste `migrations/0001_init.sql` into the D1 console.) Future migrations are applied the same way.
+3. **Apply the migrations**: `npx wrangler d1 migrations apply pokemon-team-builder --remote` applies every file in `migrations/` that hasn't run yet (0001 creates the documents table, 0002 adds sharing and a `group_id` column). **Run it before the deploy of a version that adds a migration**: the sync code of this version writes `group_id`, so sync answers with an error until 0002 is applied. (Or paste the files into the D1 console, in order.)
 4. **Find the Access values.** Zero Trust → Settings → Custom pages shows the team domain (`<team>.cloudflareaccess.com`). Zero Trust → Access → Applications → the app's application → Overview → **Application Audience (AUD) Tag**.
 5. **Set the two variables** on the Worker: Workers & Pages → pokemon-team-builder → Settings → Variables and Secrets → add `ACCESS_TEAM_DOMAIN` (e.g. `myteam.cloudflareaccess.com`) and `ACCESS_AUD` (the tag). `keep_vars` in `wrangler.jsonc` stops deploys from removing them.
 6. **Make Access cover `/api/*`.** The Access application protects the Worker's whole hostname (docs/IPHONE_APP.md step 2), so `/api/*` is already behind the login. If you used a path-limited application, add `/api/*` to it. Check: opening `https://<worker>/api/sync` in a private window must show the Access login, not JSON.
 7. In the app: Settings → Sync → **Sync with my account**.
+
+## Sharing (two players)
+
+Built on the same Worker, D1 database and Access identity. Nothing is shared unless the owner does it, and every read and write is checked on the server.
+
+- **Shared folders.** In Saved teams, a team's share button (visible once sync is on) shares that team **and all its variations** with one e-mail address as *can view* or *can edit*. The server needs the team to have synced once (the dialog syncs first). Only a top-level team can be shared, never a single variation.
+- **What the other person gets.** A "Shared with me" section in Saved teams, with the owner's name on each tile (their display name, or their e-mail). A view-only team opens in the builder read-only (every edit is refused with a notice) with **Make my own copy**, which copies the folder into their own teams. With *can edit* they can change the team, edit and add variations; they cannot delete the top-level team. Their edits go to the owner's copy and show up in the owner's own sync.
+- **Conflicts.** The same merge rule as for one person's devices (`src/domain/sync.ts`): last write wins by `updatedAt`, and when both changed a team the version that loses is kept. For shared teams the loser is kept as a **team of the editor's own** (named "… (conflict copy (<device>, <date>))"), so nothing is lost on either side.
+- **Match log.** Settings → Sync → Sharing → *Share my matches* gives one person a read-only copy of your whole match log. Their matches show up in the Match log and Meta tabs as a separate choice (*Mine / <Name>'s / Both of us*) and only count in your statistics when you pick *Both of us*.
+- **Notices.** When a sync brings in a change by the other person you get a toast ("Ash updated “Rain M-C” 2 h ago.", at most three, nothing older than a week). Set your **display name** in Settings → Sync. There are no push notifications.
+- **Ending it.** The owner can stop sharing at any time (Share dialog → Stop sharing, or Settings); the other person can also *Leave*. The shared copies disappear from the other person's devices at their next sync; anything they copied with *Make my own copy* is theirs.
+
+### How it is stored and checked
+
+- `migrations/0002_shares.sql`: `shares` (owner, grantee, kind `team-group` | `matches`, ref, role), `profiles` (display names) and a `group_id` column on `documents` (a team's folder: its own id, or its `groupId`).
+- Endpoints: `GET /api/shares`, `PUT /api/shares`, `DELETE /api/shares` (the owner stops sharing, or the grantee leaves), `PUT /api/profile`, `GET /api/shared` (everything shared with me, tombstones included) and `POST /api/shared` (edits to folders I can edit).
+- `worker/access.ts` is the whole access matrix as one pure function (owner / editor / viewer / stranger; matches are never writable by anyone but their owner). `POST /api/shared` additionally refuses to move a team into or out of a folder, to touch another folder, to delete a folder's top-level team, and never stores the client-side `shared` marker.
+- At most 50 shares per account; a share needs a valid e-mail address, and the address must be one that Access lets in (the share itself doesn't invite anyone).
 
 ## Backing up D1
 

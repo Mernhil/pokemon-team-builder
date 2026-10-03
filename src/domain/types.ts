@@ -350,6 +350,11 @@ export interface Team {
   groupId?: string;
   /** Short label for a variation within its group (e.g. "vs Rain", "Variation 2"). */
   variationLabel?: string;
+  /**
+   * Set on a copy that belongs to someone else and was shared with this player (cloud sync):
+   * whose it is and what this player may do. Never stored in an account's own documents.
+   */
+  shared?: { owner: string; role: 'view' | 'edit' };
 }
 
 export type SpriteSetId =

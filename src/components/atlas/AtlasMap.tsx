@@ -18,6 +18,19 @@ interface Props {
   /** Filter / search matches: glow on these, dim the rest. null = no filter. */
   matches: Set<string> | null;
   done: Set<string>;
+  /** A run's wild encounter per place: available (ring), used (filled square), none (dash). Shapes, not just colours. */
+  marks?: Record<string, 'used' | 'available' | 'none'>;
+}
+
+const MARK_TEXT = { used: ', encounter used', available: ', encounter available', none: ', no wild encounters' } as const;
+
+/** Run marker, bottom-left of a place: ring = encounter available, filled square = used, dash = none. Dark outline so it reads on any map. */
+function RunMark({ kind, x, y, k }: { kind: 'used' | 'available' | 'none'; x: number; y: number; k: number }) {
+  const r = 1.5 * k;
+  const common = { className: 'pointer-events-none', stroke: '#10131a', strokeOpacity: 0.85 } as const;
+  if (kind === 'none') return <rect {...common} x={x} y={y - 0.5 * k} width={2.6 * k} height={k} fill="#b6bcc9" strokeWidth={0.3 * k} />;
+  if (kind === 'used') return <rect {...common} x={x} y={y - 2 * r} width={2 * r} height={2 * r} fill="#ff9f1c" strokeWidth={0.4 * k} />;
+  return <circle {...common} cx={x + r} cy={y - r} r={r} fill="#ffffff" fillOpacity={0.25} stroke="#4cc9f0" strokeOpacity={1} strokeWidth={0.8 * k} />;
 }
 
 const ARROWS: Record<string, Dir> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
@@ -27,7 +40,7 @@ const ARROWS: Record<string, Dir> = { ArrowLeft: 'left', ArrowRight: 'right', Ar
  * with one focusable shape per location. Hover / focus previews, click / Enter / tap pins, arrow keys
  * move between locations. Shape ids (`atlas-loc-<id>`) are the location ids of the atlas data.
  */
-export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, onHover, matches, done }: Props) {
+export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, onHover, matches, done, marks }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const [avail, setAvail] = useState(0);
   useEffect(() => {
@@ -121,7 +134,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
                   data-loc={loc}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${names(loc)}${isDone ? ', done' : ''}${isMatch ? ', matches filter' : ''}`}
+                  aria-label={`${names(loc)}${isDone ? ', done' : ''}${marks?.[loc] ? MARK_TEXT[marks[loc]] : ''}${isMatch ? ', matches filter' : ''}`}
                   aria-pressed={isPinned}
                   className={cn('pointer-events-none outline-none', schematic ? '[&:focus-visible>path.frame]:stroke-[0.28]' : '[&:focus-visible>path.frame]:stroke-[1.4]')}
                   onKeyDown={onKey(loc)}
@@ -143,6 +156,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
                       <path className="frame pointer-events-none" d={outlines[loc]} fill="none" stroke={pal.cursor} strokeOpacity={isPinned ? 0.95 : 0.7} strokeWidth={k} strokeLinejoin="round" />
                     </>
                   )}
+                  {marks?.[loc] && <RunMark kind={marks[loc]} x={rects[0][0] + k} y={rects[0][1] + rects[0][3] - k} k={k} />}
                   {isDone && <circle className="pointer-events-none" cx={rects[0][0] + rects[0][2] - k} cy={rects[0][1] + k} r={1.6 * k} fill={pal.done} stroke="#10131a" strokeOpacity={0.6} strokeWidth={0.4 * k} />}
                 </g>
               );

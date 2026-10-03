@@ -34,6 +34,8 @@ export interface SyncStats {
   deleted: number;
   /** Conflict copies made (teams). */
   conflicts: number;
+  /** The documents the server's version replaced or created here, for "X updated Y" notices. */
+  changed: { kind: DocKind; id: string; updatedAt: number; existed: boolean }[];
 }
 
 export interface SyncDeps {
@@ -44,13 +46,15 @@ export interface SyncDeps {
   save: (state: SyncState) => void;
   deviceName: string;
   now?: () => number;
+  /** How a losing team version is kept; by default a variation of the winner's folder. */
+  copyFor?: (loser: Team, winner: Team, deviceName: string, now: number) => Team;
 }
 
 const MAX_PASSES = 3;
 
 export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stats: SyncStats }> {
   const now = deps.now ?? Date.now;
-  const stats: SyncStats = { pulled: 0, pushed: 0, updated: 0, deleted: 0, conflicts: 0 };
+  const stats: SyncStats = { pulled: 0, pushed: 0, updated: 0, deleted: 0, conflicts: 0, changed: [] };
   let state: SyncState = { cursor: deps.state.cursor, known: { ...deps.state.known } };
   let stale: RemoteDocument[] = [];
 
@@ -82,6 +86,7 @@ export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stat
         local.set(k, doc);
         known[k] = { updatedAt: r.updatedAt };
         stats.updated++;
+        stats.changed.push({ kind: r.kind, id: r.id, updatedAt: r.updatedAt, existed: !!mine });
       };
       if (res.action === 'apply-remote') take();
       else if (res.action === 'delete-local') {
@@ -93,7 +98,7 @@ export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stat
         const loser = res.winner === 'remote' ? mine.json : r.json;
         const winnerJson = res.winner === 'remote' ? r.json : mine.json;
         if (res.copy) {
-          const copy = conflictCopy(loser as Team, winnerJson as Team, deps.deviceName, now());
+          const copy = (deps.copyFor ?? conflictCopy)(loser as Team, winnerJson as Team, deps.deviceName, now());
           const doc: LocalDoc = { id: copy.id, kind: 'team', updatedAt: copy.updatedAt, json: copy };
           upserts.push(doc);
           local.set(docKey('team', copy.id), doc);
@@ -128,6 +133,9 @@ export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stat
           stats.pushed++;
           if (c.deleted) delete state.known[k];
           else state.known[k] = { updatedAt: c.updatedAt };
+        } else if (r.status === 'denied') {
+          // Not allowed to write this one (access was taken away): stop trying to send it.
+          delete state.known[k];
         } else if (r.doc) stale.push(r.doc);
       }
     }

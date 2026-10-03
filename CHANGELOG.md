@@ -2,6 +2,22 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.18.0 — 2026-10-03
+
+### New
+- **Playthrough / Nuzlocke tracker:** a **Run** page in Pokénav (next to Map, Items, Trainers and Progress) for every game, with several runs per game and a run switcher. Log what you meet in each place with one tap (caught, fainted, fled), gifts and trades by hand, keep your party, box and graveyard (with where and why a Pokémon died), and set your own rules: first encounter per area, dupes clause (it knows evolution lines), shiny clause, species clause, soft or hard level caps and your own notes. A summary at the top shows badges, how many are alive or dead and the **next level cap** ("Next cap: 26 (Fantina)"), and warns when a party member is over it. **Next boss** shows the next Gym leader, Elite Four member or Champion's team, how your party's types fare against it, **Calc vs boss** in the game's own format and **Load party into Builder**. On the map, places show whether their wild encounter is available, used or absent. Encounters-only games (Gen 5 onward) track encounters, the party and deaths, without caps or bosses.
+
+## 0.17.0 — 2026-10-03
+
+### New
+- **Share teams with a friend:** with sync on, the share button on a saved team shares it and all its variations with one other person as *can view* or *can edit*. Their copy appears under **Shared with me** with your name on it; a view-only team opens read-only with **Make my own copy**, and with *can edit* they can change it and add variations (your own sync receives their changes). If you both change the same team, the older change is kept as a team of the editor's own, so nothing is lost. You can stop sharing any time and the other person can leave. Set a display name in Settings → Sync.
+- **Share your match log** (view only): your friend's matches show up as a separate choice in the Match log and Meta tabs (*Mine / their name / Both of us*) and only count in your statistics when you pick *Both of us*.
+- **Notices:** a toast tells you when the other person changed something you can see ("Ash updated “Rain M-C” 2 h ago.").
+- **Compare teams** (More → Compare teams): two teams side by side (yours, shared, or two variations of one team) with both type matrices, speeds, top threats and a set-by-set diff of species, item, ability, nature, moves and spread. Variations of the same team are called out.
+
+### Setup
+- Needs the new D1 migration: run `npx wrangler d1 migrations apply pokemon-team-builder --remote` **before** deploying this version (docs/SYNC.md). Until it is applied, cloud sync answers with an error.
+
 ## 0.16.0 — 2026-10-03
 
 ### New

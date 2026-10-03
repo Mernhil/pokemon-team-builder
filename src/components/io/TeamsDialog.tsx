@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Copy, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, Copy, Pencil, Plus, Share2, Trash2, Users } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useRegulationChanges } from '@/data/regulationChanges';
 import { useDex } from '@/data/useDex';
 import { getFormat, regulationInfo } from '@/domain/formats';
 import { relevantRegulations, teamImpact, type TeamImpact } from '@/domain/regulationImpact';
+import { nameOf, sharedFolders } from '@/domain/sharing';
 import { teamVariations } from '@/domain/team';
 import type { SpriteSetId, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
+import { useShareStore } from '@/sync/shareStore';
+import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { ImpactList, impactSummary } from '../analysis/ImpactList';
+import { ShareDialog } from './ShareDialog';
 import { Modal } from '../ui/Modal';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip } from '../ui/primitives';
@@ -173,9 +177,14 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   const teams = useTeamStore((s) => s.teams);
   const order = useTeamStore((s) => s.order);
   const activeTeamId = useTeamStore((s) => s.activeTeamId);
-  const { selectTeam, duplicateTeam, deleteTeam, updateTeam, addVariation } = useTeamStore.getState();
+  const { selectTeam, duplicateTeam, deleteTeam, updateTeam, addVariation, copySharedToMine } = useTeamStore.getState();
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [showProblems, setShowProblems] = useState(false);
+  const [shareTeam, setShareTeam] = useState<Team | null>(null);
+  const syncOn = useSyncStore((s) => s.enabled) && syncAvailable();
+  const granted = useShareStore((s) => s.granted);
+  const names = useShareStore((s) => s.names);
+  const sharedWithMe = useMemo(() => sharedFolders(teams), [teams]);
 
   // Regulation impact: every Champions team (and variation) against the live regulation and the next
   // announced one that has data, minus what was already wrong in its own regulation.
@@ -187,7 +196,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
     const out = new Map<string, Map<string, TeamImpact>>();
     if (!open || champDex.status !== 'ready') return out;
     for (const t of Object.values(teams)) {
-      if (getFormat(t.formatId).datasetId !== 'champions') continue;
+      if (t.shared || getFormat(t.formatId).datasetId !== 'champions') continue;
       const own = getFormat(t.formatId).regulationId;
       const per = new Map<string, TeamImpact>();
       for (const reg of targets) if (reg !== own) per.set(reg, teamImpact(t, reg, champDex.dex, changes));
@@ -239,7 +248,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
       <ul className="space-y-3">
         {order.map((id) => {
           const t = teams[id];
-          if (!t) return null;
+          if (!t || t.shared) return null;
           const f = getFormat(t.formatId);
           const variations = teamVariations(teams, id);
           const groupIsActive = id === activeTeamId;
@@ -255,7 +264,15 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                   {variations.length > 0 && <Chip>{variations.length + 1} variations</Chip>}
                   <RegulationChips team={t} impacts={impacts.get(t.id)} live={live} />
                   {groupIsActive && <Chip tone="accent">Editing</Chip>}
+                  {granted.some((g) => g.kind === 'team-group' && g.ref === id) && (
+                    <Chip icon={Users}>Shared with {granted.filter((g) => g.kind === 'team-group' && g.ref === id).map((g) => nameOf(g.grantee, names)).join(', ')}</Chip>
+                  )}
                 </div>
+                {syncOn && (
+                  <Button size="icon" variant="ghost" aria-label={`Share ${t.name}`} onClick={() => setShareTeam(t)}>
+                    <Share2 size={15} aria-hidden />
+                  </Button>
+                )}
                 <Button size="icon" variant="ghost" aria-label={`Duplicate ${t.name}`} onClick={() => duplicateTeam(id)}>
                   <Copy size={15} aria-hidden />
                 </Button>
@@ -298,6 +315,58 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
           );
         })}
       </ul>
+
+      {sharedWithMe.length > 0 && (
+        <section aria-label="Shared with me" className="mt-5">
+          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+            <Users size={15} aria-hidden /> Shared with me
+          </h3>
+          <ul className="space-y-3">
+            {sharedWithMe.map(({ root, variations }) => {
+              const f = getFormat(root.formatId);
+              const editable = root.shared?.role === 'edit';
+              return (
+                <li key={root.id} className={cn('rounded-2xl border bg-surface p-3', root.id === activeTeamId ? 'border-accent ring-1 ring-accent' : 'border-border')}>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="min-w-0 truncate text-base font-semibold">{root.name}</span>
+                    <Chip>{root.category || f.shortName}</Chip>
+                    <Chip tone="accent">From {nameOf(root.shared!.owner, names)}</Chip>
+                    <Chip tone={editable ? 'good' : 'neutral'}>{editable ? 'Can edit' : 'View only'}</Chip>
+                    {variations.length > 0 && <Chip>{variations.length + 1} variations</Chip>}
+                  </div>
+                  <button type="button" onClick={() => select(root.id)} className="mt-2 block w-full rounded-xl text-left" aria-label={`Open ${root.name}, shared by ${nameOf(root.shared!.owner, names)}`}>
+                    <TeamTiles team={root} dex={dex} spriteSet={f.spriteSet} />
+                  </button>
+                  {variations.length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-1.5">
+                      {variations.map((v) => (
+                        <li key={v.id}>
+                          <Button size="sm" variant={v.id === activeTeamId ? 'primary' : 'default'} onClick={() => select(v.id)}>
+                            {v.variationLabel ?? 'Variation'}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        copySharedToMine(root.id);
+                        onOpenChange(false);
+                      }}
+                    >
+                      <Copy size={14} aria-hidden /> Make my own copy
+                    </Button>
+                    <span className="text-xs text-muted">Updated {new Date(root.updatedAt).toLocaleString()}</span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+      {shareTeam && <ShareDialog open onOpenChange={(o) => !o && setShareTeam(null)} team={shareTeam} />}
     </Modal>
   );
 }

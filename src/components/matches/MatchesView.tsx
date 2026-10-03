@@ -8,17 +8,56 @@ import type { FormatRules } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
 import { useMatchStore } from '@/store/matchStore';
 import { useTeamStore } from '@/store/teamStore';
+import { MATCH_SOURCE_LABEL, matchesForSource, nameOf, type MatchSource, type SharedMatch } from '@/domain/sharing';
+import { useShareStore } from '@/sync/shareStore';
+import { Sprite } from '../ui/Sprite';
 import { MatchForm } from './MatchForm';
 import { MatchStats } from './MatchStats';
 import { MatchupBuilder } from './MatchupBuilder';
 import { Button, EmptyState, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
+/** A friend's match, read only: the result, the event, what they faced and their notes. */
+function SharedMatchCard({ dex, match, who, spriteSet }: { dex: Dex; match: SharedMatch; who: string; spriteSet: FormatRules['spriteSet'] }) {
+  return (
+    <Panel title={`${who}'s match · ${match.date}`} bodyClassName="space-y-2 p-3">
+      <p className="text-sm">
+        <b className={match.result === 'win' ? 'text-good' : 'text-bad'}>{match.result === 'win' ? 'Win' : 'Loss'}</b>
+        {match.eventName ? ` · ${match.eventName}` : ''}
+        <span className="text-muted"> · view only</span>
+      </p>
+      {match.opponentTeam.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5" aria-label="Opponent's team">
+          {match.opponentTeam.map((o, i) => {
+            const sp = dex.species(o.speciesId);
+            return (
+              <li key={i} title={sp?.name ?? o.speciesId}>
+                <Sprite speciesId={o.speciesId} name={sp?.name} types={sp?.types} set={spriteSet} size={40} />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {match.notes && <p className="text-sm whitespace-pre-wrap text-muted">{match.notes}</p>}
+    </Panel>
+  );
+}
+
 export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const [tab, setTab] = useState<'log' | 'builder'>('log');
   const matchesById = useMatchStore((s) => s.matches);
   const order = useMatchStore((s) => s.order);
-  const matches = useMemo(() => order.map((id) => matchesById[id]).filter(Boolean), [order, matchesById]);
+  const mine = useMemo(() => order.map((id) => matchesById[id]).filter(Boolean), [order, matchesById]);
+  // A friend's shared log is a separate source: it only counts in the stats when I pick "Both of us".
+  const theirs = useShareStore((s) => s.matches);
+  const names = useShareStore((s) => s.names);
+  const [source, setSource] = useState<MatchSource>('mine');
+  const effectiveSource = theirs.length ? source : 'mine';
+  const matches = useMemo<(Match | SharedMatch)[]>(
+    () => matchesForSource<Match>(mine, theirs, effectiveSource).sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt - a.updatedAt),
+    [mine, theirs, effectiveSource],
+  );
+  const theirName = theirs[0] ? nameOf(theirs[0].owner, names) : '';
   const { addMatch } = useMatchStore.getState();
   const teams = useTeamStore((s) => s.teams);
   const teamOrder = useTeamStore((s) => s.order);
@@ -38,6 +77,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
   );
 
   const active = matches.find((m) => m.id === selected) ?? null;
+  const activeIsTheirs = !!active && 'owner' in active;
   const regsUsed = useMemo(() => [...new Set(matches.map((m) => m.regulationId).filter(Boolean))] as string[], [matches]);
 
   const newMatch = () => {
@@ -112,6 +152,15 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
                 </option>
               ))}
             </Select>
+            {theirs.length > 0 && (
+              <Select aria-label="Whose matches" className="w-full sm:w-auto" value={effectiveSource} onChange={(e) => { setSource(e.target.value as MatchSource); setSelected(null); }}>
+                {(Object.keys(MATCH_SOURCE_LABEL) as MatchSource[]).map((k) => (
+                  <option key={k} value={k}>
+                    {k === 'theirs' ? `${theirName}'s` : MATCH_SOURCE_LABEL[k]}
+                  </option>
+                ))}
+              </Select>
+            )}
             <label className="flex min-h-9 items-center gap-2 text-sm">
               <input type="checkbox" checked={lossOnly} onChange={(e) => setLossOnly(e.target.checked)} className="size-4 accent-[var(--color-accent)]" />
               Losses only
@@ -154,6 +203,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
                         <span className={cn('shrink-0 text-xs font-bold', m.result === 'win' ? 'text-good' : 'text-bad')}>{m.result === 'win' ? 'W' : 'L'}</span>
                         <span className="font-mono text-xs text-muted">{m.date}</span>
                         <span className="min-w-0 flex-1 truncate">{m.eventName || (m.opponentTeam[0] ? (dex.species(m.opponentTeam[0].speciesId)?.name ?? '') : 'Untitled')}</span>
+                        {'owner' in m && <span className="shrink-0 rounded-full bg-surface-2 px-1.5 text-[10px] font-semibold text-muted">{nameOf(m.owner, names)}</span>}
                       </button>
                       {m.opponentTeam.length > 0 && (
                         <Button size="icon-sm" variant="ghost" aria-label="Send their first Pokémon to the damage calculator" title="Send to damage calculator" onClick={() => sendThreatToCalc(m)}>
@@ -167,7 +217,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
               </Panel>
 
               <div className="min-w-0 space-y-3">
-                {active ? <MatchForm dex={dex} format={format} match={active} /> : <EmptyState title="Pick a match on the left to see or edit it." />}
+                {active && activeIsTheirs ? <SharedMatchCard dex={dex} spriteSet={format.spriteSet} match={active as SharedMatch} who={nameOf((active as SharedMatch).owner, names)} /> : active ? <MatchForm dex={dex} format={format} match={active} /> : <EmptyState title="Pick a match on the left to see or edit it." />}
                 <MatchStats dex={dex} format={format} matches={matches} />
               </div>
             </div>

@@ -3,7 +3,7 @@
  * tests. It implements only what worker/store.ts uses: prepare/bind/first/all/run and batch (one
  * transaction, results in order).
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import type { D1Like, D1Statement } from '../types';
 
@@ -11,7 +11,8 @@ type Bound = { sql: string; values: unknown[] };
 
 export function createD1(): D1Like & { raw: DatabaseSync } {
   const db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(new URL('../../migrations/0001_init.sql', import.meta.url), 'utf8'));
+  const dir = new URL('../../migrations/', import.meta.url);
+  for (const f of readdirSync(dir).filter((x) => x.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'));
   const stmt = (b: Bound): D1Statement & { _b: Bound } => ({
     _b: b,
     bind: (...values) => stmt({ sql: b.sql, values }),
