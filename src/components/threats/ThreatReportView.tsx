@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import { META_STALE_DAYS } from '@/domain/meta';
+import { META_STALE_DAYS, isProvisional, provisionalNote } from '@/domain/meta';
 import { TERRAINS, WEATHERS, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
 import type { MetaSet } from '@/domain/metaSets';
 import { snapshotAge } from '@/domain/speedTiers';
@@ -94,7 +94,8 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   if (!picked) {
     return (
       <EmptyState icon={ShieldAlert} title="No usage data to build a threat report from yet">
-        Smogon publishes each month’s usage statistics after the month ends; the app picks them up with its next update.
+        Early numbers from tournaments and Showdown replays appear within days of a regulation starting, and Smogon’s usage statistics after its
+        first month; the app picks them up with its next update.
       </EmptyState>
     );
   }
@@ -112,6 +113,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
             <b className="text-fg">{reg?.name ?? picked.regulationId}</b>
             {s.month && ` · ${fmtMonth(s.month)} usage`}
             {s.battles !== undefined ? ` · ${s.battles.toLocaleString()} battles` : ''}
+            {isProvisional(picked.snapshot) && ` · ${provisionalNote(picked.snapshot, (id) => champRegs.find((r) => r.id === id)?.shortName)}`}
             {age ? ` · ${age.days} days old` : ''}
           </p>
           <label className="ml-auto flex items-center gap-2 text-xs text-muted">
@@ -157,7 +159,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
           Showing {reg?.shortName ?? picked.regulationId}’s numbers, the newest published.
         </Notice>
       )}
-      {age && age.days > META_STALE_DAYS && (
+      {age && !isProvisional(picked.snapshot) && age.days > META_STALE_DAYS && (
         <Notice icon={AlertTriangle} title={`These numbers are ${age.days} days old`}>
           They describe play up to {age.dataDate}. Newer usage statistics haven’t been published or built into the app yet.
         </Notice>

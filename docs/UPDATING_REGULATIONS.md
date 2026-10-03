@@ -71,6 +71,7 @@ If a new Showdown mod exists for the regulation (like `championsregma`), prefer 
 ```bash
 npm run data:strict        # fails on any id Showdown/newSpecies can't resolve — fix ids, don't skip
 npm run sprites -- champions   # picks up sprites for new species/Megas (PokeAPI)
+npm run meta -- --sources carryover   # the new regulation's provisional Meta data: the previous one's usage for what's still allowed (offline)
 npm run typecheck && npm test
 npm run reg:status         # confirm dates, counts and the LIVE marker
 npm run build:artifact     # dist/artifact.html + dist/sprites/*, dist/maps/*, dist/data/*

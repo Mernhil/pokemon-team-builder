@@ -3,7 +3,7 @@ import { AlertTriangle, ChevronDown, Gauge } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { metaFor } from '@/data/meta';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import { META_STALE_DAYS } from '@/domain/meta';
+import { META_STALE_DAYS, isProvisional, provisionalNote } from '@/domain/meta';
 import {
   DEFAULT_TOP_N,
   buildLadder,
@@ -112,7 +112,8 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
   if (!picked) {
     return (
       <EmptyState icon={Gauge} title="No usage data to build speed tiers from yet">
-        Smogon publishes each month’s usage statistics after the month ends; the app picks them up with its next update.
+        Early numbers from tournaments and Showdown replays appear within days of a regulation starting, and Smogon’s usage statistics after its
+        first month; the app picks them up with its next update.
       </EmptyState>
     );
   }
@@ -145,6 +146,7 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
             {s.month && `${fmtMonth(s.month)} usage`}
             {s.cutoff ? ` · rating ${s.cutoff}+` : ''}
             {s.battles !== undefined ? ` · ${s.battles.toLocaleString()} battles` : ''}
+            {isProvisional(picked.snapshot) && ` · ${provisionalNote(picked.snapshot, (id) => champRegs.find((r) => r.id === id)?.shortName)}`}
             {` · ${days} days old`}
           </p>
           <label className="ml-auto flex items-center gap-2 text-xs text-muted">
@@ -201,7 +203,7 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
           Showing {reg?.shortName ?? picked.regulationId}’s numbers, the newest published.
         </Notice>
       )}
-      {days > META_STALE_DAYS && (
+      {!isProvisional(picked.snapshot) && days > META_STALE_DAYS && (
         <Notice icon={AlertTriangle} title={`These numbers are ${days} days old`}>
           They describe play up to {snapshotAge(picked.snapshot).dataDate}. Newer usage statistics haven’t been published or built into the app yet.
         </Notice>

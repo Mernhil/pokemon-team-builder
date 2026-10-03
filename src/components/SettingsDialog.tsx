@@ -69,7 +69,9 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               Damage calculation: <b>@smogon/calc</b>, MIT licence.
             </li>
             <li>
-              Meta tab usage numbers: <b>Smogon usage statistics</b> (smogon.com/stats), from rated Pokémon Showdown ladder battles.
+              Meta tab usage numbers: <b>Smogon usage statistics</b> (smogon.com/stats), from rated Pokémon Showdown ladder battles; before a
+              regulation’s first month is published, provisional numbers from <b>Limitless</b> tournament team lists (play.limitlesstcg.com),
+              public <b>Pokémon Showdown replays</b> (replay.pokemonshowdown.com) or the previous regulation.
             </li>
             <li>
               Sprites, Pokédex text and locations: <b>PokeAPI</b> (sprites and CSV data).

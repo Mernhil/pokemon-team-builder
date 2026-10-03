@@ -3,7 +3,7 @@ import { openApp, setTheme } from './helpers';
 
 test('Meta tab lists the most used Pokémon with where the numbers come from', async ({ page }) => {
   await openApp(page, '#meta');
-  // Reg M-C is live but has no published usage yet; the previous regulation does.
+  // Reg M-B has Smogon's published usage (Reg M-C may still be on provisional numbers).
   await page.getByRole('combobox', { name: 'Regulation' }).selectOption({ label: 'Champions · Reg M-B' });
   const list = page.getByRole('list', { name: /Most used Pokémon in Reg M-B/ });
   await expect(list.getByRole('listitem').first()).toBeVisible();

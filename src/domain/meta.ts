@@ -7,7 +7,10 @@
  *     app. A scheduled GitHub Action (.github/workflows/meta.yml) regenerates it.
  *  2. A hand-maintained file, src/data/meta/manual.json (same schema; docs/UPDATING_META.md), for
  *     regulations Smogon doesn't cover yet.
- *  3. The player's own logged matches (localMetaFromMatches) — shown when there's nothing else.
+ *  3. Until Smogon publishes a regulation's first month, early estimates built by the same script
+ *     (domain/metaSources.ts): tournament team lists, public Showdown replays, and the previous
+ *     regulation's numbers carried over (metaSourceRank orders them).
+ *  4. The player's own logged matches (localMetaFromMatches) — shown when there's nothing better.
  *
  * Nothing here reaches the network; the Meta tab's optional refresh (store/metaStore.ts) fetches the
  * deployed copy of the same file and runs it through the same validation.
@@ -37,10 +40,30 @@ export const MetaEntrySchema = z.object({
       }),
     )
     .default([]),
+  /**
+   * Set when the spreads aren't this source's own (replays and team lists don't show them): the
+   * regulation whose usage statistics they were borrowed from, or 'estimate' (from base stats).
+   */
+  spreadFrom: z.string().max(64).optional(),
 });
 export type MetaEntry = z.infer<typeof MetaEntrySchema>;
 
+/**
+ * Where a snapshot's numbers come from, best first (see metaSourceRank):
+ * - smogon: Smogon's monthly usage statistics (the whole rated Showdown ladder).
+ * - manual: src/data/meta/manual.json, entered by hand from a named source.
+ * - tournaments: open team lists from Limitless VGC tournaments (full sets, no spreads).
+ * - replays: public Showdown replays (exact species from Team Preview; moves, items and abilities
+ *   only as revealed in battle; no spreads).
+ * - carryover: the previous regulation's numbers for the Pokémon still allowed.
+ * - matches: the player's own logged matches.
+ */
+export const META_SOURCE_KINDS = ['smogon', 'manual', 'tournaments', 'replays', 'carryover', 'matches'] as const;
+export type MetaSourceKind = (typeof META_SOURCE_KINDS)[number];
+
 export const MetaSourceSchema = z.object({
+  /** Absent in older files: Smogon if the url is a Smogon stats file, else manual (metaSourceKind). */
+  kind: z.enum(META_SOURCE_KINDS).optional(),
   /** Shown in the UI, e.g. "Smogon usage statistics (Pokémon Showdown ladder)". */
   name: z.string().min(1).max(120),
   url: z.string().url().optional(),
@@ -51,6 +74,11 @@ export const MetaSourceSchema = z.object({
   /** Rating cutoff (Smogon: 0, 1500, 1630, 1760). */
   cutoff: z.number().int().min(0).optional(),
   battles: z.number().int().min(0).optional(),
+  /** Tournaments: team lists and events counted. */
+  teams: z.number().int().min(0).optional(),
+  events: z.number().int().min(0).optional(),
+  /** Carry-over: the regulation the numbers were taken from. */
+  basedOn: z.string().max(64).optional(),
 });
 export type MetaSource = z.infer<typeof MetaSourceSchema>;
 
@@ -98,15 +126,71 @@ export function metaDataDate(snap: Pick<MetaSnapshot, 'updatedAt' | 'source'>): 
 export const metaAgeDays = (snap: Pick<MetaSnapshot, 'updatedAt' | 'source'>, now = Date.now()) =>
   Math.max(0, Math.floor((now - Date.parse(metaDataDate(snap))) / 86_400_000));
 
+/** The kind of source a snapshot comes from (older files carry no `kind`). */
+export function metaSourceKind(snap: Pick<MetaSnapshot, 'source'>): MetaSourceKind {
+  return snap.source.kind ?? (/smogon\.com\/stats\//.test(snap.source.url ?? '') ? 'smogon' : 'manual');
+}
+
+/** Below these samples an early source ranks under the other one (see metaSourceRank). */
+export const MIN_TOURNAMENT_TEAMS = 64;
+export const MIN_REPLAY_GAMES = 150;
+
 /**
- * Picks the snapshot for a regulation: the automated one if present, else the hand-maintained one.
- * A refreshed copy (newer `updatedAt`) wins over the baked one.
+ * How trustworthy a snapshot is, 0 = best: Smogon's stats, then hand-entered data, then a
+ * well-sampled tournament or replay snapshot, then a thin one, then the previous regulation's
+ * numbers, then the player's own matches. The early sources only fill the weeks before Smogon
+ * publishes a regulation's first month; once it has, Smogon wins.
+ */
+export function metaSourceRank(snap: Pick<MetaSnapshot, 'source'>): number {
+  const s = snap.source;
+  switch (metaSourceKind(snap)) {
+    case 'smogon':
+      return 0;
+    case 'manual':
+      return 1;
+    case 'tournaments':
+      return (s.teams ?? 0) >= MIN_TOURNAMENT_TEAMS ? 2 : 4;
+    case 'replays':
+      return (s.battles ?? 0) >= MIN_REPLAY_GAMES ? 3 : 5;
+    case 'carryover':
+      return 6;
+    case 'matches':
+      return 7;
+  }
+}
+
+/** Orders snapshots best first: by source rank, then the newest data, then the newest build. */
+export function compareSnapshots(a: MetaSnapshot, b: MetaSnapshot): number {
+  return metaSourceRank(a) - metaSourceRank(b) || metaDataDate(b).localeCompare(metaDataDate(a)) || b.updatedAt.localeCompare(a.updatedAt);
+}
+
+/**
+ * Picks the snapshot for a regulation across files (a refreshed copy, the built-in one, the
+ * hand-maintained one): the best source, and of two from the same source the newer one.
  */
 export function pickSnapshot(regulationId: string, ...files: (MetaFile | undefined)[]): MetaSnapshot | undefined {
   return files
     .map((f) => f?.regulations[regulationId])
     .filter((s): s is MetaSnapshot => !!s)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    .sort(compareSnapshots)[0];
+}
+
+/** Snapshots that are early estimates (shown as provisional): anything but Smogon's or hand-entered data. */
+export const isProvisional = (snap: Pick<MetaSnapshot, 'source'>) => metaSourceRank(snap) > 1;
+
+/** A short "provisional: …" note for an early estimate (undefined for Smogon's or hand-entered data). */
+export function provisionalNote(snap: Pick<MetaSnapshot, 'source'>, regulationName: (id: string) => string | undefined = (id) => id): string | undefined {
+  if (!isProvisional(snap)) return undefined;
+  switch (metaSourceKind(snap)) {
+    case 'carryover':
+      return `provisional: carried over from ${(snap.source.basedOn && regulationName(snap.source.basedOn)) ?? 'the previous regulation'}`;
+    case 'replays':
+      return 'provisional: from public Showdown replays';
+    case 'tournaments':
+      return 'provisional: from tournament team lists';
+    default:
+      return 'provisional';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -201,6 +285,7 @@ export function chaosToSnapshot(raw: unknown, o: ChaosOptions): MetaSnapshot {
     regulationId: o.regulationId,
     updatedAt: new Date().toISOString().slice(0, 10),
     source: {
+      kind: 'smogon',
       name: 'Smogon usage statistics (Pokémon Showdown ladder)',
       url: o.url,
       format: o.format,
@@ -249,7 +334,7 @@ export function localMetaFromMatches(
   return {
     regulationId,
     updatedAt: today,
-    source: { name: `${sourceLabel} (${relevant.length})`, battles: relevant.length },
+    source: { kind: 'matches', name: `${sourceLabel} (${relevant.length})`, battles: relevant.length },
     entries: [...bySpecies.entries()]
       .map(([speciesId, rec]) => ({
         speciesId,

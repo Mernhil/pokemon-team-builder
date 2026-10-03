@@ -154,7 +154,7 @@ describe('fallback from your logged matches', () => {
       '2026-09-28',
     );
     expect(snap).not.toBeNull();
-    expect(snap!.source).toEqual({ name: 'Your logged matches (2)', battles: 2 });
+    expect(snap!.source).toEqual({ kind: 'matches', name: 'Your logged matches (2)', battles: 2 });
     expect(snap!.entries[0]).toMatchObject({ speciesId: 'incineroar', usagePct: 100, items: [{ id: 'safetygoggles', pct: 100 }] });
     expect(snap!.entries.find((e) => e.speciesId === 'rillaboom')?.usagePct).toBe(50);
     // The result passes the same validation as published data.
