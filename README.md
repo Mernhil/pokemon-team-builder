@@ -12,6 +12,7 @@ npm install
 npm run dev           # http://localhost:5173
 npm test              # vitest: stat engines, codecs, validation
 npm run typecheck
+npm run e2e           # browser smoke tests (Playwright) against the production build; see docs/E2E.md
 npm run build         # static site in dist/
 npm run build:single  # one self-contained index.html (works offline)
 npm run data          # regenerate src/data/generated/*.json (Showdown data + regulation files + Gen 1–9 datasets)
@@ -124,6 +125,49 @@ A weekly scheduled task follows [`docs/UPDATING_REGULATIONS.md`](docs/UPDATING_R
 The Meta tab lists each Champions regulation's most-used Pokémon with their common items, moves, abilities, spreads and teammates.
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
+
+### Cloud sync
+
+**Settings → Sync → Sync with my account** (web and phone app, opt-in) keeps your teams (with folders and variations) and your match log the same on every device you sign in on, through the Cloudflare deployment that already hosts the app. It is offline-first (localStorage stays the source of truth), syncs on start, on focus, a few seconds after a change and on "Sync now", and merges with what is already on a new device instead of wiping it. Last write wins per document; when two devices changed the same team the older change is kept as a variation named "Conflict copy (device, date)"; an edit beats a delete unless the delete is clearly later.
+`worker/` is the Worker behind `/api/sync` (Cloudflare Access JWT verification, D1 storage, zod-validated and sanitised payloads), `src/domain/sync.ts` the merge rules and `src/sync/` the client. One-time setup (D1, migration, Access variables), backups, turning it off and the desktop options are in [`docs/SYNC.md`](docs/SYNC.md). The desktop app and the single-file build don't sync.
+
+### Regulation changes
+
+When a regulation changes, the app shows what it does. **More → Regulation diff** (`#regdiff`) compares any two Champions regulations: Pokémon, Megas, items, moves and abilities added or removed (with sprites and item icons), species patches as before → after (typing, stats, abilities) and the unconfirmed entries, labelled as such. Saved teams get a badge when their regulation isn't the live one and a "N problems in Reg M-D" chip when something of theirs isn't legal there; the Saved teams dialog gathers them under "3 of your teams have problems in Reg M-D". In the builder, the regulation banner shows the impact before "Move team to <live>" (what breaks, what changes, what is new, with the final-stat effect of a patched Pokémon) and **Copy to <regulation>** adds a variation with the illegal parts removed and a checklist of what to fix; the original is never modified. A next regulation with a start date counts down in the banner.
+`src/domain/regulationImpact.ts` (pure) computes legality from the Dex and from `validateTeam` for the target format, so it can't disagree with the validator, and works for Showdown-based sets as well as delta ones; only the patches and unconfirmed notes come from `src/data/generated/regulation-changes.json`, which `npm run data` builds from the delta files.
+
+### Bring planner
+
+**Plan vs this team** (on a logged match with a saved team picked, and in the Matchup tab) suggests which four of your six to bring and which two to lead, in doubles (bring 4, lead 2; singles 3 and 1), with the best three plans, each with two to four plain reasons and a main risk ("Nothing in this four outspeeds Dragapult outside Tailwind"). It is a suggestion, not a prediction.
+Their six can be added as species, pasted as Showdown text, loaded from a logged match's Team Preview (what the log saw overrides) or taken from a saved enemy team. Each of their Pokémon uses its most-used set (`metaSets`) unless more is known; known item, ability and moves override it field by field, and a full pasted or saved set is used as it is.
+`src/domain/bringPlanner.ts` (pure) scores all C(6,4) = 15 fours × 6 lead pairs with the Threat report's damage and speed numbers: pressure and risk against what they probably bring (their four most dangerous to your team), tempo, type coverage, speed control (Tailwind, Trick Room, Icy Wind, Electroweb, and whether it flips the matchup) and support (Fake Out, Intimidate, redirection, Wide Guard). Only one Pokémon can Mega Evolve per battle, so two Mega Stone holders may both come but only one gets its Mega stats in any plan. All weights are constants in one place (`WEIGHTS`). **Use this plan** saves what you bring and lead onto the match (or a new one). Champions only; other formats get an explanation.
+
+### Match log: brought, led and analytics
+
+Besides the result and the opponent's Team Preview, a match can record **what each side brought and led**: tap a Pokémon's sprite to cycle not brought → brought → lead (doubles bring 4 / lead 2, singles 3 / 1, from the match's regulation), for your side and for the opponent's revealed six. It's all optional; a match with only a result is still valid. Saved-team Pokémon are stored by uid, run-and-gun ones by species; the save format is v3 (`ptb:matches:v1`, a v2 log loads unchanged), and the CSV export gains the four columns.
+The analytics (`src/domain/matchStats.ts`, pure and tested) sit under the log with filters for regulation, category, date range and team or folder of variations: win rate **by my lead**, **by the four I brought** and **by team variation**; per opponent Pokémon the record when it was on their team, when they brought it and when they led it; a **nemesis** list (the five worst, among those faced at least five times) linking to the Damage Calc, Speed tiers and Threat report on that Pokémon; a **weekly win rate** chart per regulation; and an **archetype vs archetype** grid.
+Every rate carries a Wilson 95% range, and a record from fewer than 5 games is greyed and shown without a percentage, so a 1–0 never reads as 100%. Lead and brought groups are by species, so variations of one team merge.
+
+### Stat Point optimiser
+
+The **Optimise** button in the stat calculator (Champions Stat Points and Gen 3–9 EVs) finds the cheapest spread for goals: **survive** a move (every roll, 15 of 16, or at least half; optionally on a crit), **outspeed** a Speed (or, for Trick Room, stay under it), or **knock out** a Pokémon in one or two hits, in priority order, with the leftover points put in one stat or "max HP, then split evenly".
+The other Pokémon comes from the most-used sets, your saved teams, or any species (prefilled with its meta set where there is one). Every number comes from the Damage Calc (`src/domain/optimizer.ts`), and because each goal is monotonic in its stats the search is exact without trying every combination: for each HP value the least Def/SpD that passes, found with a two-pointer walk, and a binary search for Atk/SpA/Spe. It can keep your nature or suggest one (never lowering a stat a goal needs). A goal that can't be met says how short it falls ("short by 3% even at max HP and SpD: consider Assault Vest", "needs 4 more SP than you have"); when the points run out the later goal is the one dropped.
+The result sits next to your current spread with ✓/✗ per goal; **Apply** writes it (undoable). Speed tiers' "Outspeed this" and the Threat report's cells ("Survive this…") open it with the goal filled in.
+
+### Threat report
+
+**More → Threat report** (`#threats`, with a "Top threats" line in Team check) runs the Damage Calc for your whole team against the most-used Champions sets, in both directions, on one screen.
+Each threat is a meta set (`src/domain/metaSets.ts`: the most common ability, item, spread and nature, and the top four moves, never four status moves; anything the format doesn't allow is dropped and reported). Every cell shows your best move and its best move as OHKO / possible OHKO / 2HKO / 3HKO+ with the damage range, and who moves first; Mega Stone holders are read at their worse forme for you and their better one for the threat. Plain-language summaries rank the worst threats first ("Kingambit OHKOs 3 of your Pokémon and none of yours OHKO it back", "Nothing on your team outspeeds and 2HKOs Flutter Mane").
+The field (Doubles by default, weather, terrain, Trick Room) and the number of threats (10/20/30) change everything at once. The grid uses a blue-to-orange scale with ✓/✗/~ and words in every cell, and becomes one card per threat on phones; tapping a cell opens the Damage Calc pre-filled with that attacker, defender and field.
+The engine (`src/domain/threats.ts`) is pure; the page runs it in a Web Worker (`src/workers/`) with memoised cells and streams rows in as they finish, so it doesn't freeze a phone (the single-file build runs it on the main thread in small slices instead). It uses the same newest-published-regulation fallback and data-age notice as Speed tiers. Other formats show an explanation instead.
+
+### Speed tiers
+
+**More → Speed tiers** (`#speed`, also linked from Team check) is a ladder of the most-used Champions Pokémon's likely Speeds with your team on the same scale, fastest first.
+Each meta Pokémon is built from its published spreads (spreads with the same final Speed merge), its most common ability and item; a Mega Stone holder also gets its Mega forme's Speed, and a Choice Scarf row appears when at least 10% of its sets hold one.
+Every number comes from the Damage Calc's own speed (`calcSpeed`), so the two can't disagree. Toggle Tailwind, −1/+1/+2, paralysis and (for your side) Choice Scarf per side, plus weather, terrain and Trick Room, which flips the ladder.
+Tap a meta row for **Outspeed this**: the Stat Points (and nature, if needed) one of your Pokémon needs to beat it in that scenario, with an undoable Apply.
+The numbers come from the newest regulation with published usage, and the page says which regulation, month and age (when the live regulation has none yet, it says so and uses the previous one). Other formats show an explanation instead.
 
 ### Advanced details and damage calculator
 

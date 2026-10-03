@@ -7,7 +7,7 @@
  */
 
 import { datasetCapabilities, type Capabilities } from './capabilities';
-import { currentRegulation, formatForRegulation, regulationInfo } from './formats';
+import { FORMATS, currentRegulation, formatForRegulation, regulationInfo } from './formats';
 import { uid } from './team';
 import type { TeraType } from './types';
 
@@ -57,6 +57,15 @@ export interface Match {
   /** Species seen at Team Preview, with whatever else was learned during the game. */
   opponentTeam: LoggedMon[];
   opponentArchetype?: string;
+  /**
+   * Which of the six each side brought and led (all optional; a match with only a result is valid).
+   * Mine are Pokémon uids when `myTeamId` is set, else species ids from `myTeam`; the opponent's
+   * are species ids from `opponentTeam`. Leads are a subset of what was brought.
+   */
+  myBrought?: string[];
+  myLeads?: string[];
+  oppBrought?: string[];
+  oppLeads?: string[];
   notes?: string;
   createdAt: number;
   updatedAt: number;
@@ -101,6 +110,51 @@ export function suggestRegulationForDate(date: string): string | undefined {
 /** "Clone last opponent" / "match against a previous entry": reuse a logged opponent core verbatim. */
 export function cloneOpponentTeam(mons: LoggedMon[]): LoggedMon[] {
   return mons.map((m) => ({ ...m, moves: m.moves ? [...m.moves] : undefined }));
+}
+
+// ---------------------------------------------------------------------------
+// Brought and led
+// ---------------------------------------------------------------------------
+
+export interface BringSelection {
+  brought: string[];
+  leads: string[];
+}
+export interface BringLimits {
+  /** How many of the six are brought, and how many of those lead. */
+  bring: number;
+  lead: number;
+}
+export type BringState = 'none' | 'brought' | 'lead';
+
+/** Doubles: bring 4, lead 2. Singles: bring 3, lead 1. Taken from the match's regulation (doubles when unknown). */
+export function bringLimits(regulationId?: string): BringLimits {
+  const f = FORMATS.find((x) => x.regulationId === regulationId);
+  if (f?.gameType === 'singles') return { bring: 3, lead: 1 };
+  return { bring: f?.pick ?? 4, lead: 2 };
+}
+
+export const bringState = (sel: BringSelection, id: string): BringState => (sel.leads.includes(id) ? 'lead' : sel.brought.includes(id) ? 'brought' : 'none');
+
+/**
+ * One tap on a Pokémon: not brought → brought → lead → not brought. A step that would break a limit
+ * is skipped (brought with the leads full goes back to not brought; not brought with the roster full stays put).
+ */
+export function cycleBring(sel: BringSelection, id: string, limits: BringLimits): BringSelection {
+  const state = bringState(sel, id);
+  if (state === 'none') return sel.brought.length < limits.bring ? { ...sel, brought: [...sel.brought, id] } : sel;
+  if (state === 'brought') {
+    if (sel.leads.length < limits.lead) return { ...sel, leads: [...sel.leads, id] };
+    return { brought: sel.brought.filter((x) => x !== id), leads: sel.leads };
+  }
+  return { brought: sel.brought.filter((x) => x !== id), leads: sel.leads.filter((x) => x !== id) };
+}
+
+/** Drops duplicates, anything not on the roster, and leads that weren't brought; caps to the limits. */
+export function normalizeBring(sel: BringSelection, roster: string[], limits: BringLimits): BringSelection {
+  const brought = [...new Set(sel.brought)].filter((id) => roster.includes(id)).slice(0, limits.bring);
+  const leads = [...new Set(sel.leads)].filter((id) => brought.includes(id)).slice(0, limits.lead);
+  return { brought, leads };
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +243,13 @@ function csvCell(v: string): string {
 const monLabel = (m: LoggedMon, speciesName: (id: string) => string, tera: boolean) =>
   [speciesName(m.speciesId), m.itemId, m.abilityId, tera ? m.teraType : undefined, ...(m.moves ?? [])].filter(Boolean).join(' | ');
 
-export function matchesToCSV(matches: Match[], speciesName: (id: string) => string, teamName: (id: string) => string): string {
+export function matchesToCSV(
+  matches: Match[],
+  speciesName: (id: string) => string,
+  teamName: (id: string) => string,
+  /** Name of one of my Pokémon by the id stored in myBrought/myLeads (a uid for saved teams); defaults to the species name. */
+  myMonName: (m: Match, id: string) => string = (_m, id) => speciesName(id),
+): string {
   const header = [
     'Date',
     'Result',
@@ -200,6 +260,10 @@ export function matchesToCSV(matches: Match[], speciesName: (id: string) => stri
     'My Team',
     'Opponent Archetype',
     'Opponent Team',
+    'My Brought',
+    'My Leads',
+    'Opponent Brought',
+    'Opponent Leads',
     'Notes',
   ];
   const rows = matches.map((m) => [
@@ -212,6 +276,10 @@ export function matchesToCSV(matches: Match[], speciesName: (id: string) => stri
     m.myTeamId ? teamName(m.myTeamId) : (m.myTeam ?? []).map((x) => speciesName(x.speciesId)).join(' / '),
     m.opponentArchetype ?? '',
     m.opponentTeam.map((x) => monLabel(x, speciesName, matchCapabilities(m.regulationId).tera)).join(' / '),
+    (m.myBrought ?? []).map((id) => myMonName(m, id)).join(' / '),
+    (m.myLeads ?? []).map((id) => myMonName(m, id)).join(' / '),
+    (m.oppBrought ?? []).map(speciesName).join(' / '),
+    (m.oppLeads ?? []).map(speciesName).join(' / '),
     m.notes ?? '',
   ]);
   return [header, ...rows].map((r) => r.map((c) => csvCell(String(c))).join(',')).join('\n');

@@ -2,13 +2,16 @@ import { useMemo, useState } from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import { ARCHETYPE_PRESETS, CATEGORY_PRESETS, cloneOpponentTeam, matchCapabilities, suggestRegulationForDate, type LoggedMon, type Match, type MatchResult } from '@/domain/matches';
+import { ARCHETYPE_PRESETS, CATEGORY_PRESETS, bringLimits, cloneOpponentTeam, matchCapabilities, normalizeBring, suggestRegulationForDate, type BringSelection, type LoggedMon, type Match, type MatchResult } from '@/domain/matches';
 import { coreOverlapScore } from '@/domain/meta';
 import type { FormatRules } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
 import { useMetaStore } from '@/store/metaStore';
 import { metaFor } from '@/data/meta';
 import { useTeamStore } from '@/store/teamStore';
+import { BringPicker, type RosterMon } from './BringPicker';
+import { sourcesFromLog } from '@/domain/bringPlanner';
+import { BringPlanner } from './BringPlanner';
 import { LoggedMonEditor } from './LoggedMonEditor';
 import { Button, Field, Input, Panel, Select, TextArea } from '../ui/primitives';
 import { cn } from '../ui/styles';
@@ -24,6 +27,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
   const teams = useTeamStore((s) => s.teams);
   const teamOrder = useTeamStore((s) => s.order);
   const [myMode, setMyMode] = useState<'saved' | 'freeform'>(match.myTeamId ? 'saved' : 'freeform');
+  const [planning, setPlanning] = useState(false);
 
   const set = (patch: Partial<Match>) => updateMatch(match.id, patch);
   const tera = matchCapabilities(match.regulationId).tera;
@@ -34,24 +38,49 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
     if (match.opponentTeam.length >= 6) return;
     set({ opponentTeam: [...match.opponentTeam, { speciesId: '' }] });
   };
+  /** The opponent's brought/led, kept in step with who is on their team. */
+  const oppBring = (team: LoggedMon[]) => {
+    const roster = team.map((x) => x.speciesId).filter(Boolean);
+    return normalizeBring({ brought: match.oppBrought ?? [], leads: match.oppLeads ?? [] }, roster, limits);
+  };
+  const withOppBring = (team: LoggedMon[]): Partial<Match> => {
+    const b = oppBring(team);
+    return { opponentTeam: team, oppBrought: b.brought.length ? b.brought : undefined, oppLeads: b.leads.length ? b.leads : undefined };
+  };
   const updateOpponentMon = (i: number, m: LoggedMon) => {
     const next = [...match.opponentTeam];
     next[i] = m;
-    set({ opponentTeam: next });
+    set(withOppBring(next));
   };
-  const removeOpponentMon = (i: number) => set({ opponentTeam: match.opponentTeam.filter((_, idx) => idx !== i) });
+  const removeOpponentMon = (i: number) => set(withOppBring(match.opponentTeam.filter((_, idx) => idx !== i)));
 
+  const limits = bringLimits(match.regulationId);
   const myTeam = match.myTeam ?? [];
+  const savedTeam = match.myTeamId ? teams[match.myTeamId] : undefined;
+  // What I can bring: a saved team's Pokémon (by uid) or the run-and-gun list (by species).
+  const myRoster: RosterMon[] =
+    myMode === 'saved'
+      ? (savedTeam?.slots.flatMap((s) => (s ? [{ id: s.uid, speciesId: s.speciesId }] : [])) ?? [])
+      : [...new Map(myTeam.filter((x) => x.speciesId).map((x) => [x.speciesId, { id: x.speciesId, speciesId: x.speciesId }])).values()];
+  const mySel = normalizeBring({ brought: match.myBrought ?? [], leads: match.myLeads ?? [] }, myRoster.map((r) => r.id), limits);
+  const oppRoster: RosterMon[] = [...new Set(match.opponentTeam.map((x) => x.speciesId).filter(Boolean))].map((id) => ({ id, speciesId: id }));
+  const oppSel = oppBring(match.opponentTeam);
+  const setMyBring = (b: BringSelection) => set({ myBrought: b.brought.length ? b.brought : undefined, myLeads: b.leads.length ? b.leads : undefined });
+  const setOppBring = (b: BringSelection) => set({ oppBrought: b.brought.length ? b.brought : undefined, oppLeads: b.leads.length ? b.leads : undefined });
   const addMyMon = () => {
     if (myTeam.length >= 6) return;
     set({ myTeam: [...myTeam, { speciesId: '' }] });
   };
+  const withMyTeam = (team: LoggedMon[]): Partial<Match> => {
+    const b = normalizeBring({ brought: match.myBrought ?? [], leads: match.myLeads ?? [] }, team.map((x) => x.speciesId), limits);
+    return { myTeam: team, myBrought: b.brought.length ? b.brought : undefined, myLeads: b.leads.length ? b.leads : undefined };
+  };
   const updateMyMon = (i: number, m: LoggedMon) => {
     const next = [...myTeam];
     next[i] = m;
-    set({ myTeam: next });
+    set(withMyTeam(next));
   };
-  const removeMyMon = (i: number) => set({ myTeam: myTeam.filter((_, idx) => idx !== i) });
+  const removeMyMon = (i: number) => set(withMyTeam(myTeam.filter((_, idx) => idx !== i)));
 
   const priorOpponents = allMatches.filter((m) => m.id !== match.id && m.opponentTeam.length > 0);
 
@@ -136,16 +165,16 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">My team</span>
               <div className="flex rounded-md bg-surface-2 p-0.5 text-xs">
-                <button type="button" onClick={() => { setMyMode('saved'); set({ myTeam: undefined }); }} className={cn('rounded px-2 py-0.5', myMode === 'saved' ? 'bg-surface shadow-sm' : 'text-muted')}>
+                <button type="button" onClick={() => { setMyMode('saved'); set({ myTeam: undefined, myBrought: undefined, myLeads: undefined }); }} className={cn('rounded px-2 py-0.5', myMode === 'saved' ? 'bg-surface shadow-sm' : 'text-muted')}>
                   Saved team
                 </button>
-                <button type="button" onClick={() => { setMyMode('freeform'); set({ myTeamId: undefined }); }} className={cn('rounded px-2 py-0.5', myMode === 'freeform' ? 'bg-surface shadow-sm' : 'text-muted')}>
+                <button type="button" onClick={() => { setMyMode('freeform'); set({ myTeamId: undefined, myBrought: undefined, myLeads: undefined }); }} className={cn('rounded px-2 py-0.5', myMode === 'freeform' ? 'bg-surface shadow-sm' : 'text-muted')}>
                   Run and gun
                 </button>
               </div>
             </div>
             {myMode === 'saved' ? (
-              <Select value={match.myTeamId ?? ''} onChange={(e) => set({ myTeamId: e.target.value || undefined })}>
+              <Select aria-label="My saved team" value={match.myTeamId ?? ''} onChange={(e) => set({ myTeamId: e.target.value || undefined, myBrought: undefined, myLeads: undefined })}>
                 <option value="">— pick a saved team —</option>
                 {teamOrder.map((id) => (
                   <option key={id} value={id}>
@@ -165,6 +194,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
                 )}
               </div>
             )}
+            <BringPicker dex={dex} format={format} label="I brought" roster={myRoster} value={mySel} limits={limits} onChange={setMyBring} />
             <Field label="My archetype" hint="optional · freeform">
               <Input list="archetype-presets" value={match.myArchetype ?? ''} onChange={(e) => set({ myArchetype: e.target.value || undefined })} placeholder="Trick Room, Rain…" />
             </Field>
@@ -187,6 +217,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
                 </Button>
               )}
             </div>
+            <BringPicker dex={dex} format={format} label="They brought" roster={oppRoster} value={oppSel} limits={limits} onChange={setOppBring} />
             <Field label="Opponent archetype" hint="optional · freeform">
               <Input list="archetype-presets" value={match.opponentArchetype ?? ''} onChange={(e) => set({ opponentArchetype: e.target.value || undefined })} placeholder="Trick Room, Rain…" />
             </Field>
@@ -202,7 +233,12 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
           <TextArea rows={2} value={match.notes ?? ''} onChange={(e) => set({ notes: e.target.value || undefined })} placeholder="Anything worth remembering about this game…" />
         </Field>
 
-        <div className="flex justify-end gap-2">
+        {planning && savedTeam && <BringPlanner dex={dex} format={format} team={savedTeam} matchId={match.id} initialOpponent={sourcesFromLog(match.opponentTeam)} />}
+
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button size="sm" onClick={() => setPlanning((p) => !p)} disabled={!savedTeam} title={!savedTeam ? 'Pick one of your saved teams first' : undefined}>
+            {planning ? 'Hide the plan' : 'Plan vs this team'}
+          </Button>
           <Button size="sm" onClick={() => duplicateAsTemplate(match.id)}>
             <Copy size={13} /> Log another match against this same opponent
           </Button>

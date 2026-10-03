@@ -9,10 +9,13 @@ import {
   ChevronDown,
   Eraser,
   FolderOpen,
+  Gauge,
+  GitCompare,
   MoreHorizontal,
   Plus,
   Save,
   Settings,
+  ShieldAlert,
   Swords,
   Users,
   type LucideIcon,
@@ -25,6 +28,7 @@ import { GEN_GAMES } from '@/domain/generations';
 import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { toast } from '@/store/toastStore';
+import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
 import { OffenseMatrix } from './components/analysis/OffenseMatrix';
@@ -48,6 +52,9 @@ const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').the
 const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
 const AtlasView = lazy(() => import('./components/atlas/AtlasView').then((m) => ({ default: m.AtlasView })));
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
+const RegulationDiffView = lazy(() => import('./components/regulation/RegulationDiffView').then((m) => ({ default: m.RegulationDiffView })));
+const ThreatReportView = lazy(() => import('./components/threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
+const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
 
 interface Dest {
@@ -65,8 +72,11 @@ const PRIMARY: Dest[] = [
 const SECONDARY: Dest[] = [
   { id: 'matches', label: 'Match log', icon: Swords },
   { id: 'meta', label: 'Meta', icon: BarChart3 },
+  { id: 'speed', label: 'Speed tiers', icon: Gauge },
+  { id: 'threats', label: 'Threat report', icon: ShieldAlert },
+  { id: 'regdiff', label: 'Regulation diff', icon: GitCompare },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'regdiff'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -76,6 +86,21 @@ export default function App() {
   const view = useTeamStore((s) => s.view);
   const setView = useTeamStore((s) => s.setView);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Cloud sync (opt-in): its code loads only once it is turned on.
+  const syncOn = useSyncStore((s) => s.enabled);
+  useEffect(() => {
+    if (!syncOn || !syncAvailable()) return;
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    void import('./sync/runner').then((m) => {
+      if (!cancelled) stop = m.startAutoSync();
+    });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [syncOn]);
 
   // Deep link: #calc opens the calculator, #dex the Pokédex, #builder the team builder, …
   useEffect(() => {
@@ -117,10 +142,13 @@ export default function App() {
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
   else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
+  else if (view === 'regdiff') content = <Suspense fallback={loading('Loading regulation diff…')}><RegulationDiffView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;
   else if (view === 'meta') content = <Suspense fallback={loading('Loading meta data…')}><MetaView dex={dex} format={format} /></Suspense>;
+  else if (view === 'speed') content = <Suspense fallback={loading('Loading speed tiers…')}><SpeedTiersView dex={dex} format={format} team={team} /></Suspense>;
+  else if (view === 'threats') content = <Suspense fallback={loading('Loading threat report…')}><ThreatReportView dex={dex} format={format} team={team} /></Suspense>;
   else content = <Builder team={team} format={format} dex={dex} />;
 
   return (

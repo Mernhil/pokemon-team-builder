@@ -18,6 +18,8 @@ interface MatchState {
   deleteMatch: (id: string) => void;
   duplicateAsTemplate: (id: string, date?: string) => string;
   importMatches: (matches: Match[]) => void;
+  /** Cloud sync: write merged matches and remove deleted ones, keeping each match's own `updatedAt`. */
+  applySynced: (upserts: Match[], deletes: string[]) => void;
   setScoutYourTeam: (id: string | undefined) => void;
   setScoutEnemyTeam: (id: string | undefined) => void;
 }
@@ -29,9 +31,12 @@ export const MATCH_BACKUP_V1_KEY = 'ptb:matches:v1:backup-v1';
  * v2: a revealed Tera Type is only kept on matches whose regulation's game has Terastallization
  * (Scarlet/Violet) — none of the Champions regulations do. The v1 log is copied to
  * MATCH_BACKUP_V1_KEY first, once.
+ * v3: matches may record what each side brought and led (myBrought, myLeads, oppBrought, oppLeads).
+ * Purely additive, so a v2 log needs no rewrite beyond being run through the sanitiser (which
+ * validates the new fields); no backup is made.
  */
 export function migrateMatchState(persisted: unknown, version: number): MatchState {
-  const p = (persisted ?? {}) as Partial<MatchState>;
+  let p = (persisted ?? {}) as Partial<MatchState>;
   if (version < 2 && p.matches && typeof p.matches === 'object') {
     if (safeStorage.getItem(MATCH_BACKUP_V1_KEY) === null) {
       safeStorage.setItem(MATCH_BACKUP_V1_KEY, JSON.stringify({ version, backedUpAt: new Date().toISOString(), state: persisted }));
@@ -41,9 +46,14 @@ export function migrateMatchState(persisted: unknown, version: number): MatchSta
       const m = sanitizeMatch(raw);
       matches[id] = m ? enforceMatchCapabilities(m) : raw;
     }
-    return { ...p, matches } as MatchState;
+    p = { ...p, matches } as Partial<MatchState>;
   }
-  return persisted as MatchState;
+  if (version < 3 && p.matches && typeof p.matches === 'object') {
+    const matches: Record<string, unknown> = {};
+    for (const [id, raw] of Object.entries(p.matches)) matches[id] = sanitizeMatch(raw) ?? raw;
+    p = { ...p, matches } as Partial<MatchState>;
+  }
+  return p as MatchState;
 }
 
 export const useMatchStore = create<MatchState>()(
@@ -75,12 +85,25 @@ export const useMatchStore = create<MatchState>()(
           m.myTeamId = src.myTeamId;
           m.myTeam = src.myTeam?.map((x) => ({ ...x }));
           m.myArchetype = src.myArchetype;
+          m.myBrought = src.myBrought && [...src.myBrought];
+          m.myLeads = src.myLeads && [...src.myLeads];
           m.category = src.category;
         }
         const clean = enforceMatchCapabilities(m);
         set((s) => ({ matches: { ...s.matches, [clean.id]: clean }, order: [clean.id, ...s.order] }));
         return clean.id;
       },
+      applySynced: (upserts, deletes) =>
+        set((s) => {
+          const matches = { ...s.matches };
+          for (const id of deletes) delete matches[id];
+          const added: string[] = [];
+          for (const m of upserts) {
+            if (!matches[m.id]) added.push(m.id);
+            matches[m.id] = enforceMatchCapabilities(m);
+          }
+          return { matches, order: [...added, ...s.order.filter((id) => Object.hasOwn(matches, id))] };
+        }),
       importMatches: (incoming) =>
         set((s) => {
           const matches = { ...s.matches };
@@ -96,7 +119,7 @@ export const useMatchStore = create<MatchState>()(
     }),
     {
       name: 'ptb:matches:v1',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => safeStorage),
       migrate: migrateMatchState,
       // Stored state may be stale or corrupted — never let a bad entry crash every reload.

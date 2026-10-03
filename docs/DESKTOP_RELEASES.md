@@ -1,7 +1,7 @@
 # Desktop releases (Windows/Linux, with auto-update)
 
 The app ships as a Tauri desktop app. `.github/workflows/desktop-release.yml` builds native
-installers on each OS's own GitHub-hosted runner and, on a version tag, publishes them to a
+installers on each OS's own GitHub-hosted runner and, for each new version, publishes them to a
 GitHub Release together with a signed `latest.json` — that's what the in-app "Install & Restart"
 banner (`src/components/DesktopUpdater.tsx`) checks on launch, every 4 hours while the app is open,
 and on demand from the header's refresh button (which also flags a failed background check).
@@ -31,25 +31,33 @@ installers themselves build fine, only the auto-updater manifest can't be produc
 
 ## Cutting a release
 
+The release happens by itself once a version bump is merged: **bump → CHANGELOG → PR → merge → release.**
+
 1. Bump the version everywhere at once (tauri.conf.json, Cargo.toml/.lock, package.json/-lock) and
    add a `## <version> — <date>` section to `CHANGELOG.md` (the workflow uses it as the release text):
    ```bash
    npm run bump -- 0.6.0
    ```
-2. Run `npm run typecheck && npm test`, commit, and push it to the branch you'll release from
-   (normally the default branch).
-3. Publish the release — either:
-   - **GitHub web:** Releases → **Draft a new release** → *Choose a tag* → type `v0.6.0` →
-     *Create new tag on publish* → set **Target** to the branch from step 2 → add notes (or
-     *Generate release notes*) → **Publish release**; or
-   - **CLI:** `git tag v0.6.0 && git push origin v0.6.0`.
+2. Run `npm run typecheck && npm test`, commit, and open a PR into the default branch
+   (`claude/pokemon-team-builder-otextg`).
+3. Merge the PR. The push to the default branch changes `package.json`, which starts
+   `desktop-release.yml`. Its `plan` job reads the version; if `v<version>` doesn't exist as a tag yet,
+   the release runs for it, and the release step creates the tag at the merged commit. If the tag
+   already exists (e.g. a `package.json` edit that didn't bump the version, or a re-push after a
+   release) nothing happens.
 4. The workflow first checks that the tag matches the version from step 1 (a mismatch fails the run
    before anything is built or uploaded) and that typecheck + tests pass, then builds both
-   platforms and attaches the installers and `latest.json` to that tag's **public** Release (creating
-   it when the tag was pushed from the CLI). Watch it under the Actions tab; the assets appear on the
-   release after ~15–20 minutes. Apps already installed will offer the update next time they're
-   launched (already-running instances: at the next 4-hourly check, or right away from the header's
-   "Check for updates" button).
+   platforms and attaches the installers and `latest.json` to that tag's **public** Release. Watch it
+   under the Actions tab; the assets appear on the release after ~15–20 minutes. Apps already
+   installed will offer the update next time they're launched (already-running instances: at the next
+   4-hourly check, or right away from the header's "Check for updates" button).
+
+Tagging by hand still works and does the same thing: push `vX.Y.Z` (`git tag v0.6.0 && git push origin v0.6.0`)
+or publish it from GitHub's web UI (Releases → **Draft a new release** → new tag → **Publish**), with the
+version bump already on that commit. Don't do both for one version: if the merge's run has already
+created the tag, the manual tag push is a no-op; if you tag first, the merge's run sees the tag and skips.
+(The tag has to exist *before* the merge's `plan` job looks, so tag only before merging or after the
+release has finished.)
 
 If a run fails after the release was published, fix the cause, then delete the release **and** its
 tag on GitHub and publish it again (or bump to the next patch version).
@@ -65,7 +73,7 @@ tag on GitHub and publish it again (or bump to the next patch version).
   browser (`ptb:v1:backup-v2` for teams, `ptb:matches:v1:backup-v1` for matches) to restore by hand.
 - **Desktop:** the updater only moves forward (it installs a *higher* version), so don't delete the
   release people already have. Fix forward: revert on the default branch, `npm run bump -- <next patch>`,
-  tag it, and installed apps update to the fixed build. To stop a broken release spreading before
+  merge it (the release runs by itself), and installed apps update to the fixed build. To stop a broken release spreading before
   that's ready, mark its GitHub Release as a draft: `latest.json` then 404s and apps stay where they are.
 
 ## Manual test build (no release, no signing needed)

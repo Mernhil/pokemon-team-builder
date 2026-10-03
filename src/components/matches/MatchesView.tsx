@@ -50,6 +50,11 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
       filtered,
       (id) => dex.species(id)?.name ?? id,
       (id) => teams[id]?.name ?? 'Deleted team',
+      // My brought/led ids are Pokémon uids for a saved team.
+      (m, id) => {
+        const sid = (m.myTeamId ? teams[m.myTeamId]?.slots.find((s) => s?.uid === id)?.speciesId : undefined) ?? id;
+        return dex.species(sid)?.name ?? sid;
+      },
     );
     try {
       await navigator.clipboard.writeText(csv);
@@ -163,7 +168,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
 
               <div className="min-w-0 space-y-3">
                 {active ? <MatchForm dex={dex} format={format} match={active} /> : <EmptyState title="Pick a match on the left to see or edit it." />}
-                <MatchStats dex={dex} matches={matches} />
+                <MatchStats dex={dex} format={format} matches={matches} />
               </div>
             </div>
           )}

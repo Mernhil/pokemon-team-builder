@@ -296,3 +296,6 @@ export function withSpreadValue<T extends Pick<PokemonSet, 'sp' | 'evs' | 'ivs'>
   }
   return { ...p, [kind]: setSpreadValue(p[kind], stat, value, sys.totalCap, sys.perStatCap) };
 }
+
+/** Whether the Stat Point optimiser (src/domain/optimizer.ts) works in a format's stat system: Champions SP and Gen 3–9 EVs. */
+export const canOptimize = (format: FormatRules) => format.statSystem.kind === 'champions-sp' || format.statSystem.kind === 'modern-ev';

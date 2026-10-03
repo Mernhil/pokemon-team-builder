@@ -2,6 +2,29 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.16.0 — 2026-10-03
+
+### New
+- **Speed tiers:** a ladder of the most-used Champions Pokémon's likely Speeds (from the published usage spreads, with Mega and Choice Scarf rows) with your team's Pokémon on the same scale and Speed ties called out. Toggle Tailwind, −1/+1/+2, paralysis and Choice Scarf for each side, plus weather, terrain and Trick Room (which flips the order). Tap a meta Pokémon for **Outspeed this**: the Stat Points and nature your selected Pokémon needs to beat it, with an undoable Apply. Under More → Speed tiers, and linked from Team check.
+
+- **Threat report:** your whole team against the most-used Champions sets on one screen: your best move and its best move (OHKO / 2HKO / 3HKO+ with damage ranges), who moves first, and plain-language summaries of the worst threats. Change the field (Doubles/Singles, weather, terrain, Trick Room) or the number of threats and everything updates; tap a cell to open it in the Damage Calc. Under More → Threat report, with a "Top threats" line in Team check.
+
+- **Stat Point optimiser:** an **Optimise** button in the stat calculator finds the cheapest spread for goals like "survive Garchomp's Earthquake", "outspeed Flutter Mane under Tailwind" and "2HKO Kingambit", then puts the leftover points where you say (one stat, or max HP and an even split). It can suggest a nature, tells you how short an unreachable goal falls and what could help, and applies with Undo. Works for Champions Stat Points and Gen 3–9 EVs. Also reachable from Speed tiers ("Optimise…") and the Threat report ("Survive this…").
+
+- **Match log: brought, led and analytics:** record which Pokémon each side brought and led by tapping their sprites (doubles bring 4 / lead 2, singles 3 / 1), all optional. The stats now have filters (regulation, category, dates, team or variation) and show win rate by your lead, by the four you brought and by team variation, the record against each opponent Pokémon (on their team / brought / led), a nemesis list that links to the Damage Calc, Speed tiers and the Threat report, a weekly win-rate chart and an archetype-vs-archetype grid. Every rate shows a 95% range, and fewer than 5 games is greyed out without a percentage. The CSV export has the new columns.
+
+- **Bring planner:** "Plan vs this team" suggests which four to bring and which two to lead against the opponent's six, with the three best plans, plain reasons and the main risk. Add their Pokémon as species, paste their team, load a logged match or use a saved enemy team; unknown sets use the most-used set, and what you know overrides it. Only one Mega per plan. "Use this plan" saves what you bring and lead onto the match. On a logged match and in the Matchup tab.
+
+- **Regulation changes:** a new **Regulation diff** page (More → Regulation diff) compares two regulations: what was added or removed (Pokémon, Megas, items, moves, abilities), species changes as before → after, and unconfirmed entries. Saved teams show a badge when they're not in the live regulation and which of their Pokémon, items or moves aren't legal in it. The regulation banner now shows what moving a team to the live regulation breaks, changes or newly allows, and **Copy to <regulation>** makes a variation with the illegal parts removed and a checklist (the original is untouched). A next regulation with a start date counts down in the banner.
+
+- **Cloud sync (web and phone app):** an opt-in way to keep your teams and match log the same across devices (Settings → Sync). It works offline and syncs when it can; if two devices change the same team, the older change is kept as a "Conflict copy" variation so nothing is lost. It needs a one-time setup on the Cloudflare side (docs/SYNC.md); until then the app behaves as before and Settings says sync isn't set up. The desktop app doesn't sync yet.
+
+### Fixed
+- Light theme: better contrast for the selected game in Pokénav, the map caption, the Losses archetype chip and the small-sample rows in the match stats; the saved-team picker in the match form now has a label.
+
+### Tooling
+- Browser smoke tests (Playwright, desktop and iPhone) and a CI workflow run on every pull request; a merged version bump now releases the desktop apps by itself.
+
 ## 0.15.0 — 2026-10-02
 
 ### New

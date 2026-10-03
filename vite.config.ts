@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
+import { configDefaults } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 
@@ -31,6 +32,8 @@ const emitMeta = (): Plugin => ({
 // `vite build --mode singlefile` inlines everything into one index.html (portable/offline build).
 export default defineConfig(({ mode }) => ({
   base: './',
+  // Module workers (the Threat report's engine) share code-split chunks with the app.
+  worker: { format: 'es' },
   // Shown in Settings & credits.
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
   plugins: [
@@ -80,5 +83,5 @@ export default defineConfig(({ mode }) => ({
   build: { chunkSizeWarningLimit: 1500 },
   // Fixed port so the Tauri desktop shell (src-tauri/tauri.conf.json's devUrl) always finds the dev server.
   server: { port: 1420, strictPort: true },
-  test: { environment: 'node' },
+  test: { environment: 'node', exclude: [...configDefaults.exclude, 'e2e/**'] },
 }));

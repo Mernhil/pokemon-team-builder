@@ -307,6 +307,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
         const summary = [cap ? `${used}/${cap} ${champions ? 'SP' : 'EVs'}` : null, mech.natures ? set.nature : null].filter(Boolean).join(' · ');
         const body = (
           <SlotStatDistributor
+            slotKey={`${teamId}:${slot}`}
             set={set}
             species={species}
             mega={mega}
