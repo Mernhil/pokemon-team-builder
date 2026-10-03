@@ -7,6 +7,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 ### New
 - **Speed tiers:** a ladder of the most-used Champions Pokémon's likely Speeds (from the published usage spreads, with Mega and Choice Scarf rows) with your team's Pokémon on the same scale and Speed ties called out. Toggle Tailwind, −1/+1/+2, paralysis and Choice Scarf for each side, plus weather, terrain and Trick Room (which flips the order). Tap a meta Pokémon for **Outspeed this**: the Stat Points and nature your selected Pokémon needs to beat it, with an undoable Apply. Under More → Speed tiers, and linked from Team check.
 
+- **Threat report:** your whole team against the most-used Champions sets on one screen: your best move and its best move (OHKO / 2HKO / 3HKO+ with damage ranges), who moves first, and plain-language summaries of the worst threats. Change the field (Doubles/Singles, weather, terrain, Trick Room) or the number of threats and everything updates; tap a cell to open it in the Damage Calc. Under More → Threat report, with a "Top threats" line in Team check.
+
 ### Fixed
 - Light theme: better contrast for the selected game in Pokénav and for the map caption.
 

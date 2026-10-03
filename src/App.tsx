@@ -14,6 +14,7 @@ import {
   Plus,
   Save,
   Settings,
+  ShieldAlert,
   Swords,
   Users,
   type LucideIcon,
@@ -49,6 +50,7 @@ const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').the
 const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
 const AtlasView = lazy(() => import('./components/atlas/AtlasView').then((m) => ({ default: m.AtlasView })));
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
+const ThreatReportView = lazy(() => import('./components/threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
 const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
 
@@ -68,8 +70,9 @@ const SECONDARY: Dest[] = [
   { id: 'matches', label: 'Match log', icon: Swords },
   { id: 'meta', label: 'Meta', icon: BarChart3 },
   { id: 'speed', label: 'Speed tiers', icon: Gauge },
+  { id: 'threats', label: 'Threat report', icon: ShieldAlert },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -125,6 +128,7 @@ export default function App() {
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;
   else if (view === 'meta') content = <Suspense fallback={loading('Loading meta data…')}><MetaView dex={dex} format={format} /></Suspense>;
   else if (view === 'speed') content = <Suspense fallback={loading('Loading speed tiers…')}><SpeedTiersView dex={dex} format={format} team={team} /></Suspense>;
+  else if (view === 'threats') content = <Suspense fallback={loading('Loading threat report…')}><ThreatReportView dex={dex} format={format} team={team} /></Suspense>;
   else content = <Builder team={team} format={format} dex={dex} />;
 
   return (

@@ -23,6 +23,7 @@ import type { FormatRules, Team } from '@/domain/types';
 import { useMetaStore } from '@/store/metaStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
+import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip, EmptyState, Label, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
@@ -36,33 +37,6 @@ const STAGES: { stage: SpeedStage; label: string; hint: string }[] = [
 ];
 
 const fmtMonth = (month: string) => new Date(`${month}-15T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-
-/** A toggle chip: pressed state is text-and-border, never colour alone. */
-function Toggle({ pressed, onClick, children, title }: { pressed: boolean; onClick: () => void; children: React.ReactNode; title?: string }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      title={title}
-      onClick={onClick}
-      className={cn(
-        'inline-flex h-8 shrink-0 items-center rounded-md border px-2.5 text-xs font-semibold whitespace-nowrap transition-colors pointer-coarse:h-11 pointer-coarse:px-3',
-        pressed ? 'border-accent bg-accent/15 text-fg' : 'border-border text-muted hover:text-fg',
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ChipRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div role="group" aria-label={label} className="flex items-center gap-2">
-      <span className="w-16 shrink-0 text-[11px] font-bold tracking-wide text-muted uppercase">{label}</span>
-      <div className="scrollbar-thin -mx-1 flex gap-1.5 overflow-x-auto px-1 py-1">{children}</div>
-    </div>
-  );
-}
 
 function SideChips({
   side,

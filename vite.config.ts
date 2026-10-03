@@ -32,6 +32,8 @@ const emitMeta = (): Plugin => ({
 // `vite build --mode singlefile` inlines everything into one index.html (portable/offline build).
 export default defineConfig(({ mode }) => ({
   base: './',
+  // Module workers (the Threat report's engine) share code-split chunks with the app.
+  worker: { format: 'es' },
   // Shown in Settings & credits.
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
   plugins: [

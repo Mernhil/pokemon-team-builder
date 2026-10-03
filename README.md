@@ -126,6 +126,13 @@ The Meta tab lists each Champions regulation's most-used Pokémon with their com
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
 
+### Threat report
+
+**More → Threat report** (`#threats`, with a "Top threats" line in Team check) runs the Damage Calc for your whole team against the most-used Champions sets, in both directions, on one screen.
+Each threat is a meta set (`src/domain/metaSets.ts`: the most common ability, item, spread and nature, and the top four moves, never four status moves; anything the format doesn't allow is dropped and reported). Every cell shows your best move and its best move as OHKO / possible OHKO / 2HKO / 3HKO+ with the damage range, and who moves first; Mega Stone holders are read at their worse forme for you and their better one for the threat. Plain-language summaries rank the worst threats first ("Kingambit OHKOs 3 of your Pokémon and none of yours OHKO it back", "Nothing on your team outspeeds and 2HKOs Flutter Mane").
+The field (Doubles by default, weather, terrain, Trick Room) and the number of threats (10/20/30) change everything at once. The grid uses a blue-to-orange scale with ✓/✗/~ and words in every cell, and becomes one card per threat on phones; tapping a cell opens the Damage Calc pre-filled with that attacker, defender and field.
+The engine (`src/domain/threats.ts`) is pure; the page runs it in a Web Worker (`src/workers/`) with memoised cells and streams rows in as they finish, so it doesn't freeze a phone (the single-file build runs it on the main thread in small slices instead). It uses the same newest-published-regulation fallback and data-age notice as Speed tiers. Other formats show an explanation instead.
+
 ### Speed tiers
 
 **More → Speed tiers** (`#speed`, also linked from Team check) is a ladder of the most-used Champions Pokémon's likely Speeds with your team on the same scale, fastest first.

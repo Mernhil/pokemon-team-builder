@@ -49,6 +49,13 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoA11yViolations(page);
     });
 
+    test('Threat report', async ({ page }) => {
+      await importTeam(page, SAMPLE_TEAM);
+      await page.goto('/#threats');
+      await page.getByRole('status').filter({ hasText: /threats calculated/ }).waitFor({ timeout: 30_000 });
+      await expectNoA11yViolations(page);
+    });
+
     test('Meta', async ({ page }) => {
       await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More/ }).click();
       await page.getByRole('menuitem', { name: 'Meta' }).click();
