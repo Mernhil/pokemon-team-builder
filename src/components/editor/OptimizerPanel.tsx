@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { metaFor } from '@/data/meta';
+import { useMetaFor } from '@/data/useMeta';
 import { TERRAINS, WEATHERS, defaultField, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
 import { calcSpeed } from '@/domain/battle/damage';
 import { REGULATION_MANIFEST } from '@/domain/formats';
@@ -11,7 +11,6 @@ import { pickSpeedSnapshot } from '@/domain/speedTiers';
 import { createSet } from '@/domain/team';
 import { spreadKey } from '@/domain/stats';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type PokemonSet, type StatId, type StatTable } from '@/domain/types';
-import { useMetaStore } from '@/store/metaStore';
 import { useOptimizerStore, type OptimizerRequest } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
@@ -41,10 +40,10 @@ interface Source {
 
 /** Where the other Pokémon in a goal can come from: the most-used sets, my saved teams, or any species. */
 function useSources(dex: Dex, format: FormatRules, mine: PokemonSet) {
-  const refreshed = useMetaStore((s) => s.refreshed);
+  const metaFor = useMetaFor();
   const teams = useTeamStore((s) => s.teams);
   return useMemo(() => {
-    const picked = format.datasetId === 'champions' ? pickSpeedSnapshot(format.regulationId, champRegIds, (id) => metaFor(id, refreshed)) : undefined;
+    const picked = format.datasetId === 'champions' ? pickSpeedSnapshot(format.regulationId, champRegIds, (id) => metaFor?.(id)) : undefined;
     const meta: Source[] = picked ? metaSets(picked.snapshot, dex, format, 30).map((m: MetaSet) => ({ key: m.speciesId, label: `${dex.species(m.speciesId)?.name ?? m.speciesId} (${m.usagePct.toFixed(1)}%)`, set: m.set })) : [];
     const saved: Source[] = [];
     for (const t of Object.values(teams)) {
@@ -57,7 +56,7 @@ function useSources(dex: Dex, format: FormatRules, mine: PokemonSet) {
     // A species in the meta list comes with its set filled in; any other starts blank.
     const anySet = (speciesId: string): PokemonSet => meta.find((m) => m.key === speciesId)?.set ?? createSet(dex, speciesId, format);
     return { meta, saved, species, anySet, hasMeta: meta.length > 0 };
-  }, [dex, format, teams, refreshed, mine.uid]);
+  }, [dex, format, teams, metaFor, mine.uid]);
 }
 
 /** Damaging moves of a set, or (for a blank set) everything the species can learn. */

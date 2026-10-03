@@ -6,8 +6,7 @@ import { ARCHETYPE_PRESETS, CATEGORY_PRESETS, bringLimits, cloneOpponentTeam, ma
 import { coreOverlapScore } from '@/domain/meta';
 import type { FormatRules } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
-import { useMetaStore } from '@/store/metaStore';
-import { metaFor } from '@/data/meta';
+import { useMetaFor } from '@/data/useMeta';
 import { useTeamStore } from '@/store/teamStore';
 import { BringPicker, type RosterMon } from './BringPicker';
 import { sourcesFromLog } from '@/domain/bringPlanner';
@@ -86,8 +85,8 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
 
   // Optional cross-reference: flag when this opponent's Team Preview overlaps a popular core from
   // the Meta tab's usage data for that regulation (when there is any).
-  const refreshedMeta = useMetaStore((s) => s.refreshed);
-  const metaSnapshot = useMemo(() => (match.regulationId ? metaFor(match.regulationId, refreshedMeta) : undefined), [match.regulationId, refreshedMeta]);
+  const metaFor = useMetaFor();
+  const metaSnapshot = useMemo(() => (match.regulationId ? metaFor?.(match.regulationId) : undefined), [match.regulationId, metaFor]);
   const knownCore = useMemo(() => {
     if (!metaSnapshot || match.opponentTeam.length < 2) return null;
     const species = match.opponentTeam.map((m) => m.speciesId).filter(Boolean);

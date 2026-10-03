@@ -14,7 +14,7 @@ import { useOptimizerStore } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
-import { Chip, EmptyState, Notice, Panel, Select } from '../ui/primitives';
+import { Chip, EmptyState, LoadingState, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useThreatReport } from './useThreatReport';
 
@@ -43,7 +43,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   const [count, setCount] = useState<number>(20);
   const [field, setField] = useState<FieldConditions>({ gameType: 'Doubles', weather: '', terrain: '', trickRoom: false, gravity: false });
   const report = useThreatReport({ dex, format, team, count, field });
-  const { picked, threats, members, rows, done, summaries, error } = report;
+  const { picked, loading, threats, members, rows, done, summaries, error } = report;
 
   const openCalc = (member: PokemonSet, slot: number, threat: MetaSet) => {
     const calc = useCalcStore.getState();
@@ -91,6 +91,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
       </EmptyState>
     );
   }
+  if (loading) return <LoadingState label="Loading usage data…" />;
   if (!picked) {
     return (
       <EmptyState icon={ShieldAlert} title="No usage data to build a threat report from yet">

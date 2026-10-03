@@ -11,10 +11,10 @@ test('Speed tiers: ladder with my team, Trick Room flips it, Outspeed this appli
   await page.getByRole('link', { name: /Speed tiers/ }).click();
   await expect(page).toHaveURL(/#speed$/);
 
-  // Reg M-C is live without usage data: the newest regulation that has some is used, and says so.
-  await expect(page.getByText(/No usage data for Reg M-C yet/)).toBeVisible();
+  // The live regulation always has numbers of its own (Smogon's, or provisional ones), so no fallback.
   const ladder = page.getByRole('list', { name: 'Speed tiers' });
   await expect(ladder.getByRole('listitem').first()).toBeVisible();
+  await expect(page.getByText(/No usage data for .* yet/)).toHaveCount(0);
   await expect(ladder.getByText('Yours').first()).toBeVisible();
   const normal = await speeds(page);
   expect(normal.length).toBeGreaterThan(10);

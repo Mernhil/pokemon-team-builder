@@ -1,7 +1,7 @@
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AlertTriangle, BarChart3, CloudOff, ExternalLink, RefreshCw } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { metaFor } from '@/data/meta';
+import { useMetaFor } from '@/data/useMeta';
 import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
 import { META_STALE_DAYS, isProvisional, localMetaFromMatches, metaAgeDays, metaDataDate, metaSourceKind, type MetaEntry, type MetaSnapshot } from '@/domain/meta';
 import { STAT_IDS, STAT_LABELS, type FormatRules } from '@/domain/types';
@@ -11,7 +11,7 @@ import { useShareStore } from '@/sync/shareStore';
 import { useMetaStore } from '@/store/metaStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, EmptyState, Label, Notice, Panel, Select } from '../ui/primitives';
+import { Button, Chip, EmptyState, Label, LoadingState, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
@@ -53,7 +53,8 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const matches = useMatchStore((s) => s.matches);
   const online = useOnline();
 
-  const built = useMemo(() => metaFor(regId, refreshed), [regId, refreshed]);
+  const metaFor = useMetaFor();
+  const built = useMemo(() => metaFor?.(regId), [regId, metaFor]);
   // The previous regulation's numbers are only a stand-in: your own matches of this one beat them,
   // unless you ask for the carry-over.
   const [preferCarryOver, setPreferCarryOver] = useState(false);
@@ -64,20 +65,20 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const [source, setSource] = useState<MatchSource>('mine');
   const effectiveSource = theirs.length ? source : 'mine';
   const personal = useMemo(
-    () => (built && !carryOver ? null : localMetaFromMatches(
+    () => (!metaFor || (built && !carryOver) ? null : localMetaFromMatches(
             matchesForSource(Object.values(matches), theirs, effectiveSource),
             regId,
             undefined,
             effectiveSource === 'mine' ? undefined : effectiveSource === 'both' ? 'Both our logged matches' : `${nameOf(theirs[0].owner, names)}'s logged matches`,
           )),
-    [built, carryOver, matches, theirs, effectiveSource, regId, names],
+    [metaFor, built, carryOver, matches, theirs, effectiveSource, regId, names],
   );
   const published = carryOver && personal && !preferCarryOver ? undefined : built;
   const snapshot = published ?? personal ?? undefined;
   const basedOn = champRegs.find((r) => r.id === carryOver?.source.basedOn);
   const reg = champRegs.find((r) => r.id === regId);
   // Newest other regulation that has published numbers, offered when this one has none.
-  const withData = useMemo(() => (published ? undefined : champRegs.find((r) => r.id !== regId && metaFor(r.id, refreshed))), [published, regId, refreshed]);
+  const withData = useMemo(() => (published ? undefined : champRegs.find((r) => r.id !== regId && metaFor?.(r.id))), [published, regId, metaFor]);
 
   return (
     <div className="space-y-3">
@@ -138,7 +139,9 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
         </Notice>
       )}
 
-      {!snapshot ? (
+      {!metaFor ? (
+        <LoadingState label="Loading usage data…" />
+      ) : !snapshot ? (
         <EmptyState
           icon={BarChart3}
           title={`No usage data for ${reg?.shortName ?? 'this regulation'} yet`}

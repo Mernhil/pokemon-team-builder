@@ -1,8 +1,9 @@
 /**
  * The meta (usage) data built into the app: the automated snapshot (generated/meta.json, from
  * `npm run meta`) and the hand-maintained file (meta/manual.json). Both are validated here, so a
- * bad file shows up as "no data" plus a console error rather than a broken tab. Import this module
- * lazily (it's only needed by the Meta tab and meta-backed hints).
+ * bad file shows up as "no data" plus a console error rather than a broken tab. Never import this
+ * module statically: it's loaded on first use through `useMetaFor` (./useMeta.ts), which keeps the
+ * usage data out of the app's first download (a test checks).
  */
 import generatedJson from './generated/meta.json';
 import manualJson from './meta/manual.json';
