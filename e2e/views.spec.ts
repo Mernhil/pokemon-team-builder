@@ -52,9 +52,13 @@ test('Pokénav: open Platinum, click a place on the map, the location panel open
   await openApp(page, '#atlas');
   await page.getByRole('radio', { name: 'Pokémon Platinum' }).check();
   await expect(page.getByRole('tab', { name: 'Map' })).toHaveAttribute('aria-selected', 'true');
-  // The place markers sit under the map image, which takes the real pointer events: force the click
-  // onto the marker's position and let the map's own hit-testing pick the place.
-  await page.getByRole('group', { name: /Sinnoh map/ }).getByRole('button', { name: 'Route 201', exact: true }).click({ force: true });
+  // The place markers sit under the map image, which takes the real pointer events: tap the map itself
+  // where the marker is and let the map's own hit-testing pick the place. Not a forced click: that skips
+  // the check that nothing covers the point (on phones the fixed tab bar can, depending on how the
+  // browser scrolled the map into view), and lands the tap on whatever does.
+  const map = page.getByRole('group', { name: /Sinnoh map/ });
+  const [m, s] = await Promise.all([map.getByRole('button', { name: 'Route 201', exact: true }).boundingBox(), map.boundingBox()]);
+  await map.click({ position: { x: m!.x - s!.x + m!.width / 2, y: m!.y - s!.y + m!.height / 2 } });
   // A side panel on desktop, a sheet on phones.
   const panel = page.getByRole('complementary', { name: 'Location details' }).or(page.getByRole('dialog', { name: 'Route 201' }));
   await expect(panel.getByRole('heading', { name: 'Route 201', level: 2 }).first()).toBeVisible();
