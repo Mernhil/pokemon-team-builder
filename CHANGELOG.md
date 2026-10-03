@@ -2,6 +2,17 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.16.0 — 2026-10-03
+
+### New
+- **Speed tiers:** a ladder of the most-used Champions Pokémon's likely Speeds (from the published usage spreads, with Mega and Choice Scarf rows) with your team's Pokémon on the same scale and Speed ties called out. Toggle Tailwind, −1/+1/+2, paralysis and Choice Scarf for each side, plus weather, terrain and Trick Room (which flips the order). Tap a meta Pokémon for **Outspeed this**: the Stat Points and nature your selected Pokémon needs to beat it, with an undoable Apply. Under More → Speed tiers, and linked from Team check.
+
+### Fixed
+- Light theme: better contrast for the selected game in Pokénav and for the map caption.
+
+### Tooling
+- Browser smoke tests (Playwright, desktop and iPhone) and a CI workflow run on every pull request; a merged version bump now releases the desktop apps by itself.
+
 ## 0.15.0 — 2026-10-02
 
 ### New

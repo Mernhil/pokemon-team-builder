@@ -10,7 +10,7 @@ import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
 export type Theme = 'dark' | 'light';
-export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta';
+export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta' | 'speed';
 
 /** Advanced-details state for one team member (keyed by set uid). */
 export interface SlotBattleState {
@@ -133,7 +133,7 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
     order,
     activeTeamId: typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0],
     theme: p.theme === 'light' ? 'light' : 'dark',
-    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' ? p.view : 'builder',
+    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' || p.view === 'speed' ? p.view : 'builder',
     battle,
   };
 }

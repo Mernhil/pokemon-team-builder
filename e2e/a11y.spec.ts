@@ -41,6 +41,14 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoA11yViolations(page);
     });
 
+    test('Speed tiers', async ({ page }) => {
+      await importTeam(page, SAMPLE_TEAM);
+      await page.goto('/#speed');
+      await page.getByRole('list', { name: 'Speed tiers' }).waitFor();
+      await page.getByRole('list', { name: 'Speed tiers' }).getByRole('button').first().click();
+      await expectNoA11yViolations(page);
+    });
+
     test('Meta', async ({ page }) => {
       await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More/ }).click();
       await page.getByRole('menuitem', { name: 'Meta' }).click();

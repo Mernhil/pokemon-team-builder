@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Eraser,
   FolderOpen,
+  Gauge,
   MoreHorizontal,
   Plus,
   Save,
@@ -48,6 +49,7 @@ const DamageCalcView = lazy(() => import('./components/calc/DamageCalcView').the
 const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((m) => ({ default: m.PokedexView })));
 const AtlasView = lazy(() => import('./components/atlas/AtlasView').then((m) => ({ default: m.AtlasView })));
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
+const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
 
 interface Dest {
@@ -65,8 +67,9 @@ const PRIMARY: Dest[] = [
 const SECONDARY: Dest[] = [
   { id: 'matches', label: 'Match log', icon: Swords },
   { id: 'meta', label: 'Meta', icon: BarChart3 },
+  { id: 'speed', label: 'Speed tiers', icon: Gauge },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -121,6 +124,7 @@ export default function App() {
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;
   else if (view === 'meta') content = <Suspense fallback={loading('Loading meta data…')}><MetaView dex={dex} format={format} /></Suspense>;
+  else if (view === 'speed') content = <Suspense fallback={loading('Loading speed tiers…')}><SpeedTiersView dex={dex} format={format} team={team} /></Suspense>;
   else content = <Builder team={team} format={format} dex={dex} />;
 
   return (

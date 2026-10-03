@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Gauge } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { metaFor } from '@/data/meta';
 import { defensiveCoverage } from '@/domain/coverage';
@@ -73,6 +74,12 @@ export function TeamCheck({ team, dex, format, issues }: { team: Team; dex: Dex;
               {meta?.source.month ? `, ${new Date(`${meta.source.month}-15T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}` : ''}; more on the Meta
               tab.</p>
           </div>
+        )}
+        {format.datasetId === 'champions' && team.slots.some(Boolean) && (
+          <a href="#speed" className="inline-flex min-h-8 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
+            <Gauge size={15} aria-hidden /> Speed tiers
+            <span className="font-normal text-muted">where your team sits against the meta</span>
+          </a>
         )}
       </div>
     </Panel>

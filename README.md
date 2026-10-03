@@ -126,6 +126,14 @@ The Meta tab lists each Champions regulation's most-used Pokémon with their com
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
 
+### Speed tiers
+
+**More → Speed tiers** (`#speed`, also linked from Team check) is a ladder of the most-used Champions Pokémon's likely Speeds with your team on the same scale, fastest first.
+Each meta Pokémon is built from its published spreads (spreads with the same final Speed merge), its most common ability and item; a Mega Stone holder also gets its Mega forme's Speed, and a Choice Scarf row appears when at least 10% of its sets hold one.
+Every number comes from the Damage Calc's own speed (`calcSpeed`), so the two can't disagree. Toggle Tailwind, −1/+1/+2, paralysis and (for your side) Choice Scarf per side, plus weather, terrain and Trick Room, which flips the ladder.
+Tap a meta row for **Outspeed this**: the Stat Points (and nature, if needed) one of your Pokémon needs to beat it in that scenario, with an undoable Apply.
+The numbers come from the newest regulation with published usage, and the page says which regulation, month and age (when the live regulation has none yet, it says so and uses the previous one). Other formats show an explanation instead.
+
 ### Advanced details and damage calculator
 
 Each Pokémon in the builder has an **Advanced details** panel for "what are my stats under…" questions. You can set:
