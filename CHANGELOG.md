@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.18.0 — 2026-10-03
+
+### New
+- **Playthrough / Nuzlocke tracker:** a **Run** page in Pokénav (next to Map, Items, Trainers and Progress) for every game, with several runs per game and a run switcher. Log what you meet in each place with one tap (caught, fainted, fled), gifts and trades by hand, keep your party, box and graveyard (with where and why a Pokémon died), and set your own rules: first encounter per area, dupes clause (it knows evolution lines), shiny clause, species clause, soft or hard level caps and your own notes. A summary at the top shows badges, how many are alive or dead and the **next level cap** ("Next cap: 26 (Fantina)"), and warns when a party member is over it. **Next boss** shows the next Gym leader, Elite Four member or Champion's team, how your party's types fare against it, **Calc vs boss** in the game's own format and **Load party into Builder**. On the map, places show whether their wild encounter is available, used or absent. Encounters-only games (Gen 5 onward) track encounters, the party and deaths, without caps or bosses.
+
 ## 0.17.0 — 2026-10-03
 
 ### New

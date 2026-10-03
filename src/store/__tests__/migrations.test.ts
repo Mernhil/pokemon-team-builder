@@ -198,3 +198,77 @@ describe('match log v2 → v3 (brought and led)', () => {
     expect(useMatchStore.getState().matches.a.oppLeads).toEqual(['garchomp']);
   });
 });
+
+describe('runs store (ptb:runs:v1)', () => {
+  let storage: ReturnType<typeof fakeStorage>;
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('loads a saved v1 run exactly, through the sanitiser', async () => {
+    const { useRunStore } = await import('../runStore');
+    storage = fakeStorage({
+      'ptb:runs:v1': JSON.stringify({
+        version: 1,
+        state: {
+          runs: {
+            r1: { id: 'r1', game: 'platinum', name: 'Nuzlocke', startedAt: '2026-10-01', rules: { nuzlocke: true, firstEncounter: true, dupes: true, shiny: true, species: false, levelCaps: 'hard', notes: 'no items in battle' }, encounters: [{ id: 'e1', loc: 'route-201', species: 'starly', status: 'caught', at: 5 }], mons: [{ id: 'm1', species: 'starly', level: 7, state: 'party', encounterId: 'e1' }], beaten: ['gym:roark'], createdAt: 1, updatedAt: 2 },
+            junk: 'not a run',
+          },
+          order: ['junk', 'r1', 'ghost'],
+          active: { platinum: 'r1', emerald: 'r1', diamond: 'nope' },
+        },
+      }),
+    });
+    vi.stubGlobal('localStorage', storage);
+    await useRunStore.persist.rehydrate();
+    const s = useRunStore.getState();
+    expect(Object.keys(s.runs)).toEqual(['r1']);
+    expect(s.order).toEqual(['r1']);
+    expect(s.active).toEqual({ platinum: 'r1' }); // a run is only active for its own game
+    expect(s.runs.r1.rules.levelCaps).toBe('hard');
+    expect(s.runs.r1.rules.notes).toBe('no items in battle');
+    expect(s.runs.r1.mons[0]).toMatchObject({ species: 'starly', level: 7, state: 'party', encounterId: 'e1' });
+    expect(s.runs.r1.beaten).toEqual(['gym:roark']);
+  });
+
+  it('upgrades the unreleased v0 shape (a flat list of runs) without losing any', async () => {
+    const { useRunStore } = await import('../runStore');
+    storage = fakeStorage({
+      'ptb:runs:v1': JSON.stringify({ version: 0, state: { runs: [{ id: 'a', game: 'heartgold', name: 'A', mons: [{ id: 'm', species: 'cyndaquil', level: 5 }] }, { id: 'b', game: 'emerald', name: 'B' }, null] } }),
+    });
+    vi.stubGlobal('localStorage', storage);
+    await useRunStore.persist.rehydrate();
+    const s = useRunStore.getState();
+    expect(Object.keys(s.runs).sort()).toEqual(['a', 'b']);
+    expect(s.runs.a.mons[0].species).toBe('cyndaquil');
+    expect(s.runs.b.rules.nuzlocke).toBe(true);
+    // and the store now writes v1
+    s.rename('a', 'Renamed');
+    expect(JSON.parse(storage.getItem('ptb:runs:v1')!).version).toBe(1);
+  });
+
+  it('survives garbage in storage', async () => {
+    const { useRunStore } = await import('../runStore');
+    storage = fakeStorage({ 'ptb:runs:v1': JSON.stringify({ version: 1, state: { runs: 5, order: 'x', active: [] } }) });
+    vi.stubGlobal('localStorage', storage);
+    await useRunStore.persist.rehydrate();
+    expect(useRunStore.getState()).toMatchObject({ runs: {}, order: [], active: {} });
+  });
+
+  it('keeps one run per game active, switches, and falls back when the active one is deleted', async () => {
+    const { useRunStore } = await import('../runStore');
+    vi.stubGlobal('localStorage', fakeStorage({}));
+    useRunStore.setState({ runs: {}, order: [], active: {} });
+    const st = useRunStore.getState();
+    const a = st.newRun('platinum', 'First');
+    const b = st.newRun('platinum', 'Second');
+    const c = st.newRun('emerald', 'Other game');
+    expect(useRunStore.getState().active).toEqual({ platinum: b, emerald: c });
+    useRunStore.getState().selectRun('platinum', c); // wrong game: ignored
+    expect(useRunStore.getState().active.platinum).toBe(b);
+    useRunStore.getState().deleteRun(b);
+    expect(useRunStore.getState().active.platinum).toBe(a);
+    useRunStore.getState().deleteRun(a);
+    expect(useRunStore.getState().active.platinum).toBeUndefined();
+    expect(useRunStore.getState().order).toEqual([c]);
+  });
+});

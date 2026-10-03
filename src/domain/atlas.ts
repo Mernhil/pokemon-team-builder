@@ -261,6 +261,23 @@ export function wildAt(data: PokedexData, dexGame: string, loc: string): WildRow
   return out;
 }
 
+/** Every location's wild encounters in one game, in a single pass over the tables (the same rows as `wildAt`). */
+export function wildByLocation(data: PokedexData, dexGame: string): Map<string, WildRow[]> {
+  const gi = data.games.findIndex((g) => g.id === dexGame);
+  const out = new Map<string, WildRow[]>();
+  if (gi < 0) return out;
+  for (const [species, rows] of Object.entries(data.encounters))
+    for (const [g, a, m, min, max, rate, conds] of rows) {
+      if (g !== gi) continue;
+      const loc = data.areas[a].loc;
+      const row: WildRow = { species, method: data.methods[m], min, max, rate, conditions: conds.map((c) => data.conditions[c]), sub: data.areas[a].sub };
+      const list = out.get(loc);
+      if (list) list.push(row);
+      else out.set(loc, [row]);
+    }
+  return out;
+}
+
 /** Location ids where a species is found in one game. */
 export function wildLocations(data: PokedexData, dexGame: string, speciesId: string): Set<string> {
   const gi = data.games.findIndex((g) => g.id === dexGame);

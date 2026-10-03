@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Progress } from '@/domain/atlas';
 import { safeStorage } from './storage';
 
-export type AtlasPage = 'map' | 'items' | 'trainers' | 'progress';
+export type AtlasPage = 'map' | 'items' | 'trainers' | 'progress' | 'run';
 export type LocationTab = 'overview' | 'items' | 'npcs' | 'wild' | 'trainers' | 'events';
 
 const EMPTY: Progress = { locations: [], items: [], trainers: [] };
