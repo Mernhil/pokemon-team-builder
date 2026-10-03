@@ -64,14 +64,14 @@ export function TeamCheck({ team, dex, format, issues }: { team: Team; dex: Dex;
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{sp?.name}</span>
                       <span className="block truncate text-xs text-muted">
-                        with {p.with.slice(0, 2).map((w) => `${dex.species(w.speciesId)?.name ?? w.speciesId} ${Math.round(w.pct)}%`).join(' · ')}
+                        with {p.with.slice(0, 2).map((w) => `${dex.species(w.speciesId)?.name ?? w.speciesId} ${w.pct !== undefined ? `${Math.round(w.pct)}%` : `#${w.rank}`}`).join(' · ')}
                       </span>
                     </span>
                   </li>
                 );
               })}
             </ul>
-            <p className="text-xs text-muted">% of teams with that member that also run it. {meta?.source.name}
+            <p className="text-xs text-muted">{meta?.entries.some((e) => e.teammates.some((t) => t.pct === undefined)) ? '#: its rank among that member’s most common teammates.' : '% of teams with that member that also run it.'} {meta?.source.name}
               {meta?.source.month ? `, ${new Date(`${meta.source.month}-15T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}` : ''}; more on the Meta
               tab.</p>
           </div>

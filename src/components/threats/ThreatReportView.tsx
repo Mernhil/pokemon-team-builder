@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import { META_STALE_DAYS, isProvisional, provisionalNote } from '@/domain/meta';
+import { META_STALE_DAYS, isProvisional, provisionalNote, usageLabel, usageText } from '@/domain/meta';
 import { TERRAINS, WEATHERS, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
 import type { MetaSet } from '@/domain/metaSets';
 import { snapshotAge } from '@/domain/speedTiers';
@@ -113,6 +113,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
           <p className="min-w-0 text-sm text-muted">
             <b className="text-fg">{reg?.name ?? picked.regulationId}</b>
             {s.month && ` · ${fmtMonth(s.month)} usage`}
+            {s.season && ` · in-game ranked season ${s.season}`}
             {s.battles !== undefined ? ` · ${s.battles.toLocaleString()} battles` : ''}
             {isProvisional(picked.snapshot) && ` · ${provisionalNote(picked.snapshot, (id) => champRegs.find((r) => r.id === id)?.shortName)}`}
             {age ? ` · ${age.days} days old` : ''}
@@ -189,7 +190,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                         <p className="flex flex-wrap items-center gap-x-2">
                           <b>{sp?.name ?? sm.speciesId}</b>
                           <Chip tone={sm.tone === 'bad' ? 'bad' : sm.tone === 'warn' ? 'warn' : 'good'}>{sm.tone === 'bad' ? 'Big problem' : sm.tone === 'warn' ? 'Watch out' : 'Manageable'}</Chip>
-                          <span className="text-xs text-muted">{sm.usagePct.toFixed(1)}% usage</span>
+                          <span className="text-xs text-muted">{usageText(sm)}</span>
                         </p>
                         {sm.lines.map((l) => (
                           <p key={l} className="text-muted">
@@ -233,7 +234,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                           <Sprite speciesId={t.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={32} />
                           <span>
                             <b className="block text-sm">{sp?.name ?? t.speciesId}</b>
-                            <span className="text-muted">{t.usagePct.toFixed(1)}%</span>
+                            <span className="text-muted">{usageLabel(t)}</span>
                           </span>
                         </span>
                       </th>
@@ -260,7 +261,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                     <Sprite speciesId={t.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={40} />
                     <div className="min-w-0">
                       <b className="block text-sm">{sp?.name ?? t.speciesId}</b>
-                      <span className="text-xs text-muted">{t.usagePct.toFixed(1)}% usage</span>
+                      <span className="text-xs text-muted">{usageText(t)}</span>
                     </div>
                   </div>
                   {line && <p className="mb-2 text-xs text-muted">{line}</p>}

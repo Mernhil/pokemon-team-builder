@@ -17,8 +17,9 @@ export const DEFAULT_META_COUNT = 20;
 
 export interface MetaSet {
   speciesId: string;
-  /** The species' usage %. */
-  usagePct: number;
+  /** The species' usage: a %, or (in-game data) a rank. */
+  usagePct?: number;
+  usageRank?: number;
   set: PokemonSet;
   /** 'both' when the set holds a Mega Stone (Mega in play), else 'base'. */
   megaMode: MegaMode;
@@ -90,7 +91,7 @@ export function metaSet(entry: MetaEntry, dex: Dex, format: FormatRules): MetaSe
     moves: [...moves.map((m) => m.id), '', '', '', ''].slice(0, 4) as PokemonSet['moves'],
   };
   const megaMode: MegaMode = dex.megaFor(species.id, itemId) ? 'both' : 'base';
-  return { speciesId: species.id, usagePct: entry.usagePct, set, megaMode, dropped };
+  return { speciesId: species.id, usagePct: entry.usagePct, usageRank: entry.usageRank, set, megaMode, dropped };
 }
 
 /** Meta sets for the `n` most used species that have one. */

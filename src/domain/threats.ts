@@ -14,6 +14,7 @@ import { calcMoves, calcSpeed, type FormResult, type MoveResult } from './battle
 import { defaultSide, type FieldConditions } from './battle/conditions';
 import type { MegaMode } from './battle/conditions';
 import type { PokemonSet } from './types';
+import { byUsage } from './usage.ts';
 
 export type Kill = 'ohko' | 'pohko' | '2hko' | '3hko' | 'none';
 const RANK: Record<Kill, number> = { ohko: 4, pohko: 3, '2hko': 2, '3hko': 1, none: 0 };
@@ -124,7 +125,7 @@ export interface ThreatJob {
   datasetId: string;
   formatId: string;
   members: { slot: number; set: PokemonSet }[];
-  threats: { key: string; speciesId: string; usagePct: number; set: PokemonSet; megaMode: MegaMode }[];
+  threats: { key: string; speciesId: string; usagePct?: number; usageRank?: number; set: PokemonSet; megaMode: MegaMode }[];
   field: FieldConditions;
 }
 
@@ -165,7 +166,9 @@ export function runThreatJob(dex: Dex, job: ThreatJob, onRow: (index: number, ce
 
 export interface ThreatSummary {
   speciesId: string;
-  usagePct: number;
+  /** Usage: a %, or (in-game data) a rank. */
+  usagePct?: number;
+  usageRank?: number;
   /** Higher = worse for me; the sort key (then usage, then species id, so the order is stable). */
   danger: number;
   tone: 'bad' | 'warn' | 'good';
@@ -200,7 +203,7 @@ export function summarize(dex: Dex, job: ThreatJob, rows: ThreatCell[][]): Threa
     if (lines.length === 0) lines.push(`No clear problem: ${name} doesn't OHKO anything of yours.`);
 
     const tone = theirOhko > 0 && myOhko === 0 ? 'bad' : theirOhko > 0 || fastKo.length === 0 ? 'warn' : 'good';
-    out.push({ speciesId: t.speciesId, usagePct: t.usagePct, danger, tone, lines });
+    out.push({ speciesId: t.speciesId, usagePct: t.usagePct, usageRank: t.usageRank, danger, tone, lines });
   });
-  return out.sort((a, b) => b.danger - a.danger || b.usagePct - a.usagePct || a.speciesId.localeCompare(b.speciesId));
+  return out.sort((a, b) => b.danger - a.danger || byUsage(a, b) || a.speciesId.localeCompare(b.speciesId));
 }

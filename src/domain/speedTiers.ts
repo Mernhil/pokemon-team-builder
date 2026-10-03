@@ -10,6 +10,7 @@ import type { Dex } from '@/data/dex';
 import { calcSpeed } from './battle/damage';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions, type Terrain, type Weather } from './battle/conditions';
 import { metaAgeDays, metaDataDate, type MetaEntry, type MetaSnapshot } from './meta';
+import { byUsage } from './usage.ts';
 import { createSet } from './team';
 import type { FormatRules, Nature, PokemonSet, StatTable } from './types';
 
@@ -84,8 +85,9 @@ export interface MetaVariant {
   key: string;
   speciesId: string;
   set: PokemonSet;
-  /** The species' usage %. */
-  usagePct: number;
+  /** The species' usage: a %, or (in-game data) a rank. */
+  usagePct?: number;
+  usageRank?: number;
   /** % of this species' sets with this Speed (merged spreads), 0 when unknown. */
   spreadPct: number;
   /** Choice Scarf variant of a species whose main set doesn't hold one. */
@@ -146,6 +148,7 @@ export function variantsFor(entry: MetaEntry, dex: Dex, format: FormatRules): Me
       speciesId: entry.speciesId,
       set,
       usagePct: entry.usagePct,
+      usageRank: entry.usageRank,
       spreadPct: Math.round(g.pct * 10) / 10,
       scarf: false,
       hasMega: !!dex.megaFor(entry.speciesId, topItem),
@@ -160,6 +163,7 @@ export function variantsFor(entry: MetaEntry, dex: Dex, format: FormatRules): Me
       speciesId: entry.speciesId,
       set: build(g.spread, SCARF_ID),
       usagePct: entry.usagePct,
+      usageRank: entry.usageRank,
       spreadPct: scarfPct,
       scarf: true,
       hasMega: false,
@@ -199,6 +203,7 @@ export interface SpeedRow {
   /** Team slot (mine only). */
   slot?: number;
   usagePct?: number;
+  usageRank?: number;
   spreadPct?: number;
   label: string;
   scarf: boolean;
@@ -249,6 +254,7 @@ export function buildLadder(dex: Dex, variants: MetaVariant[], team: TeamMember[
         speciesId: v.speciesId,
         mine: false,
         usagePct: v.usagePct,
+        usageRank: v.usageRank,
         spreadPct: v.spreadPct,
         label: v.label,
         scarf: v.scarf,
@@ -277,7 +283,7 @@ export function buildLadder(dex: Dex, variants: MetaVariant[], team: TeamMember[
   for (const group of bySpeed.values()) if (group.length > 1 && group.some((r) => r.mine)) for (const r of group) r.tie = true;
 
   const dir = scenario.trickRoom ? 1 : -1;
-  return rows.sort((a, b) => dir * (a.speed - b.speed) || Number(b.mine) - Number(a.mine) || (b.usagePct ?? 0) - (a.usagePct ?? 0) || a.key.localeCompare(b.key));
+  return rows.sort((a, b) => dir * (a.speed - b.speed) || Number(b.mine) - Number(a.mine) || byUsage(a, b) || a.key.localeCompare(b.key));
 }
 
 // ---------------------------------------------------------------------------

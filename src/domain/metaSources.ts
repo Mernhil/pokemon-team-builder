@@ -415,3 +415,96 @@ export function fillSpreads(snap: MetaSnapshot, donors: MetaSnapshot[], baseStat
     }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Pokémon Champions' in-game Battle Data (ranked season usage)
+// ---------------------------------------------------------------------------
+
+/** One daily snapshot of the in-game ranked usage, as the community mirror publishes it. */
+const IngameShare = z.tuple([z.string(), z.number(), z.number()]).rest(z.unknown());
+export const IngameSnapshotSchema = z.object({
+  season: z.string().min(1).max(16),
+  /** dd_mm_yyyy */
+  date: z.string().regex(/^\d{2}_\d{2}_\d{4}$/),
+  format: z.string(),
+  pokemon: z.record(
+    z.string(),
+    z.object({
+      /** Usage rank, 1 = most used. */
+      position: z.number().int().min(1),
+      move: z.array(IngameShare).default([]),
+      held_item: z.array(IngameShare).default([]),
+      ability: z.array(IngameShare).default([]),
+      /** [nature, %, raised stat, lowered stat, rank] */
+      stat_alignment: z.array(z.tuple([z.string(), z.number()]).rest(z.unknown())).default([]),
+      /** [%, HP, Atk, Def, SpA, SpD, Spe, rank] */
+      stat_points: z.array(z.array(z.number()).length(8)).default([]),
+      /** [species, rank] */
+      teammate: z.array(z.tuple([z.string(), z.number()]).rest(z.unknown())).default([]),
+    }),
+  ),
+});
+export type IngameSnapshot = z.infer<typeof IngameSnapshotSchema>;
+
+/** "03_10_2026" → "2026-10-03". */
+export const ingameDate = (d: string) => `${d.slice(6, 10)}-${d.slice(3, 5)}-${d.slice(0, 2)}`;
+
+export interface IngameOptions {
+  regulationId: string;
+  url: string;
+  /** Showdown-style species name → this app's species id (Megas → base forme), undefined = unknown. */
+  speciesId: SpeciesResolver;
+  maxSpecies?: number;
+}
+
+/**
+ * Normalises one in-game snapshot. Usage is a rank only (the game doesn't publish percentages for
+ * species), so entries carry `usageRank` and no `usagePct`; teammates likewise carry ranks. The game
+ * lists natures and Stat Point spreads separately, so each spread is paired with the species' most
+ * common nature. A species listed twice (e.g. a Mega forme and its base) keeps its better rank.
+ */
+export function ingameToSnapshot(raw: unknown, o: IngameOptions): MetaSnapshot {
+  const snap = IngameSnapshotSchema.parse(raw);
+  const shares = (rows: z.infer<typeof IngameShare>[], n: number) =>
+    rows
+      .map(([name, pct]) => ({ id: toId(name), pct: round1(Math.min(100, Math.max(0, pct))) }))
+      .filter((x) => isId(x.id) && x.pct >= 1)
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, n);
+  const byId = new Map<string, MetaEntry>();
+  for (const [name, d] of Object.entries(snap.pokemon)) {
+    const speciesId = o.speciesId(name);
+    if (!speciesId) continue;
+    const prev = byId.get(speciesId);
+    if (prev && (prev.usageRank ?? Infinity) <= d.position) continue;
+    const nature = d.stat_alignment.slice().sort((a, b) => b[1] - a[1])[0]?.[0];
+    const teammates = d.teammate
+      .map(([mate, rank]) => ({ id: o.speciesId(mate), rank }))
+      .filter((t): t is { id: string; rank: number } => !!t.id && t.id !== speciesId && Number.isInteger(t.rank) && t.rank >= 1)
+      .sort((a, b) => a.rank - b.rank)
+      .filter((t, i, all) => all.findIndex((x) => x.id === t.id) === i)
+      .slice(0, 6);
+    byId.set(speciesId, {
+      speciesId,
+      usageRank: d.position,
+      abilities: shares(d.ability, 3),
+      items: shares(d.held_item, 6),
+      moves: shares(d.move, 8),
+      teammates,
+      spreads: nature
+        ? d.stat_points
+            .map(([pct, ...rest]) => ({ nature, values: rest.slice(0, 6) as [number, number, number, number, number, number], pct: round1(pct) }))
+            .filter((x) => x.pct >= 1 && x.values.every((v) => Number.isInteger(v) && v >= 0 && v <= 32))
+            .sort((a, b) => b.pct - a.pct)
+            .slice(0, 5)
+        : [],
+    });
+  }
+  const entries = [...byId.values()].sort((a, b) => (a.usageRank ?? 0) - (b.usageRank ?? 0)).slice(0, o.maxSpecies ?? 60);
+  return MetaSnapshotSchema.parse({
+    regulationId: o.regulationId,
+    updatedAt: ingameDate(snap.date),
+    source: { kind: 'ingame', name: 'Pokémon Champions in-game Battle Data (ranked Doubles)', url: o.url, format: snap.format, season: snap.season },
+    entries,
+  });
+}

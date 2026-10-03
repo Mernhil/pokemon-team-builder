@@ -3,9 +3,10 @@
  * report, speed tiers, Stat Point optimiser and bring planner. One snapshot per Champions
  * regulation: the best of these sources (metaSourceRank in src/domain/meta.ts):
  *
- *  1. Smogon's monthly usage statistics (scripts/meta/smogon.ts). Once a regulation has a published
- *     month, nothing else is fetched for it.
- *  2. Until then, early estimates, refreshed every run:
+ *  1. Pokémon Champions' in-game Battle Data for the current ranked season (scripts/meta/ingame.ts):
+ *     the real ladder, refreshed daily, for the regulation that season runs on.
+ *  2. Smogon's monthly usage statistics (scripts/meta/smogon.ts).
+ *  3. Until a regulation has either, early estimates, refreshed every run:
  *     - tournament team lists from Limitless (scripts/meta/limitless.ts),
  *     - public Showdown replays (scripts/meta/replays.ts),
  *     - the previous regulation's numbers for what's still allowed (carry-over).
@@ -15,11 +16,11 @@
  * would reject is never written. Species names the Champions dataset doesn't know are listed.
  *
  *   npm run meta                                every source
- *   npm run meta -- --sources smogon,carryover  only some (smogon, tournaments, replays, carryover)
+ *   npm run meta -- --sources smogon,carryover  only some (ingame, smogon, tournaments, replays, carryover)
  *   npm run meta -- --months 3                  look back 3 Smogon months (default 8)
  *   npm run meta -- --max-replays 300           new replays read per format (default 1500)
  *
- * Needs network access to www.smogon.com, replay.pokemonshowdown.com and play.limitlesstcg.com (the
+ * Needs network access to raw.githubusercontent.com, www.smogon.com, replay.pokemonshowdown.com and play.limitlesstcg.com (the
  * scheduled GitHub Action has it; it also keeps .cache/meta/ between runs). See docs/UPDATING_META.md.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -27,12 +28,13 @@ import { resolve } from 'node:path';
 import { compareSnapshots, metaSourceKind, parseMetaFile, type MetaFile, type MetaSnapshot } from '../src/domain/meta.ts';
 import { carryOverSnapshot, fillSpreads } from '../src/domain/metaSources.ts';
 import { Context, ROOT, type Regulation } from './meta/context.ts';
+import { ingameSnapshot } from './meta/ingame.ts';
 import { tournamentsSnapshot } from './meta/limitless.ts';
 import { replaysSnapshot } from './meta/replays.ts';
 import { listMonths, smogonSnapshot } from './meta/smogon.ts';
 
 const OUT = resolve(ROOT, 'src/data/generated/meta.json');
-const SOURCES = ['smogon', 'tournaments', 'replays', 'carryover'] as const;
+const SOURCES = ['ingame', 'smogon', 'tournaments', 'replays', 'carryover'] as const;
 
 const arg = (name: string) => {
   const i = process.argv.indexOf(name);
@@ -46,6 +48,8 @@ for (const s of wanted) if (!(SOURCES as readonly string[]).includes(s)) throw n
 const ctx = new Context();
 const previous: MetaFile = existsSync(OUT) ? parseMetaFile(JSON.parse(readFileSync(OUT, 'utf8'))) : { version: 1, generatedAt: '1970-01-01', regulations: {} };
 const now = new Date().toISOString();
+
+const ingame = wanted.has('ingame') ? await attempt('In-game data', () => ingameSnapshot(ctx)) : null;
 
 let months: string[] = [];
 if (wanted.has('smogon')) {
@@ -90,7 +94,9 @@ for (const reg of ctx.regulations) {
 
   const smogon = wanted.has('smogon') && months.length ? await attempt('Smogon', () => smogonSnapshot(ctx, reg, months)) : null;
   if (smogon) fresh.push(smogon);
-  const hasSmogon = !!smogon || isSmogon(prev);
+  if (ingame?.regulationId === reg.id) fresh.push(ingame);
+  // With real usage data (Smogon's or the game's own), the early estimates aren't needed.
+  const hasSmogon = !!smogon || isSmogon(prev) || ingame?.regulationId === reg.id || (!!prev && metaSourceKind(prev) === 'ingame');
 
   if (!hasSmogon && reg.start <= now) {
     if (wanted.has('tournaments')) {
@@ -112,7 +118,7 @@ for (const reg of ctx.regulations) {
     }
   }
 
-  const filled = fresh.map((s) => (metaSourceKind(s) === 'smogon' ? s : fillSpreads(s, donors(reg), (id) => ctx.baseStats(id))));
+  const filled = fresh.map((s) => (['smogon', 'ingame'].includes(metaSourceKind(s)) ? s : fillSpreads(s, donors(reg), (id) => ctx.baseStats(id))));
   // A fresh snapshot replaces the previous one from the same source; otherwise the previous one competes.
   const candidates = [...filled, ...(prev && !filled.some((s) => metaSourceKind(s) === metaSourceKind(prev)) ? [prev] : [])];
   const best = candidates.sort(compareSnapshots)[0];

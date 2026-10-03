@@ -12,18 +12,43 @@ One snapshot per regulation: the best source available, in this order (`metaSour
 
 | Rank | Source | Kind | Built by |
 |---|---|---|---|
-| 1 | [Smogon usage statistics](https://www.smogon.com/stats/): monthly "chaos" JSON from rated Pokémon Showdown ladder battles, for the regulation's VGC format (`[Gen 9 Champions] VGC 2026 Reg M-C` → `gen9championsvgc2026regmc`, Bo3 variant as a fallback), highest rating cutoff published (1760 → 1630 → 1500 → 0) | `smogon` | `scripts/meta/smogon.ts` |
-| 2 | Hand-maintained entries (`src/data/meta/manual.json`) | `manual` | a person, by hand |
-| 3 | **Provisional:** [Limitless](https://play.limitlesstcg.com) tournament team lists, at least 64 teams | `tournaments` | `scripts/meta/limitless.ts` |
-| 4 | **Provisional:** public [Showdown replays](https://replay.pokemonshowdown.com/), at least 150 games | `replays` | `scripts/meta/replays.ts` |
-| 5 | **Provisional:** fewer tournament teams, then fewer replays | | |
-| 6 | **Provisional:** the previous regulation's numbers, carried over | `carryover` | `carryOverSnapshot` |
-| 7 | The player's own logged matches | `matches` | automatic, on the device |
+| 1 | **Pokémon Champions' in-game Battle Data** for the current ranked season: the game's own ranked Doubles usage (the real ladder), daily, from the community mirror [Gheist23/pokemonbattledata](https://github.com/Gheist23/pokemonbattledata) | `ingame` | `scripts/meta/ingame.ts` |
+| 2 | [Smogon usage statistics](https://www.smogon.com/stats/): monthly "chaos" JSON from rated Pokémon Showdown ladder battles, for the regulation's VGC format (`[Gen 9 Champions] VGC 2026 Reg M-C` → `gen9championsvgc2026regmc`, Bo3 variant as a fallback), highest rating cutoff published (1760 → 1630 → 1500 → 0) | `smogon` | `scripts/meta/smogon.ts` |
+| 3 | Hand-maintained entries (`src/data/meta/manual.json`) | `manual` | a person, by hand |
+| 4 | **Provisional:** [Limitless](https://play.limitlesstcg.com) tournament team lists, at least 64 teams | `tournaments` | `scripts/meta/limitless.ts` |
+| 5 | **Provisional:** public [Showdown replays](https://replay.pokemonshowdown.com/), at least 150 games | `replays` | `scripts/meta/replays.ts` |
+| 6 | **Provisional:** fewer tournament teams, then fewer replays | | |
+| 7 | **Provisional:** the previous regulation's numbers, carried over | `carryover` | `carryOverSnapshot` |
+| 8 | The player's own logged matches | `matches` | automatic, on the device |
 
-All of 1, 3, 4 and 6 end up in `src/data/generated/meta.json`, built by `npm run meta` / the daily
+All but 3 and 8 end up in `src/data/generated/meta.json`, built by `npm run meta` / the daily
 GitHub Action. A refreshed copy (the Meta tab's **Check for newer data**, web app only) is the deployed
 site's own `meta/latest.json` — the same file — validated before use and kept on the device. If it
 fails for any reason, the built-in data stays on screen.
+
+### The in-game Battle Data (`scripts/meta/ingame.ts`)
+
+Pokémon Champions shows each ranked season's usage in its Battle Data screen. A community mirror saves
+a dated JSON snapshot of it every day (`data/meta/index.json` lists the seasons and days;
+`data/meta/<season>/<dd_mm_yyyy>/Doubles.json` is one day), read from raw.githubusercontent.com
+(`INGAME_DATA_BASE` overrides the base URL). Each run takes the newest Doubles snapshot of the newest
+season and files it under the regulation live on that day, but only when:
+
+- the season has at least 3 days of snapshots (a season's first days are thin; until then the
+  previous season's last snapshot, already in `meta.json`, stays in use), and
+- at least 98% of the species in it are legal in that regulation (so a season is never filed under
+  the wrong one).
+
+What it has and hasn't: the game publishes a **usage rank** per Pokémon, not a percentage, so these
+entries carry `usageRank` instead of `usagePct` and the app shows "#3" where it would show "47.2%".
+Moves, items, abilities, natures and Stat Point spreads come with percentages; teammates are ranked
+only. Natures and spreads are separate lists in the game's data, so each spread is shown with the
+species' most common nature. While a regulation's current season has in-game data, the early
+estimates below aren't built for it; Smogon's stats still cover ended regulations and are the
+fallback whenever the mirror can't be read (the last good snapshot stays in the meantime).
+
+The data belongs to the game; the mirror is unofficial and states no licence for it. Fine for this
+private app, but if the mirror disappears, the pipeline simply falls back to Smogon.
 
 ### Before Smogon publishes: the provisional sources
 
