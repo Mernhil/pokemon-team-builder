@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bringLimits,
+  type BringSelection,
+  bringState,
+  cycleBring,
+  normalizeBring,
   cloneOpponentTeam,
   createMatch,
   matchesToCSV,
@@ -97,5 +102,80 @@ describe('match sanitising', () => {
 
   it('defaults an unrecognised result to a win rather than dropping the match', () => {
     expect(sanitizeMatch({ date: '2026-01-01', result: 'draw' })!.result).toBe('win');
+  });
+});
+
+describe('brought and led', () => {
+  const limits = { bring: 4, lead: 2 };
+  const empty: BringSelection = { brought: [], leads: [] };
+
+  it('uses doubles 4/2 (and singles 3/1) from the regulation', () => {
+    expect(bringLimits('champions-reg-mc')).toEqual({ bring: 4, lead: 2 });
+    expect(bringLimits(undefined)).toEqual({ bring: 4, lead: 2 });
+    expect(bringLimits('gen9')).toEqual({ bring: 3, lead: 1 });
+  });
+
+  it('cycles not brought → brought → lead → not brought', () => {
+    let s = cycleBring(empty, 'a', limits);
+    expect(bringState(s, 'a')).toBe('brought');
+    s = cycleBring(s, 'a', limits);
+    expect(bringState(s, 'a')).toBe('lead');
+    expect(s).toEqual({ brought: ['a'], leads: ['a'] });
+    s = cycleBring(s, 'a', limits);
+    expect(s).toEqual(empty);
+  });
+
+  it('respects the limits: no fifth Pokémon, no third lead', () => {
+    let s = empty;
+    for (const id of ['a', 'b', 'c', 'd']) s = cycleBring(s, id, limits);
+    expect(s.brought).toEqual(['a', 'b', 'c', 'd']);
+    expect(cycleBring(s, 'e', limits)).toBe(s);
+    for (const id of ['a', 'b']) s = cycleBring(s, id, limits);
+    expect(s.leads).toEqual(['a', 'b']);
+    // With both lead slots taken, a third tap sends a merely brought Pokémon back to the bench.
+    s = cycleBring(s, 'c', limits);
+    expect(s.brought).not.toContain('c');
+    expect(s.leads).toEqual(['a', 'b']);
+  });
+
+  it('singles lead with one', () => {
+    const singles = { bring: 3, lead: 1 };
+    let s = cycleBring(cycleBring(cycleBring(empty, 'a', singles), 'a', singles), 'b', singles);
+    s = cycleBring(s, 'b', singles);
+    expect(s.leads).toEqual(['a']);
+    expect(s.brought).toEqual(['a']);
+  });
+
+  it('normalises: drops strangers, duplicates and leads that were not brought', () => {
+    expect(normalizeBring({ brought: ['a', 'a', 'x', 'b', 'c', 'd', 'e'], leads: ['b', 'z', 'a', 'c'] }, ['a', 'b', 'c', 'd', 'e'], limits)).toEqual({ brought: ['a', 'b', 'c', 'd'], leads: ['b', 'a'] });
+  });
+
+  it('a match with only a result is still valid, and the new fields are sanitised', () => {
+    const bare = sanitizeMatch({ date: '2026-01-01', result: 'win' })!;
+    expect(bare.myBrought).toBeUndefined();
+    expect(bare.oppLeads).toBeUndefined();
+    const m = sanitizeMatch({
+      date: '2026-01-01',
+      result: 'loss',
+      myBrought: ['u1', 'u2', 'u2', 3, 'u3', 'u4', 'u5', 'u6', 'u7'],
+      myLeads: ['u2', 'zzz', 'u1', 'u3'],
+      oppBrought: ['garchomp'],
+      oppLeads: ['kingambit'],
+    })!;
+    expect(m.myBrought).toEqual(['u1', 'u2', 'u3', 'u4', 'u5', 'u6']);
+    expect(m.myLeads).toEqual(['u2', 'u1']);
+    expect(m.oppBrought).toEqual(['garchomp']);
+    // A lead that was never brought is dropped rather than invented.
+    expect(m.oppLeads).toBeUndefined();
+  });
+
+  it('adds the brought and led columns to the CSV, naming my saved-team Pokémon through the callback', () => {
+    const m = mkMatch({ myTeamId: 't1', myBrought: ['u1', 'u2'], myLeads: ['u1'], oppBrought: ['garchomp', 'kingambit'], oppLeads: ['garchomp'], opponentTeam: [{ speciesId: 'garchomp' }, { speciesId: 'kingambit' }] });
+    const csv = matchesToCSV([m], (id) => id.toUpperCase(), () => 'Team', (_m, id) => ({ u1: 'Incineroar', u2: 'Urshifu' })[id]!);
+    const [header, row] = csv.split('\n');
+    expect(header.split(',').slice(-5, -1)).toEqual(['My Brought', 'My Leads', 'Opponent Brought', 'Opponent Leads']);
+    expect(row).toContain('Incineroar / Urshifu,Incineroar,GARCHOMP / KINGAMBIT,GARCHOMP');
+    // Without the callback it falls back to the species name.
+    expect(matchesToCSV([{ ...m, myBrought: ['x'] }], (id) => id.toUpperCase(), () => 'T').split('\n')[1]).toContain(',X,');
   });
 });

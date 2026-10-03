@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
@@ -9,6 +9,7 @@ import { snapshotAge } from '@/domain/speedTiers';
 import { THREAT_COUNTS, bucket, KILL_LABEL, KILL_SHORT, type ThreatCell } from '@/domain/threats';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
+import { useFocusStore } from '@/store/focusStore';
 import { useOptimizerStore } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
 import { ChipRow, Toggle } from '../ui/chips';
@@ -63,6 +64,22 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
     useTeamStore.getState().setActiveSlot(slot);
     setView('builder');
   };
+
+  // A hand-off from the match log: widen the list if needed, scroll to that species and mark its row.
+  const focusId = useFocusStore((s) => s.speciesId);
+  const clearFocus = useFocusStore((s) => s.clear);
+  useEffect(() => () => clearFocus(), [clearFocus]);
+  useEffect(() => {
+    if (!focusId || threats.length === 0) return;
+    if (!threats.some((t) => t.speciesId === focusId)) {
+      if (count < 30) setCount(30);
+      return;
+    }
+    requestAnimationFrame(() => {
+      const els = [...document.querySelectorAll<HTMLElement>(`[data-threat="${focusId}"]`)].filter((e) => e.offsetParent !== null);
+      els[0]?.scrollIntoView({ block: 'center' });
+    });
+  }, [focusId, threats, count]);
 
   const calculated = rows.filter(Boolean).length;
   const age = useMemo(() => (picked ? snapshotAge(picked.snapshot) : undefined), [picked]);
@@ -207,7 +224,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                 {threats.map((t, i) => {
                   const sp = dex.species(t.speciesId);
                   return (
-                    <tr key={t.speciesId} className="border-t border-border">
+                    <tr key={t.speciesId} data-threat={t.speciesId} className={cn('border-t border-border', focusId === t.speciesId && 'outline-2 -outline-offset-2 outline-accent')}>
                       <th scope="row" className="sticky left-0 z-10 bg-surface p-2 text-left font-normal">
                         <span className="flex items-center gap-2">
                           <Sprite speciesId={t.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={32} />
@@ -235,7 +252,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
               const sp = dex.species(t.speciesId);
               const line = summaries.find((x) => x.speciesId === t.speciesId)?.lines[0];
               return (
-                <li key={t.speciesId} className="rounded-xl border border-border bg-surface p-3">
+                <li key={t.speciesId} data-threat={t.speciesId} aria-current={focusId === t.speciesId ? 'true' : undefined} className={cn('rounded-xl border bg-surface p-3', focusId === t.speciesId ? 'border-accent' : 'border-border')}>
                   <div className="mb-2 flex items-center gap-3">
                     <Sprite speciesId={t.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={40} />
                     <div className="min-w-0">

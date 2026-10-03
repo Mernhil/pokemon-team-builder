@@ -98,6 +98,13 @@ function sanitizeLoggedMon(v: unknown): LoggedMon | null {
   };
 }
 
+/** A list of ids (deduped, at most `max`), or undefined when there are none. */
+function idList(v: unknown, max: number): string[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const ids = [...new Set(v.map((x) => str(x, MAX_ID)).filter((x): x is string => !!x))].slice(0, max);
+  return ids.length ? ids : undefined;
+}
+
 /** Returns a well-formed copy of `v`, or null when it isn't recognisably a match. */
 export function sanitizeMatch(v: unknown): Match | null {
   if (!isObj(v)) return null;
@@ -110,6 +117,14 @@ export function sanitizeMatch(v: unknown): Match | null {
   const myTeam = Array.isArray(v.myTeam)
     ? v.myTeam.map(sanitizeLoggedMon).filter((m): m is LoggedMon => !!m).slice(0, 6)
     : undefined;
+  // Brought: up to 6 (the roster); leads: up to 2, and only among those brought when brought is known.
+  const myBrought = idList(v.myBrought, 6);
+  const oppBrought = idList(v.oppBrought, 6);
+  const leadsOf = (leads: unknown, brought: string[] | undefined) => {
+    const all = idList(leads, 6);
+    const l = (brought ? all?.filter((x) => brought.includes(x)) : all)?.slice(0, 2);
+    return l && l.length ? l : undefined;
+  };
   return {
     id: safeId(v.id),
     date,
@@ -122,6 +137,10 @@ export function sanitizeMatch(v: unknown): Match | null {
     myArchetype: str(v.myArchetype, MAX_NAME),
     opponentTeam,
     opponentArchetype: str(v.opponentArchetype, MAX_NAME),
+    myBrought,
+    myLeads: leadsOf(v.myLeads, myBrought),
+    oppBrought,
+    oppLeads: leadsOf(v.oppLeads, oppBrought),
     notes: str(v.notes, MAX_NOTES),
     createdAt: int(v.createdAt, 0, Number.MAX_SAFE_INTEGER, now),
     updatedAt: int(v.updatedAt, 0, Number.MAX_SAFE_INTEGER, now),

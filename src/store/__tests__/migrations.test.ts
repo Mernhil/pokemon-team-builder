@@ -149,3 +149,52 @@ describe('0.6.x saves (teams v2, matches v1, calc v1) → current', () => {
     expect(attacker.set!.speciesId).toBe('garchomp');
   });
 });
+
+describe('match log v2 → v3 (brought and led)', () => {
+  const v2 = {
+    version: 2,
+    state: {
+      matches: {
+        old: { id: 'old', date: '2026-09-01', result: 'loss', regulationId: 'champions-reg-mc', opponentTeam: [{ speciesId: 'kingambit' }], myTeamId: 't1', createdAt: 5, updatedAt: 6 },
+        weird: { id: 'weird', date: '2026-09-02', result: 'win', opponentTeam: [], myBrought: ['u1', 'u1', 7], myLeads: ['nope'] },
+      },
+      order: ['old', 'weird'],
+      scoutYourTeamId: 't1',
+    },
+  };
+  let storage: ReturnType<typeof fakeStorage>;
+  beforeEach(() => {
+    storage = fakeStorage({ 'ptb:matches:v1': JSON.stringify(v2) });
+    vi.stubGlobal('localStorage', storage);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('keeps every match as it was and leaves the new fields empty', async () => {
+    await useMatchStore.persist.rehydrate();
+    const s = useMatchStore.getState();
+    expect(s.order).toEqual(['old', 'weird']);
+    expect(s.scoutYourTeamId).toBe('t1');
+    expect(s.matches.old).toEqual(expect.objectContaining({ id: 'old', date: '2026-09-01', result: 'loss', myTeamId: 't1', createdAt: 5, updatedAt: 6, opponentTeam: [{ speciesId: 'kingambit' }] }));
+    for (const k of ['myBrought', 'myLeads', 'oppBrought', 'oppLeads'] as const) expect(s.matches.old[k]).toBeUndefined();
+    // A hand-edited or corrupted new field is sanitised rather than trusted.
+    expect(s.matches.weird.myBrought).toEqual(['u1']);
+    expect(s.matches.weird.myLeads).toBeUndefined();
+  });
+
+  it('no backup is made (the change is additive) and the next write is v3', async () => {
+    await useMatchStore.persist.rehydrate();
+    expect(storage.getItem(MATCH_BACKUP_V1_KEY)).toBeNull();
+    useMatchStore.getState().updateMatch('old', { myBrought: ['u1', 'u2'], myLeads: ['u1'], oppBrought: ['kingambit'] });
+    const saved = JSON.parse(storage.getItem('ptb:matches:v1')!);
+    expect(saved.version).toBe(3);
+    expect(saved.state.matches.old.myLeads).toEqual(['u1']);
+    await useMatchStore.persist.rehydrate();
+    expect(useMatchStore.getState().matches.old.oppBrought).toEqual(['kingambit']);
+  });
+
+  it('a v3 save is read unchanged', async () => {
+    storage.setItem('ptb:matches:v1', JSON.stringify({ version: 3, state: { matches: { a: { id: 'a', date: '2026-10-01', result: 'win', opponentTeam: [{ speciesId: 'garchomp' }], oppBrought: ['garchomp'], oppLeads: ['garchomp'] } }, order: ['a'] } }));
+    await useMatchStore.persist.rehydrate();
+    expect(useMatchStore.getState().matches.a.oppLeads).toEqual(['garchomp']);
+  });
+});

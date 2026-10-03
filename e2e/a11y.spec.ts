@@ -41,6 +41,19 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoA11yViolations(page);
     });
 
+    test('Match log analytics', async ({ page }) => {
+      const mon = (speciesId: string) => ({ speciesId });
+      const matches: Record<string, unknown> = {};
+      for (let i = 0; i < 6; i++) {
+        matches[`k${i}`] = { id: `k${i}`, date: `2026-09-${10 + i}`, result: i < 2 ? 'win' : 'loss', regulationId: 'champions-reg-mc', myTeam: ['incineroar', 'garchomp'].map(mon), myBrought: ['incineroar', 'garchomp'], myLeads: ['incineroar', 'garchomp'], opponentTeam: ['kingambit', 'sneasler'].map(mon), oppBrought: ['kingambit'], oppLeads: ['kingambit'], myArchetype: 'Rain', opponentArchetype: 'Trick Room', createdAt: 1, updatedAt: 1 };
+      }
+      await page.evaluate((log) => localStorage.setItem('ptb:matches:v1', log), JSON.stringify({ version: 3, state: { matches, order: Object.keys(matches) } }));
+      await page.goto('/#matches');
+      await page.reload();
+      await page.getByRole('heading', { name: /Nemesis/ }).waitFor();
+      await expectNoA11yViolations(page);
+    });
+
     test('Speed tiers', async ({ page }) => {
       await importTeam(page, SAMPLE_TEAM);
       await page.goto('/#speed');

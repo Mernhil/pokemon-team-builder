@@ -11,6 +11,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 - **Stat Point optimiser:** an **Optimise** button in the stat calculator finds the cheapest spread for goals like "survive Garchomp's Earthquake", "outspeed Flutter Mane under Tailwind" and "2HKO Kingambit", then puts the leftover points where you say (one stat, or max HP and an even split). It can suggest a nature, tells you how short an unreachable goal falls and what could help, and applies with Undo. Works for Champions Stat Points and Gen 3–9 EVs. Also reachable from Speed tiers ("Optimise…") and the Threat report ("Survive this…").
 
+- **Match log: brought, led and analytics:** record which Pokémon each side brought and led by tapping their sprites (doubles bring 4 / lead 2, singles 3 / 1), all optional. The stats now have filters (regulation, category, dates, team or variation) and show win rate by your lead, by the four you brought and by team variation, the record against each opponent Pokémon (on their team / brought / led), a nemesis list that links to the Damage Calc, Speed tiers and the Threat report, a weekly win-rate chart and an archetype-vs-archetype grid. Every rate shows a 95% range, and fewer than 5 games is greyed out without a percentage. The CSV export has the new columns.
+
 ### Fixed
 - Light theme: better contrast for the selected game in Pokénav and for the map caption.
 

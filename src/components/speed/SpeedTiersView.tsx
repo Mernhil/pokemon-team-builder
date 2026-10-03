@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ChevronDown, Gauge } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { metaFor } from '@/data/meta';
@@ -21,6 +21,7 @@ import {
 import { TERRAINS, WEATHERS } from '@/domain/battle/conditions';
 import type { FormatRules, Team } from '@/domain/types';
 import { useMetaStore } from '@/store/metaStore';
+import { useFocusStore } from '@/store/focusStore';
 import { useOptimizerStore } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
@@ -86,6 +87,20 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
   const variants = useMemo(() => (picked ? metaVariants(picked.snapshot, dex, format, topN) : []), [picked, dex, format, topN]);
   const members = useMemo(() => team.slots.flatMap((set, slot) => (set ? [{ slot, set }] : [])), [team.slots]);
   const ladder = useMemo(() => buildLadder(dex, variants, members, scenario), [dex, variants, members, scenario]);
+
+  // A hand-off from the match log: open that species' row (widening the list if it isn't in the top N).
+  const focusId = useFocusStore((st) => st.speciesId);
+  const clearFocus = useFocusStore((st) => st.clear);
+  useEffect(() => {
+    if (!focusId) return;
+    const row = ladder.find((r) => !r.mine && r.speciesId === focusId);
+    if (row) {
+      setOpen(row.key);
+      requestAnimationFrame(() => document.getElementById(`speed-row-${row.key}`)?.scrollIntoView({ block: 'center' }));
+      clearFocus();
+    } else if (topN < 40) setTopN(40);
+    else clearFocus();
+  }, [focusId, ladder, topN, clearFocus]);
 
   if (format.datasetId !== 'champions') {
     return (
@@ -262,7 +277,7 @@ function Row({
   );
   const frame = cn('flex w-full min-h-12 items-center gap-3 rounded-xl border px-3 py-1.5', row.mine ? 'border-accent bg-accent/10' : 'border-border bg-surface');
   return (
-    <li>
+    <li id={`speed-row-${row.key}`}>
       {row.mine ? (
         <div className={frame}>{body}</div>
       ) : (

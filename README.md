@@ -126,6 +126,12 @@ The Meta tab lists each Champions regulation's most-used Pokémon with their com
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
 
+### Match log: brought, led and analytics
+
+Besides the result and the opponent's Team Preview, a match can record **what each side brought and led**: tap a Pokémon's sprite to cycle not brought → brought → lead (doubles bring 4 / lead 2, singles 3 / 1, from the match's regulation), for your side and for the opponent's revealed six. It's all optional; a match with only a result is still valid. Saved-team Pokémon are stored by uid, run-and-gun ones by species; the save format is v3 (`ptb:matches:v1`, a v2 log loads unchanged), and the CSV export gains the four columns.
+The analytics (`src/domain/matchStats.ts`, pure and tested) sit under the log with filters for regulation, category, date range and team or folder of variations: win rate **by my lead**, **by the four I brought** and **by team variation**; per opponent Pokémon the record when it was on their team, when they brought it and when they led it; a **nemesis** list (the five worst, among those faced at least five times) linking to the Damage Calc, Speed tiers and Threat report on that Pokémon; a **weekly win rate** chart per regulation; and an **archetype vs archetype** grid.
+Every rate carries a Wilson 95% range, and a record from fewer than 5 games is greyed and shown without a percentage, so a 1–0 never reads as 100%. Lead and brought groups are by species, so variations of one team merge.
+
 ### Stat Point optimiser
 
 The **Optimise** button in the stat calculator (Champions Stat Points and Gen 3–9 EVs) finds the cheapest spread for goals: **survive** a move (every roll, 15 of 16, or at least half; optionally on a crit), **outspeed** a Speed (or, for Trick Room, stay under it), or **knock out** a Pokémon in one or two hits, in priority order, with the leftover points put in one stat or "max HP, then split evenly".
