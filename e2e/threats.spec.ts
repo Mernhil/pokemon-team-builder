@@ -10,8 +10,9 @@ test('Threat report: Team check links to it, cells show both directions, a cell 
   await page.getByRole('link', { name: /Threat report/ }).click();
   await expect(page).toHaveURL(/#threats$/);
 
-  await expect(page.getByText(/No usage data for Reg M-C yet/)).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: /\d+ threats calculated against 2 of your Pokémon/ })).toBeVisible({ timeout: 30_000 });
+  // The live regulation always has numbers of its own (Smogon's, or provisional ones), so no fallback.
+  await expect(page.getByText(/No usage data for .* yet/)).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Biggest threats' })).toBeVisible();
 
   // Cells carry the same story in words: your best move, its best move and who moves first.

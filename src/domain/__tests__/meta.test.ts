@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import generatedJson from '@/data/generated/meta.json';
 import manualJson from '@/data/meta/manual.json';
@@ -154,7 +156,7 @@ describe('fallback from your logged matches', () => {
       '2026-09-28',
     );
     expect(snap).not.toBeNull();
-    expect(snap!.source).toEqual({ name: 'Your logged matches (2)', battles: 2 });
+    expect(snap!.source).toEqual({ kind: 'matches', name: 'Your logged matches (2)', battles: 2 });
     expect(snap!.entries[0]).toMatchObject({ speciesId: 'incineroar', usagePct: 100, items: [{ id: 'safetygoggles', pct: 100 }] });
     expect(snap!.entries.find((e) => e.speciesId === 'rillaboom')?.usagePct).toBe(50);
     // The result passes the same validation as published data.
@@ -177,5 +179,15 @@ describe('meta store migration', () => {
     const refreshed: MetaFile = { version: 1, generatedAt: '2026-09-28', regulations: { 'champions-reg-mc': baseSnap() } };
     expect(migrateMetaState({ refreshed, refreshedAt: 5 }, 2)).toEqual({ refreshed, refreshedAt: 5 });
     expect(migrateMetaState({ refreshed: { version: 1, regulations: 'nope' } }, 2)).toEqual({});
+  });
+});
+
+describe('meta data loading', () => {
+  it('is never imported statically, so it stays out of the first download', () => {
+    const files = (readdirSync('src', { recursive: true }) as string[]).filter((f) => /\.tsx?$/.test(f) && !f.includes('__tests__'));
+    const imports = (f: string) => [...readFileSync(join('src', f), 'utf8').matchAll(/^import [^;]*? from '([^']+)';/gm)].map((m) => m[1]);
+    const isMetaData = (f: string, spec: string) => spec === '@/data/meta' || (f.startsWith('data') && spec === './meta');
+    const offenders = files.filter((f) => imports(f).some((spec) => isMetaData(f, spec)));
+    expect(offenders).toEqual([]);
   });
 });

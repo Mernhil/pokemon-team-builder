@@ -1,12 +1,11 @@
 import { Suspense, lazy, useMemo } from 'react';
 import { Gauge } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { metaFor } from '@/data/meta';
+import { useMetaFor } from '@/data/useMeta';
 import { defensiveCoverage } from '@/domain/coverage';
 import { metaPartners } from '@/domain/meta';
 import type { FormatRules, Team } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
-import { useMetaStore } from '@/store/metaStore';
 import { Sprite } from '../ui/Sprite';
 import { Label, Panel, TypeBadge } from '../ui/primitives';
 import { IssueCounts, IssueList } from './ValidationPanel';
@@ -26,8 +25,8 @@ export function TeamCheck({ team, dex, format, issues }: { team: Team; dex: Dex;
         .slice(0, 6),
     [team, dex, format.capabilities.mega],
   );
-  const refreshed = useMetaStore((s) => s.refreshed);
-  const meta = useMemo(() => (format.regulationId ? metaFor(format.regulationId, refreshed) : undefined), [format.regulationId, refreshed]);
+  const metaFor = useMetaFor();
+  const meta = useMemo(() => (format.regulationId ? metaFor?.(format.regulationId) : undefined), [format.regulationId, metaFor]);
   const partners = useMemo(() => {
     const species = team.slots.flatMap((s) => (s ? [s.speciesId] : []));
     return meta && species.length < 6 ? metaPartners(meta, species).filter((p) => dex.species(p.speciesId)) : [];

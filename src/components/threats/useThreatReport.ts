@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Dex } from '@/data/dex';
-import { metaFor } from '@/data/meta';
+import { useMetaFor } from '@/data/useMeta';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import type { FieldConditions } from '@/domain/battle/conditions';
 import { metaSets, type MetaSet } from '@/domain/metaSets';
 import { pickSpeedSnapshot, type PickedSnapshot } from '@/domain/speedTiers';
 import { summarize, type ThreatCell, type ThreatJob, type ThreatSummary } from '@/domain/threats';
 import type { FormatRules, Team } from '@/domain/types';
-import { useMetaStore } from '@/store/metaStore';
 import { startThreatJob } from '@/workers/threatClient';
 
 const champRegIds = REGULATION_MANIFEST.regulations
@@ -18,8 +17,10 @@ const champRegIds = REGULATION_MANIFEST.regulations
 const NO_ROWS: (ThreatCell[] | undefined)[] = [];
 
 export interface ThreatReport {
-  /** Which regulation's numbers, or undefined when nothing is published. */
+  /** Which regulation's numbers, or undefined when nothing is published (or still loading). */
   picked?: PickedSnapshot;
+  /** The meta data is still loading. */
+  loading: boolean;
   threats: MetaSet[];
   members: { slot: number; set: Team['slots'][number] & object }[];
   /** One entry per threat; undefined until that row has been calculated. */
@@ -35,11 +36,11 @@ export interface ThreatReport {
  * arrive. Restarts, debounced, when the team, the field or the threat count changes.
  */
 export function useThreatReport({ dex, format, team, count, field, delay = 150 }: { dex: Dex; format: FormatRules; team: Team; count: number; field: FieldConditions; delay?: number }): ThreatReport {
-  const refreshed = useMetaStore((s) => s.refreshed);
+  const metaFor = useMetaFor();
   const champions = format.datasetId === 'champions';
   const picked = useMemo(
-    () => (champions ? pickSpeedSnapshot(format.regulationId, champRegIds, (id) => metaFor(id, refreshed)) : undefined),
-    [champions, format.regulationId, refreshed],
+    () => (champions && metaFor ? pickSpeedSnapshot(format.regulationId, champRegIds, metaFor) : undefined),
+    [champions, format.regulationId, metaFor],
   );
   const threats = useMemo(() => (picked ? metaSets(picked.snapshot, dex, format, count) : []), [picked, dex, format, count]);
   const members = useMemo(() => team.slots.flatMap((set, slot) => (set ? [{ slot, set }] : [])), [team.slots]);
@@ -79,5 +80,5 @@ export function useThreatReport({ dex, format, team, count, field, delay = 150 }
   const current = state.job === job;
   const rows = current ? state.rows : NO_ROWS;
   const summaries = useMemo(() => (job && current && rows.length ? summarize(dex, job, rows as ThreatCell[][]) : []), [dex, job, current, rows]);
-  return { picked, threats, members, rows, done: current ? state.done : !job, error: current ? state.error : undefined, summaries, job };
+  return { picked, loading: champions && !metaFor, threats, members, rows, done: current ? state.done : !job, error: current ? state.error : undefined, summaries, job };
 }

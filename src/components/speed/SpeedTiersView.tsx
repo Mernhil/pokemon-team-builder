@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ChevronDown, Gauge } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { metaFor } from '@/data/meta';
+import { useMetaFor } from '@/data/useMeta';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import { META_STALE_DAYS } from '@/domain/meta';
+import { META_STALE_DAYS, isProvisional, provisionalNote } from '@/domain/meta';
 import {
   DEFAULT_TOP_N,
   buildLadder,
@@ -20,14 +20,13 @@ import {
 } from '@/domain/speedTiers';
 import { TERRAINS, WEATHERS } from '@/domain/battle/conditions';
 import type { FormatRules, Team } from '@/domain/types';
-import { useMetaStore } from '@/store/metaStore';
 import { useFocusStore } from '@/store/focusStore';
 import { useOptimizerStore } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, EmptyState, Label, Notice, Panel, Select } from '../ui/primitives';
+import { Button, Chip, EmptyState, Label, LoadingState, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
@@ -72,7 +71,7 @@ function SideChips({
  * with your team's Pokémon on the same scale. Every number comes from the Damage Calc's speed.
  */
 export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: FormatRules; team: Team }) {
-  const refreshed = useMetaStore((s) => s.refreshed);
+  const metaFor = useMetaFor();
   const updateSet = useTeamStore((s) => s.updateSet);
   const [scenario, setScenario] = useState<SpeedScenario>(neutralScenario);
   const [topN, setTopN] = useState(DEFAULT_TOP_N);
@@ -81,8 +80,8 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
 
   const wanted = format.regulationId ?? champRegs[0]?.id;
   const picked = useMemo(
-    () => pickSpeedSnapshot(wanted, champRegs.map((r) => r.id), (id) => metaFor(id, refreshed)),
-    [wanted, refreshed],
+    () => (metaFor ? pickSpeedSnapshot(wanted, champRegs.map((r) => r.id), metaFor) : undefined),
+    [wanted, metaFor],
   );
   const variants = useMemo(() => (picked ? metaVariants(picked.snapshot, dex, format, topN) : []), [picked, dex, format, topN]);
   const members = useMemo(() => team.slots.flatMap((set, slot) => (set ? [{ slot, set }] : [])), [team.slots]);
@@ -109,10 +108,12 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
       </EmptyState>
     );
   }
+  if (!metaFor) return <LoadingState label="Loading usage data…" />;
   if (!picked) {
     return (
       <EmptyState icon={Gauge} title="No usage data to build speed tiers from yet">
-        Smogon publishes each month’s usage statistics after the month ends; the app picks them up with its next update.
+        Early numbers from tournaments and Showdown replays appear within days of a regulation starting, and Smogon’s usage statistics after its
+        first month; the app picks them up with its next update.
       </EmptyState>
     );
   }
@@ -145,6 +146,7 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
             {s.month && `${fmtMonth(s.month)} usage`}
             {s.cutoff ? ` · rating ${s.cutoff}+` : ''}
             {s.battles !== undefined ? ` · ${s.battles.toLocaleString()} battles` : ''}
+            {isProvisional(picked.snapshot) && ` · ${provisionalNote(picked.snapshot, (id) => champRegs.find((r) => r.id === id)?.shortName)}`}
             {` · ${days} days old`}
           </p>
           <label className="ml-auto flex items-center gap-2 text-xs text-muted">
@@ -201,7 +203,7 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
           Showing {reg?.shortName ?? picked.regulationId}’s numbers, the newest published.
         </Notice>
       )}
-      {days > META_STALE_DAYS && (
+      {!isProvisional(picked.snapshot) && days > META_STALE_DAYS && (
         <Notice icon={AlertTriangle} title={`These numbers are ${days} days old`}>
           They describe play up to {snapshotAge(picked.snapshot).dataDate}. Newer usage statistics haven’t been published or built into the app yet.
         </Notice>

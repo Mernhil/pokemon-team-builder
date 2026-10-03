@@ -1,12 +1,18 @@
 name: Meta data
 
 # Keeps the Meta tab's usage data (src/data/generated/meta.json) current: `npm run meta` reads
-# Smogon's monthly usage statistics for every Champions regulation (scripts/build-meta.ts).
+# Smogon's monthly usage statistics for every Champions regulation and, for a regulation Smogon has
+# no month of yet, builds provisional numbers from Limitless tournament team lists, public Showdown
+# replays and the previous regulation (scripts/build-meta.ts, scripts/meta/).
 #
-# - Weekly schedule (Smogon publishes once a month, a few days after it ends; checking weekly picks
-#   new numbers up within a week): when the data changed, opens (or updates) a pull request against
-#   the default branch. Merging it redeploys the web app (Cloudflare builds every push); desktop apps
-#   get it with their next release.
+# - Daily schedule (the provisional numbers move day by day in a regulation's first weeks; once
+#   Smogon has published, a day with nothing new changes nothing): when the data changed, opens (or
+#   updates) a pull request against the default branch. Merging it redeploys the web app
+#   (Cloudflare builds every push); desktop apps get it with their next release.
+# - .cache/meta/ (replays and tournaments already read) is kept between runs with actions/cache, so
+#   each run only reads what's new.
+# - Optional secret LIMITLESS_API_KEY, if Limitless asks for an access key; optional repository
+#   variables LIMITLESS_GAMES / LIMITLESS_FORMATS pin the Limitless game and format codes.
 # - "Run workflow" on the default branch does the same on demand. On any other branch (a manual run,
 #   or a push that changes this workflow or scripts/build-meta.ts) it commits the new data straight
 #   to that branch, which is how changes to the pipeline get tested against real data.
@@ -15,13 +21,15 @@ name: Meta data
 # for the pull request step. See docs/UPDATING_META.md.
 on:
   schedule:
-    - cron: '17 6 * * 1'
+    - cron: '17 6 * * *'
   workflow_dispatch:
   # A change to the pipeline itself runs it right away on that branch (against real data).
   push:
     paths:
       - .github/workflows/meta.yml
       - scripts/build-meta.ts
+      - scripts/meta/**
+      - src/domain/metaSources.ts
 
 permissions:
   contents: read
@@ -47,7 +55,19 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Build usage data from Smogon's stats
+      # Replays and tournaments already read; a new key every run so the cache is saved each time.
+      - name: Restore the meta source cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: .cache/meta
+          key: meta-sources-${{ github.run_id }}
+          restore-keys: meta-sources-
+
+      - name: Build usage data (Smogon, tournaments, replays, carry-over)
+        env:
+          LIMITLESS_API_KEY: ${{ secrets.LIMITLESS_API_KEY }}
+          LIMITLESS_GAMES: ${{ vars.LIMITLESS_GAMES }}
+          LIMITLESS_FORMATS: ${{ vars.LIMITLESS_FORMATS }}
         run: npm run meta
 
       - name: Typecheck and test with the new data
@@ -65,7 +85,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          msg="data: update Meta tab usage data from Smogon's stats"
+          msg="data: update Meta tab usage data"
           if [ "$REF" != "$DEFAULT_BRANCH" ]; then
             git commit -m "$msg" -- src/data/generated/meta.json
             git push origin "HEAD:$REF"
@@ -75,6 +95,6 @@ jobs:
           git switch -C "$branch"
           git commit -m "$msg" -- src/data/generated/meta.json
           git push --force origin "$branch"
-          body="Automated update of \`src/data/generated/meta.json\` by \`npm run meta\` (Smogon usage statistics). Typecheck and tests passed with the new data. Merging redeploys the web app."
+          body="Automated update of \`src/data/generated/meta.json\` by \`npm run meta\` (Smogon usage statistics; provisional numbers from tournament team lists, Showdown replays or the previous regulation where Smogon has no month yet — see the run log for which source each regulation uses). Typecheck and tests passed with the new data. Merging redeploys the web app."
           gh pr view "$branch" --json number >/dev/null 2>&1 \
             || gh pr create --base "$DEFAULT_BRANCH" --head "$branch" --title "Meta data update ($(date -u +%Y-%m-%d))" --body "$body"

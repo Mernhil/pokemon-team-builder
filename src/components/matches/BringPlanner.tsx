@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Check, ClipboardPaste, Plus, Swords, X } from 'lucide-react';
 import type { Dex } from '@/data/dex';
-import { metaFor } from '@/data/meta';
+import { useMetaFor } from '@/data/useMeta';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import { importShowdown } from '@/domain/codecs';
 import { bringLimits } from '@/domain/matches';
@@ -9,7 +9,6 @@ import { planBring, planToMatchPatch, resolveOpponent, sourcesFromLog, sourcesFr
 import { pickSpeedSnapshot } from '@/domain/speedTiers';
 import type { FormatRules, Team } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
-import { useMetaStore } from '@/store/metaStore';
 import { toast } from '@/store/toastStore';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { Sprite } from '../ui/Sprite';
@@ -42,7 +41,7 @@ export function BringPlanner({
   matchId?: string;
   initialOpponent?: OppSource[];
 }) {
-  const refreshed = useMetaStore((s) => s.refreshed);
+  const metaFor = useMetaFor();
   const matchesById = useMatchStore((s) => s.matches);
   const order = useMatchStore((s) => s.order);
   const [opps, setOpps] = useState<OppSource[]>(initialOpponent.slice(0, 6));
@@ -53,8 +52,8 @@ export function BringPlanner({
 
   const limits = bringLimits(format.regulationId);
   const picked = useMemo(
-    () => (format.datasetId === 'champions' ? pickSpeedSnapshot(format.regulationId, champRegIds, (id) => metaFor(id, refreshed)) : undefined),
-    [format.datasetId, format.regulationId, refreshed],
+    () => (format.datasetId === 'champions' ? pickSpeedSnapshot(format.regulationId, champRegIds, (id) => metaFor?.(id)) : undefined),
+    [format.datasetId, format.regulationId, metaFor],
   );
   const mine = useMemo(() => team.slots.flatMap((s) => (s ? [{ uid: s.uid, set: s }] : [])), [team.slots]);
   const resolved = useMemo(

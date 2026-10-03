@@ -1,118 +1,132 @@
 /**
- * `npm run meta`: builds src/data/generated/meta.json (the Meta tab's usage data) from Smogon's
- * monthly usage statistics, https://www.smogon.com/stats/ — the "chaos" JSON files, which come
- * from rated battles on the Pokémon Showdown ladder.
+ * `npm run meta`: builds src/data/generated/meta.json, the usage data behind the Meta tab, threat
+ * report, speed tiers, Stat Point optimiser and bring planner. One snapshot per Champions
+ * regulation: the best of these sources (metaSourceRank in src/domain/meta.ts):
  *
- * For every Champions regulation in src/data/generated/regulations.json it looks, newest month
- * first, for that regulation's Showdown VGC format (e.g. "[Gen 9 Champions] VGC 2026 Reg M-C" →
- * gen9championsvgc2026regmc, then its Bo3 variant) at the highest rating cutoff published, and
- * normalises it with chaosToSnapshot (src/domain/meta.ts). Regulations without published stats
- * keep whatever the previous meta.json had; nothing is invented. Species Showdown names that the
- * Champions dataset doesn't know are dropped and listed.
+ *  1. Smogon's monthly usage statistics (scripts/meta/smogon.ts). Once a regulation has a published
+ *     month, nothing else is fetched for it.
+ *  2. Until then, early estimates, refreshed every run:
+ *     - tournament team lists from Limitless (scripts/meta/limitless.ts),
+ *     - public Showdown replays (scripts/meta/replays.ts),
+ *     - the previous regulation's numbers for what's still allowed (carry-over).
+ *     Their entries borrow spreads from another regulation's Smogon stats, or estimate one.
  *
- *   npm run meta              all Champions regulations
- *   npm run meta -- --months 3   only look back 3 months (default 8)
+ * A source that fails keeps its previous snapshot in play; nothing is invented, and a file the app
+ * would reject is never written. Species names the Champions dataset doesn't know are listed.
  *
- * Needs network access to www.smogon.com (the scheduled GitHub Action has it). See
- * docs/UPDATING_META.md.
+ *   npm run meta                                every source
+ *   npm run meta -- --sources smogon,carryover  only some (smogon, tournaments, replays, carryover)
+ *   npm run meta -- --months 3                  look back 3 Smogon months (default 8)
+ *   npm run meta -- --max-replays 300           new replays read per format (default 1500)
+ *
+ * Needs network access to www.smogon.com, replay.pokemonshowdown.com and play.limitlesstcg.com (the
+ * scheduled GitHub Action has it; it also keeps .cache/meta/ between runs). See docs/UPDATING_META.md.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { chaosToSnapshot, parseMetaFile, type MetaFile, type MetaSnapshot } from '../src/domain/meta.ts';
+import { resolve } from 'node:path';
+import { compareSnapshots, metaSourceKind, parseMetaFile, type MetaFile, type MetaSnapshot } from '../src/domain/meta.ts';
+import { carryOverSnapshot, fillSpreads } from '../src/domain/metaSources.ts';
+import { Context, ROOT, type Regulation } from './meta/context.ts';
+import { tournamentsSnapshot } from './meta/limitless.ts';
+import { replaysSnapshot } from './meta/replays.ts';
+import { listMonths, smogonSnapshot } from './meta/smogon.ts';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = resolve(ROOT, 'src/data/generated/meta.json');
-const STATS = 'https://www.smogon.com/stats/';
-/** Smogon's VGC cutoffs, best first. */
-const CUTOFFS = [1760, 1630, 1500, 0];
+const SOURCES = ['smogon', 'tournaments', 'replays', 'carryover'] as const;
 
-const monthsBack = Number(process.argv[process.argv.indexOf('--months') + 1]) || 8;
-
-const toID = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
-
-interface Regulation {
-  id: string;
-  game: string;
-  shortName: string;
-}
-const manifest = JSON.parse(readFileSync(resolve(ROOT, 'src/data/generated/regulations.json'), 'utf8')) as { regulations: Regulation[] };
-const dataset = JSON.parse(readFileSync(resolve(ROOT, 'src/data/generated/champions.json'), 'utf8')) as {
-  species: Record<string, { id: string; name: string; baseSpecies: string; isMega: boolean; battleOnly?: string }>;
+const arg = (name: string) => {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
 };
+const monthsBack = Number(arg('--months')) || 8;
+const maxReplays = Number(arg('--max-replays')) || 1500;
+const wanted = new Set((arg('--sources') ?? SOURCES.join(',')).split(',').map((s) => s.trim()));
+for (const s of wanted) if (!(SOURCES as readonly string[]).includes(s)) throw new Error(`Unknown source "${s}" (use ${SOURCES.join(', ')}).`);
 
-/** Showdown species name → this app's Champions species id (Megas count as their base forme). */
-function speciesId(name: string): string | undefined {
-  const sp = dataset.species[toID(name)];
-  if (!sp) return undefined;
-  return sp.isMega && sp.battleOnly ? sp.battleOnly : sp.id;
+const ctx = new Context();
+const previous: MetaFile = existsSync(OUT) ? parseMetaFile(JSON.parse(readFileSync(OUT, 'utf8'))) : { version: 1, generatedAt: '1970-01-01', regulations: {} };
+const now = new Date().toISOString();
+
+let months: string[] = [];
+if (wanted.has('smogon')) {
+  try {
+    months = (await listMonths()).slice(0, monthsBack);
+    console.log(`Smogon stats months (newest first): ${months.join(', ')}`);
+  } catch (e) {
+    console.log(`Smogon: ${(e as Error).message} — keeping the previous Smogon snapshots.`);
+  }
 }
 
-async function get(url: string): Promise<Response | null> {
-  const res = await fetch(url, { headers: { 'User-Agent': 'pokemon-team-builder meta build (+https://github.com/Mernhil/pokemon-team-builder)' } });
-  return res.ok ? res : null;
+const out: Record<string, MetaSnapshot> = {};
+const isSmogon = (s: MetaSnapshot | undefined) => !!s && metaSourceKind(s) === 'smogon';
+
+/** Smogon snapshots of other regulations, nearest in time first (earlier ones win ties): spread donors. */
+function donors(reg: Regulation): MetaSnapshot[] {
+  const at = Date.parse(reg.start);
+  return ctx.regulations
+    .filter((r) => r.id !== reg.id)
+    .map((r) => ({ r, snap: [out[r.id], previous.regulations[r.id]].find(isSmogon) }))
+    .filter((x): x is { r: Regulation; snap: MetaSnapshot } => !!x.snap)
+    .sort((a, b) => Math.abs(Date.parse(a.r.start) - at) - Math.abs(Date.parse(b.r.start) - at) || a.r.start.localeCompare(b.r.start))
+    .map((x) => x.snap);
 }
 
-/** Stats months on the index page, newest first ("2026-08", …; the -DLC variants are skipped). */
-async function listMonths(): Promise<string[]> {
-  const res = await get(STATS);
-  if (!res) throw new Error(`Couldn't read ${STATS}`);
-  const html = await res.text();
-  return [...new Set([...html.matchAll(/href="(\d{4}-\d{2})\/"/g)].map((m) => m[1]))].sort().reverse();
+/** The same numbers as `b` (ignoring when it was built)? Keeps a daily run from rewriting unchanged data. */
+const sameData = (a: MetaSnapshot, b: MetaSnapshot) => JSON.stringify({ ...a, updatedAt: '' }) === JSON.stringify({ ...b, updatedAt: '' });
+
+async function attempt<T>(label: string, fn: () => Promise<T | null>): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (e) {
+    console.log(`  ${label}: failed (${(e as Error).message}); keeping the previous snapshot if any.`);
+    return null;
+  }
 }
 
-/** Showdown format ids for a Champions regulation id (champions-reg-mc → …vgc2026regmc, …bo3). */
-function formatIds(reg: Regulation): string[] {
-  const letters = reg.id.replace(/^champions-reg-/, '');
-  const year = '2026'; // TODO: take the season from the regulation once a Champions regulation spans another VGC year.
-  const base = `gen9championsvgc${year}reg${letters}`;
-  return [base, `${base}bo3`];
-}
+for (const reg of ctx.regulations) {
+  console.log(`${reg.shortName}:`);
+  const prev = previous.regulations[reg.id];
+  const fresh: MetaSnapshot[] = [];
 
-async function findChaos(reg: Regulation, months: string[]) {
-  for (const month of months.slice(0, monthsBack)) {
-    for (const format of formatIds(reg)) {
-      for (const cutoff of CUTOFFS) {
-        const url = `${STATS}${month}/chaos/${format}-${cutoff}.json`;
-        const res = await get(url);
-        if (res) return { month, format, cutoff, url, json: (await res.json()) as unknown };
-      }
+  const smogon = wanted.has('smogon') && months.length ? await attempt('Smogon', () => smogonSnapshot(ctx, reg, months)) : null;
+  if (smogon) fresh.push(smogon);
+  const hasSmogon = !!smogon || isSmogon(prev);
+
+  if (!hasSmogon && reg.start <= now) {
+    if (wanted.has('tournaments')) {
+      const t = await attempt('Tournaments', () => tournamentsSnapshot(ctx, reg));
+      if (t) fresh.push(t);
+    }
+    if (wanted.has('replays')) {
+      const r = await attempt('Replays', () => replaysSnapshot(ctx, reg, { maxNew: maxReplays }));
+      if (r) fresh.push(r);
     }
   }
-  return null;
-}
+  if (!hasSmogon && wanted.has('carryover')) {
+    // The latest earlier regulation with data (its own best snapshot).
+    const before = ctx.regulations.filter((r) => r.start < reg.start && out[r.id]).at(-1);
+    const c = before ? carryOverSnapshot(out[before.id], reg.id, ctx.legality(reg.id)) : null;
+    if (c) {
+      fresh.push(c);
+      console.log(`  Carry-over: ${c.entries.length} Pokémon from ${before!.shortName} still allowed.`);
+    }
+  }
 
-const previous: MetaFile = existsSync(OUT) ? parseMetaFile(JSON.parse(readFileSync(OUT, 'utf8'))) : { version: 1, generatedAt: '1970-01-01', regulations: {} };
-const months = await listMonths();
-console.log(`Smogon stats months (newest first): ${months.slice(0, monthsBack).join(', ')}`);
-
-const regulations: Record<string, MetaSnapshot> = { ...previous.regulations };
-const unknown = new Set<string>();
-for (const reg of manifest.regulations.filter((r) => r.game === 'champions')) {
-  const found = await findChaos(reg, months);
-  if (!found) {
-    console.log(`${reg.shortName}: no published stats yet${regulations[reg.id] ? ' (keeping the previous snapshot)' : ''}.`);
+  const filled = fresh.map((s) => (metaSourceKind(s) === 'smogon' ? s : fillSpreads(s, donors(reg), (id) => ctx.baseStats(id))));
+  // A fresh snapshot replaces the previous one from the same source; otherwise the previous one competes.
+  const candidates = [...filled, ...(prev && !filled.some((s) => metaSourceKind(s) === metaSourceKind(prev)) ? [prev] : [])];
+  const best = candidates.sort(compareSnapshots)[0];
+  if (!best) {
+    console.log('  no data yet.');
     continue;
   }
-  const snap = chaosToSnapshot(found.json, {
-    regulationId: reg.id,
-    format: found.format,
-    month: found.month,
-    url: found.url,
-    speciesId: (name: string) => {
-      const sid = speciesId(name);
-      if (!sid) unknown.add(name);
-      return sid;
-    },
-  });
-  regulations[reg.id] = snap;
-  console.log(`${reg.shortName}: ${found.format} ${found.month} ≥${found.cutoff}, ${snap.source.battles} battles, ${snap.entries.length} Pokémon.`);
+  out[reg.id] = prev && sameData(best, prev) ? prev : best;
+  console.log(`  → using ${metaSourceKind(best)}${best === prev ? ' (previous snapshot)' : ''}: ${best.entries.length} Pokémon.`);
 }
-if (unknown.size) console.log(`Not in the Champions dataset (dropped): ${[...unknown].sort().join(', ')}`);
+if (ctx.unknown.size) console.log(`Not in the Champions dataset (dropped): ${[...ctx.unknown].sort().join(', ')}`);
 
-const out: MetaFile = { version: 1, generatedAt: new Date().toISOString().slice(0, 10), regulations };
-parseMetaFile(out); // never write a file the app would reject
-const unchanged = JSON.stringify(previous.regulations) === JSON.stringify(regulations);
-if (unchanged) console.log('No change in the data.');
-else writeFileSync(OUT, JSON.stringify(out, null, 1) + '\n');
-console.log(unchanged ? 'meta.json left as is.' : `wrote ${OUT}`);
+const file: MetaFile = { version: 1, generatedAt: now.slice(0, 10), regulations: out };
+parseMetaFile(file); // never write a file the app would reject
+const unchanged = JSON.stringify(previous.regulations) === JSON.stringify(out);
+if (!unchanged) writeFileSync(OUT, JSON.stringify(file, null, 1) + '\n');
+console.log(unchanged ? 'No change in the data; meta.json left as is.' : `wrote ${OUT}`);

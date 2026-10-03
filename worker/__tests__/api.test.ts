@@ -92,7 +92,7 @@ describe('payload validation', () => {
     const stored = (await pull(env, 'a@b.c')).docs[0].json as Record<string, unknown>;
     expect(stored.evil).toBeUndefined();
     expect(stored.notes).toBe('ok');
-    const m = createMatch('2026-10-01');
+    const m = { ...createMatch('2026-10-01'), createdAt: NOW - 1000, updatedAt: NOW - 1000 };
     expect((await push(env, 'a@b.c', [{ id: m.id, kind: 'match', updatedAt: m.updatedAt, deleted: false, json: m }])).status).toBe(200);
   });
 
