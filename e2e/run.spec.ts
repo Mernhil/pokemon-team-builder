@@ -91,7 +91,7 @@ test('Log a gift by hand, and the Pokémon joins the party', async ({ page }) =>
   await startRun(page);
   await runTab(page, 'Encounters').click();
   await page.getByRole('combobox', { name: 'Where' }).selectOption({ label: 'Twinleaf Town' });
-  await page.getByRole('textbox', { name: 'Pokémon', exact: true }).fill('Turtwig');
+  await page.getByRole('combobox', { name: 'Pokémon', exact: true }).fill('Turtwig');
   await page.getByRole('textbox', { name: 'Nickname', exact: true }).fill('Leafy');
   await page.getByRole('button', { name: 'Log it' }).click();
   await runTab(page, 'Party').click();

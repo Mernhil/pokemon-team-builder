@@ -109,7 +109,7 @@ function PlaceEncounters({ run, loc, rows, onLog }: { run: Run; loc: string; row
             const name = speciesName(r.species);
             const sp = dex.species(r.species);
             return (
-              <li key={r.species} data-blocked={!check.ok} className={cn('flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2', !check.ok && 'opacity-60')}>
+              <li key={r.species} data-blocked={!check.ok} className={cn('flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2', !check.ok && 'border-dashed bg-surface-2')}>
                 <Sprite speciesId={r.species} name={name} types={sp?.types} set={format.spriteSet} size={36} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{name}</span>
