@@ -126,6 +126,12 @@ The Meta tab lists each Champions regulation's most-used Pokémon with their com
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
 
+### Stat Point optimiser
+
+The **Optimise** button in the stat calculator (Champions Stat Points and Gen 3–9 EVs) finds the cheapest spread for goals: **survive** a move (every roll, 15 of 16, or at least half; optionally on a crit), **outspeed** a Speed (or, for Trick Room, stay under it), or **knock out** a Pokémon in one or two hits, in priority order, with the leftover points put in one stat or "max HP, then split evenly".
+The other Pokémon comes from the most-used sets, your saved teams, or any species (prefilled with its meta set where there is one). Every number comes from the Damage Calc (`src/domain/optimizer.ts`), and because each goal is monotonic in its stats the search is exact without trying every combination: for each HP value the least Def/SpD that passes, found with a two-pointer walk, and a binary search for Atk/SpA/Spe. It can keep your nature or suggest one (never lowering a stat a goal needs). A goal that can't be met says how short it falls ("short by 3% even at max HP and SpD: consider Assault Vest", "needs 4 more SP than you have"); when the points run out the later goal is the one dropped.
+The result sits next to your current spread with ✓/✗ per goal; **Apply** writes it (undoable). Speed tiers' "Outspeed this" and the Threat report's cells ("Survive this…") open it with the goal filled in.
+
 ### Threat report
 
 **More → Threat report** (`#threats`, with a "Top threats" line in Team check) runs the Damage Calc for your whole team against the most-used Champions sets, in both directions, on one screen.

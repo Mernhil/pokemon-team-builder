@@ -111,10 +111,10 @@ Timid Nature
 - Air Slash
 `;
 
-/** The Stat Point calculator is always open on desktop and a collapsed section on phones. */
+/** The stat calculator (Stat Points, EVs…) is always open on desktop and a collapsed section on phones. */
 export async function openStatCalculator(page: Page) {
-  const hp = page.getByRole('spinbutton', { name: 'HP SP value' });
-  if (await hp.isVisible()) return;
-  await page.getByRole('heading', { name: /Stat Point Calculator/ }).click();
-  await expect(hp).toBeVisible();
+  const probe = page.getByRole('button', { name: 'Optimise', exact: true });
+  if (await probe.isVisible()) return;
+  await page.getByRole('heading', { name: /Stat Point Calculator|EVs & IVs/ }).click();
+  await expect(probe).toBeVisible();
 }

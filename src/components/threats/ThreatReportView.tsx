@@ -9,6 +9,7 @@ import { snapshotAge } from '@/domain/speedTiers';
 import { THREAT_COUNTS, bucket, KILL_LABEL, KILL_SHORT, type ThreatCell } from '@/domain/threats';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
+import { useOptimizerStore } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
@@ -50,6 +51,17 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
     calc.setSide('defender', { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode }, crits: [false, false, false, false] });
     calc.setField(field);
     setView('calc');
+  };
+
+  const openOptimizer = (slot: number, threat: MetaSet, cell: ThreatCell) => {
+    if (!cell.theirs) return;
+    useOptimizerStore.getState().open({
+      slotKey: `${team.id}:${slot}`,
+      goals: [{ kind: 'survive', attacker: threat.set, attackerCond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode }, moveId: cell.theirs.moveId, rolls: 16 }],
+      field,
+    });
+    useTeamStore.getState().setActiveSlot(slot);
+    setView('builder');
   };
 
   const calculated = rows.filter(Boolean).length;
@@ -207,7 +219,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                       </th>
                       {members.map((m, j) => (
                         <td key={m.slot} className="p-1 align-top">
-                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} onOpen={() => openCalc(m.set, m.slot, t)} />
+                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} survive={rows[i]?.[j]?.theirs ? `Optimise ${dex.species(m.set.speciesId)?.name} to survive ${dex.species(t.speciesId)?.name}'s ${rows[i]![j].theirs!.move}` : ''} onOpen={() => openCalc(m.set, m.slot, t)} onSurvive={() => openOptimizer(m.slot, t, rows[i]![j])} />
                         </td>
                       ))}
                     </tr>
@@ -237,7 +249,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                       <div key={m.slot} className="flex items-center gap-2">
                         <Sprite speciesId={m.set.speciesId} name={dex.species(m.set.speciesId)?.name} types={dex.species(m.set.speciesId)?.types} set={format.spriteSet} size={28} />
                         <div className="min-w-0 flex-1">
-                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} onOpen={() => openCalc(m.set, m.slot, t)} />
+                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} survive={rows[i]?.[j]?.theirs ? `Optimise ${dex.species(m.set.speciesId)?.name} to survive ${dex.species(t.speciesId)?.name}'s ${rows[i]![j].theirs!.move}` : ''} onOpen={() => openCalc(m.set, m.slot, t)} onSurvive={() => openOptimizer(m.slot, t, rows[i]![j])} />
                         </div>
                       </div>
                     ))}
@@ -257,28 +269,35 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   );
 }
 
-function Cell({ cell, sentence, onOpen }: { cell: ThreatCell | undefined; sentence: string; onOpen: () => void }) {
+function Cell({ cell, sentence, survive, onOpen, onSurvive }: { cell: ThreatCell | undefined; sentence: string; survive: string; onOpen: () => void; onSurvive: () => void }) {
   if (!cell) return <div className="min-h-16 rounded-lg border border-dashed border-border p-2 text-center text-muted">…</div>;
   const b = bucket(cell.verdict);
   const range = (m: NonNullable<ThreatCell['mine']>) => (m.percent[0] === m.percent[1] ? `${m.percent[0]}%` : `${m.percent[0]}–${m.percent[1]}%`);
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={sentence}
-      title={sentence}
-      className={cn(
-        'block min-h-16 w-full min-w-28 rounded-lg border p-1.5 text-left leading-tight hover:brightness-95 pointer-coarse:min-h-14',
-        b === 'good' && 'border-accent/50 bg-accent/12',
-        b === 'bad' && 'border-warn/60 bg-warn/15',
-        b === 'even' && 'border-border bg-surface-2',
+    <div className="space-y-0.5">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={sentence}
+        title={sentence}
+        className={cn(
+          'block min-h-16 w-full min-w-28 rounded-lg border p-1.5 text-left leading-tight hover:brightness-95 pointer-coarse:min-h-14',
+          b === 'good' && 'border-accent/50 bg-accent/12',
+          b === 'bad' && 'border-warn/60 bg-warn/15',
+          b === 'even' && 'border-border bg-surface-2',
+        )}
+      >
+        <span className="block font-semibold">
+          {b === 'good' ? '✓' : b === 'bad' ? '✗' : '~'} You: {cell.mine ? `${KILL_SHORT[cell.mine.kill]} ${range(cell.mine)}` : '—'}
+        </span>
+        <span className="block">It: {cell.theirs ? `${KILL_SHORT[cell.theirs.kill]} ${range(cell.theirs)}` : '—'}</span>
+        <span className="block text-muted">{speedText(cell)}</span>
+      </button>
+      {cell.theirs && (
+        <button type="button" onClick={onSurvive} aria-label={survive} title={survive} className="block w-full rounded px-1 py-0.5 text-left text-[11px] font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
+          Survive this…
+        </button>
       )}
-    >
-      <span className="block font-semibold">
-        {b === 'good' ? '✓' : b === 'bad' ? '✗' : '~'} You: {cell.mine ? `${KILL_SHORT[cell.mine.kill]} ${range(cell.mine)}` : '—'}
-      </span>
-      <span className="block">It: {cell.theirs ? `${KILL_SHORT[cell.theirs.kill]} ${range(cell.theirs)}` : '—'}</span>
-      <span className="block text-muted">{speedText(cell)}</span>
-    </button>
+    </div>
   );
 }

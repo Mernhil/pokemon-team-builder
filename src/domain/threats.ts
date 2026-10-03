@@ -47,6 +47,7 @@ export function classifyKill(koText: string, percent: [number, number]): Kill {
 
 export interface MoveSummary {
   move: string;
+  moveId: string;
   /** Damage as % of the defender's max HP. */
   percent: [number, number];
   kill: Kill;
@@ -82,7 +83,7 @@ function best(results: MoveResult[], pessimistic: boolean): MoveSummary | null {
     const kill = classifyKill(f.koText, f.percent);
     const rank = RANK[kill];
     if (!top || rank > top.rank || (rank === top.rank && f.percent[1] > top.percent[1])) {
-      top = { move: m.name, percent: f.percent, kill, text: f.koText || f.desc, rank };
+      top = { move: m.name, moveId: m.moveId, percent: f.percent, kill, text: f.koText || f.desc, rank };
     }
   }
   if (!top || top.kill === 'none') return null;

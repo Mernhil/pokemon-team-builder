@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { SAMPLE_TEAM, expectNoA11yViolations, importTeam, openApp, setTheme } from './helpers';
+import { SAMPLE_TEAM, expectNoA11yViolations, importTeam, openApp, openStatCalculator, setTheme } from './helpers';
 
 // axe-core (WCAG 2.0/2.1 A + AA) on each main view, in both themes.
 for (const theme of ['light', 'dark'] as const) {
@@ -53,6 +53,17 @@ for (const theme of ['light', 'dark'] as const) {
       await importTeam(page, SAMPLE_TEAM);
       await page.goto('/#threats');
       await page.getByRole('status').filter({ hasText: /threats calculated/ }).waitFor({ timeout: 30_000 });
+      await expectNoA11yViolations(page);
+    });
+
+    test('Optimiser panel', async ({ page }) => {
+      await importTeam(page, 'Incineroar @ Sitrus Berry\nAbility: Intimidate\nAdamant Nature\n- Flare Blitz\n- Fake Out\n');
+      await openStatCalculator(page);
+      await page.getByRole('button', { name: 'Optimise', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: 'Optimise spread' });
+      await dialog.getByRole('button', { name: 'Survive a move' }).click();
+      await dialog.getByRole('button', { name: 'Add goal' }).click();
+      await dialog.getByRole('button', { name: 'Knock out' }).click();
       await expectNoA11yViolations(page);
     });
 

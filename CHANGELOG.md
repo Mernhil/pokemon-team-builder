@@ -9,6 +9,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 - **Threat report:** your whole team against the most-used Champions sets on one screen: your best move and its best move (OHKO / 2HKO / 3HKO+ with damage ranges), who moves first, and plain-language summaries of the worst threats. Change the field (Doubles/Singles, weather, terrain, Trick Room) or the number of threats and everything updates; tap a cell to open it in the Damage Calc. Under More → Threat report, with a "Top threats" line in Team check.
 
+- **Stat Point optimiser:** an **Optimise** button in the stat calculator finds the cheapest spread for goals like "survive Garchomp's Earthquake", "outspeed Flutter Mane under Tailwind" and "2HKO Kingambit", then puts the leftover points where you say (one stat, or max HP and an even split). It can suggest a nature, tells you how short an unreachable goal falls and what could help, and applies with Undo. Works for Champions Stat Points and Gen 3–9 EVs. Also reachable from Speed tiers ("Optimise…") and the Threat report ("Survive this…").
+
 ### Fixed
 - Light theme: better contrast for the selected game in Pokénav and for the map caption.
 

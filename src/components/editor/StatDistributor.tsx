@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { Minus, Plus, RotateCcw, Sparkles, Target } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
-import { calcStats, gbHpDV, investRange, investmentForTarget, lgpeFriendshipPercent, natureModifier, spendBudget, spreadKey, sumStats } from '@/domain/stats';
+import { calcStats, canOptimize, gbHpDV, investRange, investmentForTarget, lgpeFriendshipPercent, natureModifier, spendBudget, spreadKey, sumStats } from '@/domain/stats';
 import {
   STAT_IDS,
   STAT_LABELS,
@@ -13,7 +13,10 @@ import {
   type StatSystem,
   type StatTable,
 } from '@/domain/types';
+import { useOptimizerStore } from '@/store/optimizerStore';
 import { Button } from '../ui/primitives';
+// The optimiser pulls in the damage calculator, so it loads when first opened.
+const OptimizerPanel = lazy(() => import('./OptimizerPanel').then((m) => ({ default: m.OptimizerPanel })));
 import { cn } from '../ui/styles';
 import { STAT_COLOR_VAR } from '../ui/color';
 
@@ -34,6 +37,8 @@ interface Props {
   /** Whether the Mega forme is the one shown (controlled; shared with the battle Mega toggle). */
   megaActive?: boolean;
   onMegaActive?: (on: boolean) => void;
+  /** `${teamId}:${slot}`, so a hand-off from another screen can open this Pokémon's optimiser. */
+  slotKey?: string;
 }
 
 type Preset = { label: string; spread: Partial<StatTable> };
@@ -73,8 +78,12 @@ const zero = (): StatTable => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
  *  - Legends: Arceus Effort Levels (0–10 each; IVs are folded into them)
  * Inline +/− buttons on each stat set the nature Showdown-style (Gen 3+).
  */
-export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive }: Props) {
+export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive, slotKey }: Props) {
   const [localMega, setLocalMega] = useState(true);
+  const [optimizerOpen, setOptimizerOpen] = useState(false);
+  const request = useOptimizerStore((s) => s.request);
+  const clearRequest = useOptimizerStore((s) => s.clear);
+  const requested = !!slotKey && request?.slotKey === slotKey;
   const sys = format.statSystem;
   const mech = formatMechanics(format);
   const key = spreadKey(sys);
@@ -382,6 +391,11 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
             {p.label}
           </Button>
         ))}
+        {canOptimize(format) && (
+          <Button size="sm" variant="primary" onClick={() => setOptimizerOpen(true)} title="Find the cheapest spread for goals like surviving a move or outspeeding a threat">
+            <Sparkles size={13} aria-hidden /> Optimise
+          </Button>
+        )}
         {showIV && (
           <Button
             size="sm"
@@ -393,6 +407,25 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
           </Button>
         )}
       </div>
+      {canOptimize(format) && (optimizerOpen || requested) && (
+        <Suspense fallback={null}>
+        <OptimizerPanel
+          open={optimizerOpen || requested}
+          onOpenChange={(o) => {
+            setOptimizerOpen(o);
+            if (!o) clearRequest();
+          }}
+          dex={dex}
+          format={format}
+          set={set}
+          request={requested ? request : null}
+          onApply={(spread, nature) => {
+            onReplaceSpread(spread);
+            if (nature !== set.nature) onNature(nature);
+          }}
+        />
+        </Suspense>
+      )}
       <SpeedBenchmark mega={showMega} set={set} species={shown} format={format} dex={dex} onSpread={onSpread} speed={stats.spe} unit={unit} />
     </div>
   );

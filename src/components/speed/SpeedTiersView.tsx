@@ -21,6 +21,7 @@ import {
 import { TERRAINS, WEATHERS } from '@/domain/battle/conditions';
 import type { FormatRules, Team } from '@/domain/types';
 import { useMetaStore } from '@/store/metaStore';
+import { useOptimizerStore } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
 import { ChipRow, Toggle } from '../ui/chips';
@@ -212,7 +213,7 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
         {ladder.map((row) => (
           <Row key={row.key} row={row} dex={dex} format={format} open={open === row.key} onToggle={() => setOpen(open === row.key ? null : row.key)}>
             {!row.mine && (
-              <OutspeedPanel row={row} dex={dex} format={format} scenario={scenario} mover={mover} onApply={() => apply(row)} />
+              <OutspeedPanel row={row} dex={dex} format={format} scenario={scenario} mover={mover} teamId={team.id} onApply={() => apply(row)} />
             )}
           </Row>
         ))}
@@ -282,6 +283,7 @@ function OutspeedPanel({
   format,
   scenario,
   mover,
+  teamId,
   onApply,
 }: {
   row: SpeedRow;
@@ -289,6 +291,7 @@ function OutspeedPanel({
   format: FormatRules;
   scenario: SpeedScenario;
   mover: { slot: number; set: import('@/domain/types').PokemonSet } | undefined;
+  teamId: string;
   onApply: () => void;
 }) {
   if (!mover) return <p className="text-sm text-muted">Add a Pokémon to your team to see what it needs to {scenario.trickRoom ? 'move before' : 'outspeed'} this.</p>;
@@ -310,6 +313,21 @@ function OutspeedPanel({
           </p>
         )}
       </div>
+      <Button
+        size="sm"
+        aria-label={`Optimise ${name} to ${scenario.trickRoom ? 'move before' : 'outspeed'} ${row.name}`}
+        onClick={() => {
+          useOptimizerStore.getState().open({
+            slotKey: `${teamId}:${mover.slot}`,
+            goals: [{ kind: 'outspeed', target: row.speed, mode: scenario.trickRoom ? 'under' : 'over', label: `${row.name} at ${row.speed}` }],
+            tailwind: scenario.mine.tailwind,
+          });
+          useTeamStore.getState().setActiveSlot(mover.slot);
+          useTeamStore.getState().setView('builder');
+        }}
+      >
+        Optimise…
+      </Button>
       {plan.status === 'reachable' && (
         <Button variant="primary" size="sm" disabled={!can} onClick={onApply} aria-label={`Apply ${plan.sp} Spe ${plan.nature} to ${name}`}>
           Apply
