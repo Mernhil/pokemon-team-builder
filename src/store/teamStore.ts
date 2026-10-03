@@ -47,6 +47,8 @@ export interface TeamState {
   addVariation: (id: string) => string;
   deleteTeam: (id: string) => void;
   addTeams: (teams: Team[], activate?: boolean) => void;
+  /** Cloud sync: write merged teams and remove deleted ones, keeping each team's own `updatedAt`. */
+  applySynced: (upserts: Team[], deletes: string[]) => void;
 
   // slots — take an explicit team id (not just the active team) so the same slot editor can drive
   // more than one team on screen at once (the Matches tab's Your Team / Enemy Team builders).
@@ -229,6 +231,22 @@ export const useTeamStore = create<TeamState>()(
             }
             const activeTeamId = teams[s.activeTeamId] ? s.activeTeamId : order[0];
             return { teams, order, activeTeamId, activeSlot: 0 };
+          }),
+        applySynced: (upserts, deletes) =>
+          set((s) => {
+            const teams = { ...s.teams };
+            for (const id of deletes) delete teams[id];
+            for (const t of upserts) teams[t.id] = enforceCapabilities(t);
+            // A variation whose folder is gone becomes a folder itself, rather than vanishing.
+            for (const t of Object.values(teams)) if (t.groupId && !Object.hasOwn(teams, t.groupId)) teams[t.id] = { ...t, groupId: undefined };
+            if (Object.keys(teams).length === 0) {
+              const fresh = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team');
+              teams[fresh.id] = fresh;
+            }
+            const topLevel = Object.keys(teams).filter((id) => !teams[id].groupId);
+            const order = [...s.order.filter((id) => topLevel.includes(id)), ...topLevel.filter((id) => !s.order.includes(id))];
+            const activeTeamId = Object.hasOwn(teams, s.activeTeamId) ? s.activeTeamId : order[0];
+            return { teams, order, activeTeamId, activeSlot: activeTeamId === s.activeTeamId ? s.activeSlot : 0 };
           }),
         addTeams: (incoming, activate = true) =>
           set((s) => {

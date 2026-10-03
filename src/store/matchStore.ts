@@ -18,6 +18,8 @@ interface MatchState {
   deleteMatch: (id: string) => void;
   duplicateAsTemplate: (id: string, date?: string) => string;
   importMatches: (matches: Match[]) => void;
+  /** Cloud sync: write merged matches and remove deleted ones, keeping each match's own `updatedAt`. */
+  applySynced: (upserts: Match[], deletes: string[]) => void;
   setScoutYourTeam: (id: string | undefined) => void;
   setScoutEnemyTeam: (id: string | undefined) => void;
 }
@@ -91,6 +93,17 @@ export const useMatchStore = create<MatchState>()(
         set((s) => ({ matches: { ...s.matches, [clean.id]: clean }, order: [clean.id, ...s.order] }));
         return clean.id;
       },
+      applySynced: (upserts, deletes) =>
+        set((s) => {
+          const matches = { ...s.matches };
+          for (const id of deletes) delete matches[id];
+          const added: string[] = [];
+          for (const m of upserts) {
+            if (!matches[m.id]) added.push(m.id);
+            matches[m.id] = enforceMatchCapabilities(m);
+          }
+          return { matches, order: [...added, ...s.order.filter((id) => Object.hasOwn(matches, id))] };
+        }),
       importMatches: (incoming) =>
         set((s) => {
           const matches = { ...s.matches };

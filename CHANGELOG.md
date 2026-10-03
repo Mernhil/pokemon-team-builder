@@ -17,6 +17,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 - **Regulation changes:** a new **Regulation diff** page (More → Regulation diff) compares two regulations: what was added or removed (Pokémon, Megas, items, moves, abilities), species changes as before → after, and unconfirmed entries. Saved teams show a badge when they're not in the live regulation and which of their Pokémon, items or moves aren't legal in it. The regulation banner now shows what moving a team to the live regulation breaks, changes or newly allows, and **Copy to <regulation>** makes a variation with the illegal parts removed and a checklist (the original is untouched). A next regulation with a start date counts down in the banner.
 
+- **Cloud sync (web and phone app):** an opt-in way to keep your teams and match log the same across devices (Settings → Sync). It works offline and syncs when it can; if two devices change the same team, the older change is kept as a "Conflict copy" variation so nothing is lost. It needs a one-time setup on the Cloudflare side (docs/SYNC.md); until then the app behaves as before and Settings says sync isn't set up. The desktop app doesn't sync yet.
+
 ### Fixed
 - Light theme: better contrast for the selected game in Pokénav, the map caption, the Losses archetype chip and the small-sample rows in the match stats; the saved-team picker in the match form now has a label.
 

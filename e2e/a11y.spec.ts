@@ -99,6 +99,16 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoA11yViolations(page);
     });
 
+    test('Settings with sync on', async ({ page }) => {
+      await page.route('**/api/sync**', (route) => (route.request().method() === 'GET' ? route.fulfill({ json: { docs: [], cursor: 0, more: false } }) : route.fulfill({ json: { results: [] } })));
+      await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More/ }).click();
+      await page.getByRole('menuitem', { name: /Settings/ }).click();
+      const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
+      await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
+      await dialog.getByRole('status').filter({ hasText: /Last sync: / }).waitFor();
+      await expectNoA11yViolations(page);
+    });
+
     test('Meta', async ({ page }) => {
       await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More/ }).click();
       await page.getByRole('menuitem', { name: 'Meta' }).click();

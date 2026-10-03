@@ -1,8 +1,12 @@
+import { Suspense, lazy } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTeamStore } from '@/store/teamStore';
 import { UpdateCheckButton } from './DesktopUpdater';
 import { Modal } from './ui/Modal';
 import { Label, Tabs } from './ui/primitives';
+
+// Cloud sync loads when Settings opens (its engine loads only once sync is on).
+const SyncSettings = lazy(() => import('./SyncSettings'));
 
 /**
  * Settings & credits: appearance, where data lives, and who made the data and art the app uses.
@@ -36,12 +40,21 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             <Label>Your data</Label>
           </h3>
           <p>
-            Teams, the match log and your picker favourites are stored only on this device, in this browser (or the desktop app). Nothing is
-            uploaded. To move teams to another device, use <b>Import / Export → JSON backup</b> from the team menu.
+            Teams, the match log and your picker favourites are stored on this device, in this browser (or the desktop app). Nothing is uploaded
+            unless you turn on <b>Sync</b> below. To move teams to another device without it, use <b>Import / Export → JSON backup</b> from the team menu.
           </p>
           <div className="flex items-center gap-2">
             <UpdateCheckButton />
           </div>
+        </section>
+
+        <section className="space-y-1.5" aria-labelledby="set-sync">
+          <h3 id="set-sync">
+            <Label>Sync</Label>
+          </h3>
+          <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+            <SyncSettings />
+          </Suspense>
         </section>
 
         <section className="space-y-1.5" aria-labelledby="set-credits">

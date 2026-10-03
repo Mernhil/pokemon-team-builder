@@ -1,14 +1,26 @@
-// Cloudflare Workers deploy of the phone/web app (static assets only, no server code).
-// Workers Builds runs `npm run build` then `npx wrangler deploy` on every push; see docs/IPHONE_APP.md.
+// Cloudflare Workers deploy of the phone/web app: the static app, plus a small Worker for cloud sync
+// (/api/*, worker/). Workers Builds runs `npm run build` then `npx wrangler deploy` on every push;
+// see docs/IPHONE_APP.md, and docs/SYNC.md for the one-time sync setup.
 {
   "name": "pokemon-team-builder",
+  "main": "worker/index.ts",
+  "tsconfig": "./tsconfig.worker.json",
   "compatibility_date": "2026-09-01",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Only /api/* runs the Worker; every other request is served straight from the assets, as before.
+    "run_worker_first": ["/api/*"]
   },
   // Served at pokemon-team-builder.<account>.workers.dev, gated by Cloudflare Access.
   "workers_dev": true,
   // Per-version preview URLs would be a second, unprotected way in; keep them off.
-  "preview_urls": false
+  "preview_urls": false,
+  // ACCESS_TEAM_DOMAIN and ACCESS_AUD are set in the dashboard (Worker → Settings → Variables and
+  // Secrets); keep them across deploys instead of letting this file wipe them.
+  "keep_vars": true
+
+  // Cloud sync needs a D1 database. After creating it (docs/SYNC.md step 1), uncomment this with its id:
+  // , "d1_databases": [{ "binding": "DB", "database_name": "pokemon-team-builder", "database_id": "<paste the id>", "migrations_dir": "migrations" }]
 }

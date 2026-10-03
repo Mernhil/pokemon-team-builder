@@ -51,6 +51,8 @@ isn't available in CI. On a device, after **Add to Home Screen**:
    notice.
 8. After a new deploy, reopening the app switches to the new version by itself.
 
+> Cloud sync across devices (teams and the match log) is a separate, opt-in feature with its own one-time setup: see [SYNC.md](SYNC.md).
+
 ## Hosting: Cloudflare Workers + Cloudflare Access (private, free)
 
 The repo is private and the app should only be reachable by people explicitly allowed in, so it

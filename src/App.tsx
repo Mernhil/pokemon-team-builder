@@ -28,6 +28,7 @@ import { GEN_GAMES } from '@/domain/generations';
 import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { toast } from '@/store/toastStore';
+import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
 import { OffenseMatrix } from './components/analysis/OffenseMatrix';
@@ -85,6 +86,21 @@ export default function App() {
   const view = useTeamStore((s) => s.view);
   const setView = useTeamStore((s) => s.setView);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Cloud sync (opt-in): its code loads only once it is turned on.
+  const syncOn = useSyncStore((s) => s.enabled);
+  useEffect(() => {
+    if (!syncOn || !syncAvailable()) return;
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    void import('./sync/runner').then((m) => {
+      if (!cancelled) stop = m.startAutoSync();
+    });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [syncOn]);
 
   // Deep link: #calc opens the calculator, #dex the Pokédex, #builder the team builder, …
   useEffect(() => {
