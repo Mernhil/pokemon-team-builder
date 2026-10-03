@@ -13,6 +13,9 @@ const REMOTE_TEAM = {
 /** A fake /api/sync: serves the given documents on pull, accepts every push, and records what was pushed. */
 async function fakeServer(page: Page, docs: unknown[] = [], status = 200) {
   const pushed: { id: string; kind: string; deleted: boolean }[] = [];
+  // Sharing endpoints: nothing shared with this account.
+  await page.route('**/api/shares', (route) => route.fulfill(status !== 200 ? { status, contentType: 'application/json', body: JSON.stringify({ error: 'nope' }) } : { json: { me: { email: 'me@example.com' }, granted: [], received: [], names: {} } }));
+  await page.route('**/api/shared', (route) => route.fulfill({ json: { docs: [], names: {} } }));
   await page.route('**/api/sync**', async (route) => {
     const req = route.request();
     if (status !== 200) return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ error: 'nope' }) });
