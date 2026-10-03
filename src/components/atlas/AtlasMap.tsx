@@ -150,7 +150,7 @@ export function AtlasMap({ map, skin, locations, names, pinned, onPin, hovered, 
           </svg>
         )}
       </MapViewport>
-      <p className={cn('flex flex-wrap justify-between gap-x-3 px-3 py-1.5 text-xs text-muted')}>
+      <p className={cn('flex flex-wrap justify-between gap-x-3 px-3 py-1.5 text-xs text-[#a0a5b2]')}>
         <span>{schematic ? `${map.name} · schematic map, not the game’s own; positions approximate` : map.smooth ? `${map.name} · the game’s own artwork (supplied screenshot); positions approximate` : `${skin.label} · the game’s own map, from the pret decompilation`}</span>
         {fixedScale ? <span>{scale}× pixel scale</span> : null}
       </p>

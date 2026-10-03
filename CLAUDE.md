@@ -9,7 +9,7 @@
 - Regulation updates follow `docs/UPDATING_REGULATIONS.md` exactly.
 - Phone app: PWA (`vite-plugin-pwa` + `src/pwa.ts`), hosted on Cloudflare Workers (`wrangler.jsonc`, auto-deploys on push) behind Cloudflare Access; see `docs/IPHONE_APP.md`.
 - Releases: `npm run bump -- <version>` + a `CHANGELOG.md` section → PR into the default branch (`claude/pokemon-team-builder-otextg`, there is no `main`) → merge → `desktop-release.yml` tags `v<version>` and publishes the desktop installers by itself (docs/DESKTOP_RELEASES.md). Manual `v*` tags still work.
-- Before any commit: `npm run typecheck && npm test`.
+- Before any commit: `npm run typecheck && npm test`. Before a PR that touches UI: `npm run e2e` (Playwright smoke + axe tests on desktop Chromium and an iPhone-sized WebKit; `docs/E2E.md`). CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests, build and e2e on every PR.
 - Hosted app: claude.ai artifact https://claude.ai/artifact/LPVBSr6M3VNhWcPbFB3xcm
   - Republish `dist/artifact.html` from `npm run build:artifact`.
   - Pass `files` = every file in `dist/sprites/`, `dist/maps/` and `dist/data/` (`data/` includes the lazily fetched `atlas-<game>.json`), published at `sprites/<name>`, `maps/<name>` and `data/<name>` (the single-file build fetches the Gen 1–9 data from `data/`).

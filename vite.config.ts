@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
+import { configDefaults } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 
@@ -80,5 +81,5 @@ export default defineConfig(({ mode }) => ({
   build: { chunkSizeWarningLimit: 1500 },
   // Fixed port so the Tauri desktop shell (src-tauri/tauri.conf.json's devUrl) always finds the dev server.
   server: { port: 1420, strictPort: true },
-  test: { environment: 'node' },
+  test: { environment: 'node', exclude: [...configDefaults.exclude, 'e2e/**'] },
 }));

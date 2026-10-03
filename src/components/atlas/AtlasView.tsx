@@ -93,7 +93,7 @@ export function AtlasView() {
                   role="radio"
                   aria-checked={g.id === game.id}
                   onClick={() => { setGame(g.id); setPinned(undefined); }}
-                  className={cn('inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold transition-colors', g.id === game.id ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}
+                  className={cn('inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold transition-colors', g.id === game.id ? 'border-accent bg-accent/15 text-fg' : 'border-border text-muted hover:text-fg')}
                 >
                   <GameBadge color={g.color} />
                   {g.name}
@@ -208,7 +208,7 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
             {gameMaps.length > 1 && (
               <div className="mb-2 flex gap-1" role="tablist" aria-label="Region">
                 {gameMaps.map((m) => (
-                  <button key={m.id} type="button" role="tab" aria-selected={m.id === map.id} onClick={() => { setPickedMap(m.id); if (pinned && !m.places[pinned]) setPinned(undefined); }} className={cn('h-8 flex-1 rounded-md border px-2 text-xs font-semibold', m.id === map.id ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}>
+                  <button key={m.id} type="button" role="tab" aria-selected={m.id === map.id} onClick={() => { setPickedMap(m.id); if (pinned && !m.places[pinned]) setPinned(undefined); }} className={cn('h-8 flex-1 rounded-md border px-2 text-xs font-semibold', m.id === map.id ? 'border-accent bg-accent/15 text-fg' : 'border-border text-muted hover:text-fg')}>
                     {m.name}
                     <span className="ml-1 font-mono font-normal text-muted">{regionCount(m)}</span>
                   </button>
@@ -269,7 +269,7 @@ function LocationList({ matches, pinned, setPinned }: { matches: Set<string> | n
 function FilterBar({ filter, setFilter, matchCount, lite }: { filter: FilterState; setFilter: (f: FilterState) => void; matchCount?: number; lite?: boolean }) {
   const set = (p: Partial<typeof filter>) => setFilter({ ...filter, ...p });
   const toggle = (k: 'gym' | 'shop' | 'pokecenter', label: string, Icon: typeof MapPin) => (
-    <button key={k} type="button" aria-pressed={filter[k]} onClick={() => set({ [k]: !filter[k] })} className={cn('inline-flex h-8 items-center gap-1 rounded-md border px-2 text-xs font-semibold', filter[k] ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted hover:text-fg')}>
+    <button key={k} type="button" aria-pressed={filter[k]} onClick={() => set({ [k]: !filter[k] })} className={cn('inline-flex h-8 items-center gap-1 rounded-md border px-2 text-xs font-semibold', filter[k] ? 'border-accent bg-accent/15 text-fg' : 'border-border text-muted hover:text-fg')}>
       <Icon size={13} aria-hidden /> {label}
     </button>
   );

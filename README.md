@@ -12,6 +12,7 @@ npm install
 npm run dev           # http://localhost:5173
 npm test              # vitest: stat engines, codecs, validation
 npm run typecheck
+npm run e2e           # browser smoke tests (Playwright) against the production build; see docs/E2E.md
 npm run build         # static site in dist/
 npm run build:single  # one self-contained index.html (works offline)
 npm run data          # regenerate src/data/generated/*.json (Showdown data + regulation files + Gen 1–9 datasets)
