@@ -30,6 +30,14 @@ describe('Regulation overlays', () => {
     expect(dex.move('pyroball')!.legalIn).toEqual(['champions-reg-mc']);
   });
 
+  it('evolutions inherit their pre-evolutions\' egg and level-up moves', () => {
+    // Egg moves live on the base form in Showdown's data: Fake Out is Grookey's / Pawmi's, not Rillaboom's / Pawmot's.
+    expect(data.learnsets.rillaboom).toContain('fakeout');
+    expect(data.learnsets.pawmot).toContain('fakeout');
+    // TMs a pre-evolution alone could use don't carry over.
+    expect(data.learnsets.kingambit).not.toContain('fakeout');
+  });
+
   it('applies species patches and new abilities from announcements', () => {
     expect(dex.species('lucariomegaz')!.abilities['0']).toBe('Aura Guard');
     expect(dex.ability('auraguard')?.name).toBe('Aura Guard');

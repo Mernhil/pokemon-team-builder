@@ -160,6 +160,27 @@ function resolveRegulations(files: RegulationFile[]): Resolved[] {
   return files.map((f) => resolveOne(f));
 }
 
+/**
+ * A species' own Showdown learnset plus what it inherits from its pre-evolutions: egg moves live on the base
+ * form (Rillaboom's Fake Out is Grookey's) and level-up moves a pre-evolution learned stay with the evolution.
+ * TMs/tutors don't carry over, and only Generation 9 sources count (older ones are moves Champions dropped).
+ */
+async function withPrevoMoves(dex: AnyDex, s: ReturnType<AnyDex['species']['get']>, own: string[]): Promise<string[]> {
+  if (!own.length) return own;
+  const moves = [...own];
+  const have = new Set(moves);
+  for (let prevo = s.prevo ? dex.species.get(s.prevo) : undefined; prevo?.exists; prevo = prevo.prevo ? dex.species.get(prevo.prevo) : undefined) {
+    const ls = (await dex.learnsets.get(prevo.id))?.learnset;
+    for (const [m, sources] of Object.entries(ls ?? {})) {
+      if (!have.has(m) && sources.some((c) => /^9[LE]/.test(c))) {
+        have.add(m);
+        moves.push(m);
+      }
+    }
+  }
+  return moves;
+}
+
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const files = loadRegulations();
@@ -226,11 +247,12 @@ async function main() {
           break;
         }
       }
+      moves = await withPrevoMoves(base, s, moves);
       if (!moves.length) {
         for (const src of chain) {
           const ls = await gen9.learnsets.get(src);
           if (ls?.learnset) {
-            moves = Object.keys(ls.learnset);
+            moves = await withPrevoMoves(gen9, s, Object.keys(ls.learnset));
             provisional.push(id);
             break;
           }
