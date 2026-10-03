@@ -42,7 +42,7 @@ function ToastItem({ toast }: { toast: Toast }) {
         <Button
           variant="ghost"
           size="sm"
-          className="text-bg hover:bg-bg/15 hover:text-bg"
+          className="text-bg! hover:bg-bg/15! hover:text-bg!"
           onClick={() => {
             toast.action!.run();
             dismiss(toast.id);
@@ -51,7 +51,7 @@ function ToastItem({ toast }: { toast: Toast }) {
           {toast.action.label}
         </Button>
       )}
-      <Button variant="ghost" size="icon-sm" aria-label="Dismiss" className="text-bg/80 hover:bg-bg/15 hover:text-bg" onClick={() => dismiss(toast.id)}>
+      <Button variant="ghost" size="icon-sm" aria-label="Dismiss" className="text-bg/80! hover:bg-bg/15! hover:text-bg!" onClick={() => dismiss(toast.id)}>
         <X size={15} />
       </Button>
     </div>
