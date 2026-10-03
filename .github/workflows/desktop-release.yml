@@ -4,7 +4,11 @@ name: Desktop release
 # own runner (Tauri apps aren't reliably cross-compiled). macOS isn't shipped; phones use the PWA
 # (docs/IPHONE_APP.md).
 #
-# - a new `v*` tag — either published from GitHub's web UI (Releases → Draft a new release → new
+# - a version bump merged to the default branch (package.json changes `version` and no `v<version>`
+#   tag exists yet): the `plan` job detects it and the release below runs for that version; the
+#   release step creates the tag at the merged commit. (A tag created by a workflow with GITHUB_TOKEN
+#   wouldn't start any other workflow, so this workflow reacts to the push itself instead.)
+# - a manually pushed `v*` tag — either published from GitHub's web UI (Releases → Draft a new release → new
 #   tag `vX.Y.Z` → Publish) or pushed with `git tag vX.Y.Z && git push origin vX.Y.Z`: first checks
 #   the tag matches the app version and that typecheck + tests pass, then builds, signs, and attaches
 #   the installers *and* the signed `latest.json` manifest the in-app updater polls
@@ -22,6 +26,11 @@ on:
   push:
     tags:
       - 'v*'
+    # The default branch (it's not `main`; if it is renamed, rename it here too).
+    branches:
+      - claude/pokemon-team-builder-otextg
+    paths:
+      - package.json
   workflow_dispatch:
 
 # Least privilege by default; only the release job may write (to publish the GitHub Release).
@@ -35,10 +44,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Tag push: refuse to ship if the tag doesn't match the app version or the checks fail — a
+  # Decides whether this push is a release and for which tag: a `v*` tag push always is; a push to
+  # the default branch is one only when package.json's version has no tag yet (so edits to
+  # package.json that don't bump the version, and re-pushes after a release, do nothing).
+  plan:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      tag: ${{ steps.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-tags: true
+
+      - name: Is there a release to make?
+        id: plan
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF" == refs/tags/v* ]]; then
+            tag="$REF_NAME"
+            release=true
+          else
+            tag="v$(node -p "require('./package.json').version")"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "Tag $tag already exists: nothing to release."
+              release=false
+            else
+              echo "No tag $tag yet: releasing it."
+              release=true
+            fi
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+  # Release: refuse to ship if the tag doesn't match the app version or the checks fail — a
   # mismatched tag would publish a latest.json advertising the wrong version to every installed app.
   verify:
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -47,7 +94,7 @@ jobs:
 
       - name: Tag matches the app version
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.plan.outputs.tag }}
         run: |
           tauri=$(node -p "require('./src-tauri/tauri.conf.json').version")
           pkg=$(node -p "require('./package.json').version")
@@ -72,10 +119,9 @@ jobs:
       - name: Test
         run: npm test
 
-  # Tag push: build, sign, and publish/update the GitHub Release the updater polls.
+  # Build, sign, and publish/update the GitHub Release the updater polls (creating the tag if needed).
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: verify
+    needs: [plan, verify]
     permissions:
       contents: write
     strategy:
@@ -112,8 +158,10 @@ jobs:
       - name: Release notes from CHANGELOG.md
         id: notes
         shell: bash
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
         run: |
-          v="${GITHUB_REF_NAME#v}"
+          v="${TAG#v}"
           notes=$(awk -v v="$v" 'index($0, "## " v) == 1 { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md)
           { echo 'body<<EOF_RELEASE_NOTES'; echo "${notes:-See CHANGELOG.md.}"; echo 'EOF_RELEASE_NOTES'; } >> "$GITHUB_OUTPUT"
 
@@ -123,8 +171,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Pokémon Team Builder ${{ github.ref_name }}'
+          tagName: ${{ needs.plan.outputs.tag }}
+          # Where a missing tag is created (a branch push): the exact commit that was merged.
+          commitish: ${{ github.sha }}
+          releaseName: 'Pokémon Team Builder ${{ needs.plan.outputs.tag }}'
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false

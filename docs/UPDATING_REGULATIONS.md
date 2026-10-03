@@ -73,7 +73,7 @@ npm run data:strict        # fails on any id Showdown/newSpecies can't resolve â
 npm run sprites -- champions   # picks up sprites for new species/Megas (PokeAPI)
 npm run typecheck && npm test
 npm run reg:status         # confirm dates, counts and the LIVE marker
-npm run build:artifact     # dist/artifact.html + dist/sprites/*
+npm run build:artifact     # dist/artifact.html + dist/sprites/*, dist/maps/*, dist/data/*
 ```
 
 Add a test to `src/domain/__tests__/regulations.test.ts` for the new set: one added species, one new item and the live-date switch.
@@ -82,8 +82,8 @@ If a sprite is missing because PokeAPI hasn't added a new Mega yet, the app fall
 
 ## 5. Ship
 
-1. Commit on `main` with a message like `data: add Champions Reg M-D (starts 2026-12-02)`, then push.
-2. Republish the web app to its existing artifact URL. Publish `dist/artifact.html` with `files` = every file in `dist/sprites/` (paths `sprites/<name>`).
+1. Commit on a branch off the default branch (`claude/pokemon-team-builder-otextg`) with a message like `data: add Champions Reg M-D (starts 2026-12-02)`, push it and open a PR into the default branch.
+2. Republish the web app to its existing artifact URL (https://claude.ai/artifact/LPVBSr6M3VNhWcPbFB3xcm). Publish `dist/artifact.html` with `files` = every file in `dist/sprites/`, `dist/maps/` and `dist/data/`, at `sprites/<name>`, `maps/<name>` and `data/<name>`.
 3. Send the owner a short summary:
    - what changed
    - start and end dates

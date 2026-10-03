@@ -8,6 +8,7 @@
 - Sprites: `npm run sprites` rebuilds `public/sprites/*` atlases from PokeAPI.
 - Regulation updates follow `docs/UPDATING_REGULATIONS.md` exactly.
 - Phone app: PWA (`vite-plugin-pwa` + `src/pwa.ts`), hosted on Cloudflare Workers (`wrangler.jsonc`, auto-deploys on push) behind Cloudflare Access; see `docs/IPHONE_APP.md`.
+- Releases: `npm run bump -- <version>` + a `CHANGELOG.md` section → PR into the default branch (`claude/pokemon-team-builder-otextg`, there is no `main`) → merge → `desktop-release.yml` tags `v<version>` and publishes the desktop installers by itself (docs/DESKTOP_RELEASES.md). Manual `v*` tags still work.
 - Before any commit: `npm run typecheck && npm test`.
 - Hosted app: claude.ai artifact https://claude.ai/artifact/LPVBSr6M3VNhWcPbFB3xcm
   - Republish `dist/artifact.html` from `npm run build:artifact`.
