@@ -1,6 +1,6 @@
 import type { LoggedMon, Match, MatchResult } from './matches';
 import { emptySlots, uid } from './team';
-import { STAT_IDS, type PokemonSet, type StatTable, type Team, type TeamSlots, type TeraType } from './types';
+import { STAT_IDS, type PokemonSet, type SharedMark, type StatTable, type Team, type TeamSlots, type TeraType } from './types';
 
 /**
  * Structural coercion for teams coming from outside the app (JSON backups, share codes, persisted
@@ -50,6 +50,15 @@ export function sanitizeSet(v: unknown): PokemonSet | null {
     shiny: v.shiny === true ? true : undefined,
     friendship: v.friendship === undefined ? undefined : int(v.friendship, 0, 255, 255),
   };
+}
+
+/** The shared-folder mark of a team kept on this device, or undefined when absent or malformed. */
+export function sanitizeSharedMark(v: unknown): SharedMark | undefined {
+  if (!isObj(v)) return undefined;
+  const owner = str(v.owner, 254);
+  const folderId = typeof v.folderId === 'string' && ID_RE.test(v.folderId) ? v.folderId : undefined;
+  if (!owner || !folderId || (v.role !== 'view' && v.role !== 'edit')) return undefined;
+  return { owner, folderId, role: v.role, ownerName: str(v.ownerName, 40) };
 }
 
 /** Returns a well-formed copy of `v`, or null when it isn't recognisably a team. */

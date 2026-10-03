@@ -10,6 +10,8 @@ import { useMatchStore } from '@/store/matchStore';
 import { useTeamStore } from '@/store/teamStore';
 import { MatchForm } from './MatchForm';
 import { MatchStats } from './MatchStats';
+import { SourceSelect } from './SourceSelect';
+import { useMatchSource } from './useMatchSource';
 import { MatchupBuilder } from './MatchupBuilder';
 import { Button, EmptyState, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
@@ -18,11 +20,13 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
   const [tab, setTab] = useState<'log' | 'builder'>('log');
   const matchesById = useMatchStore((s) => s.matches);
   const order = useMatchStore((s) => s.order);
-  const matches = useMemo(() => order.map((id) => matchesById[id]).filter(Boolean), [order, matchesById]);
+  const mine = useMemo(() => order.map((id) => matchesById[id]).filter(Boolean), [order, matchesById]);
+  // A friend's shared matches: only ever shown on their own or together with mine, on request.
+  const { source, setSource, options, matches, foreign, friendName } = useMatchSource(mine);
   const { addMatch } = useMatchStore.getState();
   const teams = useTeamStore((s) => s.teams);
   const teamOrder = useTeamStore((s) => s.order);
-  const [selected, setSelected] = useState<string | null>(matches[0]?.id ?? null);
+  const [selected, setSelected] = useState<string | null>(mine[0]?.id ?? null);
   const [lossOnly, setLossOnly] = useState(false);
   const [regFilter, setRegFilter] = useState('');
   const [teamFilter, setTeamFilter] = useState('');
@@ -33,14 +37,16 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
       matches
         .filter((m) => !lossOnly || m.result === 'loss')
         .filter((m) => !regFilter || m.regulationId === regFilter)
-        .filter((m) => !teamFilter || m.myTeamId === teamFilter),
-    [matches, lossOnly, regFilter, teamFilter],
+        .filter((m) => source !== 'mine' || !teamFilter || m.myTeamId === teamFilter),
+    [matches, lossOnly, regFilter, teamFilter, source],
   );
 
-  const active = matches.find((m) => m.id === selected) ?? null;
+  // A friend's list starts on its first match (nothing of theirs can already be selected).
+  const active = matches.find((m) => m.id === selected) ?? (source !== 'mine' ? (filtered[0] ?? null) : null);
   const regsUsed = useMemo(() => [...new Set(matches.map((m) => m.regulationId).filter(Boolean))] as string[], [matches]);
 
   const newMatch = () => {
+    setSource('mine');
     const id = addMatch();
     setSelected(id);
   };
@@ -94,8 +100,9 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
         <MatchupBuilder defaultFormatId={format.id} />
       ) : (
         <>
-          {matches.length > 0 && (
+          {(matches.length > 0 || options.length > 1) && (
           <Panel bodyClassName="flex flex-wrap items-center gap-2 p-3">
+            <SourceSelect source={source} options={options} onChange={setSource} className="w-full sm:w-auto" />
             <Select aria-label="Filter by regulation" className="w-full sm:w-auto" value={regFilter} onChange={(e) => setRegFilter(e.target.value)}>
               <option value="">All regulations</option>
               {regsUsed.map((id) => (
@@ -104,14 +111,16 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
                 </option>
               ))}
             </Select>
+            {source === 'mine' && (
             <Select aria-label="Filter by my team" className="w-full sm:w-auto" value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}>
               <option value="">All teams</option>
-              {teamOrder.map((id) => (
+              {teamOrder.filter((id) => !teams[id]?.shared).map((id) => (
                 <option key={id} value={id}>
                   {teams[id]?.name}
                 </option>
               ))}
             </Select>
+            )}
             <label className="flex min-h-9 items-center gap-2 text-sm">
               <input type="checkbox" checked={lossOnly} onChange={(e) => setLossOnly(e.target.checked)} className="size-4 accent-[var(--color-accent)]" />
               Losses only
@@ -167,13 +176,50 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
               </Panel>
 
               <div className="min-w-0 space-y-3">
-                {active ? <MatchForm dex={dex} format={format} match={active} /> : <EmptyState title="Pick a match on the left to see or edit it." />}
-                <MatchStats dex={dex} format={format} matches={matches} />
+                {active ? (
+                  foreign.has(active.id) ? <FriendMatch dex={dex} match={active} owner={friendName ?? 'a friend'} /> : <MatchForm dex={dex} format={format} match={active} />
+                ) : (
+                  <EmptyState title="Pick a match on the left to see or edit it." />
+                )}
+                {source !== 'mine' && (
+                  <p role="status" className="text-sm text-muted">
+                    {source.startsWith('both:') ? `These numbers count both of your logs together${friendName ? ` (you and ${friendName})` : ''}.` : `These are ${friendName ?? 'a friend'}’s matches, read-only.`} Switch to “My matches” for your own.
+                  </p>
+                )}
+                <MatchStats dex={dex} format={format} matches={matches} foreign={foreign} />
               </div>
             </div>
           )}
         </>
       )}
     </div>
+  );
+}
+
+/** A friend's logged match: everything they recorded, read-only. */
+function FriendMatch({ dex, match, owner }: { dex: Dex; match: Match; owner: string }) {
+  const name = (id: string) => dex.species(id)?.name ?? id;
+  return (
+    <Panel title={`${owner}’s match · ${match.date}`} actions={<span className={match.result === 'win' ? 'text-sm font-bold text-good' : 'text-sm font-bold text-bad'}>{match.result === 'win' ? 'Win' : 'Loss'}</span>}>
+      <dl className="space-y-2 text-sm">
+        {match.eventName && (
+          <div>
+            <dt className="text-xs font-semibold text-muted">Event</dt>
+            <dd>{match.eventName}</dd>
+          </div>
+        )}
+        <div>
+          <dt className="text-xs font-semibold text-muted">Opponent’s team</dt>
+          <dd>{match.opponentTeam.length ? match.opponentTeam.map((m) => name(m.speciesId)).join(', ') : 'Not recorded'}</dd>
+        </div>
+        {match.notes && (
+          <div>
+            <dt className="text-xs font-semibold text-muted">Notes</dt>
+            <dd className="whitespace-pre-wrap">{match.notes}</dd>
+          </div>
+        )}
+      </dl>
+      <p className="mt-2 text-xs text-muted">Shared with you by {owner}. You can’t change it.</p>
+    </Panel>
   );
 }

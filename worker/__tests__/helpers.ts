@@ -32,7 +32,7 @@ export async function signJwt(key: TestKey, claims: Record<string, unknown>, hea
   return `${h}.${p}.${b64url(sig)}`;
 }
 
-export const NOW = Date.parse('2026-10-03T12:00:00Z');
+export const NOW = Date.parse('2030-01-01T12:00:00Z');
 
 export const goodClaims = (email = 'me@example.com', over: Record<string, unknown> = {}) => ({
   iss: `https://${TEAM}`,

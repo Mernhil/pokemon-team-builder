@@ -29,7 +29,7 @@ async function fakeServer(page: Page, docs: unknown[] = [], status = 200) {
 }
 
 async function openSettings(page: Page) {
-  await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More|^Match log|^Meta|^Speed tiers|^Threat report|^Regulation diff/ }).click();
+  await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More|^Match log|^Meta|^Speed tiers|^Threat report|^Regulation diff|^Compare teams/ }).click();
   await page.getByRole('menuitem', { name: /Settings/ }).click();
   return page.getByRole('dialog', { name: 'Settings & credits' });
 }

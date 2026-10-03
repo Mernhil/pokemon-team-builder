@@ -55,7 +55,7 @@ function WinRateRow({ label, r }: { label: string; r: WinRate }) {
 }
 
 /** Win rate, personal-meta frequency, and loss review — the report views over the logged matches. */
-export function MatchStats({ dex, format, matches: allMatches }: { dex: Dex; format: FormatRules; matches: Match[] }) {
+export function MatchStats({ dex, format, matches: allMatches, foreign }: { dex: Dex; format: FormatRules; matches: Match[]; /** Ids of a friend's matches: they aren't tied to my saved teams, so the by-team rows leave them out. */ foreign?: Set<string> }) {
   const teams = useTeamStore((s) => s.teams);
   const [filter, setFilter] = useState<MatchFilter>({});
   const teamOf = useMemo<TeamLookup>(() => (id) => (teams[id] ? { name: teams[id].name, groupId: teams[id].groupId ?? id, variationLabel: teams[id].variationLabel } : undefined), [teams]);
@@ -70,7 +70,7 @@ export function MatchStats({ dex, format, matches: allMatches }: { dex: Dex; for
   const matches = useMemo(() => filterMatches(allMatches, filter, teamOf), [allMatches, filter, teamOf]);
   const overall = useMemo(() => overallWinRate(matches), [matches]);
   const byReg = useMemo(() => winRateByRegulation(matches), [matches]);
-  const byTeam = useMemo(() => winRateByTeam(matches), [matches]);
+  const byTeam = useMemo(() => winRateByTeam(foreign?.size ? matches.filter((m) => !foreign.has(m.id)) : matches), [matches, foreign]);
   const byArch = useMemo(() => winRateByArchetype(matches), [matches]);
   const speciesFreq = useMemo(() => [...opponentSpeciesFrequency(matches).entries()].sort((a, b) => b[1] - a[1]).slice(0, 15), [matches]);
   const coreFreq = useMemo(() => [...opponentCoreFrequency(matches).entries()].sort((a, b) => b[1] - a[1]).slice(0, 10), [matches]);

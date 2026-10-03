@@ -9,6 +9,8 @@ import { useMatchStore } from '@/store/matchStore';
 import { useMetaStore } from '@/store/metaStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
+import { SourceSelect } from '../matches/SourceSelect';
+import { useMatchSource } from '../matches/useMatchSource';
 import { Button, Chip, EmptyState, Label, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
@@ -47,11 +49,19 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const status = useMetaStore((s) => s.status);
   const error = useMetaStore((s) => s.error);
   const refresh = useMetaStore((s) => s.refresh);
-  const matches = useMatchStore((s) => s.matches);
+  const matchesById = useMatchStore((s) => s.matches);
+  const mine = useMemo(() => Object.values(matchesById), [matchesById]);
+  const { source, setSource, options, matches: logged, friendName } = useMatchSource(mine);
   const online = useOnline();
 
   const published = useMemo(() => metaFor(regId, refreshed), [regId, refreshed]);
-  const personal = useMemo(() => (published ? null : localMetaFromMatches(Object.values(matches), regId)), [published, matches, regId]);
+  const personal = useMemo(
+    () =>
+      published
+        ? null
+        : localMetaFromMatches(logged, regId, undefined, source === 'mine' ? undefined : source.startsWith('both:') ? `Matches of you and ${friendName ?? 'a friend'}` : `${friendName ?? 'A friend'}’s matches`),
+    [published, logged, regId, source, friendName],
+  );
   const snapshot = published ?? personal ?? undefined;
   const reg = champRegs.find((r) => r.id === regId);
   // Newest other regulation that has published numbers, offered when this one has none.
@@ -67,6 +77,7 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
             </option>
           ))}
         </Select>
+        {!published && <SourceSelect source={source} options={options.filter((o) => o.value === 'mine' || o.value.startsWith('both:'))} onChange={setSource} className="w-full sm:w-auto" />}
         {snapshot && <SourceLine snapshot={snapshot} />}
         {CAN_REFRESH && (
           <Button size="sm" className="ml-auto" onClick={refresh} disabled={status === 'loading' || !online} title="Fetch the newest data published with the app">
@@ -94,7 +105,7 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
       )}
       {!published && personal && (
         <Notice icon={BarChart3} tone="accent" title={`No published usage data for ${reg?.shortName ?? 'this regulation'} yet`}>
-          Showing what you’ve faced in your own {personal.source.battles} logged matches instead.
+          {source === 'mine' ? `Showing what you’ve faced in your own ${personal.source.battles} logged matches instead.` : `Showing what the two of you faced in ${personal.source.battles} logged matches instead.`}
         </Notice>
       )}
 

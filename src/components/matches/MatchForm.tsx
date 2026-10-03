@@ -176,7 +176,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
             {myMode === 'saved' ? (
               <Select aria-label="My saved team" value={match.myTeamId ?? ''} onChange={(e) => set({ myTeamId: e.target.value || undefined, myBrought: undefined, myLeads: undefined })}>
                 <option value="">— pick a saved team —</option>
-                {teamOrder.map((id) => (
+                {teamOrder.filter((id) => !teams[id]?.shared || id === match.myTeamId).map((id) => (
                   <option key={id} value={id}>
                     {teams[id]?.name}
                   </option>

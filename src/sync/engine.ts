@@ -34,6 +34,8 @@ export interface SyncStats {
   deleted: number;
   /** Conflict copies made (teams). */
   conflicts: number;
+  /** The server's versions that were taken, so the caller can tell who changed what. */
+  received: RemoteDocument[];
 }
 
 export interface SyncDeps {
@@ -50,7 +52,7 @@ const MAX_PASSES = 3;
 
 export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stats: SyncStats }> {
   const now = deps.now ?? Date.now;
-  const stats: SyncStats = { pulled: 0, pushed: 0, updated: 0, deleted: 0, conflicts: 0 };
+  const stats: SyncStats = { pulled: 0, pushed: 0, updated: 0, deleted: 0, conflicts: 0, received: [] };
   let state: SyncState = { cursor: deps.state.cursor, known: { ...deps.state.known } };
   let stale: RemoteDocument[] = [];
 
@@ -82,6 +84,7 @@ export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stat
         local.set(k, doc);
         known[k] = { updatedAt: r.updatedAt };
         stats.updated++;
+        stats.received.push(r);
       };
       if (res.action === 'apply-remote') take();
       else if (res.action === 'delete-local') {

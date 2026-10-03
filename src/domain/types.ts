@@ -350,6 +350,21 @@ export interface Team {
   groupId?: string;
   /** Short label for a variation within its group (e.g. "vs Rain", "Variation 2"). */
   variationLabel?: string;
+  /**
+   * Set only on this device, on teams that belong to someone else's shared folder. Never synced as
+   * part of the team (the server's sanitiser drops it): it says whose folder this is and what I may do.
+   */
+  shared?: SharedMark;
+}
+
+/** Where a shared team comes from, and whether I can change it. */
+export interface SharedMark {
+  /** The owner's e-mail. */
+  owner: string;
+  ownerName?: string;
+  /** The top-level team's id in the owner's account. */
+  folderId: string;
+  role: 'view' | 'edit';
 }
 
 export type SpriteSetId =

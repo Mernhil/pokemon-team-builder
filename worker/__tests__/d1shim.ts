@@ -11,7 +11,7 @@ type Bound = { sql: string; values: unknown[] };
 
 export function createD1(): D1Like & { raw: DatabaseSync } {
   const db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(new URL('../../migrations/0001_init.sql', import.meta.url), 'utf8'));
+  for (const file of ['0001_init.sql', '0002_sharing.sql']) db.exec(readFileSync(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'));
   const stmt = (b: Bound): D1Statement & { _b: Bound } => ({
     _b: b,
     bind: (...values) => stmt({ sql: b.sql, values }),

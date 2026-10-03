@@ -4,13 +4,13 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from './storage';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
 import { withSpreadValue } from '@/domain/stats';
-import { sanitizeTeam } from '@/domain/sanitize';
+import { sanitizeSharedMark, sanitizeTeam } from '@/domain/sanitize';
 import { cloneTeam, createTeam, emptySlots, enforceCapabilities } from '@/domain/team';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
 export type Theme = 'dark' | 'light';
-export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta' | 'speed' | 'threats' | 'regdiff';
+export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta' | 'speed' | 'threats' | 'regdiff' | 'compare';
 
 /** Advanced-details state for one team member (keyed by set uid). */
 export interface SlotBattleState {
@@ -47,6 +47,11 @@ export interface TeamState {
   addVariation: (id: string) => string;
   deleteTeam: (id: string) => void;
   addTeams: (teams: Team[], activate?: boolean) => void;
+  /**
+   * A copy of a shared folder (the shared team and its variations) as my own top-level teams, with
+   * no link back to the owner. Returns the new top-level team's id (or `id` when it isn't shared).
+   */
+  makeOwnCopy: (id: string) => string;
   /** Cloud sync: write merged teams and remove deleted ones, keeping each team's own `updatedAt`. */
   applySynced: (upserts: Team[], deletes: string[]) => void;
 
@@ -106,7 +111,7 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
   const teams: Record<string, Team> = {};
   for (const raw of Object.values(p.teams && typeof p.teams === 'object' ? p.teams : {})) {
     const t = sanitizeTeam(raw);
-    if (t) teams[t.id] = enforceCapabilities(t);
+    if (t) teams[t.id] = enforceCapabilities({ ...t, shared: sanitizeSharedMark((raw as { shared?: unknown }).shared) });
   }
   const ids = Object.keys(teams);
   if (ids.length === 0) return current;
@@ -135,10 +140,18 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
     order,
     activeTeamId: typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0],
     theme: p.theme === 'light' ? 'light' : 'dark',
-    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' || p.view === 'speed' || p.view === 'threats' || p.view === 'regdiff' ? p.view : 'builder',
+    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' || p.view === 'speed' || p.view === 'threats' || p.view === 'regdiff' || p.view === 'compare' ? p.view : 'builder',
     battle,
   };
 }
+
+/**
+ * Teams I may not change: a view-only shared team. The store refuses these edits itself, so no
+ * screen can get one through by forgetting to disable a control.
+ */
+export const isReadOnly = (t: Team | undefined): boolean => t?.shared?.role === 'view';
+/** A shared folder's own top-level team can't be removed by the person it was shared with (they stop following it instead). */
+const isSharedRoot = (t: Team | undefined): boolean => !!t?.shared && !t.groupId;
 
 export const useTeamStore = create<TeamState>()(
   persist(
@@ -150,7 +163,7 @@ export const useTeamStore = create<TeamState>()(
       const mutateTeam = (id: string, fn: (t: Team) => Team) =>
         set((s) => {
           const t = s.teams[id];
-          if (!t) return s;
+          if (!t || isReadOnly(t)) return s;
           return { teams: { ...s.teams, [t.id]: { ...enforceCapabilities(fn(t)), updatedAt: Date.now() } } };
         });
       const mutateSlot = (id: string, i: number, fn: (p: PokemonSet) => PokemonSet) =>
@@ -178,11 +191,11 @@ export const useTeamStore = create<TeamState>()(
         },
         selectTeam: (id) => get().teams[id] && set({ activeTeamId: id, activeSlot: 0 }),
         updateTeam: (id, patch) =>
-          set((s) => (s.teams[id] ? { teams: { ...s.teams, [id]: { ...s.teams[id], ...patch, updatedAt: Date.now() } } } : s)),
+          set((s) => (s.teams[id] && !isReadOnly(s.teams[id]) ? { teams: { ...s.teams, [id]: { ...s.teams[id], ...patch, updatedAt: Date.now() } } } : s)),
         switchFormat: (id, formatId) =>
           set((s) => {
             const t = s.teams[id];
-            if (!t || t.formatId === formatId) return s;
+            if (!t || t.formatId === formatId || isReadOnly(t)) return s;
             const slotsByFormat = { ...t.slotsByFormat, [t.formatId]: t.slots };
             const slots = slotsByFormat[formatId] ?? emptySlots();
             return {
@@ -206,17 +219,18 @@ export const useTeamStore = create<TeamState>()(
         },
         addVariation: (id) => {
           const src = get().teams[id];
-          if (!src) return id;
+          if (!src || isReadOnly(src)) return id;
           const groupId = src.groupId ?? src.id;
           const siblings = Object.values(get().teams).filter((t) => t.groupId === groupId).length;
-          const t = cloneTeam(src, src.name, { groupId, variationLabel: `Variation ${siblings + 2}` });
+          // A variation of a folder I can edit belongs to that folder (and syncs into it).
+          const t = cloneTeam(src, src.name, { groupId, variationLabel: `Variation ${siblings + 2}`, shared: src.shared });
           set((s) => ({ teams: { ...s.teams, [t.id]: t }, activeTeamId: t.id, activeSlot: 0 }));
           return t.id;
         },
         deleteTeam: (id) =>
           set((s) => {
             const target = s.teams[id];
-            if (!target) return s;
+            if (!target || isReadOnly(target) || isSharedRoot(target)) return s;
             const teams = { ...s.teams };
             delete teams[id];
             // Deleting a top-level group takes its variations with it; deleting a variation only removes itself.
@@ -232,6 +246,23 @@ export const useTeamStore = create<TeamState>()(
             const activeTeamId = teams[s.activeTeamId] ? s.activeTeamId : order[0];
             return { teams, order, activeTeamId, activeSlot: 0 };
           }),
+        makeOwnCopy: (id) => {
+          const src = get().teams[id];
+          if (!src?.shared) return id;
+          const folder = src.groupId ?? src.id;
+          const members = Object.values(get().teams).filter((t) => t.shared && (t.id === folder || t.groupId === folder));
+          const root = members.find((t) => t.id === folder) ?? src;
+          const rootCopy = cloneTeam(root);
+          const copies = members.filter((t) => t.id !== root.id).map((t) => cloneTeam(t, t.name, { groupId: rootCopy.id, variationLabel: t.variationLabel }));
+          const picked = src.id === root.id ? rootCopy : (copies[members.filter((t) => t.id !== root.id).findIndex((t) => t.id === src.id)] ?? rootCopy);
+          set((s) => ({
+            teams: { ...s.teams, ...Object.fromEntries([rootCopy, ...copies].map((t) => [t.id, t])) },
+            order: [rootCopy.id, ...s.order],
+            activeTeamId: picked.id,
+            activeSlot: 0,
+          }));
+          return picked.id;
+        },
         applySynced: (upserts, deletes) =>
           set((s) => {
             const teams = { ...s.teams };

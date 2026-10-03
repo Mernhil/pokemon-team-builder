@@ -49,7 +49,7 @@ export function createSet(dex: Dex, speciesId: string, format: FormatRules): Pok
  * Deep-clone a team with a fresh id (used by "Duplicate", "Save as…" and "Add variation").
  * Clones are top-level groups by default — pass `overrides` to nest the copy as a variation.
  */
-export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: Partial<Pick<Team, 'groupId' | 'variationLabel'>>): Team {
+export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: Partial<Pick<Team, 'groupId' | 'variationLabel' | 'shared'>>): Team {
   const now = Date.now();
   const cloneSlots = (slots: TeamSlots): TeamSlots => slots.map((s) => (s ? { ...structuredClone(s), uid: uid() } : null)) as TeamSlots;
   return {
@@ -58,6 +58,7 @@ export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: 
     name,
     groupId: undefined,
     variationLabel: undefined,
+    shared: undefined, // a copy is mine, never part of someone else's folder
     ...overrides,
     slots: cloneSlots(team.slots),
     slotsByFormat: team.slotsByFormat && Object.fromEntries(Object.entries(team.slotsByFormat).map(([id, s]) => [id, cloneSlots(s)])),

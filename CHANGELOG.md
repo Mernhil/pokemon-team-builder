@@ -19,6 +19,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 - **Cloud sync (web and phone app):** an opt-in way to keep your teams and match log the same across devices (Settings → Sync). It works offline and syncs when it can; if two devices change the same team, the older change is kept as a "Conflict copy" variation so nothing is lost. It needs a one-time setup on the Cloudflare side (docs/SYNC.md); until then the app behaves as before and Settings says sync isn't set up. The desktop app doesn't sync yet.
 
+- **Sharing and Compare teams (with sync):** share a team folder with another e-mail as *can view* or *can edit*; shared teams appear under Teams → Shared with me with the owner on the tile, view-only ones open read-only with **Make my own copy**, and editable ones merge like your own teams (conflict copies included). **Share my matches** gives a friend a read-only **Whose matches** filter in the Match log and a **Both of us** source for the Meta tab's own-match numbers, never mixed into your stats otherwise. Set a display name in Settings; after a sync a toast says when someone else changed a team you can see. The new **Compare teams** page (More → Compare teams) shows two teams side by side: set-by-set diff (species, item, ability, nature, moves, spreads), both type matrices, Speed against the meta and threat summaries, with variations of one team called out. Needs `migrations/0002_sharing.sql` applied (docs/SYNC.md).
+
 ### Fixed
 - Light theme: better contrast for the selected game in Pokénav, the map caption, the Losses archetype chip and the small-sample rows in the match stats; the saved-team picker in the match form now has a label.
 

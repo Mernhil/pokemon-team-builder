@@ -33,7 +33,7 @@ export function TeamBuilderPanel({
   excludeTeamId?: string;
 }) {
   const teams = useTeamStore((s) => s.teams);
-  const order = useTeamStore((s) => s.order).filter((id) => id !== excludeTeamId);
+  const order = useTeamStore((s) => s.order).filter((id) => id !== excludeTeamId && !teams[id]?.shared);
   const { addTeams } = useTeamStore.getState();
   const team = teamId ? teams[teamId] : undefined;
   const format = team ? getFormat(team.formatId) : undefined;

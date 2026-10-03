@@ -7,6 +7,7 @@ import {
   Calculator,
   Check,
   ChevronDown,
+  Columns2,
   Eraser,
   FolderOpen,
   Gauge,
@@ -29,7 +30,7 @@ import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { toast } from '@/store/toastStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
-import { useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
+import { isReadOnly, useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
 import { OffenseMatrix } from './components/analysis/OffenseMatrix';
 import { TeamCheck } from './components/analysis/TeamCheck';
@@ -41,6 +42,7 @@ import { ImportExportDialog } from './components/io/ImportExportDialog';
 import { SaveTeamDialog } from './components/io/SaveTeamDialog';
 import { TeamsDialog } from './components/io/TeamsDialog';
 import { SettingsDialog } from './components/SettingsDialog';
+import { SharedBanner } from './components/team/SharedBanner';
 import { TeamSlots, TeamStrip } from './components/team/TeamSlots';
 import { Menu, MenuItem, MenuSeparator } from './components/ui/Menu';
 import { Toaster } from './components/ui/Toaster';
@@ -55,6 +57,7 @@ const MatchesView = lazy(() => import('./components/matches/MatchesView').then((
 const RegulationDiffView = lazy(() => import('./components/regulation/RegulationDiffView').then((m) => ({ default: m.RegulationDiffView })));
 const ThreatReportView = lazy(() => import('./components/threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
 const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
+const CompareView = lazy(() => import('./components/compare/CompareView').then((m) => ({ default: m.CompareView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
 
 interface Dest {
@@ -75,8 +78,9 @@ const SECONDARY: Dest[] = [
   { id: 'speed', label: 'Speed tiers', icon: Gauge },
   { id: 'threats', label: 'Threat report', icon: ShieldAlert },
   { id: 'regdiff', label: 'Regulation diff', icon: GitCompare },
+  { id: 'compare', label: 'Compare teams', icon: Columns2 },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'regdiff'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'regdiff', 'compare'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -142,6 +146,7 @@ export default function App() {
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
   else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
+  else if (view === 'compare') content = <Suspense fallback={loading('Loading compare…')}><CompareView /></Suspense>;
   else if (view === 'regdiff') content = <Suspense fallback={loading('Loading regulation diff…')}><RegulationDiffView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
@@ -393,7 +398,8 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
 
   return (
     <div className="grid content-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_300px]">
-      <div className="lg:col-span-2 xl:col-span-3">
+      <div className="space-y-3 lg:col-span-2 xl:col-span-3">
+        <SharedBanner team={team} />
         <RegulationBanner team={team} format={format} />
       </div>
 
@@ -430,7 +436,11 @@ function Builder({ team, format, dex }: { team: Team; format: FormatRules; dex: 
         <div className="lg:hidden">
           <TeamStrip team={team} dex={dex} format={format} issues={issues} activeSlot={activeSlot} />
         </div>
-        <SetEditor key={team.id + activeSlot} teamId={team.id} slot={activeSlot} set={team.slots[activeSlot]} dex={dex} format={format} issues={issues} />
+        {/* A view-only team can be looked at but not changed: the store refuses the edits, and the controls are switched off so that is visible. */}
+        <fieldset disabled={isReadOnly(team)} className="m-0 min-w-0 border-0 p-0">
+          <legend className="sr-only">Selected Pokémon{isReadOnly(team) ? ' (view only)' : ''}</legend>
+          <SetEditor key={team.id + activeSlot} teamId={team.id} slot={activeSlot} set={team.slots[activeSlot]} dex={dex} format={format} issues={issues} />
+        </fieldset>
       </div>
 
       <aside aria-label="Team check" className="min-w-0 space-y-4 lg:col-start-2 xl:sticky xl:top-[72px] xl:col-start-3 xl:row-start-2 xl:self-start">

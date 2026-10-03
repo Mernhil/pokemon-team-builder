@@ -62,7 +62,7 @@ export function ImportExportDialog({
       case 'json':
         // Export every team, not just top-level groups — otherwise variations would silently
         // vanish from the backup, since they're intentionally left out of `order`.
-        return exportBackup(order.flatMap((id) => [allTeams[id], ...teamVariations(allTeams, id)]).filter((t): t is Team => !!t));
+        return exportBackup(order.flatMap((id) => [allTeams[id], ...teamVariations(allTeams, id)]).filter((t): t is Team => !!t && !t.shared));
       default:
         return '';
     }
