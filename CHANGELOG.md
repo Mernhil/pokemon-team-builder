@@ -2,6 +2,17 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.17.0 — 2026-10-03
+
+### New
+- **Share teams with a friend:** with sync on, the share button on a saved team shares it and all its variations with one other person as *can view* or *can edit*. Their copy appears under **Shared with me** with your name on it; a view-only team opens read-only with **Make my own copy**, and with *can edit* they can change it and add variations (your own sync receives their changes). If you both change the same team, the older change is kept as a team of the editor's own, so nothing is lost. You can stop sharing any time and the other person can leave. Set a display name in Settings → Sync.
+- **Share your match log** (view only): your friend's matches show up as a separate choice in the Match log and Meta tabs (*Mine / their name / Both of us*) and only count in your statistics when you pick *Both of us*.
+- **Notices:** a toast tells you when the other person changed something you can see ("Ash updated “Rain M-C” 2 h ago.").
+- **Compare teams** (More → Compare teams): two teams side by side (yours, shared, or two variations of one team) with both type matrices, speeds, top threats and a set-by-set diff of species, item, ability, nature, moves and spread. Variations of the same team are called out.
+
+### Setup
+- Needs the new D1 migration: run `npx wrangler d1 migrations apply pokemon-team-builder --remote` **before** deploying this version (docs/SYNC.md). Until it is applied, cloud sync answers with an error.
+
 ## 0.16.0 — 2026-10-03
 
 ### New

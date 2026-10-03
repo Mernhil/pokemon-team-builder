@@ -59,10 +59,62 @@ export interface PullResponse {
 export interface PushResult {
   id: string;
   kind: DocKind;
-  /** 'applied': stored. 'stale': the server already has a newer version, which it returns. */
-  status: 'applied' | 'stale';
+  /** 'applied': stored. 'stale': the server already has a newer version, which it returns. 'denied': not allowed to write it (shared documents). */
+  status: 'applied' | 'stale' | 'denied';
   doc?: RemoteDocument;
 }
 export interface PushResponse {
   results: PushResult[];
 }
+
+// ---------------------------------------------------------------------------
+// Sharing
+// ---------------------------------------------------------------------------
+
+export const SHARE_ROLES = ['view', 'edit'] as const;
+export const SHARE_KINDS = ['team-group', 'matches'] as const;
+export const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+export const MAX_SHARES = 50;
+
+export const ShareSchema = z.object({
+  kind: z.enum(SHARE_KINDS),
+  ref: z.string().regex(/^(\*|[A-Za-z0-9-]{1,64})$/),
+  grantee: z.string().max(254).regex(EMAIL_RE).transform((e) => e.trim().toLowerCase()),
+  role: z.enum(SHARE_ROLES),
+});
+export type ShareInput = z.infer<typeof ShareSchema>;
+
+export const UnshareSchema = ShareSchema.omit({ role: true }).extend({ owner: z.string().max(254).optional() });
+export const ProfileSchema = z.object({ displayName: z.string().trim().max(40) });
+
+/** A share as the server lists it. */
+export interface ShareInfo {
+  owner: string;
+  grantee: string;
+  kind: (typeof SHARE_KINDS)[number];
+  ref: string;
+  role: (typeof SHARE_ROLES)[number];
+}
+export interface SharesResponse {
+  me: { email: string; displayName?: string };
+  /** What I have shared with others. */
+  granted: ShareInfo[];
+  /** What others have shared with me. */
+  received: ShareInfo[];
+  /** Display names by e-mail, for everyone named above. */
+  names: Record<string, string>;
+}
+
+/** A shared document: a document of someone else's, with my role on it. */
+export interface SharedDocument extends RemoteDocument {
+  owner: string;
+  role: (typeof SHARE_ROLES)[number];
+}
+export interface SharedPullResponse {
+  docs: SharedDocument[];
+  names: Record<string, string>;
+}
+
+export const SharedPushBodySchema = z.object({
+  docs: z.array(PushDocSchema.and(z.object({ owner: z.string().max(254) }))).max(LIMITS.maxDocsPerRequest),
+});

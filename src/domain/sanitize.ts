@@ -81,7 +81,15 @@ export function sanitizeTeam(v: unknown): Team | null {
     updatedAt: int(v.updatedAt, 0, Number.MAX_SAFE_INTEGER, now),
     groupId,
     variationLabel: str(v.variationLabel, MAX_NAME),
+    shared: sanitizeShared(v.shared),
   };
+}
+
+function sanitizeShared(v: unknown): Team['shared'] {
+  if (!isObj(v)) return undefined;
+  const owner = str(v.owner, 254);
+  if (!owner || !owner.includes('@')) return undefined;
+  return { owner: owner.toLowerCase(), role: v.role === 'edit' ? 'edit' : 'view' };
 }
 
 function sanitizeLoggedMon(v: unknown): LoggedMon | null {

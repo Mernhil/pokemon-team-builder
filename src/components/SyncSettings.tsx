@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { syncNow } from '@/sync/runner';
+import SharingSettings from './SharingSettings';
 import { Button, Input, Label } from './ui/primitives';
 
 const when = (t?: number) => (t ? new Date(t).toLocaleString() : 'never');
@@ -69,6 +70,7 @@ export default function SyncSettings() {
               {s.lastError}
             </p>
           )}
+          <SharingSettings />
         </div>
       )}
     </div>
