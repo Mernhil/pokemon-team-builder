@@ -346,17 +346,25 @@ export function planBring(input: PlanInput): PlanResult {
     return { total, parts };
   };
 
-  // Best (Mega choice, lead) for each set brought; ties break by index order so the result is stable.
-  const bestPerFour = new Map<string, { four: number[]; mega: number | undefined; leads: number[]; total: number; parts: Parts }>();
+  // Best (Mega choice, lead) for each set brought. Totals within EPS count as equal (sums can differ in
+  // the last bits with the team's order); ties break by the Pokémon's uids, so the result depends on
+  // who is on the team, never on where they sit.
+  type Pick = { four: number[]; mega: number | undefined; leads: number[]; total: number; parts: Parts };
+  const EPS = 1e-9;
+  const uids = (idx: number[]) => idx.map((i) => mine[i].uid).sort().join(',');
+  const tieKey = (p: Pick) => `${uids(p.four)}|${uids(p.leads)}|${p.mega === undefined ? '' : mine[p.mega].uid}`;
+  const better = (a: Pick, b: Pick) => (Math.abs(a.total - b.total) > EPS ? b.total - a.total : tieKey(a).localeCompare(tieKey(b)));
+  const bestPerFour = new Map<string, Pick>();
   for (const { brought, leads } of enumerateBrings(mine.length, limits)) {
     const key = brought.join(',');
     for (const mega of megaOptions(brought.filter((i) => holders[i]))) {
       const s = score(brought, mega, leads);
+      const cand: Pick = { four: brought, mega, leads, total: s.total, parts: s.parts };
       const cur = bestPerFour.get(key);
-      if (!cur || s.total > cur.total + 1e-9) bestPerFour.set(key, { four: brought, mega, leads, total: s.total, parts: s.parts });
+      if (!cur || better(cand, cur) < 0) bestPerFour.set(key, cand);
     }
   }
-  const top = [...bestPerFour.values()].sort((a, b) => b.total - a.total || a.four.join(',').localeCompare(b.four.join(','))).slice(0, 3);
+  const top = [...bestPerFour.values()].sort(better).slice(0, 3);
 
   const plans = top.map((p): Plan => {
     const bench = mine.map((_m, i) => i).filter((i) => !p.four.includes(i));

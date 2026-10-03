@@ -108,7 +108,8 @@ export const conflictLabel = (deviceName: string, now: number) => `Conflict copy
  * a fresh id (and Pokémon ids), the same name, labelled as a conflict copy.
  */
 export function conflictCopy(loser: Team, winner: Team, deviceName: string, now: number): Team {
-  return cloneTeam(loser, loser.name, { groupId: winner.groupId ?? winner.id, variationLabel: conflictLabel(deviceName, now) });
+  // Stamped with the sync's clock (not Date.now), like everything else the sync writes.
+  return { ...cloneTeam(loser, loser.name, { groupId: winner.groupId ?? winner.id, variationLabel: conflictLabel(deviceName, now) }), createdAt: now, updatedAt: now };
 }
 
 // ---------------------------------------------------------------------------

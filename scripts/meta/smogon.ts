@@ -20,7 +20,7 @@ export async function listMonths(): Promise<string[]> {
 }
 
 async function findChaos(ctx: Context, reg: Regulation, months: string[]) {
-  for (const month of months) {
+  for (const month of monthsToTry(reg, months)) {
     for (const format of ctx.formatIds(reg)) {
       for (const cutoff of CUTOFFS) {
         const url = `${STATS}${month}/chaos/${format}-${cutoff}.json`;
@@ -30,6 +30,24 @@ async function findChaos(ctx: Context, reg: Regulation, months: string[]) {
     }
   }
   return null;
+}
+
+/** Days of `month` (YYYY-MM) the regulation was live. */
+function liveDays(reg: Regulation, month: string): number {
+  const from = Math.max(Date.parse(`${month}-01T00:00:00Z`), Date.parse(reg.start));
+  const [y, m] = month.split('-').map(Number);
+  const to = Math.min(Date.UTC(y, m, 1), reg.end ? Date.parse(reg.end) : Infinity);
+  return Math.max(0, (to - from) / 86_400_000);
+}
+
+/**
+ * Newest first, but months the regulation was live for at least two weeks before the rest: an ended
+ * regulation's last stats month can hold just a few days of it (Reg M-B ended on 2 September, so
+ * September has two days), and Showdown keeps the old format's ladder open after it ends.
+ */
+export function monthsToTry(reg: Regulation, months: string[]): string[] {
+  const full = months.filter((m) => liveDays(reg, m) >= 14);
+  return [...full, ...months.filter((m) => !full.includes(m))];
 }
 
 /** The newest published month for `reg`, or null when Smogon has none yet. */

@@ -111,6 +111,15 @@ describe('planning', () => {
     expect(run([...team].reverse())).toEqual(a);
   });
 
+  it('breaks exact ties by who the Pokémon are, not where they sit on the team', () => {
+    // Two identical Kingambit: every plan with one has a twin with the other, scored the same.
+    const twins: MyMon[] = [...team.slice(0, 5), { uid: 'f', set: { ...team[4].set, uid: 'f' } }];
+    const run = (mine: MyMon[]) => planBring({ dex, format: fmt, mine, opponents: theirs, limits }).plans.map((p) => [[...p.brought].sort().join(), [...p.leads].sort().join(), p.mega ?? '']);
+    const a = run(twins);
+    expect(run([...twins].reverse())).toEqual(a);
+    expect(run([twins[5], ...twins.slice(0, 5)])).toEqual(a);
+  });
+
   it('singles bring three and lead one', () => {
     const { plans } = planBring({ dex, format: fmt, mine: team, opponents: theirs, limits: { bring: 3, lead: 1 } });
     for (const p of plans) {
