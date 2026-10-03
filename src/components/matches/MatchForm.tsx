@@ -10,6 +10,8 @@ import { useMetaStore } from '@/store/metaStore';
 import { metaFor } from '@/data/meta';
 import { useTeamStore } from '@/store/teamStore';
 import { BringPicker, type RosterMon } from './BringPicker';
+import { sourcesFromLog } from '@/domain/bringPlanner';
+import { BringPlanner } from './BringPlanner';
 import { LoggedMonEditor } from './LoggedMonEditor';
 import { Button, Field, Input, Panel, Select, TextArea } from '../ui/primitives';
 import { cn } from '../ui/styles';
@@ -25,6 +27,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
   const teams = useTeamStore((s) => s.teams);
   const teamOrder = useTeamStore((s) => s.order);
   const [myMode, setMyMode] = useState<'saved' | 'freeform'>(match.myTeamId ? 'saved' : 'freeform');
+  const [planning, setPlanning] = useState(false);
 
   const set = (patch: Partial<Match>) => updateMatch(match.id, patch);
   const tera = matchCapabilities(match.regulationId).tera;
@@ -171,7 +174,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
               </div>
             </div>
             {myMode === 'saved' ? (
-              <Select value={match.myTeamId ?? ''} onChange={(e) => set({ myTeamId: e.target.value || undefined, myBrought: undefined, myLeads: undefined })}>
+              <Select aria-label="My saved team" value={match.myTeamId ?? ''} onChange={(e) => set({ myTeamId: e.target.value || undefined, myBrought: undefined, myLeads: undefined })}>
                 <option value="">— pick a saved team —</option>
                 {teamOrder.map((id) => (
                   <option key={id} value={id}>
@@ -230,7 +233,12 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
           <TextArea rows={2} value={match.notes ?? ''} onChange={(e) => set({ notes: e.target.value || undefined })} placeholder="Anything worth remembering about this game…" />
         </Field>
 
-        <div className="flex justify-end gap-2">
+        {planning && savedTeam && <BringPlanner dex={dex} format={format} team={savedTeam} matchId={match.id} initialOpponent={sourcesFromLog(match.opponentTeam)} />}
+
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button size="sm" onClick={() => setPlanning((p) => !p)} disabled={!savedTeam} title={!savedTeam ? 'Pick one of your saved teams first' : undefined}>
+            {planning ? 'Hide the plan' : 'Plan vs this team'}
+          </Button>
           <Button size="sm" onClick={() => duplicateAsTemplate(match.id)}>
             <Copy size={13} /> Log another match against this same opponent
           </Button>

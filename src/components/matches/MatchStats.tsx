@@ -277,7 +277,7 @@ function GroupTable({ title, rows, dex, empty, label }: { title: string; rows: G
       ) : (
         <ul className="space-y-1">
           {rows.slice(0, 8).map((r) => (
-            <li key={r.key} className={cn('flex flex-wrap items-baseline justify-between gap-x-2 text-xs', r.thin && 'opacity-80')}>
+            <li key={r.key} className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs">
               <span className="min-w-0 truncate">{name(r)}</span>
               <RateText r={r} />
             </li>

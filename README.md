@@ -126,6 +126,12 @@ The Meta tab lists each Champions regulation's most-used Pokémon with their com
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
 
+### Bring planner
+
+**Plan vs this team** (on a logged match with a saved team picked, and in the Matchup tab) suggests which four of your six to bring and which two to lead, in doubles (bring 4, lead 2; singles 3 and 1), with the best three plans, each with two to four plain reasons and a main risk ("Nothing in this four outspeeds Dragapult outside Tailwind"). It is a suggestion, not a prediction.
+Their six can be added as species, pasted as Showdown text, loaded from a logged match's Team Preview (what the log saw overrides) or taken from a saved enemy team. Each of their Pokémon uses its most-used set (`metaSets`) unless more is known; known item, ability and moves override it field by field, and a full pasted or saved set is used as it is.
+`src/domain/bringPlanner.ts` (pure) scores all C(6,4) = 15 fours × 6 lead pairs with the Threat report's damage and speed numbers: pressure and risk against what they probably bring (their four most dangerous to your team), tempo, type coverage, speed control (Tailwind, Trick Room, Icy Wind, Electroweb, and whether it flips the matchup) and support (Fake Out, Intimidate, redirection, Wide Guard). Only one Pokémon can Mega Evolve per battle, so two Mega Stone holders may both come but only one gets its Mega stats in any plan. All weights are constants in one place (`WEIGHTS`). **Use this plan** saves what you bring and lead onto the match (or a new one). Champions only; other formats get an explanation.
+
 ### Match log: brought, led and analytics
 
 Besides the result and the opponent's Team Preview, a match can record **what each side brought and led**: tap a Pokémon's sprite to cycle not brought → brought → lead (doubles bring 4 / lead 2, singles 3 / 1, from the match's regulation), for your side and for the opponent's revealed six. It's all optional; a match with only a result is still valid. Saved-team Pokémon are stored by uid, run-and-gun ones by species; the save format is v3 (`ptb:matches:v1`, a v2 log loads unchanged), and the CSV export gains the four columns.

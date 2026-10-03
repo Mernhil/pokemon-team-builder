@@ -118,3 +118,64 @@ export async function openStatCalculator(page: Page) {
   await page.getByRole('heading', { name: /Stat Point Calculator|EVs & IVs/ }).click();
   await expect(probe).toBeVisible();
 }
+
+/** A full six for the planner tests. */
+export const SIX_TEAM = `Incineroar @ Sitrus Berry
+Ability: Intimidate
+EVs: 32 HP / 32 Atk
+Adamant Nature
+- Fake Out
+- Flare Blitz
+- Knock Off
+- Parting Shot
+
+Garchomp @ Garchompite
+Ability: Rough Skin
+EVs: 2 HP / 32 Atk / 32 Spe
+Jolly Nature
+- Earthquake
+- Dragon Claw
+- Rock Slide
+- Protect
+
+Whimsicott @ Focus Sash
+Ability: Prankster
+EVs: 2 HP / 32 Spe
+Timid Nature
+- Tailwind
+- Moonblast
+- Encore
+- Protect
+
+Dragapult @ Choice Specs
+Ability: Clear Body
+EVs: 32 SpA / 32 Spe
+Timid Nature
+- Shadow Ball
+- Draco Meteor
+- Flamethrower
+- U-turn
+
+Kingambit @ Black Glasses
+Ability: Defiant
+EVs: 32 HP / 32 Atk
+Adamant Nature
+- Sucker Punch
+- Kowtow Cleave
+- Iron Head
+- Protect
+
+Rillaboom @ Assault Vest
+Ability: Grassy Surge
+EVs: 32 HP / 32 Atk
+Adamant Nature
+- Grassy Glide
+- Wood Hammer
+- Fake Out
+- U-turn
+`;
+
+/** Rename the active team (the header's team name box; the phone has its own copy). */
+export async function renameTeam(page: Page, name: string) {
+  await page.getByRole('textbox', { name: 'Team name' }).locator('visible=true').first().fill(name);
+}

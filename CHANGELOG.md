@@ -13,8 +13,10 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 - **Match log: brought, led and analytics:** record which Pokémon each side brought and led by tapping their sprites (doubles bring 4 / lead 2, singles 3 / 1), all optional. The stats now have filters (regulation, category, dates, team or variation) and show win rate by your lead, by the four you brought and by team variation, the record against each opponent Pokémon (on their team / brought / led), a nemesis list that links to the Damage Calc, Speed tiers and the Threat report, a weekly win-rate chart and an archetype-vs-archetype grid. Every rate shows a 95% range, and fewer than 5 games is greyed out without a percentage. The CSV export has the new columns.
 
+- **Bring planner:** "Plan vs this team" suggests which four to bring and which two to lead against the opponent's six, with the three best plans, plain reasons and the main risk. Add their Pokémon as species, paste their team, load a logged match or use a saved enemy team; unknown sets use the most-used set, and what you know overrides it. Only one Mega per plan. "Use this plan" saves what you bring and lead onto the match. On a logged match and in the Matchup tab.
+
 ### Fixed
-- Light theme: better contrast for the selected game in Pokénav and for the map caption.
+- Light theme: better contrast for the selected game in Pokénav, the map caption, the Losses archetype chip and the small-sample rows in the match stats; the saved-team picker in the match form now has a label.
 
 ### Tooling
 - Browser smoke tests (Playwright, desktop and iPhone) and a CI workflow run on every pull request; a merged version bump now releases the desktop apps by itself.

@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { SAMPLE_TEAM, expectNoA11yViolations, importTeam, openApp, openStatCalculator, setTheme } from './helpers';
+import { SAMPLE_TEAM, SIX_TEAM, expectNoA11yViolations, importTeam, openApp, openStatCalculator, setTheme } from './helpers';
 
 // axe-core (WCAG 2.0/2.1 A + AA) on each main view, in both themes.
 for (const theme of ['light', 'dark'] as const) {
@@ -77,6 +77,19 @@ for (const theme of ['light', 'dark'] as const) {
       await dialog.getByRole('button', { name: 'Survive a move' }).click();
       await dialog.getByRole('button', { name: 'Add goal' }).click();
       await dialog.getByRole('button', { name: 'Knock out' }).click();
+      await expectNoA11yViolations(page);
+    });
+
+    test('Bring planner', async ({ page }) => {
+      await importTeam(page, SIX_TEAM);
+      await page.goto('/#matches');
+      await page.getByRole('button', { name: 'Log your first match' }).click();
+      await page.getByRole('button', { name: 'Saved team', exact: true }).click();
+      await page.getByRole('combobox').filter({ hasText: 'pick a saved team' }).selectOption({ index: 1 });
+      await page.getByRole('button', { name: 'Plan vs this team' }).click();
+      await page.getByRole('textbox', { name: 'Their team as Showdown text' }).fill('Sneasler @ Focus Sash\nAbility: Poison Touch\nJolly Nature\n- Close Combat\n- Dire Claw\n- Fake Out\n- Protect\n\nKingambit @ Black Glasses\nAbility: Defiant\nAdamant Nature\n- Sucker Punch\n- Kowtow Cleave\n- Iron Head\n- Protect\n');
+      await page.getByRole('button', { name: 'Load pasted team' }).click();
+      await page.getByRole('heading', { name: 'Plan 1' }).waitFor();
       await expectNoA11yViolations(page);
     });
 

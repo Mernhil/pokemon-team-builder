@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useDex } from '@/data/useDex';
 import { teamVsTeam, type MatchupRow } from '@/domain/coverage';
 import { getFormat } from '@/domain/formats';
 import { useMatchStore } from '@/store/matchStore';
 import { useTeamStore } from '@/store/teamStore';
-import { Panel, TypeBadge } from '../ui/primitives';
+import { Button, Panel, TypeBadge } from '../ui/primitives';
 import { cn } from '../ui/styles';
+import { sourcesFromTeam } from '@/domain/bringPlanner';
+import { BringPlanner } from './BringPlanner';
 import { TeamBuilderPanel } from './TeamBuilderPanel';
 
 /**
@@ -31,8 +33,26 @@ export function MatchupBuilder({ defaultFormatId }: { defaultFormatId: string })
         <TeamBuilderPanel title="Enemy Team" teamId={enemyTeamId} onTeamIdChange={setScoutEnemyTeam} newTeamFormatId={defaultFormatId} excludeTeamId={yourTeamId} />
       </div>
       {yourTeamId && enemyTeamId && <Matchup yourTeamId={yourTeamId} enemyTeamId={enemyTeamId} />}
+      {yourTeamId && enemyTeamId && <PlanVsTeam yourTeamId={yourTeamId} enemyTeamId={enemyTeamId} />}
     </div>
   );
+}
+
+/** "Plan vs this team": which four to bring and lead, with the enemy team's sets as they are built. */
+function PlanVsTeam({ yourTeamId, enemyTeamId }: { yourTeamId: string; enemyTeamId: string }) {
+  const yourTeam = useTeamStore((s) => s.teams[yourTeamId]);
+  const enemyTeam = useTeamStore((s) => s.teams[enemyTeamId]);
+  const format = getFormat(yourTeam.formatId);
+  const dexState = useDex(format.datasetId);
+  const [open, setOpen] = useState(false);
+  if (!open)
+    return (
+      <Button variant="primary" className="w-full sm:w-auto" onClick={() => setOpen(true)} disabled={dexState.status !== 'ready'}>
+        Plan vs this team
+      </Button>
+    );
+  if (dexState.status !== 'ready') return null;
+  return <BringPlanner key={`${yourTeamId}:${enemyTeamId}`} dex={dexState.dex} format={format} team={yourTeam} initialOpponent={sourcesFromTeam(enemyTeam)} />;
 }
 
 function Matchup({ yourTeamId, enemyTeamId }: { yourTeamId: string; enemyTeamId: string }) {

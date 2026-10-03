@@ -92,9 +92,16 @@ function best(results: MoveResult[], pessimistic: boolean): MoveSummary | null {
 }
 
 /** One of my Pokémon against one threat, under a field. */
-export function computeCell(dex: Dex, mine: PokemonSet, threat: { set: PokemonSet; megaMode: MegaMode }, field: FieldConditions): ThreatCell {
+export function computeCell(
+  dex: Dex,
+  mine: PokemonSet,
+  threat: { set: PokemonSet; megaMode: MegaMode },
+  field: FieldConditions,
+  /** Force my Mega holder to one forme (the bring planner: only one Pokémon can Mega per battle). Default: both, read pessimistically. */
+  mineMega?: 'base' | 'mega',
+): ThreatCell {
   const myHasMega = !!dex.megaFor(mine.speciesId, mine.itemId);
-  const mySide = { set: mine, cond: defaultSide(myHasMega) };
+  const mySide = { set: mine, cond: { ...defaultSide(myHasMega), ...(mineMega ? { megaMode: mineMega } : {}) } };
   const theirSide = { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode } };
 
   const myMoves = best(calcMoves(dex, mySide, theirSide, field), true);
