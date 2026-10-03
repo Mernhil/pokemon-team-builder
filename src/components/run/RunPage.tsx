@@ -86,9 +86,9 @@ export function RunPage() {
           </p>
         )}
         {warnings.length > 0 && (
-          <ul aria-label="Over the level cap" className="space-y-1">
+          <ul aria-label="Over the level cap" aria-live={run.rules.levelCaps === 'hard' ? 'assertive' : 'polite'} className="space-y-1">
             {warnings.map((w) => (
-              <li key={w.monId} role={run.rules.levelCaps === 'hard' ? 'alert' : 'status'} className={run.rules.levelCaps === 'hard' ? 'rounded-lg border border-bad/40 bg-bad/8 px-2.5 py-1.5 text-sm text-bad' : 'rounded-lg border border-warn/40 bg-warn/8 px-2.5 py-1.5 text-sm'}>
+              <li key={w.monId} className={run.rules.levelCaps === 'hard' ? 'rounded-lg border border-bad/40 bg-bad/8 px-2.5 py-1.5 text-sm text-bad' : 'rounded-lg border border-warn/40 bg-warn/8 px-2.5 py-1.5 text-sm'}>
                 {monName(w.monId)} (Lv {w.level}) is over the next level cap ({w.cap}).{run.rules.levelCaps === 'hard' ? ' Hard cap: leave it in the box.' : ' Soft cap: keep it out of battles if you can.'}
               </li>
             ))}
