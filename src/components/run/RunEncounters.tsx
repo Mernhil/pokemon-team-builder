@@ -123,7 +123,7 @@ function PlaceEncounters({ run, loc, rows, onLog }: { run: Run; loc: string; row
                     <Button
                       key={s}
                       size="sm"
-                      variant={s === 'caught' && check.ok ? 'primary' : 'default'}
+                      variant="default"
                       aria-label={`${ENCOUNTER_LABEL[s]}: ${name}`}
                       onClick={() => {
                         onLog(loc, s, r.species, r.min, s === 'caught' ? nickname : undefined);
