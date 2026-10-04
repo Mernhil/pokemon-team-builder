@@ -10,6 +10,7 @@ import {
   type BoostStat,
   type FieldConditions,
   type MegaMode,
+  type StatFormChoice,
   type SideConditions,
 } from '@/domain/battle/conditions';
 import { formatMechanics } from '@/domain/games';
@@ -168,6 +169,7 @@ export function SideControls({
   onChange,
   ability,
   canMega,
+  statForm,
   canTera,
   teraType,
   gen = 9,
@@ -179,6 +181,8 @@ export function SideControls({
   onChange: (p: Partial<SideConditions>) => void;
   ability?: string;
   canMega: boolean;
+  /** The Pokémon changes stats between battle formes (Aegislash, Palafin): offer the choice. `alt` is the other forme's name ("Blade"). */
+  statForm?: { alt: string; auto: string };
   canTera: boolean;
   teraType?: string;
 }) {
@@ -223,6 +227,21 @@ export function SideControls({
           ]}
           onChange={(megaMode) => onChange({ megaMode })}
         />
+      )}
+      {statForm && (
+        <div className="space-y-1">
+          <Segmented<StatFormChoice>
+            label="Form"
+            value={cond.statForm ?? 'auto'}
+            options={[
+              { id: 'auto', label: 'Auto' },
+              { id: 'base', label: 'Base' },
+              { id: 'alt', label: statForm.alt },
+            ]}
+            onChange={(choice) => onChange({ statForm: choice })}
+          />
+          <p className="text-[11px] text-muted">{statForm.auto}</p>
+        </div>
       )}
       <div className="flex flex-wrap gap-1">
         {canTera && <Toggle on={cond.tera} onChange={(tera) => onChange({ tera })}>Tera {teraType}</Toggle>}

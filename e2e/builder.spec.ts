@@ -131,3 +131,13 @@ test('Aegislash: the stats panel switches between Shield and Blade Forme stats',
   await expect(group.getByRole('button', { name: 'Blade' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText('Blade Spe').first()).toBeVisible();
 });
+
+test('Aegislash: Advanced details offers a Form choice (Auto / Base / Blade)', async ({ page }) => {
+  await openApp(page);
+  await pickOption(page, 'Species', 'Aegislash');
+  await page.getByRole('button', { name: /Advanced details/ }).click();
+  const form = page.getByRole('radiogroup', { name: 'Form' });
+  await expect(form.getByRole('radio', { name: 'Auto' })).toBeChecked();
+  await form.getByRole('radio', { name: 'Blade' }).click();
+  await expect(form.getByRole('radio', { name: 'Blade' })).toBeChecked();
+});
