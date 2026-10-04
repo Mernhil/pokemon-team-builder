@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ChevronRight, Crosshair, Swords, Zap } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import type { FieldConditions, SideConditions } from '@/domain/battle/conditions';
+import { statFormOptions } from '@/domain/battle/statForm';
 import { effectiveStats, stageMultiplier, type StatLine } from '@/domain/battle/effective';
 import { calcStats } from '@/domain/stats';
 import { STAT_LABELS, type FormatRules, type Pokemon, type PokemonSet } from '@/domain/types';
@@ -49,7 +50,8 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
   const patchSide = (p: Partial<SideConditions>) => update({ side: { ...state.side, ...p } });
   const patchField = (p: Partial<FieldConditions>) => update({ field: { ...state.field, ...p } });
 
-  const forme = state.side.megaMode !== 'base' && mega ? mega : species;
+  // Here "Auto" shows the base forme (there is no attacker/defender); "Blade"/"Hero" shows the other one.
+  const forme = state.side.megaMode !== 'base' && mega ? mega : state.side.statForm === 'alt' ? (dex.statForm(species.id) ?? species) : species;
   const ability = forme !== species ? Object.values(forme.abilities)[0] ?? '' : dex.ability(set.abilityId)?.name ?? '';
 
   const result = useMemo(
@@ -110,6 +112,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
               onChange={patchSide}
               ability={ability}
               canMega={!!mega && format.capabilities.mega}
+              statForm={statFormOptions(dex, set)}
               canTera={format.capabilities.tera && !!set.teraType}
               teraType={set.teraType}
               gen={format.generation}

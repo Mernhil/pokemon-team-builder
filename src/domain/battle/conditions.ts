@@ -9,6 +9,7 @@ export type Status = '' | 'brn' | 'par' | 'psn' | 'tox' | 'slp' | 'frz';
 export type GameType = 'Doubles' | 'Singles';
 /** Which forme(s) to use in battle when a Mega Stone is held. */
 export type MegaMode = 'base' | 'mega' | 'both';
+export type StatFormChoice = 'auto' | 'base' | 'alt';
 
 export const WEATHERS: { id: Weather; label: string }[] = [
   { id: '', label: 'None' },
@@ -42,6 +43,12 @@ export interface SideConditions {
   hpPercent: number;
   /** Which forme(s) to use (when holding a Mega Stone); ignored otherwise. */
   megaMode: MegaMode;
+  /**
+   * Which battle forme to use for a Pokémon with a stat-changing one (Aegislash Shield/Blade, Palafin Zero/Hero).
+   * 'auto' (or unset): Stance Change users fight as Blade when they attack and Shield when they defend;
+   * everyone else uses the base forme. 'base' / 'alt' force it.
+   */
+  statForm?: StatFormChoice;
   /** Terastallized (uses set.teraType). */
   tera: boolean;
   /** Ability condition is met: Unburden (item used), Protosynthesis/Quark Drive (booster), Flash Fire, Slow Start… */

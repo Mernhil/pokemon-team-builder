@@ -80,8 +80,8 @@ test('Showdown export → clear → import restores the same set', async ({ page
 test('a saved team survives a reload', async ({ page }) => {
   await openApp(page);
   await buildIncineroar(page);
-  await page.getByRole('textbox', { name: 'Team name' }).first().fill('E2E team');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('dialog').getByRole('textbox', { name: 'Team name' }).fill('E2E team');
   await page.getByRole('dialog').getByRole('button', { name: /^Save/ }).click();
   await expect(page.getByText(/Saved “.*” to your teams/)).toBeVisible();
 
@@ -92,3 +92,52 @@ test('a saved team survives a reload', async ({ page }) => {
   await expect(page.getByRole('dialog')).toContainText('E2E team');
 });
 
+
+test('saving under a name that is taken asks: add a variation, or overwrite', async ({ page }) => {
+  await openApp(page);
+  await buildIncineroar(page);
+  const save = async (name: string) => {
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Save team' }).getByRole('textbox', { name: 'Team name' }).fill(name);
+  };
+  await save('Dup');
+  await page.getByRole('dialog', { name: 'Save team' }).getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Saved “Dup” to your teams.')).toBeVisible();
+
+  // A second build under the same name: the dialog asks, defaulting to the safe choice.
+  await page.getByRole('button', { name: 'Team actions' }).click();
+  await page.getByRole('menuitem', { name: 'Clear this team' }).click();
+  await expect(page.getByText(/Started a new team/)).toBeVisible();
+  await buildIncineroar(page);
+  await save('Dup');
+  const dialog = page.getByRole('dialog', { name: 'Save team' });
+  await expect(dialog.getByRole('radio', { name: /Add as a variation of “Dup”/ })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Add variation' }).click();
+  await expect(page.getByText('Added a variation to “Dup”.')).toBeVisible();
+
+  await save('Dup');
+  await dialog.getByRole('radio', { name: /Overwrite “Dup”/ }).check();
+  await dialog.getByRole('button', { name: 'Overwrite' }).click();
+  await expect(page.getByText('Overwrote “Dup”.')).toBeVisible();
+});
+
+test('Aegislash: the stats panel switches between Shield and Blade Forme stats', async ({ page }) => {
+  await openApp(page);
+  await pickOption(page, 'Species', 'Aegislash');
+  await openStatCalculator(page);
+  const group = page.getByRole('group', { name: 'Stats shown for' });
+  await expect(group.getByRole('button', { name: 'Base' })).toHaveAttribute('aria-pressed', 'true');
+  await group.getByRole('button', { name: 'Blade' }).click();
+  await expect(group.getByRole('button', { name: 'Blade' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Blade Spe').first()).toBeVisible();
+});
+
+test('Aegislash: Advanced details offers a Form choice (Auto / Base / Blade)', async ({ page }) => {
+  await openApp(page);
+  await pickOption(page, 'Species', 'Aegislash');
+  await page.getByRole('button', { name: /Advanced details/ }).click();
+  const form = page.getByRole('radiogroup', { name: 'Form' });
+  await expect(form.getByRole('radio', { name: 'Auto' })).toBeChecked();
+  await form.getByRole('radio', { name: 'Blade' }).click();
+  await expect(form.getByRole('radio', { name: 'Blade' })).toBeChecked();
+});

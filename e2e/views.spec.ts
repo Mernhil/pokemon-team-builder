@@ -48,6 +48,25 @@ test('Pokédex opens an entry and its Area tab', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /Viridian Forest/ })).toBeVisible();
 });
 
+test('Pokédex Moves tab: the type filter narrows every list to one type', async ({ page }) => {
+  await openApp(page, '#dex');
+  await page.getByRole('button', { name: /Kanto/ }).click();
+  await page.getByRole('listbox', { name: 'Pokémon' }).getByRole('option', { name: /Pikachu/ }).first().click();
+  await page.getByRole('button', { name: 'Moves', exact: true }).click();
+  const filter = page.getByRole('group', { name: 'Filter moves by type' });
+  const rows = page.getByRole('row');
+  const all = await rows.count();
+  await filter.getByRole('button', { name: 'Electric moves' }).click();
+  await expect(filter.getByRole('button', { name: 'Electric moves' })).toHaveAttribute('aria-pressed', 'true');
+  const electric = await rows.count();
+  expect(electric).toBeGreaterThan(1);
+  expect(electric).toBeLessThan(all);
+  await expect(page.getByRole('row').filter({ hasText: 'Thunderbolt' }).first()).toBeVisible();
+  await expect(page.getByRole('row').filter({ hasText: 'Quick Attack' })).toHaveCount(0);
+  await filter.getByRole('button', { name: 'All types' }).click();
+  expect(await rows.count()).toBe(all);
+});
+
 test('Pokénav: open Platinum, click a place on the map, the location panel opens', async ({ page }) => {
   await openApp(page, '#atlas');
   await page.getByRole('radio', { name: 'Pokémon Platinum' }).check();

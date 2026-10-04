@@ -1,6 +1,7 @@
 import { Crosshair, Sparkles, Info } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultSide } from '@/domain/battle/conditions';
+import { statFormOptions } from '@/domain/battle/statForm';
 import { stripUnsupported } from '@/domain/capabilities';
 import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
 import { createSet } from '@/domain/team';
@@ -276,6 +277,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
               onChange={(p) => patchCond(role, p)}
               ability={forme !== species ? Object.values(forme!.abilities)[0] : dex.ability(set.abilityId)?.name}
               canMega={!!mega && format.capabilities.mega}
+              statForm={statFormOptions(dex, set)}
               canTera={format.capabilities.tera && !!set.teraType}
               teraType={set.teraType}
               gen={dex.generation}

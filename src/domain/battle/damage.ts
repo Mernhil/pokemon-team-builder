@@ -16,6 +16,7 @@ import { FORMATS } from '../formats';
 import { calcStats, statExpToEV } from '../stats';
 import { STAT_IDS, type PokemonSet, type StatTable, type TypeName } from '../types';
 import type { FieldConditions, SideConditions } from './conditions';
+import { statFormeFor, type CalcRole } from './statForm';
 
 /** The calculator generation for a dataset: 0 (Champions) or the dataset's generation. */
 const calcGen = (dex: Dex) => Generations.get((dex.data.generation ?? 0) as never);
@@ -85,11 +86,11 @@ export function formsFor(dex: Dex, set: PokemonSet, cond: SideConditions): Forme
   return cond.megaMode === 'both' ? ['base', 'mega'] : [cond.megaMode];
 }
 
-/** The forme in battle: the Mega forme when requested and the stone is held. */
-export function battleForme(dex: Dex, set: PokemonSet, wantMega: boolean) {
+/** The forme in battle: the Mega forme when requested and the stone is held, else the stat-changing one the role calls for. */
+export function battleForme(dex: Dex, set: PokemonSet, wantMega: boolean, cond?: Pick<SideConditions, 'statForm'>, role: CalcRole = 'neutral') {
   const base = dex.species(set.speciesId);
   const mega = wantMega && datasetCapabilities(dex.data.id).mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
-  return mega ?? base;
+  return mega ?? (cond ? statFormeFor(dex, set, cond, role) : undefined) ?? base;
 }
 
 /** Display label for a form combo: '' for a single combo, else 'Base'/'Mega' or 'Base→Mega'. */
@@ -118,12 +119,12 @@ class FixedStatsPokemon extends CalcPokemon {
   }
 }
 
-export function toCalcPokemon(dex: Dex, set: PokemonSet, cond: SideConditions, wantMega: boolean = cond.megaMode !== 'base'): CalcPokemon {
+export function toCalcPokemon(dex: Dex, set: PokemonSet, cond: SideConditions, wantMega: boolean = cond.megaMode !== 'base', role: CalcRole = 'neutral'): CalcPokemon {
   const gen = calcGen(dex);
   const g = dex.data.generation;
   const mech = datasetMechanics(dex.data.id, g ?? 9);
-  const forme = battleForme(dex, set, wantMega)!;
-  const isMega = forme.id !== set.speciesId;
+  const forme = battleForme(dex, set, wantMega, cond, role)!;
+  const isMega = forme.isMega;
   const ability = !mech.abilities ? undefined : isMega ? Object.values(forme.abilities)[0] : dex.ability(set.abilityId)?.name;
   const item = mech.heldItems ? dex.item(set.itemId)?.name : undefined;
   const spread = !g
@@ -194,8 +195,8 @@ export function calcMoves(
   const gen = calcGen(dex);
   const attackerForms = formsFor(dex, attacker.set, attacker.cond);
   const defenderForms = formsFor(dex, defender.set, defender.cond);
-  const aPokemon = new Map(attackerForms.map((form) => [form, toCalcPokemon(dex, attacker.set, attacker.cond, form === 'mega')]));
-  const dPokemon = new Map(defenderForms.map((form) => [form, toCalcPokemon(dex, defender.set, defender.cond, form === 'mega')]));
+  const aPokemon = new Map(attackerForms.map((form) => [form, toCalcPokemon(dex, attacker.set, attacker.cond, form === 'mega', 'attacker')]));
+  const dPokemon = new Map(defenderForms.map((form) => [form, toCalcPokemon(dex, defender.set, defender.cond, form === 'mega', 'defender')]));
   const f = toCalcField(field, attacker.cond, defender.cond, dex.generation);
   const out: MoveResult[] = [];
   attacker.set.moves.forEach((moveId, i) => {

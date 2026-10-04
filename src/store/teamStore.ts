@@ -6,7 +6,7 @@ import { toast } from './toastStore';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
 import { withSpreadValue } from '@/domain/stats';
 import { sanitizeTeam } from '@/domain/sanitize';
-import { cloneTeam, createTeam, emptySlots, enforceCapabilities } from '@/domain/team';
+import { cloneTeam, createTeam, emptySlots, enforceCapabilities, isSavedTeam } from '@/domain/team';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
@@ -44,6 +44,12 @@ export interface TeamState {
   duplicateTeam: (id: string) => string;
   /** Explicitly commits the current in-progress build as a new, distinctly-named top-level entry. */
   saveAsNew: (name: string) => string;
+  /**
+   * Saves the current build under `name`. When another top-level team already has that name, `mode`
+   * decides: 'overwrite' replaces that team's roster, 'variation' adds the build to its folder.
+   * Returns the id of the team now open.
+   */
+  saveTeam: (name: string, mode: SaveMode, targetId?: string) => string;
   /** Duplicates `id` (or its group) and nests the copy as a variation under the same group. */
   addVariation: (id: string) => string;
   deleteTeam: (id: string) => void;
@@ -72,6 +78,15 @@ export interface TeamState {
   setBattle: (uid: string, state: SlotBattleState) => void;
 }
 
+
+export type SaveMode = 'new' | 'overwrite' | 'variation';
+
+/** The other top-level team (not the open one, not view-only) that already goes by `name`, if any. */
+export function findTeamByName(s: Pick<TeamState, 'teams' | 'order' | 'activeTeamId'>, name: string): Team | undefined {
+  const key = name.trim().toLowerCase();
+  if (!key) return undefined;
+  return s.order.map((id) => s.teams[id]).find((t) => t && t.id !== s.activeTeamId && !t.groupId && !isLocked(t) && t.name.trim().toLowerCase() === key);
+}
 
 /** A team someone else shared read-only: it can be opened and copied, never changed. */
 export const isLocked = (t: Team | undefined): boolean => !!t?.shared && t.shared.role !== 'edit';
@@ -226,6 +241,35 @@ export const useTeamStore = create<TeamState>()(
           const t = cloneTeam(src, name.trim() || src.name);
           set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order], activeTeamId: t.id, activeSlot: 0 }));
           return t.id;
+        },
+        saveTeam: (name, mode, targetId) => {
+          const state = get();
+          const src = state.teams[state.activeTeamId];
+          const target = targetId ? state.teams[targetId] : undefined;
+          if (!src) return state.activeTeamId;
+          // Saving the open team under its own name: it is already stored (edits save as you go).
+          if (mode === 'new' && src.name.trim().toLowerCase() === name.trim().toLowerCase() && isSavedTeam(src)) return src.id;
+          if (!target || target.id === src.id || isLocked(target) || mode === 'new') return get().saveAsNew(name);
+          const copy = cloneTeam(src, target.name);
+          if (mode === 'overwrite') {
+            const next: Team = {
+              ...target,
+              formatId: copy.formatId,
+              category: copy.category,
+              notes: copy.notes,
+              replicaCode: copy.replicaCode,
+              slots: copy.slots,
+              slotsByFormat: copy.slotsByFormat,
+              updatedAt: Date.now(),
+            };
+            set((s) => ({ teams: { ...s.teams, [target.id]: next }, activeTeamId: target.id, activeSlot: 0 }));
+            return target.id;
+          }
+          const groupId = target.groupId ?? target.id;
+          const siblings = Object.values(state.teams).filter((t) => t.groupId === groupId).length;
+          const v: Team = { ...copy, groupId, variationLabel: `Variation ${siblings + 2}`, shared: target.shared };
+          set((s) => ({ teams: { ...s.teams, [v.id]: v }, activeTeamId: v.id, activeSlot: 0 }));
+          return v.id;
         },
         addVariation: (id) => {
           const src = get().teams[id];

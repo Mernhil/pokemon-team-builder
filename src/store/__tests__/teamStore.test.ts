@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
-import { createSet, createTeam } from '@/domain/team';
+import { DEFAULT_TEAM_NAME, createSet, createTeam, isSavedTeam } from '@/domain/team';
 import type { Dataset, Team } from '@/domain/types';
-import { defaultSlotBattle, mergeTeamState, migrateTeamState, useTeamStore } from '../teamStore';
+import { defaultSlotBattle, findTeamByName, mergeTeamState, migrateTeamState, useTeamStore } from '../teamStore';
 
 const fmt = getFormat(DEFAULT_FORMAT_ID);
 const dex = new Dex(data as unknown as Dataset);
@@ -41,6 +41,15 @@ describe('teamStore: saveAsNew', () => {
     resetStore();
     const newId = useTeamStore.getState().saveAsNew('   ');
     expect(useTeamStore.getState().teams[newId].name).toBe('Base Team');
+  });
+});
+
+describe('isSavedTeam', () => {
+  it('is false only for the unnamed scratch draft', () => {
+    const base = { name: DEFAULT_TEAM_NAME, groupId: undefined, shared: undefined };
+    expect(isSavedTeam(base)).toBe(false);
+    expect(isSavedTeam({ ...base, name: 'Rain' })).toBe(true);
+    expect(isSavedTeam({ ...base, groupId: 'g' })).toBe(true);
   });
 });
 
@@ -277,5 +286,64 @@ describe('teamStore: updateTeam', () => {
     const state = useTeamStore.getState();
     expect(state.teams[varId].variationLabel).toBe('vs Rain teams');
     expect(state.teams[groupId].name).toBe('Base Team');
+  });
+});
+
+describe('teamStore: saveTeam with a name that is taken', () => {
+  const setup = () => {
+    const draft = resetStore();
+    const s = () => useTeamStore.getState();
+    s().setSlot(draft, 0, createSet(dex, 'charizard', fmt));
+    const rainId = s().saveAsNew('Rain');
+    s().selectTeam(draft);
+    s().setSlot(draft, 0, createSet(dex, 'blastoise', fmt));
+    return { draft, rainId, s };
+  };
+
+  it('finds the clash by name, ignoring case and the open team itself', () => {
+    const { draft, rainId, s } = setup();
+    expect(findTeamByName(s(), ' rain ')?.id).toBe(rainId);
+    expect(findTeamByName(s(), 'Sun')).toBeUndefined();
+    s().updateTeam(draft, { name: 'Sun' });
+    expect(findTeamByName(s(), 'sun')).toBeUndefined(); // the open team is not a clash with itself
+  });
+
+  it('overwrite replaces the roster of the existing team, keeping its id, name and folder', () => {
+    const { draft, rainId, s } = setup();
+    const id = s().saveTeam('Rain', 'overwrite', rainId);
+    expect(id).toBe(rainId);
+    const rain = s().teams[rainId];
+    expect(rain.name).toBe('Rain');
+    expect(rain.slots[0]?.speciesId).toBe('blastoise');
+    expect(s().activeTeamId).toBe(rainId);
+    expect(Object.values(s().teams).filter((t) => t.name === 'Rain')).toHaveLength(1);
+    expect(s().teams[draft].slots[0]?.speciesId).toBe('blastoise'); // the scratch draft is untouched
+  });
+
+  it('variation adds the build to the existing team\'s folder and leaves the original alone', () => {
+    const { rainId, s } = setup();
+    const id = s().saveTeam('Rain', 'variation', rainId);
+    const v = s().teams[id];
+    expect(v.groupId).toBe(rainId);
+    expect(v.variationLabel).toBeTruthy();
+    expect(v.slots[0]?.speciesId).toBe('blastoise');
+    expect(s().teams[rainId].slots[0]?.speciesId).toBe('charizard');
+    expect(s().order).not.toContain(id);
+    expect(s().activeTeamId).toBe(id);
+  });
+
+  it('saving the open, already-saved team under its own name does not duplicate it', () => {
+    const { rainId, s } = setup();
+    s().selectTeam(rainId);
+    const before = Object.keys(s().teams).length;
+    expect(s().saveTeam('Rain', 'new')).toBe(rainId);
+    expect(Object.keys(s().teams)).toHaveLength(before);
+  });
+
+  it('with no clash it saves a new team', () => {
+    const { s } = setup();
+    const id = s().saveTeam('Sun', 'new');
+    expect(s().teams[id].name).toBe('Sun');
+    expect(s().order).toContain(id);
   });
 });
