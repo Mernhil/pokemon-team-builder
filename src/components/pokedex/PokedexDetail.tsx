@@ -22,8 +22,8 @@ import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Toggle } from '../ui/chips';
 import { Button, Panel, TypeBadge } from '../ui/primitives';
+import { TypeFilter } from '../ui/TypeFilter';
 import { cn } from '../ui/styles';
 import { STAT_COLOR_VAR, TYPE_COLORS } from '../ui/color';
 import { AreaView } from './AreaView';
@@ -347,24 +347,7 @@ function MovesTab({ species, dex, learn, book }: Props) {
   return (
     <div className="space-y-3">
       {moveTypes.length > 1 && (
-        <div role="group" aria-label="Filter moves by type" className="scrollbar-thin flex gap-1.5 overflow-x-auto py-1">
-          <Toggle pressed={!activeType} onClick={() => setTypeFilter(null)}>All types</Toggle>
-          {moveTypes.map((type) => (
-            <button
-              key={type}
-              type="button"
-              aria-pressed={activeType === type}
-              aria-label={`${type} moves`}
-              onClick={() => setTypeFilter(activeType === type ? null : type)}
-              className={cn(
-                'inline-flex shrink-0 items-center rounded-md border p-0.5 transition-opacity pointer-coarse:p-1.5',
-                activeType === type ? 'border-accent ring-1 ring-accent' : activeType ? 'border-transparent opacity-50 hover:opacity-100' : 'border-transparent hover:opacity-80',
-              )}
-            >
-              <TypeBadge type={type} size="xs" />
-            </button>
-          ))}
-        </div>
+        <TypeFilter types={moveTypes} value={activeType} onChange={setTypeFilter} label="Filter moves by type" noun="moves" />
       )}
       {nothing && <p className="text-center text-sm text-muted">No {activeType} moves in this learnset.</p>}
       {byMethod.map((g) => (

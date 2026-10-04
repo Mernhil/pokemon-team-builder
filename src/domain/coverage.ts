@@ -54,6 +54,38 @@ export function offensiveCoverage(team: Team, dex: Dex): OffenseRow[] {
   });
 }
 
+/** How one set's selected moves fare against a defending type. */
+export interface MoveCoverageRow {
+  defType: TypeName;
+  /** Best multiplier among the damaging moves (0 = every move is blocked); undefined when there is no damaging move. */
+  mult?: number;
+  /** The moves reaching that multiplier. */
+  moves: string[];
+}
+
+/**
+ * Coverage of the moves currently selected on one set: for each defending (mono-)type, the best
+ * multiplier among its damaging moves. Only move types count (same limits as `offensiveCoverage`).
+ */
+export function moveCoverage(dex: Dex, moveIds: string[]): MoveCoverageRow[] {
+  const attacks = moveIds.flatMap((id) => {
+    const mv = id ? dex.move(id) : undefined;
+    return mv && mv.category !== 'Status' ? [mv] : [];
+  });
+  return dex.types.map((defType) => {
+    let mult: number | undefined;
+    let moves: string[] = [];
+    for (const mv of attacks) {
+      const m = dex.effectiveness(mv.type, [defType]);
+      if (mult === undefined || m > mult) {
+        mult = m;
+        moves = [mv.name];
+      } else if (m === mult) moves.push(mv.name);
+    }
+    return { defType, mult, moves };
+  });
+}
+
 export interface MatchupRow {
   defender: string;
   types: TypeName[];

@@ -12,6 +12,7 @@ import { ChipRow, Toggle } from '../ui/chips';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
 import { Button, EmptyState, LoadingState, Select } from '../ui/primitives';
+import { TypeFilter } from '../ui/TypeFilter';
 import { cn } from '../ui/styles';
 import { TYPE_COLORS } from '../ui/color';
 import { PokedexDetail } from './PokedexDetail';
@@ -132,15 +133,8 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
                 </option>
               ))}
             </Select>
-            <Select aria-label="Type" value={type} onChange={(e) => setType(e.target.value as TypeName | '')}>
-              <option value="">All types</option>
-              {dex.types.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </Select>
           </div>
+          <TypeFilter types={dex.types} value={type || null} onChange={(t) => setType(t ?? '')} label="Filter by type" noun="Pokémon" wrap />
           <label className="flex min-h-8 items-center gap-2 text-sm text-muted">
             {data.areas.length > 0 && (
               <>

@@ -10,12 +10,15 @@ import { metaSets, type MetaSet } from '@/domain/metaSets';
 import { describeGoal, optimize, type Goal, type Leftover, type OptimizeResult } from '@/domain/optimizer';
 import { pickSpeedSnapshot } from '@/domain/speedTiers';
 import { createSet } from '@/domain/team';
-import { spreadKey } from '@/domain/stats';
+import { investRange, setSpreadValue, spreadKey, sumStats } from '@/domain/stats';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type PokemonSet, type StatId, type StatTable } from '@/domain/types';
 import { useOptimizerStore, type OptimizerRequest } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
-import { Button, Chip, Field, Label, Select } from '../ui/primitives';
+import { Combobox } from '../ui/Combobox';
+import { Button, Chip, Disclosure, Field, Label, Select } from '../ui/primitives';
+import { NaturePicker } from './NaturePicker';
+import { comboProps, useItemPicker, useMovePicker } from './options';
 import { Modal } from '../ui/Modal';
 import { cn } from '../ui/styles';
 
@@ -37,6 +40,8 @@ interface Source {
   key: string;
   label: string;
   set: PokemonSet;
+  /** The moves people run on it, most used first (meta sources only). */
+  moveShare?: { id: string; pct: number }[];
 }
 
 /** Where the other Pokémon in a goal can come from: the most-used sets, my saved teams, or any species. */
@@ -45,7 +50,7 @@ function useSources(dex: Dex, format: FormatRules, mine: PokemonSet) {
   const teams = useTeamStore((s) => s.teams);
   return useMemo(() => {
     const picked = format.datasetId === 'champions' ? pickSpeedSnapshot(format.regulationId, champRegIds, (id) => metaFor?.(id)) : undefined;
-    const meta: Source[] = picked ? metaSets(picked.snapshot, dex, format, 30).map((m: MetaSet) => ({ key: m.speciesId, label: `${dex.species(m.speciesId)?.name ?? m.speciesId} (${usageLabel(m)})`, set: m.set })) : [];
+    const meta: Source[] = picked ? metaSets(picked.snapshot, dex, format, 30).map((m: MetaSet) => ({ key: m.speciesId, label: `${dex.species(m.speciesId)?.name ?? m.speciesId} (${usageLabel(m)})`, set: m.set, moveShare: picked.snapshot.entries.find((e) => e.speciesId === m.speciesId)?.moves })) : [];
     const saved: Source[] = [];
     for (const t of Object.values(teams)) {
       if (!t.slots.some(Boolean)) continue;
@@ -56,7 +61,8 @@ function useSources(dex: Dex, format: FormatRules, mine: PokemonSet) {
     const species = dex.selectableSpecies(format.regulationId);
     // A species in the meta list comes with its set filled in; any other starts blank.
     const anySet = (speciesId: string): PokemonSet => meta.find((m) => m.key === speciesId)?.set ?? createSet(dex, speciesId, format);
-    return { meta, saved, species, anySet, hasMeta: meta.length > 0 };
+    const shareFor = (speciesId: string) => meta.find((m) => m.key === speciesId)?.moveShare;
+    return { meta, saved, species, anySet, shareFor, hasMeta: meta.length > 0 };
   }, [dex, format, teams, metaFor, mine.uid]);
 }
 
@@ -360,6 +366,99 @@ function GoalRow({ dex, format, goal, mine, onChange, onRemove }: { dex: Dex; fo
   );
 }
 
+/** A set's stat investment (Stat Points or EVs, by format), one number box per stat, within the format's caps. */
+function SpreadInputs({ format, set, onChange }: { format: FormatRules; set: PokemonSet; onChange: (spread: StatTable) => void }) {
+  const sys = format.statSystem;
+  const key = spreadKey(sys);
+  const unit = key === 'sp' ? 'SP' : 'EVs';
+  const spread = (key === 'sp' ? set.sp : set.evs) as StatTable;
+  const { max, step } = investRange(sys);
+  const total = sys.kind === 'champions-sp' || sys.kind === 'modern-ev' ? sys.totalCap : Infinity;
+  return (
+    <div>
+      <p className="mb-1 text-xs text-muted">
+        {unit} {Number.isFinite(total) ? `(${sumStats(spread)}/${total})` : ''}
+      </p>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {STAT_IDS.map((st) => (
+          <label key={st} className="flex flex-col gap-0.5 text-xs">
+            <span className="font-semibold text-muted">{STAT_LABELS[st]}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={max}
+              step={step}
+              aria-label={`Their ${STAT_LABELS[st]} ${unit}`}
+              value={spread[st]}
+              onChange={(e) => onChange(setSpreadValue(spread, st, Number(e.target.value), total, max))}
+              className="h-8 w-full rounded border border-border bg-surface px-1.5 font-mono pointer-coarse:h-11"
+            />
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Pick a move: the set's own / most-used moves as one-tap suggestions, then the whole learnset as in the builder. */
+function MovePick({
+  dex,
+  format,
+  owner,
+  suggestions,
+  value,
+  onChange,
+  label,
+}: {
+  dex: Dex;
+  format: FormatRules;
+  owner: PokemonSet;
+  suggestions: { id: string; pct?: number }[];
+  value: string | undefined;
+  onChange: (id: string) => void;
+  label: string;
+}) {
+  const picker = useMovePicker(dex, format, owner);
+  const chips = suggestions.flatMap((s) => {
+    const mv = dex.move(s.id);
+    return mv && mv.category !== 'Status' && dex.canLearn(owner.speciesId, mv.id) ? [{ mv, pct: s.pct }] : [];
+  });
+  return (
+    <div className="space-y-1.5 sm:col-span-2">
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={`${label}: suggestions`}>
+          {chips.map(({ mv, pct }) => (
+            <button
+              key={mv.id}
+              type="button"
+              aria-pressed={value === mv.id}
+              onClick={() => onChange(mv.id)}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs pointer-coarse:min-h-11',
+                value === mv.id ? 'border-accent bg-accent/15 font-semibold' : 'border-border bg-surface hover:bg-surface-2',
+              )}
+            >
+              {mv.name}
+              {pct !== undefined && <span className="text-muted">{Math.round(pct)}%</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      <Combobox
+        aria-label={`${label}: all moves`}
+        {...comboProps(picker)}
+        value={value ?? ''}
+        placeholder="Search all moves"
+        onChange={(id) => {
+          picker.remember(id);
+          onChange(id);
+        }}
+      />
+    </div>
+  );
+}
+
 function GoalAdder({ kind, dex, format, mine, field, onAdd }: { kind: GoalKind; dex: Dex; format: FormatRules; mine: PokemonSet; field: FieldConditions; onAdd: (g: Goal) => void }) {
   const src = useSources(dex, format, mine);
   const [source, setSource] = useState<SourceKind>(src.hasMeta ? 'meta' : 'any');
@@ -370,14 +469,33 @@ function GoalAdder({ kind, dex, format, mine, field, onAdd }: { kind: GoalKind; 
   const [crit, setCrit] = useState(false);
   const [theirTailwind, setTheirTailwind] = useState(false);
   const [theirStage, setTheirStage] = useState(0);
+  // Edits to the other Pokémon's set; dropped whenever a different Pokémon is picked.
+  const [tweaks, setTweaks] = useState<Partial<PokemonSet>>({});
 
-  const options: Source[] = source === 'meta' ? src.meta : source === 'team' ? src.saved : src.species.map((s) => ({ key: s.id, label: s.name, set: src.anySet(s.id) }));
+  const options: Source[] = source === 'meta' ? src.meta : source === 'team' ? src.saved : src.species.map((s) => ({ key: s.id, label: s.name, set: src.anySet(s.id), moveShare: src.shareFor(s.id) }));
   const chosen = options.find((o) => o.key === pick) ?? options[0];
-  const them = chosen?.set;
-  // The move list belongs to whoever uses the move: them for "survive", me for "knock out".
+  const them: PokemonSet | undefined = chosen && { ...chosen.set, ...tweaks };
+  const species = them ? dex.species(them.speciesId) : undefined;
+  const itemPicker = useItemPicker(dex, format, them?.speciesId);
+  const choose = (key: string) => {
+    setPick(key);
+    setMoveId('');
+    setTweaks({});
+  };
+
+  // The move belongs to whoever uses it: them for "survive", me for "knock out".
   const moveOwner = kind === 'ko' ? mine : them;
-  const moves = moveOwner ? attackMoves(dex, moveOwner, format) : [];
-  const move = moves.find((m) => m.id === moveId)?.id ?? moves[0]?.id;
+  const suggestions: { id: string; pct?: number }[] =
+    kind === 'ko'
+      ? mine.moves.filter(Boolean).map((id) => ({ id }))
+      : chosen?.moveShare?.length
+        ? chosen.moveShare
+        : (chosen?.set.moves ?? []).filter(Boolean).map((id) => ({ id }));
+  const attacks = moveOwner ? attackMoves(dex, moveOwner, format) : [];
+  const move = moveId || suggestions.find((s) => dex.move(s.id)?.category !== 'Status')?.id || attacks[0]?.id;
+  const moveOk = !!move && dex.move(move)?.category !== 'Status';
+  const nature = them ? dex.nature(them.nature) : undefined;
+  const key = spreadKey(format.statSystem);
 
   const add = () => {
     if (!them) return;
@@ -392,18 +510,20 @@ function GoalAdder({ kind, dex, format, mine, field, onAdd }: { kind: GoalKind; 
     }
   };
 
+  const abilityIds = [...new Set(Object.values(species?.abilities ?? {}).flatMap((a) => (a ? [dex.ability(a)?.id ?? a] : [])))];
+
   return (
     <div className="space-y-2 rounded-lg border border-dashed border-border p-3" role="group" aria-label={`Add a goal: ${kind === 'survive' ? 'survive a move' : kind === 'outspeed' ? 'outspeed' : 'knock out'}`}>
       <div className="grid gap-2 sm:grid-cols-2">
         <Field label="Pokémon from">
-          <Select aria-label="Pokémon from" value={source} onChange={(e) => { setSource(e.target.value as SourceKind); setPick(''); }}>
+          <Select aria-label="Pokémon from" value={source} onChange={(e) => { setSource(e.target.value as SourceKind); choose(''); }}>
             {src.hasMeta && <option value="meta">Most-used sets (meta)</option>}
             <option value="team" disabled={src.saved.length === 0}>My saved teams</option>
             <option value="any">Any species</option>
           </Select>
         </Field>
         <Field label="Pokémon">
-          <Select aria-label="Pokémon" value={chosen?.key ?? ''} onChange={(e) => { setPick(e.target.value); setMoveId(''); }}>
+          <Select aria-label="Pokémon" value={chosen?.key ?? ''} onChange={(e) => choose(e.target.value)}>
             {options.map((o) => (
               <option key={o.key} value={o.key}>
                 {o.label}
@@ -411,15 +531,19 @@ function GoalAdder({ kind, dex, format, mine, field, onAdd }: { kind: GoalKind; 
             ))}
           </Select>
         </Field>
-        {kind !== 'outspeed' && (
-          <Field label={kind === 'ko' ? 'My move' : 'Their move'}>
-            <Select aria-label={kind === 'ko' ? 'My move to use' : 'Their move to survive'} value={move ?? ''} onChange={(e) => setMoveId(e.target.value)}>
-              {moves.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </Select>
+        {kind !== 'outspeed' && moveOwner && (
+          <Field label={kind === 'ko' ? 'My move' : 'Their move'} className="sm:col-span-2">
+            <MovePick
+              key={`${kind}:${moveOwner.speciesId}`}
+              dex={dex}
+              format={format}
+              owner={moveOwner}
+              suggestions={suggestions}
+              value={move}
+              onChange={setMoveId}
+              label={kind === 'ko' ? 'My move to use' : 'Their move to survive'}
+            />
+            {move && !moveOk && <p className="mt-1 text-xs text-bad">{dex.move(move)?.name} doesn't deal damage. Pick an attack.</p>}
           </Field>
         )}
         {kind === 'ko' && (
@@ -467,8 +591,51 @@ function GoalAdder({ kind, dex, format, mine, field, onAdd }: { kind: GoalKind; 
           </>
         )}
       </div>
+
+      {them && (
+        <Disclosure
+          title={`${species?.name ?? them.speciesId}'s set`}
+          summary={[dex.item(them.itemId ?? '')?.name, them.nature, `${sumStats((key === 'sp' ? them.sp : them.evs) as StatTable)} ${key === 'sp' ? 'SP' : 'EVs'}`].filter(Boolean).join(' · ')}
+        >
+          <div className="space-y-3 pt-1">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Field label="Item">
+                <Combobox
+                  aria-label="Their item"
+                  {...comboProps(itemPicker)}
+                  value={them.itemId ?? ''}
+                  allowClear
+                  placeholder="No item"
+                  onChange={(id) => {
+                    itemPicker.remember(id);
+                    setTweaks((t) => ({ ...t, itemId: id || undefined }));
+                  }}
+                />
+              </Field>
+              {abilityIds.length > 0 && (
+                <Field label="Ability">
+                  <Select aria-label="Their ability" value={them.abilityId ?? ''} onChange={(e) => setTweaks((t) => ({ ...t, abilityId: e.target.value }))}>
+                    {abilityIds.map((id) => (
+                      <option key={id} value={id}>
+                        {dex.ability(id)?.name ?? id}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+              {nature && (
+                <Field label="Nature">
+                  <NaturePicker dex={dex} value={them.nature} onChange={(n) => setTweaks((t) => ({ ...t, nature: n }))} />
+                </Field>
+              )}
+            </div>
+            <SpreadInputs format={format} set={them} onChange={(spread) => setTweaks((t) => ({ ...t, [key]: spread }))} />
+          </div>
+        </Disclosure>
+      )}
+
       <div className="flex justify-end">
-        <Button variant="primary" size="sm" disabled={!them || (kind !== 'outspeed' && !move)} onClick={add}>
+        <Button variant="primary" size="sm" disabled={!them || (kind !== 'outspeed' && !moveOk)} onClick={add}>
           Add goal
         </Button>
       </div>
