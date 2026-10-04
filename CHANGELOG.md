@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.21.1 — 2026-10-04
+
+### Fixed
+- **Damage Calc:** the ability's info card now describes the Mega's ability while a Pokémon is Mega Evolved (Chandelure-Mega showed Flash Fire's description next to Infiltrator).
+
 ## 0.21.0 — 2026-10-04
 
 ### New
