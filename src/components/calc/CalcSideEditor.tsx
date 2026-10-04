@@ -39,6 +39,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
   const species = set ? dex.species(set.speciesId) : undefined;
   const mega = set && format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
   const forme = side.cond.megaMode !== 'base' && mega ? mega : species;
+  // The ability in play: a Mega's own while it is Mega Evolved, else the set's.
+  const shownAbility = dex.ability(forme && forme !== species ? Object.values(forme.abilities)[0] : set?.abilityId);
 
   const loadFromTeam = (i: number) => {
     const s = team.slots[i];
@@ -167,8 +169,8 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
               <Field
                 label="Ability"
                 hint={
-                  dex.ability(set.abilityId)?.shortDesc && (
-                    <InfoTooltip title={dex.ability(set.abilityId)!.name} summary={dex.ability(set.abilityId)!.shortDesc} interactions={ABILITY_INTERACTIONS[set.abilityId!]} label={`About ${dex.ability(set.abilityId)!.name}`}>
+                  shownAbility?.shortDesc && (
+                    <InfoTooltip title={shownAbility.name} summary={shownAbility.shortDesc} interactions={ABILITY_INTERACTIONS[shownAbility.id]} label={`About ${shownAbility.name}`}>
                       <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
                     </InfoTooltip>
                   )
