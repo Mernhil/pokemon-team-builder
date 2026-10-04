@@ -6,12 +6,12 @@ import { toast } from './toastStore';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
 import { withSpreadValue } from '@/domain/stats';
 import { sanitizeTeam } from '@/domain/sanitize';
-import { cloneTeam, createTeam, emptySlots, enforceCapabilities, isSavedTeam } from '@/domain/team';
+import { cloneTeam, createTeam, DEFAULT_TEAM_NAME, emptySlots, enforceCapabilities, isSavedTeam } from '@/domain/team';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
 export type Theme = 'dark' | 'light';
-export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta' | 'speed' | 'threats' | 'reverse' | 'regdiff' | 'compare';
+export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta' | 'speed' | 'threats' | 'ohko' | 'ohkod' | 'reverse' | 'regdiff' | 'compare';
 
 /** Advanced-details state for one team member (keyed by set uid). */
 export interface SlotBattleState {
@@ -26,6 +26,13 @@ export interface TeamState {
   order: string[];
   activeTeamId: string;
   activeSlot: number;
+  /**
+   * The saved team the builder's draft was loaded from (Edit team) or last saved into. The builder
+   * only ever edits the scratch draft; a saved team changes when you Save over it, never by editing.
+   */
+  editingFrom: string | null;
+  /** The draft `editingFrom` belongs to: once another team becomes the open one, the link no longer applies. */
+  editingDraft: string | null;
   theme: Theme;
   view: View;
   battle: Record<string, SlotBattleState>;
@@ -33,6 +40,12 @@ export interface TeamState {
   // teams
   newTeam: (formatId?: string) => string;
   selectTeam: (id: string) => void;
+  /**
+   * Loads a saved team into the builder's scratch draft (replacing what's in it) so it can be
+   * changed without touching the saved copy; Save then updates the saved team. A view-only shared
+   * team is just shown. Returns the id of the team now open.
+   */
+  editTeam: (id: string) => string;
   updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'replicaCode' | 'variationLabel'>>) => void;
   /**
    * Switches a team to a different format, saving its current roster under its old formatId and
@@ -42,12 +55,13 @@ export interface TeamState {
    */
   switchFormat: (id: string, formatId: string) => void;
   duplicateTeam: (id: string) => string;
-  /** Explicitly commits the current in-progress build as a new, distinctly-named top-level entry. */
+  /** Commits a copy of the current build as a new, distinctly-named top-level entry; the build itself stays open. */
   saveAsNew: (name: string) => string;
   /**
-   * Saves the current build under `name`. When another top-level team already has that name, `mode`
-   * decides: 'overwrite' replaces that team's roster, 'variation' adds the build to its folder.
-   * Returns the id of the team now open.
+   * Saves a copy of the current build under `name`. When another top-level team already has that name
+   * (or `targetId` names the team to update), `mode` decides: 'overwrite' replaces that team's roster,
+   * 'variation' adds the build to its folder. The build stays open in the builder; returns the id of
+   * the saved team.
    */
   saveTeam: (name: string, mode: SaveMode, targetId?: string) => string;
   /** Duplicates `id` (or its group) and nests the copy as a variation under the same group. */
@@ -86,6 +100,11 @@ export function findTeamByName(s: Pick<TeamState, 'teams' | 'order' | 'activeTea
   const key = name.trim().toLowerCase();
   if (!key) return undefined;
   return s.order.map((id) => s.teams[id]).find((t) => t && t.id !== s.activeTeamId && !t.groupId && !isLocked(t) && t.name.trim().toLowerCase() === key);
+}
+
+/** The saved team the open draft was loaded from or last saved into, if that still applies. */
+export function editingTeam(s: Pick<TeamState, 'teams' | 'editingFrom' | 'editingDraft' | 'activeTeamId'>): Team | undefined {
+  return s.editingFrom && s.editingDraft === s.activeTeamId ? s.teams[s.editingFrom] : undefined;
 }
 
 /** A team someone else shared read-only: it can be opened and copied, never changed. */
@@ -158,14 +177,30 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
     }
   }
   const topLevelIds = ids.filter((id) => !teams[id].groupId);
-  const order = [...new Set([...(Array.isArray(p.order) ? p.order : []), ...topLevelIds])].filter((id) => topLevelIds.includes(id));
+  let order = [...new Set([...(Array.isArray(p.order) ? p.order : []), ...topLevelIds])].filter((id) => topLevelIds.includes(id));
+  let activeTeamId = typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0];
+  let editingFrom = typeof p.editingFrom === 'string' && Object.hasOwn(teams, p.editingFrom) ? p.editingFrom : null;
+  let editingDraft = typeof p.editingDraft === 'string' && Object.hasOwn(teams, p.editingDraft) ? p.editingDraft : null;
+  // Before 0.21 the builder edited the open saved team in place. It now edits a scratch draft, so a
+  // saved team that was left open becomes a draft copy of itself and stays as it was.
+  const open = teams[activeTeamId];
+  if (open && isSavedTeam(open) && !isLocked(open)) {
+    const draft = cloneTeam(open, DEFAULT_TEAM_NAME);
+    teams[draft.id] = draft;
+    order = [draft.id, ...order];
+    editingFrom = open.id;
+    editingDraft = draft.id;
+    activeTeamId = draft.id;
+  }
   return {
     ...current,
     teams,
     order,
-    activeTeamId: typeof p.activeTeamId === 'string' && Object.hasOwn(teams, p.activeTeamId) ? p.activeTeamId : order[0],
+    editingFrom,
+    editingDraft,
+    activeTeamId,
     theme: p.theme === 'light' ? 'light' : 'dark',
-    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' || p.view === 'speed' || p.view === 'threats' || p.view === 'reverse' || p.view === 'regdiff' || p.view === 'compare' ? p.view : 'builder',
+    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' || p.view === 'speed' || p.view === 'threats' || p.view === 'ohko' || p.view === 'ohkod' || p.view === 'reverse' || p.view === 'regdiff' || p.view === 'compare' ? p.view : 'builder',
     battle,
   };
 }
@@ -196,11 +231,47 @@ export const useTeamStore = create<TeamState>()(
           return { ...t, slots };
         });
 
+      /** The scratch draft takes `id`'s roster (a new draft when the open team is itself saved or shared). */
+      const openForEdit = (id: string): string => {
+        const s = get();
+        const src = s.teams[id];
+        if (!src) return id;
+        if (isLocked(src)) {
+          set({ activeTeamId: id, activeSlot: 0, editingFrom: null, editingDraft: null });
+          return id;
+        }
+        const active = s.teams[s.activeTeamId];
+        const reuse = active && active.id !== id && !isSavedTeam(active) ? active : undefined;
+        const copy = cloneTeam(src, DEFAULT_TEAM_NAME);
+        let draft: Team = copy;
+        if (reuse) {
+          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: Date.now() };
+          if (reuse.slots.some(Boolean)) {
+            const prev = { team: reuse, editingFrom: s.editingFrom, editingDraft: s.editingDraft };
+            toast(`Loaded “${src.name}${src.variationLabel ? ` · ${src.variationLabel}` : ''}” into the builder.`, {
+              label: 'Undo',
+              run: () => set((cur) => (cur.teams[prev.team.id] ? { teams: { ...cur.teams, [prev.team.id]: prev.team }, editingFrom: prev.editingFrom, editingDraft: prev.editingDraft, activeTeamId: prev.team.id, activeSlot: 0 } : cur)),
+            });
+          }
+        }
+        set((cur) => ({
+          teams: { ...cur.teams, [draft.id]: draft },
+          order: cur.order.includes(draft.id) ? cur.order : [draft.id, ...cur.order],
+          activeTeamId: draft.id,
+          activeSlot: 0,
+          editingFrom: id,
+          editingDraft: draft.id,
+        }));
+        return draft.id;
+      };
+
       return {
         teams: { [firstTeam.id]: firstTeam },
         order: [firstTeam.id],
         activeTeamId: firstTeam.id,
         activeSlot: 0,
+        editingFrom: null,
+        editingDraft: null,
         theme: 'dark',
         view: 'builder',
         battle: {},
@@ -211,6 +282,7 @@ export const useTeamStore = create<TeamState>()(
           return t.id;
         },
         selectTeam: (id) => get().teams[id] && set({ activeTeamId: id, activeSlot: 0 }),
+        editTeam: (id) => openForEdit(id),
         updateTeam: (id, patch) =>
           set((s) => (isLocked(s.teams[id]) ? (lockedNotice(), s) : s.teams[id] ? { teams: { ...s.teams, [id]: { ...s.teams[id], ...patch, updatedAt: Date.now() } } } : s)),
         switchFormat: (id, formatId) =>
@@ -232,14 +304,16 @@ export const useTeamStore = create<TeamState>()(
           const src = get().teams[id];
           if (!src) return id;
           const t = cloneTeam(src); // always a new top-level group, even if `src` was a variation
-          set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order], activeTeamId: t.id, activeSlot: 0 }));
+          set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order] }));
+          openForEdit(t.id);
           return t.id;
         },
         saveAsNew: (name) => {
           const src = get().teams[get().activeTeamId];
           if (!src) return get().activeTeamId;
           const t = cloneTeam(src, name.trim() || src.name);
-          set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order], activeTeamId: t.id, activeSlot: 0 }));
+          // The build stays open as the draft; the saved copy only changes when you Save over it.
+          set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order], editingFrom: t.id, editingDraft: s.activeTeamId }));
           return t.id;
         },
         saveTeam: (name, mode, targetId) => {
@@ -254,6 +328,7 @@ export const useTeamStore = create<TeamState>()(
           if (mode === 'overwrite') {
             const next: Team = {
               ...target,
+              name: target.groupId ? target.name : name.trim() || target.name,
               formatId: copy.formatId,
               category: copy.category,
               notes: copy.notes,
@@ -262,13 +337,13 @@ export const useTeamStore = create<TeamState>()(
               slotsByFormat: copy.slotsByFormat,
               updatedAt: Date.now(),
             };
-            set((s) => ({ teams: { ...s.teams, [target.id]: next }, activeTeamId: target.id, activeSlot: 0 }));
+            set((s) => ({ teams: { ...s.teams, [target.id]: next }, editingFrom: target.id, editingDraft: s.activeTeamId }));
             return target.id;
           }
           const groupId = target.groupId ?? target.id;
           const siblings = Object.values(state.teams).filter((t) => t.groupId === groupId).length;
           const v: Team = { ...copy, groupId, variationLabel: `Variation ${siblings + 2}`, shared: target.shared };
-          set((s) => ({ teams: { ...s.teams, [v.id]: v }, activeTeamId: v.id, activeSlot: 0 }));
+          set((s) => ({ teams: { ...s.teams, [v.id]: v }, editingFrom: v.id, editingDraft: s.activeTeamId }));
           return v.id;
         },
         addVariation: (id) => {
@@ -282,7 +357,8 @@ export const useTeamStore = create<TeamState>()(
           const siblings = Object.values(get().teams).filter((t) => t.groupId === groupId).length;
           // A variation added to a folder shared with edit rights belongs to that folder (and syncs there).
           const t = { ...cloneTeam(src, src.name, { groupId, variationLabel: `Variation ${siblings + 2}` }), shared: src.shared };
-          set((s) => ({ teams: { ...s.teams, [t.id]: t }, activeTeamId: t.id, activeSlot: 0 }));
+          set((s) => ({ teams: { ...s.teams, [t.id]: t } }));
+          openForEdit(t.id);
           return t.id;
         },
         deleteTeam: (id) =>
@@ -320,9 +396,9 @@ export const useTeamStore = create<TeamState>()(
           set((s) => {
             const teams = { ...s.teams, [copy.id]: copy };
             for (const v of variations) teams[v.id] = v;
-            const pick = src.groupId ? (variations[members.findIndex((m) => m.id === src.id)] ?? copy) : copy;
-            return { teams, order: [copy.id, ...s.order], activeTeamId: pick.id, activeSlot: 0 };
+            return { teams, order: [copy.id, ...s.order] };
           });
+          openForEdit(src.groupId ? (variations[members.findIndex((m) => m.id === src.id)] ?? copy).id : copy.id);
           return copy.id;
         },
         applySynced: (upserts, deletes) =>
@@ -341,7 +417,8 @@ export const useTeamStore = create<TeamState>()(
             const activeTeamId = Object.hasOwn(teams, s.activeTeamId) ? s.activeTeamId : order[0];
             return { teams, order, activeTeamId, activeSlot: activeTeamId === s.activeTeamId ? s.activeSlot : 0 };
           }),
-        addTeams: (incoming, activate = true) =>
+        addTeams: (incoming, activate = true) => {
+          let first: string | undefined;
           set((s) => {
             const teams = { ...s.teams };
             const idMap = new Map<string, string>(); // original incoming id -> id actually used, when remapped to avoid a collision
@@ -366,12 +443,12 @@ export const useTeamStore = create<TeamState>()(
               ids.push(copy.id);
               if (!groupId) orderAdds.push(copy.id);
             }
-            return {
-              teams,
-              order: [...orderAdds, ...s.order.filter((x) => !orderAdds.includes(x))],
-              ...(activate && ids[0] ? { activeTeamId: ids[0], activeSlot: 0 } : {}),
-            };
-          }),
+            first = ids[0];
+            return { teams, order: [...orderAdds, ...s.order.filter((x) => !orderAdds.includes(x))] };
+          });
+          // An imported team is saved as it came; the builder opens a draft copy so editing never alters it.
+          if (activate && first) openForEdit(first);
+        },
 
         setActiveSlot: (i) => set({ activeSlot: Math.max(0, Math.min(5, i)) }),
         setSlot: (id, i, p) =>
@@ -417,7 +494,7 @@ export const useTeamStore = create<TeamState>()(
       name: 'ptb:v1',
       version: 3,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, theme: s.theme, view: s.view, battle: s.battle }),
+      partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, editingFrom: s.editingFrom, theme: s.theme, view: s.view, battle: s.battle }),
       migrate: migrateTeamState,
       merge: mergeTeamState,
     },

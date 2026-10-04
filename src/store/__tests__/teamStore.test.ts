@@ -23,7 +23,7 @@ function resetStore() {
 }
 
 describe('teamStore: saveAsNew', () => {
-  it('commits the active build as a new, distinct top-level entry and activates it', () => {
+  it('commits a copy of the build as a new, distinct top-level entry and leaves the build open', () => {
     const baseId = resetStore();
     const newId = useTeamStore.getState().saveAsNew('My Rain Team');
 
@@ -32,7 +32,8 @@ describe('teamStore: saveAsNew', () => {
     expect(state.teams[newId].name).toBe('My Rain Team');
     expect(state.teams[newId].groupId).toBeUndefined();
     expect(state.order).toContain(newId);
-    expect(state.activeTeamId).toBe(newId);
+    expect(state.activeTeamId).toBe(baseId);
+    expect(state.editingFrom).toBe(newId);
     // The original entry is left untouched, not overwritten.
     expect(state.teams[baseId].name).toBe('Base Team');
   });
@@ -106,8 +107,10 @@ describe('teamStore: variations', () => {
     // Variations never appear in the top-level `order` list.
     expect(state.order).not.toContain(varId);
     expect(state.order).toContain(groupId);
-    // Clicking "Add variation" also loads the new copy into the builder.
-    expect(state.activeTeamId).toBe(varId);
+    // Clicking "Add variation" also loads the new copy into the builder's draft; the variation itself stays as saved.
+    expect(state.editingFrom).toBe(varId);
+    expect(state.activeTeamId).not.toBe(varId);
+    expect(isSavedTeam(state.teams[state.activeTeamId])).toBe(false);
   });
 
   it('adding a variation from an existing variation nests under the shared parent group', () => {
@@ -232,8 +235,11 @@ describe('persist migration (v1 flat teams -> v2 grouped teams)', () => {
     const merged = mergeTeamState({ teams: { [t.id]: t }, order: [t.id], activeTeamId: t.id }, current);
 
     expect(merged.teams[t.id].groupId).toBeUndefined();
-    expect(merged.order).toEqual([t.id]);
-    expect(merged.activeTeamId).toBe(t.id);
+    // A saved team left open by an older version is kept as it is; the builder gets a draft copy of it.
+    expect(merged.order).toContain(t.id);
+    expect(merged.activeTeamId).not.toBe(t.id);
+    expect(merged.editingFrom).toBe(t.id);
+    expect(merged.teams[merged.activeTeamId].name).toBe(DEFAULT_TEAM_NAME);
   });
 
   it('merge drops a variation whose parent group did not survive sanitising, promoting it to top-level', () => {
@@ -265,7 +271,7 @@ describe('persist migration (v1 flat teams -> v2 grouped teams)', () => {
     const current = useTeamStore.getState();
     const merged = mergeTeamState({ teams: { [group.id]: group, [variation.id]: variation }, order: [group.id, variation.id] }, current);
 
-    expect(merged.order).toEqual([group.id]);
+    expect(merged.order.filter((id) => id !== merged.activeTeamId)).toEqual([group.id]); // plus the builder's draft
     expect(merged.teams[variation.id].groupId).toBe(group.id);
   });
 
@@ -315,7 +321,8 @@ describe('teamStore: saveTeam with a name that is taken', () => {
     const rain = s().teams[rainId];
     expect(rain.name).toBe('Rain');
     expect(rain.slots[0]?.speciesId).toBe('blastoise');
-    expect(s().activeTeamId).toBe(rainId);
+    expect(s().activeTeamId).toBe(draft);
+    expect(s().editingFrom).toBe(rainId);
     expect(Object.values(s().teams).filter((t) => t.name === 'Rain')).toHaveLength(1);
     expect(s().teams[draft].slots[0]?.speciesId).toBe('blastoise'); // the scratch draft is untouched
   });
@@ -329,7 +336,8 @@ describe('teamStore: saveTeam with a name that is taken', () => {
     expect(v.slots[0]?.speciesId).toBe('blastoise');
     expect(s().teams[rainId].slots[0]?.speciesId).toBe('charizard');
     expect(s().order).not.toContain(id);
-    expect(s().activeTeamId).toBe(id);
+    expect(s().activeTeamId).not.toBe(id);
+    expect(s().editingFrom).toBe(id);
   });
 
   it('saving the open, already-saved team under its own name does not duplicate it', () => {
@@ -345,5 +353,41 @@ describe('teamStore: saveTeam with a name that is taken', () => {
     const id = s().saveTeam('Sun', 'new');
     expect(s().teams[id].name).toBe('Sun');
     expect(s().order).toContain(id);
+  });
+});
+
+describe('teamStore: editing a saved team', () => {
+  const s = () => useTeamStore.getState();
+
+  it('Edit team loads a copy into the scratch draft; changing it leaves the saved team alone', () => {
+    const draft = resetStore();
+    s().updateTeam(draft, { name: DEFAULT_TEAM_NAME });
+    s().setSlot(draft, 0, createSet(dex, 'charizard', fmt));
+    const rainId = s().saveAsNew('Rain');
+
+    s().setSlot(draft, 0, createSet(dex, 'blastoise', fmt)); // keep building after saving
+    expect(s().teams[rainId].slots[0]?.speciesId).toBe('charizard');
+
+    const open = s().editTeam(rainId);
+    expect(open).toBe(draft); // the scratch draft is reused
+    expect(s().editingFrom).toBe(rainId);
+    expect(s().teams[draft].slots[0]?.speciesId).toBe('charizard');
+    expect(s().teams[draft].slots[0]?.uid).not.toBe(s().teams[rainId].slots[0]?.uid);
+
+    s().setSlot(draft, 0, createSet(dex, 'venusaur', fmt));
+    expect(s().teams[rainId].slots[0]?.speciesId).toBe('charizard');
+
+    s().saveTeam('Rain', 'overwrite', rainId);
+    expect(s().teams[rainId].slots[0]?.speciesId).toBe('venusaur');
+  });
+
+  it('starts a new draft when the open team is itself saved', () => {
+    const base = resetStore(); // "Base Team" is a saved team
+    const other = s().saveAsNew('Other');
+    const open = s().editTeam(other);
+    expect(open).not.toBe(base);
+    expect(s().activeTeamId).toBe(open);
+    expect(isSavedTeam(s().teams[open])).toBe(false);
+    expect(s().teams[base].name).toBe('Base Team');
   });
 });

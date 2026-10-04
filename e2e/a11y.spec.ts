@@ -69,6 +69,13 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoA11yViolations(page);
     });
 
+    test('OHKO report', async ({ page }) => {
+      await importTeam(page, SAMPLE_TEAM);
+      await page.goto('/#ohkod');
+      await page.getByRole('status').filter({ hasText: /Pokémon calculated against/ }).waitFor({ timeout: 30_000 });
+      await expectNoA11yViolations(page);
+    });
+
     test('Reverse search', async ({ page }) => {
       await page.goto('/#reverse');
       await page.getByRole('combobox', { name: 'Condition type' }).selectOption({ label: 'One-shots' });

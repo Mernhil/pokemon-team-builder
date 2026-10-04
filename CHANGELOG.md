@@ -2,6 +2,16 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.21.0 — 2026-10-04
+
+### New
+- **OHKO reports** (Team check links, and More → *OHKO’d by* / *Can OHKO*): for each of your Pokémon, which of the most-used Pokémon can OHKO it, and which of them it can OHKO. Guaranteed OHKOs come first, then ones that only happen on some damage rolls (switch those off with *Possible OHKOs*), each with the move, the damage, who moves first and its usage; tap a row to open it in the Damage Calc. Same engine and meta data as the Threat report; Champions only.
+- **Edit team** in Saved teams: loads a saved team (or one of its variations) into the builder so you can change it; **Save** then offers to *Update* that team, or save the result as a separate one.
+
+### Changed
+- **Saved teams no longer change while you build.** Saving keeps a copy and leaves your build open as a separate draft, so trying a change after saving no longer alters the saved team. A saved team only changes when you Save over it from an Edit team session. Opening, duplicating, importing or adding a variation also loads a draft copy. A saved team that an older version left open is kept as it was, with a draft copy in the builder.
+- **Reverse search and Optimise spread use the builder's stat sliders and nature picker** for the opposing Pokémon (with the nature +/− buttons and presets), instead of number boxes and a drop-down.
+
 ## 0.20.0 — 2026-10-04
 
 ### New

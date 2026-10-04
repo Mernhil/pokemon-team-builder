@@ -29,8 +29,10 @@ test('Compare: two variations side by side, the same-team notice and a set-by-se
   await goTo(page, 'Compare teams');
   await expect(page).toHaveURL(/#compare$/);
 
-  // The active team on the left, its variation on the right.
+  // The build on the left by default; pick the saved team and its variation.
+  await page.getByRole('combobox', { name: 'Team A' }).selectOption('rain');
   await expect(page.getByRole('combobox', { name: 'Team A' })).toHaveValue('rain');
+  await page.getByRole('combobox', { name: 'Team B' }).selectOption('sun');
   await expect(page.getByRole('combobox', { name: 'Team B' })).toHaveValue('sun');
   await expect(page.getByText('These are variations of the same team')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Defensive type matrix, team A' })).toBeVisible();

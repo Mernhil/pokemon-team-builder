@@ -95,7 +95,9 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
     const r = copyTeamToRegulation(team, live.id, dexState.dex, changes);
     if (!r) return;
     addTeams([r.team], true);
+    // The builder opens a draft copy of the new variation: the checklist follows what's open.
     useChecklist.getState().set(r.team.id, live.shortName, r.checklist);
+    useChecklist.getState().set(useTeamStore.getState().activeTeamId, live.shortName, r.checklist);
     toast(`Copied “${team.name}” to ${live.shortName} as a variation. The original is unchanged.`);
   };
 

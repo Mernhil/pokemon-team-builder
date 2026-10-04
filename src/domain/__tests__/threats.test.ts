@@ -7,7 +7,7 @@ import { defaultField, defaultSide } from '@/domain/battle/conditions';
 import { formatForRegulation, getFormat } from '@/domain/formats';
 import { metaSet, metaSets } from '@/domain/metaSets';
 import { parseMetaFile, type MetaEntry } from '@/domain/meta';
-import { classifyKill, computeCell, runThreatJob, runThreatRow, summarize, type ThreatJob } from '@/domain/threats';
+import { classifyKill, computeCell, ohkoEntries, runThreatJob, runThreatRow, summarize, type ThreatJob } from '@/domain/threats';
 import { createSet, createTeam } from '@/domain/team';
 import type { Dataset, PokemonSet } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
@@ -192,5 +192,24 @@ describe('report', () => {
     const seen: number[] = [];
     runThreatJob(dex, job, (i) => seen.push(i));
     expect(seen).toEqual(job.threats.map((_, i) => i));
+  });
+});
+
+describe('ohkoEntries', () => {
+  const move = (kill: 'ohko' | 'pohko' | '2hko') => ({ move: 'X', moveId: 'x', percent: [90, 110] as [number, number], kill, text: '' });
+  const cell = (mine: ReturnType<typeof move> | null, theirs: ReturnType<typeof move> | null) => ({ mine, theirs, first: 'them' as const, mySpeed: 1, theirSpeed: 2, verdict: 0 });
+  const rows = [
+    [cell(null, move('pohko'))], // 0: it possibly OHKOs me
+    [cell(move('ohko'), move('2hko'))], // 1: I OHKO it
+    [cell(move('pohko'), move('ohko'))], // 2: both
+    undefined, // 3: still calculating
+  ];
+
+  it("lists what can OHKO a member: guaranteed first, then possible, in usage order", () => {
+    expect(ohkoEntries(rows, 0, 'by').map((e) => [e.threatIndex, e.kill])).toEqual([[2, 'ohko'], [0, 'pohko']]);
+  });
+
+  it('lists what a member can OHKO, leaving out 2HKOs and unfinished rows', () => {
+    expect(ohkoEntries(rows, 0, 'to').map((e) => [e.threatIndex, e.kill])).toEqual([[1, 'ohko'], [2, 'pohko']]);
   });
 });

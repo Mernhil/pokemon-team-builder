@@ -207,3 +207,35 @@ export function summarize(dex: Dex, job: ThreatJob, rows: ThreatCell[][]): Threa
   });
   return out.sort((a, b) => b.danger - a.danger || byUsage(a, b) || a.speciesId.localeCompare(b.speciesId));
 }
+
+// ---------------------------------------------------------------------------
+// OHKO reports
+// ---------------------------------------------------------------------------
+
+/** 'by': the threats that can OHKO one of my Pokémon; 'to': the threats that my Pokémon can OHKO. */
+export type OhkoMode = 'by' | 'to';
+
+export interface OhkoEntry {
+  /** Index into the job's threats (and so into the usage order). */
+  threatIndex: number;
+  /** 'ohko' is guaranteed (every roll); 'pohko' only some of the time. */
+  kill: 'ohko' | 'pohko';
+  /** The move doing it (the threat's for 'by', mine for 'to'). */
+  move: MoveSummary;
+  first: ThreatCell['first'];
+}
+
+/**
+ * The threats that one member can be OHKO'd by (`mode: 'by'`, from the threat's best move) or can OHKO
+ * (`'to'`, from the member's best move), guaranteed ones first, then possible ones, each in usage order.
+ * Rows still being calculated are skipped.
+ */
+export function ohkoEntries(rows: (ThreatCell[] | undefined)[], memberIndex: number, mode: OhkoMode): OhkoEntry[] {
+  const out: OhkoEntry[] = [];
+  rows.forEach((cells, threatIndex) => {
+    const cell = cells?.[memberIndex];
+    const move = cell && (mode === 'by' ? cell.theirs : cell.mine);
+    if (cell && move && (move.kill === 'ohko' || move.kill === 'pohko')) out.push({ threatIndex, kill: move.kill, move, first: cell.first });
+  });
+  return out.sort((a, b) => RANK[b.kill] - RANK[a.kill] || a.threatIndex - b.threatIndex);
+}

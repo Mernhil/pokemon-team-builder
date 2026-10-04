@@ -101,9 +101,11 @@ describe('0.6.x saves (teams v2, matches v1, calc v1) → current', () => {
     await useTeamStore.persist.rehydrate();
     const s = useTeamStore.getState();
 
-    expect(Object.keys(s.teams).sort()).toEqual(['champ', 'sv', 'variation']);
-    expect(s.order).toEqual(['sv', 'champ']);
-    expect(s.activeTeamId).toBe('champ');
+    // The open saved team ('champ') is kept as it was; the builder gets a scratch draft copy of it.
+    expect(Object.keys(s.teams).filter((id) => id !== s.activeTeamId).sort()).toEqual(['champ', 'sv', 'variation']);
+    expect(s.order.filter((id) => id !== s.activeTeamId)).toEqual(['sv', 'champ']);
+    expect(s.editingFrom).toBe('champ');
+    expect(s.teams[s.activeTeamId].slots).toHaveLength(6);
     expect(s.theme).toBe('light');
     expect(s.teams.variation.groupId).toBe('champ');
     expect(s.teams.variation.variationLabel).toBe('vs Rain');

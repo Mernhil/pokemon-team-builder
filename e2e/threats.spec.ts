@@ -32,7 +32,7 @@ test('Threat report: Team check links to it, cells show both directions, a cell 
   // Tapping a cell opens the Damage Calc pre-filled with that attacker, defender and field.
   await cells.first().click();
   await expect(page).toHaveURL(/#calc$/);
-  await expect(page.getByRole('heading', { name: /Attacker from Imported Team · slot \d/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Attacker from .* · slot \d/ })).toBeVisible();
   await expect(page.getByRole('radio', { name: 'Rain' })).toBeChecked();
   await expect(page.getByRole('button', { name: 'Trick Room' })).toHaveAttribute('aria-pressed', 'true');
 });
@@ -59,4 +59,24 @@ test('Threat report: still works without Web Workers (main-thread fallback)', as
   await page.goto('/#threats');
   await expect(page.getByRole('status').filter({ hasText: /\d+ threats calculated against 2 of your Pokémon/ })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('button', { name: /(you move first|it moves first|speed tie)/ }).locator('visible=true').first()).toBeVisible();
+});
+
+test('OHKO reports: Team check links to both, each lists who can OHKO whom, a row opens the Damage Calc', async ({ page }) => {
+  await openApp(page);
+  await importTeam(page, SAMPLE_TEAM);
+
+  await page.getByRole('link', { name: /OHKO’d by/ }).click();
+  await expect(page).toHaveURL(/#ohkod$/);
+  await expect(page.getByRole('status').filter({ hasText: /\d+ Pokémon calculated against 2 of yours/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('list', { name: 'Can be OHKO’d by' }).getByRole('listitem').first()).toBeVisible();
+
+  // The tabs switch between the two reports.
+  await page.getByRole('tab', { name: 'Can OHKO' }).click();
+  await expect(page).toHaveURL(/#ohko$/);
+  await expect(page.getByRole('status').filter({ hasText: /\d+ Pokémon calculated against 2 of yours/ })).toBeVisible({ timeout: 30_000 });
+  const rows = page.getByRole('button', { name: /Open in the Damage Calc/ }).locator('visible=true');
+  if (await rows.count()) {
+    await rows.first().click();
+    await expect(page).toHaveURL(/#calc$/);
+  }
 });

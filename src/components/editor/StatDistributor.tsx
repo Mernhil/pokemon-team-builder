@@ -42,6 +42,8 @@ interface Props {
   onMegaActive?: (on: boolean) => void;
   /** `${teamId}:${slot}`, so a hand-off from another screen can open this Pokémon's optimiser. */
   slotKey?: string;
+  /** For a Pokémon that isn't mine (an opponent in a goal or search): no Optimise button. */
+  noOptimise?: boolean;
 }
 
 type Preset = { label: string; spread: Partial<StatTable> };
@@ -81,7 +83,7 @@ const zero = (): StatTable => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
  *  - Legends: Arceus Effort Levels (0–10 each; IVs are folded into them)
  * Inline +/− buttons on each stat set the nature Showdown-style (Gen 3+).
  */
-export function StatDistributor({ set, species, mega, altLabel = 'Mega', format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive, slotKey }: Props) {
+export function StatDistributor({ set, species, mega, altLabel = 'Mega', format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive, slotKey, noOptimise }: Props) {
   const [localMega, setLocalMega] = useState(altLabel === 'Mega');
   const [optimizerOpen, setOptimizerOpen] = useState(false);
   const request = useOptimizerStore((s) => s.request);
@@ -394,7 +396,7 @@ export function StatDistributor({ set, species, mega, altLabel = 'Mega', format,
             {p.label}
           </Button>
         ))}
-        {canOptimize(format) && (
+        {canOptimize(format) && !noOptimise && (
           <Button size="sm" variant="primary" onClick={() => setOptimizerOpen(true)} title="Find the cheapest spread for goals like surviving a move or outspeeding a threat">
             <Sparkles size={13} aria-hidden /> Optimise
           </Button>
