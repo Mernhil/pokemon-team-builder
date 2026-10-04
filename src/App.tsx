@@ -298,8 +298,17 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
       return;
     }
     const before = team.slots;
+    const link = { editingFrom: useTeamStore.getState().editingFrom, editingDraft: useTeamStore.getState().editingDraft };
     clearTeam(team.id);
-    toast('Cleared the team.', { label: 'Undo', run: () => restoreSlots(team.id, before) });
+    // A cleared build is a fresh start: Save no longer offers to update the team it came from.
+    useTeamStore.setState({ editingFrom: null, editingDraft: null });
+    toast('Cleared the team.', {
+      label: 'Undo',
+      run: () => {
+        restoreSlots(team.id, before);
+        useTeamStore.setState(link);
+      },
+    });
   };
 
   const formatSelect = (

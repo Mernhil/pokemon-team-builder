@@ -98,6 +98,8 @@ test('saving under a name that is taken asks: add a variation, or overwrite', as
   await buildIncineroar(page);
   const save = async (name: string) => {
     await page.getByRole('button', { name: 'Save', exact: true }).click();
+    const separate = page.getByRole('dialog', { name: 'Save team' }).getByRole('radio', { name: /Save as a separate team/ });
+    if (await separate.count()) await separate.check(); // a build saved into a team offers to update it
     await page.getByRole('dialog', { name: 'Save team' }).getByRole('textbox', { name: 'Team name' }).fill(name);
   };
   await save('Dup');
@@ -119,6 +121,30 @@ test('saving under a name that is taken asks: add a variation, or overwrite', as
   await dialog.getByRole('radio', { name: /Overwrite “Dup”/ }).check();
   await dialog.getByRole('button', { name: 'Overwrite' }).click();
   await expect(page.getByText('Overwrote “Dup”.')).toBeVisible();
+});
+
+test('saved teams are only changed by Edit team + Save: the build stays a separate draft', async ({ page }) => {
+  await openApp(page);
+  await buildIncineroar(page);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Save team' }).getByRole('textbox', { name: 'Team name' }).fill('Keep');
+  await page.getByRole('dialog', { name: 'Save team' }).getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Saved “Keep” to your teams.')).toBeVisible();
+
+  // Clear the build: the saved team is still in the list, untouched.
+  await page.getByRole('button', { name: 'Team actions' }).click();
+  await page.getByRole('menuitem', { name: 'Clear this team' }).click();
+  await page.getByRole('button', { name: 'Team actions' }).click();
+  await page.getByRole('menuitem', { name: 'Saved teams' }).click();
+  const saved = page.getByRole('dialog', { name: 'Saved teams' });
+  await expect(saved).toContainText('Keep');
+
+  // Edit team loads it back into the builder, and Save offers to update it.
+  await saved.getByRole('button', { name: 'Edit team Keep' }).click();
+  await expect(saved).toBeHidden();
+  await expectBuilt(page);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Save team' }).getByRole('radio', { name: /Update “Keep”/ })).toBeChecked();
 });
 
 test('Aegislash: the stats panel switches between Shield and Blade Forme stats', async ({ page }) => {

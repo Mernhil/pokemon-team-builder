@@ -175,11 +175,11 @@ Adamant Nature
 - U-turn
 `;
 
-/** Name the active team by saving it under that name (the header's Save button; it opens the saved copy). */
+/** Name the build by saving it under that name (the header's Save button); the build itself stays open. */
 export async function renameTeam(page: Page, name: string) {
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Save team' });
   await dialog.getByRole('textbox', { name: 'Team name' }).fill(name);
-  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await dialog.getByRole('button', { name: /^(Save|Update)$/ }).click();
   await expect(dialog).toBeHidden();
 }

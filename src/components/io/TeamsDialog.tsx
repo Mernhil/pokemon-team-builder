@@ -8,7 +8,7 @@ import { relevantRegulations, teamImpact, type TeamImpact } from '@/domain/regul
 import { nameOf, sharedFolders } from '@/domain/sharing';
 import { teamVariations } from '@/domain/team';
 import type { SpriteSetId, Team } from '@/domain/types';
-import { useTeamStore } from '@/store/teamStore';
+import { editingTeam, useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { ImpactList, impactSummary } from '../analysis/ImpactList';
@@ -177,7 +177,8 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   const teams = useTeamStore((s) => s.teams);
   const order = useTeamStore((s) => s.order);
   const activeTeamId = useTeamStore((s) => s.activeTeamId);
-  const { selectTeam, duplicateTeam, deleteTeam, updateTeam, addVariation, copySharedToMine } = useTeamStore.getState();
+  const { selectTeam, editTeam, duplicateTeam, deleteTeam, updateTeam, addVariation, copySharedToMine } = useTeamStore.getState();
+  const editingFrom = useTeamStore((s) => editingTeam(s)?.id ?? null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [showProblems, setShowProblems] = useState(false);
   const [shareTeam, setShareTeam] = useState<Team | null>(null);
@@ -209,8 +210,10 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   // The furthest-ahead regulation with a team that breaks in it, for the headline.
   const headline = [...targets].reverse().map((reg) => ({ reg, broken: [...impacts.entries()].filter(([, per]) => (per.get(reg)?.counts.breaks ?? 0) > 0) })).find((h) => h.broken.length > 0);
 
+  // Saved teams are never edited in place: this loads a copy into the builder, and Save updates the saved one.
   const select = (id: string) => {
-    selectTeam(id);
+    if (teams[id]?.shared) selectTeam(id);
+    else editTeam(id);
     onOpenChange(false);
   };
 
@@ -251,9 +254,9 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
           if (!t || t.shared) return null;
           const f = getFormat(t.formatId);
           const variations = teamVariations(teams, id);
-          const groupIsActive = id === activeTeamId;
-          // "Add variation" duplicates whichever member of this group is currently selected.
-          const currentInGroup = groupIsActive || teams[activeTeamId]?.groupId === id ? activeTeamId : id;
+          const groupIsActive = id === editingFrom || (!!editingFrom && teams[editingFrom]?.groupId === id);
+          // "Add variation" duplicates whichever member of this group is being edited.
+          const currentInGroup = groupIsActive && editingFrom ? editingFrom : id;
 
           return (
             <li key={id} className={cn('rounded-2xl border bg-surface p-3', groupIsActive ? 'border-accent ring-1 ring-accent' : 'border-border')}>
@@ -273,6 +276,9 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                     <Share2 size={15} aria-hidden />
                   </Button>
                 )}
+                <Button size="sm" aria-label={`Edit team ${t.name}`} onClick={() => select(id)}>
+                  <Pencil size={14} aria-hidden /> Edit team
+                </Button>
                 <Button size="icon" variant="ghost" aria-label={`Duplicate ${t.name}`} onClick={() => duplicateTeam(id)}>
                   <Copy size={15} aria-hidden />
                 </Button>
@@ -286,7 +292,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
               {variations.length > 0 && (
                 <ul className="mt-3 space-y-1.5 border-l-2 border-border pl-3">
                   {variations.map((v) => (
-                    <li key={v.id} className={cn('flex items-center gap-2 rounded-xl border p-2', v.id === activeTeamId ? 'border-accent bg-accent/5' : 'border-transparent bg-surface-2')}>
+                    <li key={v.id} className={cn('flex items-center gap-2 rounded-xl border p-2', v.id === editingFrom ? 'border-accent bg-accent/5' : 'border-transparent bg-surface-2')}>
                       <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
                         <RegulationChips team={v} impacts={impacts.get(v.id)} live={live} />
                         <InlineEditable
@@ -300,6 +306,9 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                         </button>
                         <span className="text-xs text-muted">Edited {new Date(v.updatedAt).toLocaleString()}</span>
                       </div>
+                      <Button size="sm" aria-label={`Edit team ${t.name} · ${v.variationLabel ?? 'variation'}`} onClick={() => select(v.id)}>
+                        <Pencil size={14} aria-hidden /> Edit team
+                      </Button>
                       <DeleteButton id={v.id} label={v.variationLabel ?? 'variation'} confirmId={confirmId} setConfirmId={setConfirmId} onDelete={deleteTeam} />
                     </li>
                   ))}
@@ -307,7 +316,14 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
               )}
 
               <div className="mt-2">
-                <Button size="sm" variant="ghost" onClick={() => addVariation(currentInGroup)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    addVariation(currentInGroup);
+                    onOpenChange(false);
+                  }}
+                >
                   <Plus size={14} aria-hidden /> Add variation
                 </Button>
               </div>
