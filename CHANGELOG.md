@@ -2,7 +2,7 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## Unreleased
+## 0.21.0 — 2026-10-04
 
 ### New
 - **Edit team** in Saved teams: loads a saved team (or one of its variations) into the builder so you can change it; **Save** then offers to *Update* that team, or save the result as a separate one.
