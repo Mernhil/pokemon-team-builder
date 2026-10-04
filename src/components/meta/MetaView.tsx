@@ -3,7 +3,7 @@ import { AlertTriangle, BarChart3, CloudOff, ExternalLink, RefreshCw } from 'luc
 import type { Dex } from '@/data/dex';
 import { useMetaFor } from '@/data/useMeta';
 import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
-import { META_STALE_DAYS, isProvisional, localMetaFromMatches, metaAgeDays, metaDataDate, metaSourceKind, type MetaEntry, type MetaSnapshot } from '@/domain/meta';
+import { META_STALE_DAYS, isProvisional, localMetaFromMatches, metaAgeDays, metaDataDate, metaSourceKind, usageLabel, type MetaEntry, type MetaSnapshot } from '@/domain/meta';
 import { STAT_IDS, STAT_LABELS, type FormatRules } from '@/domain/types';
 import { MATCH_SOURCE_LABEL, matchesForSource, nameOf, type MatchSource } from '@/domain/sharing';
 import { useMatchStore } from '@/store/matchStore';
@@ -153,7 +153,7 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
       ) : (
         <ol className="grid gap-3 lg:grid-cols-2" aria-label={`Most used Pokémon in ${reg?.shortName ?? regId}`}>
           {snapshot.entries.map((e, i) => (
-            <MetaCard key={e.speciesId} rank={i + 1} entry={e} dex={dex} format={format} revealedOnly={metaSourceKind(snapshot) === 'replays'} />
+            <MetaCard key={e.speciesId} rank={e.usageRank ?? i + 1} entry={e} dex={dex} format={format} revealedOnly={metaSourceKind(snapshot) === 'replays'} />
           ))}
         </ol>
       )}
@@ -166,6 +166,7 @@ function SourceLine({ snapshot }: { snapshot: MetaSnapshot }) {
   const kind = metaSourceKind(snapshot);
   const facts = [
     kind === 'carryover' && s.basedOn && `carried over from ${champRegs.find((r) => r.id === s.basedOn)?.shortName ?? s.basedOn}`,
+    s.season && `ranked season ${s.season}`,
     s.month && fmtMonth(s.month),
     s.cutoff !== undefined && s.cutoff > 0 && `rating ${s.cutoff}+`,
     s.battles !== undefined && `${s.battles.toLocaleString()} ${kind === 'replays' ? 'games' : 'battles'}`,
@@ -226,7 +227,8 @@ function MetaCard({ rank, entry: e, dex, format, revealedOnly }: { rank: number;
             <span className="truncate">{sp?.name ?? e.speciesId}</span>
           </span>
         }
-        actions={<Chip tone="accent">{e.usagePct.toFixed(1)}%</Chip>}
+        // Rank-only (in-game) data: the rank on the left is the whole story.
+        actions={e.usagePct !== undefined ? <Chip tone="accent">{usageLabel(e)}</Chip> : undefined}
       >
         <div className="grid gap-3 text-sm sm:grid-cols-2">
           <ShareList label={`Items${seen}`} rows={e.items.slice(0, 4)} render={(id) => <><ItemSprite itemId={id} name={name(id, 'item')} size={18} />{name(id, 'item')}</>} />
@@ -265,7 +267,7 @@ function MetaCard({ rank, entry: e, dex, format, revealedOnly }: { rank: number;
   );
 }
 
-function ShareList({ label, rows, render }: { label: string; rows: { id: string; pct: number }[]; render: (id: string) => ReactNode }) {
+function ShareList({ label, rows, render }: { label: string; rows: { id: string; pct?: number; rank?: number }[]; render: (id: string) => ReactNode }) {
   if (!rows.length) return null;
   return (
     <div className="min-w-0">
@@ -274,7 +276,7 @@ function ShareList({ label, rows, render }: { label: string; rows: { id: string;
         {rows.map((r) => (
           <li key={r.id} className="flex items-center gap-2">
             <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate">{render(r.id)}</span>
-            <span className="w-10 shrink-0 text-right font-mono text-xs text-muted">{r.pct.toFixed(0)}%</span>
+            <span className="w-10 shrink-0 text-right font-mono text-xs text-muted">{r.pct !== undefined ? `${r.pct.toFixed(0)}%` : r.rank !== undefined ? `#${r.rank}` : ''}</span>
           </li>
         ))}
       </ul>

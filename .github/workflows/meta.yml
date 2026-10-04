@@ -1,12 +1,11 @@
 name: Meta data
 
-# Keeps the Meta tab's usage data (src/data/generated/meta.json) current: `npm run meta` reads
-# Smogon's monthly usage statistics for every Champions regulation and, for a regulation Smogon has
-# no month of yet, builds provisional numbers from Limitless tournament team lists, public Showdown
+# Keeps the Meta tab's usage data (src/data/generated/meta.json) current: `npm run meta` reads the
+# game's own ranked Battle Data for the current season (daily), Smogon's monthly usage statistics for
+# every Champions regulation and, for a regulation with neither, builds provisional numbers from Limitless tournament team lists, public Showdown
 # replays and the previous regulation (scripts/build-meta.ts, scripts/meta/).
 #
-# - Daily schedule (the provisional numbers move day by day in a regulation's first weeks; once
-#   Smogon has published, a day with nothing new changes nothing): when the data changed, opens (or
+# - Daily schedule (the in-game data moves day by day): when the data changed, opens (or
 #   updates) a pull request against the default branch. Merging it redeploys the web app
 #   (Cloudflare builds every push); desktop apps get it with their next release.
 # - .cache/meta/ (replays and tournaments already read) is kept between runs with actions/cache, so

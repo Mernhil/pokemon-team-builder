@@ -20,16 +20,20 @@ import { z } from 'zod';
 const id = z.string().regex(/^[a-z0-9]{1,64}$/);
 const pct = z.number().min(0).max(100);
 const share = z.object({ id, pct });
+/** A teammate: % of this species' teams that also have it, or (in-game data) only its rank among them. */
+const mate = z.object({ id, pct: pct.optional(), rank: z.number().int().min(1).optional() });
 
 export const MetaEntrySchema = z.object({
   speciesId: id,
-  /** % of teams running this species, 0–100 (Smogon's weighted usage). */
-  usagePct: pct,
+  /** % of teams running this species, 0–100 (Smogon's weighted usage). Absent for in-game data, which only ranks. */
+  usagePct: pct.optional(),
+  /** Usage rank, 1 = most used (in-game data has this instead of a %). */
+  usageRank: z.number().int().min(1).optional(),
   abilities: z.array(share).default([]),
   items: z.array(share).default([]),
   moves: z.array(share).default([]),
   /** Other species most often on the same team. */
-  teammates: z.array(share).default([]),
+  teammates: z.array(mate).default([]),
   /** Most common spreads: nature + the six stat investments (Stat Points in Champions). */
   spreads: z
     .array(
@@ -48,8 +52,12 @@ export const MetaEntrySchema = z.object({
 });
 export type MetaEntry = z.infer<typeof MetaEntrySchema>;
 
+export { byUsage, usageLabel, usageText, type Usage } from './usage.ts';
+
 /**
  * Where a snapshot's numbers come from, best first (see metaSourceRank):
+ * - ingame: Pokémon Champions' own Battle Data for the ranked season (the real ladder, refreshed
+ *   daily; usage as a rank, details as %).
  * - smogon: Smogon's monthly usage statistics (the whole rated Showdown ladder).
  * - manual: src/data/meta/manual.json, entered by hand from a named source.
  * - tournaments: open team lists from Limitless VGC tournaments (full sets, no spreads).
@@ -58,7 +66,7 @@ export type MetaEntry = z.infer<typeof MetaEntrySchema>;
  * - carryover: the previous regulation's numbers for the Pokémon still allowed.
  * - matches: the player's own logged matches.
  */
-export const META_SOURCE_KINDS = ['smogon', 'manual', 'tournaments', 'replays', 'carryover', 'matches'] as const;
+export const META_SOURCE_KINDS = ['ingame', 'smogon', 'manual', 'tournaments', 'replays', 'carryover', 'matches'] as const;
 export type MetaSourceKind = (typeof META_SOURCE_KINDS)[number];
 
 export const MetaSourceSchema = z.object({
@@ -79,6 +87,8 @@ export const MetaSourceSchema = z.object({
   events: z.number().int().min(0).optional(),
   /** Carry-over: the regulation the numbers were taken from. */
   basedOn: z.string().max(64).optional(),
+  /** In-game data: the ranked season, e.g. "M6". */
+  season: z.string().max(16).optional(),
 });
 export type MetaSource = z.infer<typeof MetaSourceSchema>;
 
@@ -136,26 +146,29 @@ export const MIN_TOURNAMENT_TEAMS = 64;
 export const MIN_REPLAY_GAMES = 150;
 
 /**
- * How trustworthy a snapshot is, 0 = best: Smogon's stats, then hand-entered data, then a
- * well-sampled tournament or replay snapshot, then a thin one, then the previous regulation's
- * numbers, then the player's own matches. The early sources only fill the weeks before Smogon
- * publishes a regulation's first month; once it has, Smogon wins.
+ * How trustworthy a snapshot is, 0 = best: the game's own ranked Battle Data (the real ladder,
+ * daily), then Smogon's stats, then hand-entered data, then a well-sampled tournament or replay
+ * snapshot, then a thin one, then the previous regulation's numbers, then the player's own matches.
+ * The early sources only fill the weeks before Smogon publishes a regulation's first month (and
+ * aren't built when the in-game data covers it).
  */
 export function metaSourceRank(snap: Pick<MetaSnapshot, 'source'>): number {
   const s = snap.source;
   switch (metaSourceKind(snap)) {
-    case 'smogon':
+    case 'ingame':
       return 0;
-    case 'manual':
+    case 'smogon':
       return 1;
+    case 'manual':
+      return 2;
     case 'tournaments':
-      return (s.teams ?? 0) >= MIN_TOURNAMENT_TEAMS ? 2 : 4;
+      return (s.teams ?? 0) >= MIN_TOURNAMENT_TEAMS ? 3 : 5;
     case 'replays':
-      return (s.battles ?? 0) >= MIN_REPLAY_GAMES ? 3 : 5;
+      return (s.battles ?? 0) >= MIN_REPLAY_GAMES ? 4 : 6;
     case 'carryover':
-      return 6;
-    case 'matches':
       return 7;
+    case 'matches':
+      return 8;
   }
 }
 
@@ -175,8 +188,8 @@ export function pickSnapshot(regulationId: string, ...files: (MetaFile | undefin
     .sort(compareSnapshots)[0];
 }
 
-/** Snapshots that are early estimates (shown as provisional): anything but Smogon's or hand-entered data. */
-export const isProvisional = (snap: Pick<MetaSnapshot, 'source'>) => metaSourceRank(snap) > 1;
+/** Snapshots that are early estimates (shown as provisional): anything but in-game, Smogon or hand-entered data. */
+export const isProvisional = (snap: Pick<MetaSnapshot, 'source'>) => metaSourceRank(snap) > 2;
 
 /** A short "provisional: …" note for an early estimate (undefined for Smogon's or hand-entered data). */
 export function provisionalNote(snap: Pick<MetaSnapshot, 'source'>, regulationName: (id: string) => string | undefined = (id) => id): string | undefined {
@@ -364,10 +377,13 @@ export function coreOverlapScore(loggedSpecies: string[], metaEntry: Pick<MetaEn
 
 export interface MetaPartner {
   speciesId: string;
-  /** Sum of "% of teams with X that also have this" over the team's members that have usage data. */
+  /**
+   * Sum of "% of teams with X that also have this" over the team's members that have usage data
+   * (for rank-only in-game data: 11 − its rank among X's teammates, so a #1 partner weighs most).
+   */
   score: number;
-  /** The team members it's commonly paired with, strongest first. */
-  with: { speciesId: string; pct: number }[];
+  /** The team members it's commonly paired with, strongest first (pct absent for rank-only data). */
+  with: { speciesId: string; pct?: number; rank?: number }[];
 }
 
 /**
@@ -382,13 +398,13 @@ export function metaPartners(snapshot: MetaSnapshot, teamSpecies: string[], limi
     for (const t of byId.get(member)?.teammates ?? []) {
       if (onTeam.has(t.id)) continue;
       const p = partners.get(t.id) ?? { speciesId: t.id, score: 0, with: [] };
-      p.score += t.pct;
-      p.with.push({ speciesId: member, pct: t.pct });
+      p.score += t.pct ?? Math.max(1, 11 - (t.rank ?? 10));
+      p.with.push({ speciesId: member, pct: t.pct, rank: t.rank });
       partners.set(t.id, p);
     }
   }
   return [...partners.values()]
-    .map((p) => ({ ...p, score: Math.round(p.score * 10) / 10, with: p.with.sort((a, b) => b.pct - a.pct) }))
+    .map((p) => ({ ...p, score: Math.round(p.score * 10) / 10, with: p.with.sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1) || (a.rank ?? 99) - (b.rank ?? 99)) }))
     .sort((a, b) => b.score - a.score || a.speciesId.localeCompare(b.speciesId))
     .slice(0, limit);
 }

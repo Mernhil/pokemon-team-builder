@@ -5,6 +5,7 @@ import { useMetaFor } from '@/data/useMeta';
 import { TERRAINS, WEATHERS, defaultField, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
 import { calcSpeed } from '@/domain/battle/damage';
 import { REGULATION_MANIFEST } from '@/domain/formats';
+import { usageLabel } from '@/domain/meta';
 import { metaSets, type MetaSet } from '@/domain/metaSets';
 import { describeGoal, optimize, type Goal, type Leftover, type OptimizeResult } from '@/domain/optimizer';
 import { pickSpeedSnapshot } from '@/domain/speedTiers';
@@ -44,7 +45,7 @@ function useSources(dex: Dex, format: FormatRules, mine: PokemonSet) {
   const teams = useTeamStore((s) => s.teams);
   return useMemo(() => {
     const picked = format.datasetId === 'champions' ? pickSpeedSnapshot(format.regulationId, champRegIds, (id) => metaFor?.(id)) : undefined;
-    const meta: Source[] = picked ? metaSets(picked.snapshot, dex, format, 30).map((m: MetaSet) => ({ key: m.speciesId, label: `${dex.species(m.speciesId)?.name ?? m.speciesId} (${m.usagePct.toFixed(1)}%)`, set: m.set })) : [];
+    const meta: Source[] = picked ? metaSets(picked.snapshot, dex, format, 30).map((m: MetaSet) => ({ key: m.speciesId, label: `${dex.species(m.speciesId)?.name ?? m.speciesId} (${usageLabel(m)})`, set: m.set })) : [];
     const saved: Source[] = [];
     for (const t of Object.values(teams)) {
       if (!t.slots.some(Boolean)) continue;

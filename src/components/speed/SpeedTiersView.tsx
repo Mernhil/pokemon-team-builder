@@ -3,7 +3,7 @@ import { AlertTriangle, ChevronDown, Gauge } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useMetaFor } from '@/data/useMeta';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import { META_STALE_DAYS, isProvisional, provisionalNote } from '@/domain/meta';
+import { META_STALE_DAYS, isProvisional, provisionalNote, usageText } from '@/domain/meta';
 import {
   DEFAULT_TOP_N,
   buildLadder,
@@ -142,8 +142,8 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <p className="min-w-0 text-sm text-muted">
             <b className="text-fg">{reg?.name ?? picked.regulationId}</b>
-            {' · '}
-            {s.month && `${fmtMonth(s.month)} usage`}
+            {s.month && ` · ${fmtMonth(s.month)} usage`}
+            {s.season && ` · in-game ranked season ${s.season}`}
             {s.cutoff ? ` · rating ${s.cutoff}+` : ''}
             {s.battles !== undefined ? ` · ${s.battles.toLocaleString()} battles` : ''}
             {isProvisional(picked.snapshot) && ` · ${provisionalNote(picked.snapshot, (id) => champRegs.find((r) => r.id === id)?.shortName)}`}
@@ -267,7 +267,7 @@ function Row({
         </span>
         <span className="block truncate text-xs text-muted">
           {row.label}
-          {row.usagePct !== undefined && ` · ${row.usagePct.toFixed(1)}% usage`}
+          {!row.mine && usageText(row) && ` · ${usageText(row)}`}
           {row.spreadPct ? ` · ${row.spreadPct}% of sets` : ''}
         </span>
       </span>

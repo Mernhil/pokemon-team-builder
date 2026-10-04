@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { compareSnapshots, isProvisional, metaSourceKind, metaSourceRank, MIN_REPLAY_GAMES, MIN_TOURNAMENT_TEAMS, pickSnapshot, type MetaFile, type MetaSnapshot } from '@/domain/meta';
+import { byUsage, compareSnapshots, isProvisional, metaPartners, metaSourceKind, metaSourceRank, MIN_REPLAY_GAMES, MIN_TOURNAMENT_TEAMS, parseMetaFile, pickSnapshot, usageLabel, usageText, type MetaFile, type MetaSnapshot } from '@/domain/meta';
 import {
   carryOverSnapshot,
+  ingameDate,
+  ingameToSnapshot,
   estimateSpread,
   fillSpreads,
   parseReplayLog,
@@ -286,10 +288,11 @@ describe('ranking sources', () => {
     expect(metaSourceKind({ source: { name: 'x', url: 'https://example.com/' } })).toBe('manual');
   });
 
-  it('prefers Smogon, then well-sampled early sources, then thin ones, then the carry-over', () => {
-    const order = [carry, replays(10), tournaments(10), replays(MIN_REPLAY_GAMES), tournaments(MIN_TOURNAMENT_TEAMS), smogon].sort(compareSnapshots);
-    expect(order.map((s) => `${s.source.kind}:${metaSourceRank(s)}`)).toEqual(['smogon:0', 'tournaments:2', 'replays:3', 'tournaments:4', 'replays:5', 'carryover:6']);
-    expect(order.map(isProvisional)).toEqual([false, true, true, true, true, true]);
+  it('prefers the in-game data, then Smogon, then well-sampled early sources, then thin ones, then the carry-over', () => {
+    const ingame = snap({ updatedAt: '2026-10-01', source: { kind: 'ingame', name: 'In-game', season: 'M6' } });
+    const order = [carry, replays(10), tournaments(10), replays(MIN_REPLAY_GAMES), tournaments(MIN_TOURNAMENT_TEAMS), smogon, ingame].sort(compareSnapshots);
+    expect(order.map((s) => `${s.source.kind}:${metaSourceRank(s)}`)).toEqual(['ingame:0', 'smogon:1', 'tournaments:3', 'replays:4', 'tournaments:5', 'replays:6', 'carryover:7']);
+    expect(order.map(isProvisional)).toEqual([false, false, true, true, true, true, true]);
   });
 
   it('picks across files by source, then by date', () => {
@@ -298,5 +301,98 @@ describe('ranking sources', () => {
     expect(pickSnapshot('champions-reg-mc', file(replays(500)), file(carry))?.source.kind).toBe('replays');
     const manual = snap({ source: { name: 'Official usage', url: 'https://example.com/' } });
     expect(pickSnapshot('champions-reg-mc', file(replays(500)), file(manual))?.source.name).toBe('Official usage');
+  });
+});
+
+/**
+ * Shaped like the in-game Battle Data mirror's daily file (…/data/meta/<season>/<dd_mm_yyyy>/Doubles.json),
+ * with made-up numbers: shares are [name, %, rank], natures [name, %, up, down, rank], Stat Points
+ * [%, HP, Atk, Def, SpA, SpD, Spe, rank], teammates [name, rank].
+ */
+const INGAME = {
+  season: 'M6',
+  date: '03_10_2026',
+  format: 'Doubles',
+  generatedAt: '2026-10-03T12:57:19.308Z',
+  pokemon: {
+    Incineroar: {
+      position: 2,
+      move: [['Fake Out', 98.1, 1], ['Parting Shot', 80, 2], ['Splash', 0.4, 3]],
+      held_item: [['Sitrus Berry', 41.5, 1], ['Safety Goggles', 30, 2]],
+      ability: [['Intimidate', 99.6, 1]],
+      stat_alignment: [['Careful', 22.1, 'Sp. Def', 'Sp. Atk', 2], ['Adamant', 40.2, 'Attack', 'Sp. Atk', 1]],
+      stat_points: [[30.5, 32, 2, 0, 0, 32, 0, 1], [0.5, 32, 32, 2, 0, 0, 0, 2], [10, 32, 40, 0, 0, 0, 0, 3]],
+      teammate: [['Rillaboom', 1], ['Fakemon', 2], ['Garchomp', 3], ['Incineroar', 4]],
+    },
+    Rillaboom: { position: 1, move: [['Grassy Glide', 97.4, 1]], held_item: [], ability: [], stat_alignment: [], stat_points: [], teammate: [['Incineroar', 1]] },
+    'Charizard-Mega-Y': { position: 9, move: [['Heat Wave', 90, 1]], held_item: [['Charizardite Y', 100, 1]], ability: [], stat_alignment: [['Timid', 90, 'Speed', 'Attack', 1]], stat_points: [], teammate: [] },
+    Charizard: { position: 4, move: [], held_item: [], ability: [], stat_alignment: [], stat_points: [], teammate: [] },
+    Fakemon: { position: 3, move: [], held_item: [], ability: [], stat_alignment: [], stat_points: [], teammate: [] },
+  },
+};
+
+describe('in-game Battle Data', () => {
+  const snap = ingameToSnapshot(INGAME, { regulationId: 'champions-reg-mc', url: 'https://github.com/Gheist23/pokemonbattledata', speciesId: resolve });
+  const entry = (id: string) => snap.entries.find((e) => e.speciesId === id)!;
+
+  it('dates the snapshot by its day and names the season', () => {
+    expect(ingameDate('03_10_2026')).toBe('2026-10-03');
+    expect(snap.updatedAt).toBe('2026-10-03');
+    expect(snap.source).toMatchObject({ kind: 'ingame', season: 'M6', format: 'Doubles' });
+    expect(metaSourceKind(snap)).toBe('ingame');
+    expect(isProvisional(snap)).toBe(false);
+  });
+
+  it('keeps usage as a rank, ordered by it, merging a Mega into its base forme and dropping unknown species', () => {
+    expect(snap.entries.map((e) => [e.speciesId, e.usageRank, e.usagePct])).toEqual([
+      ['rillaboom', 1, undefined],
+      ['incineroar', 2, undefined],
+      ['charizard', 4, undefined],
+    ]);
+  });
+
+  it('keeps details as %, without sub-1% noise', () => {
+    expect(entry('incineroar').moves).toEqual([{ id: 'fakeout', pct: 98.1 }, { id: 'partingshot', pct: 80 }]);
+    expect(entry('incineroar').items[0]).toEqual({ id: 'sitrusberry', pct: 41.5 });
+  });
+
+  it('pairs each Stat Point spread with the most common nature, dropping impossible ones', () => {
+    expect(entry('incineroar').spreads).toEqual([{ nature: 'Adamant', values: [32, 2, 0, 0, 32, 0], pct: 30.5 }]);
+    expect(entry('rillaboom').spreads).toEqual([]);
+  });
+
+  it('keeps teammates as ranks, without unknown species or itself', () => {
+    expect(entry('incineroar').teammates).toEqual([{ id: 'rillaboom', rank: 1 }, { id: 'garchomp', rank: 3 }]);
+  });
+
+  it('passes the app’s own validation', () => {
+    expect(() => parseMetaFile({ version: 1, generatedAt: '2026-10-03', regulations: { 'champions-reg-mc': snap } })).not.toThrow();
+  });
+
+  it('rejects a file in another shape', () => {
+    expect(() => ingameToSnapshot({ season: 'M6', pokemon: [] }, { regulationId: 'x', url: 'https://example.com/', speciesId: resolve })).toThrow();
+  });
+});
+
+describe('usage as a % or a rank', () => {
+  it('labels and orders both', () => {
+    expect(usageLabel({ usagePct: 47.25 })).toBe('47.3%');
+    expect(usageLabel({ usageRank: 3 })).toBe('#3');
+    expect(usageText({ usageRank: 3 })).toBe('#3 in usage');
+    expect([{ usageRank: 5 }, { usageRank: 1 }, { usageRank: 3 }].sort(byUsage).map((u) => u.usageRank)).toEqual([1, 3, 5]);
+    expect([{ usagePct: 10 }, { usagePct: 40 }].sort(byUsage).map((u) => u.usagePct)).toEqual([40, 10]);
+  });
+
+  it('suggests teammates from rank-only data, #1 partners first', () => {
+    const s = snap({
+      source: { kind: 'ingame', name: 'In-game' },
+      entries: [
+        { speciesId: 'incineroar', usageRank: 1, abilities: [], items: [], moves: [], spreads: [], teammates: [{ id: 'rillaboom', rank: 1 }, { id: 'garchomp', rank: 2 }] },
+        { speciesId: 'kingambit', usageRank: 2, abilities: [], items: [], moves: [], spreads: [], teammates: [{ id: 'garchomp', rank: 1 }] },
+      ],
+    });
+    const partners = metaPartners(s, ['incineroar', 'kingambit']);
+    expect(partners.map((p) => p.speciesId)).toEqual(['garchomp', 'rillaboom']);
+    expect(partners[0].with).toEqual([{ speciesId: 'kingambit', pct: undefined, rank: 1 }, { speciesId: 'incineroar', pct: undefined, rank: 2 }]);
   });
 });
