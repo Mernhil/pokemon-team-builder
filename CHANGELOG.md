@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.20.0 — 2026-10-04
+
+### Changed
+- **Optimise spread is more granular.** When you add a goal, the other Pokémon's move now comes with one-tap suggestions (the moves people actually run on it, with usage %, or your own moves for *Knock out*) and the builder's full move search over its whole learnset. Only attacking moves can be added. A new section under the goal lets you edit the other Pokémon's item, ability, nature and spread (SP or EVs) before you add it, for Survive, Knock out and Outspeed goals.
+
 ## 0.19.0 — 2026-10-04
 
 ### New
