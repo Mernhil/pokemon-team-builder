@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronRight, Plus } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { getFormat } from '@/domain/formats';
@@ -16,12 +16,13 @@ import {
 } from '@/domain/pokedex';
 import { ABILITY_INTERACTIONS } from '@/domain/mechanics';
 import { createSet } from '@/domain/team';
-import { STAT_IDS, STAT_LABELS, type FormatRules, type Move, type Pokemon, type SpriteSetId } from '@/domain/types';
+import { STAT_IDS, STAT_LABELS, type FormatRules, type Move, type MoveType, type Pokemon, type SpriteSetId } from '@/domain/types';
 import { usePokedexStore, type PokedexTab } from '@/store/pokedexStore';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
+import { Toggle } from '../ui/chips';
 import { Button, Panel, TypeBadge } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { STAT_COLOR_VAR, TYPE_COLORS } from '../ui/color';
@@ -314,35 +315,68 @@ const METHOD_ORDER: LearnMethod[] = ['level', 'machine', 'tutor', 'egg', 'event'
 function MovesTab({ species, dex, learn, book }: Props) {
   const gen = book.gen;
   const rows = useMemo(() => learnedMoves(learn, species.id), [learn, species.id]);
-  const own = new Set(rows.map((r) => r.moveId));
-  const fromPrevo = (dex.data.learnsets[species.id] ?? []).filter((m) => !own.has(m)).map((m) => dex.move(m)).filter((m): m is Move => !!m);
+  const fromPrevo = useMemo(() => {
+    const own = new Set(rows.map((r) => r.moveId));
+    return (dex.data.learnsets[species.id] ?? []).filter((m) => !own.has(m)).map((m) => dex.move(m)).filter((m): m is Move => !!m);
+  }, [rows, dex, species.id]);
+  const [typeFilter, setTypeFilter] = useState<MoveType | null>(null);
+  const moveTypes = useMemo(
+    () => [...new Set([...rows.map((r) => dex.move(r.moveId)?.type), ...fromPrevo.map((m) => m.type)].filter((x): x is MoveType => !!x))].sort(),
+    [rows, fromPrevo, dex],
+  );
+  const activeType = typeFilter && moveTypes.includes(typeFilter) ? typeFilter : null;
+  const ofType = (m: Move) => !activeType || m.type === activeType;
   const byMethod = METHOD_ORDER.map((method) => ({
     method,
     rows: rows
       .filter((r) => r.method === method)
       .map((r) => ({ ...r, move: dex.move(r.moveId) }))
-      .filter((r): r is typeof r & { move: Move } => !!r.move)
+      .filter((r): r is typeof r & { move: Move } => !!r.move && ofType(r.move))
       .sort((a, b) => (a.levels?.[0] ?? 0) - (b.levels?.[0] ?? 0) || a.move.name.localeCompare(b.move.name)),
   })).filter((g) => g.rows.length);
 
-  if (!byMethod.length && !fromPrevo.length) return <Panel title="Moves"><p className="text-sm text-muted">No learnset data.</p></Panel>;
+  const hasMoves = rows.length > 0 || fromPrevo.length > 0;
+  if (!hasMoves) return <Panel title="Moves"><p className="text-sm text-muted">No learnset data.</p></Panel>;
+  const prevoShown = fromPrevo.filter(ofType);
+  const nothing = !byMethod.length && !prevoShown.length;
   return (
     <div className="space-y-3">
+      {moveTypes.length > 1 && (
+        <div role="group" aria-label="Filter moves by type" className="scrollbar-thin flex gap-1.5 overflow-x-auto py-1">
+          <Toggle pressed={!activeType} onClick={() => setTypeFilter(null)}>All types</Toggle>
+          {moveTypes.map((type) => (
+            <button
+              key={type}
+              type="button"
+              aria-pressed={activeType === type}
+              aria-label={`${type} moves`}
+              onClick={() => setTypeFilter(activeType === type ? null : type)}
+              className={cn(
+                'inline-flex shrink-0 items-center rounded-md border p-0.5 transition-opacity pointer-coarse:p-1.5',
+                activeType === type ? 'border-accent ring-1 ring-accent' : activeType ? 'border-transparent opacity-50 hover:opacity-100' : 'border-transparent hover:opacity-80',
+              )}
+            >
+              <TypeBadge type={type} size="xs" />
+            </button>
+          ))}
+        </div>
+      )}
+      {nothing && <p className="text-center text-sm text-muted">No {activeType} moves in this learnset.</p>}
       {byMethod.map((g) => (
         <Panel key={g.method} title={LEARN_METHOD_LABELS[g.method]} actions={<span className="text-xs text-muted">{g.rows.length}</span>}>
           <MoveTable book={book} rows={g.rows.map((r) => ({ move: r.move, lead: g.method === 'level' ? (r.levels!.map((l) => (l <= 1 ? '—' : l)).join(' / ')) : undefined }))} lead={g.method === 'level' ? 'Lv' : undefined} />
         </Panel>
       ))}
-      {fromPrevo.length > 0 &&
+      {prevoShown.length > 0 &&
         // With no per-move learn method (Champions), this is the species' whole legal movepool, not
         // moves inherited from a pre-evolution — labelled accordingly instead of claiming otherwise.
         (byMethod.length ? (
           <Panel title="Via pre-evolutions" actions={<span className="text-xs text-muted">learned before evolving</span>}>
-            <MoveTable book={book} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
+            <MoveTable book={book} rows={prevoShown.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
           </Panel>
         ) : (
           <Panel title="Legal movepool" actions={<span className="text-xs text-muted">no level-up data for {book.games}</span>}>
-            <MoveTable book={book} rows={fromPrevo.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
+            <MoveTable book={book} rows={prevoShown.sort((a, b) => a.name.localeCompare(b.name)).map((move) => ({ move }))} />
           </Panel>
         ))}
       <p className="text-center text-xs text-muted">Learnsets for {book.games} · move data as of Gen {gen} ({book.region})</p>
