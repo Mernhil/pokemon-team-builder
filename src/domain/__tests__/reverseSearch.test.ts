@@ -7,6 +7,7 @@ import { getFormat } from '@/domain/formats';
 import { parseMetaFile } from '@/domain/meta';
 import {
   buildCandidates,
+  candidateUsageLabel,
   defaultSet,
   evaluateCandidate,
   rankMatches,
@@ -95,5 +96,22 @@ describe('evaluateCandidate', () => {
     const ranked = rankMatches(buildCandidates(dex, fmt, snap).flatMap((c) => evaluateCandidate(dex, c, conds, field) ?? []));
     const firstDefault = ranked.findIndex((m) => m.candidate.build === 'default');
     if (firstDefault >= 0) expect(ranked.slice(firstDefault).every((m) => m.candidate.build === 'default')).toBe(true);
+  });
+});
+
+describe('usage as a percentage or only a rank', () => {
+  it('labels and orders both kinds (the game\'s Battle Data has ranks only)', () => {
+    expect(candidateUsageLabel({ usagePct: 47.24 })).toBe('47.2%');
+    expect(candidateUsageLabel({ usageRank: 3 })).toBe('#3');
+    expect(candidateUsageLabel({})).toBe('');
+    const mk = (id: string, usage: { usagePct?: number; usageRank?: number }) => ({
+      candidate: { speciesId: id, set: defaultSet(dex, 'garchomp', fmt), megaMode: 'base' as const, build: 'meta' as const, ...usage },
+      results: [],
+      score: 0,
+    });
+    const ranked = rankMatches([mk('c', { usageRank: 3 }), mk('a', { usageRank: 1 }), mk('b', { usageRank: 2 })]);
+    expect(ranked.map((m) => m.candidate.speciesId)).toEqual(['a', 'b', 'c']);
+    const mixed = rankMatches([mk('lo', { usagePct: 5 }), mk('hi', { usagePct: 40 })]);
+    expect(mixed.map((m) => m.candidate.speciesId)).toEqual(['hi', 'lo']);
   });
 });
