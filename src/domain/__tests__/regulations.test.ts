@@ -5,6 +5,7 @@ import { Dex } from '@/data/dex';
 import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
 import { createSet, createTeam } from '@/domain/team';
 import { validateTeam } from '@/domain/validation';
+import { introducedIn, megaList, megaStoneName } from '@/domain/pokedex';
 import type { Dataset } from '@/domain/types';
 
 const dex = new Dex(data as unknown as Dataset);
@@ -98,5 +99,35 @@ describe('Sprite atlases', () => {
     if (missingItems.length) console.error('Missing item icons:', missingItems);
     expect(missingSpecies).toEqual([]);
     expect(missingItems).toEqual([]);
+  });
+});
+
+describe('Mega list (Champions Pokédex filter)', () => {
+  const ids = (reg?: string) => megaList(dex, reg).map((s) => s.id);
+  const REGS = ['champions-reg-ma', 'champions-reg-mb', 'champions-reg-mc'];
+
+  it('lists a regulation\'s Megas, growing with each regulation', () => {
+    expect(megaList(dex, 'champions-reg-ma').length).toBe(60);
+    expect(megaList(dex, 'champions-reg-mb').length).toBe(76);
+    expect(megaList(dex, 'champions-reg-mc').length).toBe(82);
+    expect(ids('champions-reg-ma')).not.toContain('garchompmegaz');
+    expect(ids('champions-reg-mc')).toContain('garchompmegaz');
+  });
+
+  it('keeps a Pokémon\'s Megas side by side, in order, inside National Dex order', () => {
+    const all = ids('champions-reg-mc');
+    const at = (id: string) => all.indexOf(id);
+    expect(at('charizardmegay')).toBe(at('charizardmegax') + 1);
+    expect(at('garchompmegaz')).toBe(at('garchompmega') + 1);
+    expect(at('raichumegay')).toBe(at('raichumegax') + 1);
+    const nums = megaList(dex, 'champions-reg-mc').map((s) => s.num);
+    expect(nums).toEqual([...nums].sort((a, b) => a - b));
+  });
+
+  it('names the stone and the regulation a Mega arrived in', () => {
+    expect(megaStoneName(dex, dex.species('charizardmegax')!)).toBe('Charizardite X');
+    expect(megaStoneName(dex, dex.species('garchompmegaz')!)).toBe('Garchompite Z');
+    expect(introducedIn(dex.species('garchompmega')!, REGS)).toBe('champions-reg-ma');
+    expect(introducedIn(dex.species('garchompmegaz')!, REGS)).toBe('champions-reg-mc');
   });
 });

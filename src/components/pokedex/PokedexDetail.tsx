@@ -131,7 +131,10 @@ function AddToTeam({ species, dex, book }: { species: Pokemon; dex: Dex; book: D
       title={free < 0 ? 'Your team is full' : `Add to ${team.name}`}
       onClick={() => {
         const { setSlot, setActiveSlot, setView } = useTeamStore.getState();
-        setSlot(team.id, free, createSet(dex, species.id, format));
+        // A Mega isn't a team member of its own: add its Pokémon holding the stone.
+        const stone = species.isMega ? species.requiredItem : undefined;
+        const set = createSet(dex, species.isMega && species.battleOnly ? species.battleOnly : species.id, format);
+        setSlot(team.id, free, stone ? { ...set, itemId: stone } : set);
         setActiveSlot(free);
         setView('builder');
       }}
@@ -314,11 +317,13 @@ const METHOD_ORDER: LearnMethod[] = ['level', 'machine', 'tutor', 'egg', 'event'
 
 function MovesTab({ species, dex, learn, book }: Props) {
   const gen = book.gen;
-  const rows = useMemo(() => learnedMoves(learn, species.id), [learn, species.id]);
+  const learnId = species.isMega && species.battleOnly ? species.battleOnly : species.id;
+  const rows = useMemo(() => learnedMoves(learn, learnId), [learn, learnId]);
   const fromPrevo = useMemo(() => {
     const own = new Set(rows.map((r) => r.moveId));
-    return (dex.data.learnsets[species.id] ?? []).filter((m) => !own.has(m)).map((m) => dex.move(m)).filter((m): m is Move => !!m);
-  }, [rows, dex, species.id]);
+    // A Mega has no learnset of its own: it learns what its Pokémon does.
+    return (dex.data.learnsets[learnId] ?? []).filter((m) => !own.has(m)).map((m) => dex.move(m)).filter((m): m is Move => !!m);
+  }, [rows, dex, learnId]);
   const [typeFilter, setTypeFilter] = useState<MoveType | null>(null);
   const moveTypes = useMemo(
     () => [...new Set([...rows.map((r) => dex.move(r.moveId)?.type), ...fromPrevo.map((m) => m.type)].filter((x): x is MoveType => !!x))].sort(),

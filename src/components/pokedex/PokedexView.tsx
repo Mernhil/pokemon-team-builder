@@ -3,17 +3,22 @@ import { ArrowLeft, BookOpen, Search } from 'lucide-react';
 import { toID, type Dex } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
-import { currentRegulation } from '@/domain/formats';
+import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
 import { BOOKS, bookForFormat, bookInfo, type DexBook } from '@/domain/games';
-import type { PokedexData } from '@/domain/pokedex';
+import { introducedIn, megaList, megaStoneName, type PokedexData } from '@/domain/pokedex';
 import type { FormatRules, Pokemon, TypeName } from '@/domain/types';
 import { usePokedexStore } from '@/store/pokedexStore';
+import { ChipRow, Toggle } from '../ui/chips';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
 import { Button, EmptyState, LoadingState, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { TYPE_COLORS } from '../ui/color';
 import { PokedexDetail } from './PokedexDetail';
+
+const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
+const champRegsOldestFirst = [...champRegs].reverse().map((r) => r.id);
+const regName = (id: string) => champRegs.find((r) => r.id === id)?.shortName ?? id;
 
 /**
  * Pokédex for one generation: every species that generation's games had, numbered the way its
@@ -70,15 +75,23 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
   const [type, setType] = useState<TypeName | ''>('');
   const [order, setOrder] = useState<string>('national');
   const [wildOnly, setWildOnly] = useState(false);
+  const [megaOnly, setMegaOnly] = useState(false);
   const spriteSet = book.spriteSet;
+  const champions = book.id === 'champions';
 
   // The Champions book is regulation-scoped (its roster changes every regulation); every other book
   // shows the full generation/game roster regardless of the active team's clauses. The book can be
   // picked independently of the active team's own format (e.g. browsing Champions while your team is
   // a Gen 9 one), so its regulation comes from the active team's format only when that IS a Champions
   // format — otherwise from whichever regulation is currently live.
-  const championsRegulationId = format.datasetId === 'champions' ? format.regulationId : currentRegulation()?.id;
-  const all = useMemo(() => dex.selectableSpecies(book.id === 'champions' ? championsRegulationId : undefined), [dex, book.id, championsRegulationId]);
+  const defaultRegulationId = format.datasetId === 'champions' ? format.regulationId : currentRegulation()?.id;
+  // The Champions book can also be browsed as it was in an older regulation.
+  const [pickedRegulation, setPickedRegulation] = useState<string | undefined>();
+  const championsRegulationId = pickedRegulation ?? defaultRegulationId;
+  const all = useMemo(
+    () => (champions && megaOnly ? megaList(dex, championsRegulationId) : dex.selectableSpecies(champions ? championsRegulationId : undefined)),
+    [dex, champions, megaOnly, championsRegulationId],
+  );
   const number = useCallback((s: Pokemon) => (order === 'national' ? s.num : data.entries[s.num]?.dex?.[order]), [order, data]);
   const list = useMemo(() => {
     const q = toID(query);
@@ -137,6 +150,22 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
             )}
             <span className="ml-auto font-mono text-xs" aria-label={`${list.length} Pokémon listed`}>{list.length}</span>
           </label>
+          {champions && (
+            <div className="space-y-2">
+              <ChipRow label="Show">
+                <Toggle pressed={!megaOnly} onClick={() => setMegaOnly(false)}>Pokémon</Toggle>
+                <Toggle pressed={megaOnly} onClick={() => setMegaOnly(true)} title="Mega Evolutions, a Pokémon's Megas side by side">Mega Evolutions</Toggle>
+              </ChipRow>
+              <Select aria-label="Regulation" value={championsRegulationId ?? ''} onChange={(e) => setPickedRegulation(e.target.value)}>
+                {champRegs.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                    {r.id === currentRegulation()?.id ? ' (live)' : ''}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
         </div>
         <div ref={listRef} className="scrollbar-thin max-h-[calc(100dvh-280px)] min-h-64 overflow-y-auto p-1.5" role="listbox" aria-label="Pokémon">
           {list.map((s) => (
@@ -154,7 +183,14 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
             >
               <span className="w-10 font-mono text-xs text-muted">{String(number(s)).padStart(3, '0')}</span>
               <Sprite speciesId={s.id} name={s.name} types={s.types} set={spriteSet} size={32} />
-              <span className="min-w-0 flex-1 truncate">{s.name}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{s.name}</span>
+                {s.isMega && (
+                  <span className="block truncate text-[11px] text-muted">
+                    {megaStoneName(dex, s)} · since {regName(introducedIn(s, champRegsOldestFirst) ?? '')}
+                  </span>
+                )}
+              </span>
               <span className="flex gap-0.5">
                 {s.types.map((t) => (
                   <span key={t} role="img" className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_COLORS[t] }} title={t} aria-label={t} />
@@ -162,7 +198,7 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
               </span>
             </button>
           ))}
-          {!list.length && <p className="p-4 text-center text-sm text-muted">No Pokémon match these filters.</p>}
+          {!list.length && <p className="p-4 text-center text-sm text-muted">No {megaOnly ? 'Mega Evolutions' : 'Pokémon'} match these filters.</p>}
         </div>
       </aside>
 

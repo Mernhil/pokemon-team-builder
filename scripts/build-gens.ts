@@ -79,7 +79,7 @@ export async function buildDataset(spec: DatasetSpec) {
   const legal = (x: { exists: boolean; isNonstandard?: string | null }) => x.exists && !x.isNonstandard;
 
   // ---------- Species ----------
-  const isMega = (s: Species) => /^(Mega)/.test(s.forme);
+  const isMega = (s: Species) => /(^|-)Mega(-|$)/.test(s.forme); // "Mega-X", and Meowstic's "M-Mega" / "F-Mega"
   const pool = dex.species
     .all()
     .filter((s) => (spec.roster ? s.exists && spec.roster(s.id) : legal(s)) && (!s.battleOnly || (isMega(s) && spec.megas)))
