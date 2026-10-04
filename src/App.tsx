@@ -15,6 +15,7 @@ import {
   MoreHorizontal,
   Plus,
   Save,
+  Search,
   Settings,
   ShieldAlert,
   Swords,
@@ -57,6 +58,7 @@ const AtlasView = lazy(() => import('./components/atlas/AtlasView').then((m) => 
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
 const RegulationDiffView = lazy(() => import('./components/regulation/RegulationDiffView').then((m) => ({ default: m.RegulationDiffView })));
 const ThreatReportView = lazy(() => import('./components/threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
+const ReverseSearchView = lazy(() => import('./components/reverse/ReverseSearchView').then((m) => ({ default: m.ReverseSearchView })));
 const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
 const CompareView = lazy(() => import('./components/compare/CompareView').then((m) => ({ default: m.CompareView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
@@ -78,10 +80,11 @@ const SECONDARY: Dest[] = [
   { id: 'meta', label: 'Meta', icon: BarChart3 },
   { id: 'speed', label: 'Speed tiers', icon: Gauge },
   { id: 'threats', label: 'Threat report', icon: ShieldAlert },
+  { id: 'reverse', label: 'Reverse search', icon: Search },
   { id: 'compare', label: 'Compare teams', icon: Columns2 },
   { id: 'regdiff', label: 'Regulation diff', icon: GitCompare },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'regdiff', 'compare'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'reverse', 'regdiff', 'compare'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -154,6 +157,7 @@ export default function App() {
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;
   else if (view === 'meta') content = <Suspense fallback={loading('Loading meta data…')}><MetaView dex={dex} format={format} /></Suspense>;
   else if (view === 'speed') content = <Suspense fallback={loading('Loading speed tiers…')}><SpeedTiersView dex={dex} format={format} team={team} /></Suspense>;
+  else if (view === 'reverse') content = <Suspense fallback={loading('Loading reverse search…')}><ReverseSearchView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'threats') content = <Suspense fallback={loading('Loading threat report…')}><ThreatReportView dex={dex} format={format} team={team} /></Suspense>;
   else content = <Builder team={team} format={format} dex={dex} />;
 
