@@ -2,6 +2,25 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.19.0 — 2026-10-04
+
+### New
+- **Reverse search** (More → Reverse search): say what a Pokémon has to do and get every Pokémon that does it. Combine conditions: *one-shots* a Pokémon (guaranteed, or "possible OHKO counts"), *survives* it (one or two hits), *resists* its attacking types, *outspeeds* it (Trick Room aware). The opponent loads its most-used set, which you can edit, and weather, terrain and Trick Room can be set. Answers use the same engine as the Damage Calc, show the numbers behind them ("Armor Cannon 181–212% · takes up to 64% from Throat Chop") and have **Add to team** and **Open in Calc**. Pokémon with usage data are judged on their most-used set; the rest get a generic attacker build with no item, and every result says which one it used.
+- **Mega Evolutions in the Champions Pokédex:** a **Mega Evolutions** mode lists the Megas of a regulation in Pokédex order, a Pokémon's Megas side by side (Charizard X then Y, Garchomp then Mega-Z), with the stone and the regulation each arrived in. A new **Regulation** picker browses the roster as it was in M-A, M-B or M-C. A Mega's page shows its Pokémon's moves, and **Add to team** adds that Pokémon holding the stone.
+- **Pokédex Moves tab:** filter a Pokémon's moves by type.
+- **Aegislash and Palafin forms:** the stats panel switches between Base and Blade (or Hero) with both sets of stats side by side. The Damage Calc now uses Blade stats when Aegislash attacks and Shield stats when it defends (Palafin stays in its base form unless you pick Hero), everywhere the calculator is used (Threat report, bring planner, optimiser, reverse search). A **Form** choice (Auto / Base / Blade or Hero) in the calculator and Advanced details overrides it.
+- **The game's own Battle Data** is now the Meta tab's first source for the live regulation (ranked usage from the Champions Battle Data screen, via a community mirror). It publishes a usage *rank*, not a percentage, so the Meta tab, Threat report, Speed tiers and Team check show "#3" where there is no percentage. Smogon still covers ended regulations and is the fallback.
+- **Type matrices:** the defensive matrix and Team check now read weak / resist / **immune**, so a Pokémon that takes no damage from a type (Aegislash and Fighting) is called out instead of counted as a resist. The offensive matrix separates resisted hits from moves with **no effect**.
+
+### Changed
+- **Teams are named when you save them.** The team-name box in the header is gone (edits already save into the open team, so it and the Save dialog were two ways to name a team and made same-named copies). Rename a team in Saved teams.
+- **Save under a name that is taken** asks whether to add the build as a variation of that team (the default) or overwrite it.
+- **Clear this team** on a saved or named team starts a fresh team and leaves the saved one as it was, with Undo. Before, it emptied the saved team.
+
+### Fixed
+- **Champions move pools:** evolutions now inherit their pre-evolutions' egg and level-up moves. Rillaboom was missing Fake Out (it is Grookey's egg move); 72 moves were missing across 43 Pokémon, including Pawmot's Fake Out, Cinderace's High Jump Kick and Sucker Punch, Persian-Alola's Parting Shot and Wigglytuff's Wish.
+- **Meowstic's Megas** were listed as ordinary Pokémon in the Pokédex and the species picker; they are Megas now. Legends: Z-A was also missing Mega Meowstic, Tatsugiri and Magearna.
+
 ## 0.18.0 — 2026-10-03
 
 ### New
