@@ -174,3 +174,34 @@ export function genderText(sp: Pokemon): string | undefined {
   if (typeof g === 'string') return g === 'N' ? 'Genderless' : g === 'M' ? 'Male only' : 'Female only';
   return `${Math.round(g.M * 1000) / 10}% ♂ · ${Math.round(g.F * 1000) / 10}% ♀`;
 }
+
+// ---------------------------------------------------------------------------
+// Mega Evolutions (the Champions Pokédex's Mega filter)
+// ---------------------------------------------------------------------------
+
+/** What the Mega listing needs from a dex (kept structural so this file stays free of the data layer). */
+interface MegaSource {
+  allSpecies(): Pokemon[];
+  data: { items: Record<string, { id: string; name: string; megaStone?: Record<string, string> }> };
+}
+
+/**
+ * The Mega formes legal in a regulation, in Pokédex order: by National Dex number, and a Pokémon with
+ * more than one Mega (Charizard X and Y, Garchomp and Mega-Z) keeps them side by side, in forme order.
+ */
+export function megaList(dex: MegaSource, regulationId?: string): Pokemon[] {
+  return dex
+    .allSpecies()
+    .filter((s) => s.isMega && (!regulationId || s.legalIn.includes(regulationId)))
+    .sort((a, b) => a.num - b.num || (a.forme ?? '').localeCompare(b.forme ?? '') || a.name.localeCompare(b.name));
+}
+
+/** The Mega Stone that unlocks a Mega forme ("Charizardite X"). */
+export function megaStoneName(dex: MegaSource, mega: Pokemon): string | undefined {
+  return Object.values(dex.data.items).find((i) => i.megaStone && Object.values(i.megaStone).includes(mega.id))?.name;
+}
+
+/** The first regulation (from `chronological`) a Pokémon is legal in: when it arrived. */
+export function introducedIn(s: Pick<Pokemon, 'legalIn'>, chronological: string[]): string | undefined {
+  return chronological.find((id) => s.legalIn.includes(id));
+}

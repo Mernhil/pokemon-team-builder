@@ -31,6 +31,8 @@ const REG_DIR = resolve(here, '../src/data/regulations');
 type AnyDex = ReturnType<typeof Dex.mod>;
 const STAT_IDS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const;
 const STRICT = process.argv.includes('--strict');
+/** "Mega", "Mega-X", "Mega-Z", and Meowstic's "M-Mega" / "F-Mega". */
+export const isMegaForme = (forme?: string) => /(^|-)Mega(-|$)/.test(forme ?? '');
 const toID = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 const MODS: Record<string, AnyDex> = {
@@ -212,7 +214,7 @@ async function main() {
   for (const id of [...speciesIds].sort()) {
     const custom = customSpecies.get(id);
     if (custom && !base.species.get(id).exists) {
-      const isMega = /^Mega/.test(custom.forme ?? '');
+      const isMega = isMegaForme(custom.forme);
       const donor = toID(custom.learnsetFrom ?? custom.baseSpecies);
       if (!isMega) {
         const ls = (await base.learnsets.get(donor))?.learnset ?? (await gen9.learnsets.get(donor))?.learnset ?? {};
@@ -232,7 +234,7 @@ async function main() {
       continue;
     }
     const s = base.species.get(id);
-    const isMega = s.forme.startsWith('Mega');
+    const isMega = isMegaForme(s.forme);
     const patch = patches[id] ?? {};
 
     if (!isMega) {

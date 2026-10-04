@@ -105,3 +105,37 @@ test('theme toggle switches between light and dark', async ({ page }) => {
   await setTheme(page, 'dark');
   await expect(page.locator('html')).toHaveClass(/dark/);
 });
+
+test('Champions Pokédex: Mega Evolutions filter, a Pokémon\'s Megas side by side, and older regulations', async ({ page }) => {
+  await openApp(page, '#dex');
+  await page.getByRole('group', { name: 'Pokédex' }).getByRole('button', { name: 'Champions' }).click();
+  const list = page.getByRole('listbox', { name: 'Pokémon' });
+  const regulation = page.getByRole('combobox', { name: 'Regulation' });
+
+  await page.getByRole('button', { name: 'Mega Evolutions' }).click();
+  expect(await list.getByRole('option').count()).toBe(82); // Reg M-C is live
+  const texts = await list.getByRole('option').allInnerTexts();
+  const at = (name: string) => texts.findIndex((t) => t.includes(`${name}\n`));
+  expect(at('Charizard-Mega-Y')).toBe(at('Charizard-Mega-X') + 1);
+  expect(at('Garchomp-Mega-Z')).toBe(at('Garchomp-Mega') + 1);
+  await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toContainText('Charizardite X');
+
+  // An older regulation has fewer Megas, and the newest additions are gone.
+  const older = (await regulation.locator('option').allInnerTexts()).find((t) => t.includes('M-A'))!;
+  await regulation.selectOption({ label: older });
+  expect(await list.getByRole('option').count()).toBe(60);
+  await expect(list.getByRole('option').filter({ hasText: 'Garchomp-Mega-Z' })).toHaveCount(0);
+  await expect(list.getByRole('option').filter({ hasText: 'Garchomp-Mega\n' })).toHaveCount(1);
+
+  // A Mega opens like any other entry, with its Pokémon's moves.
+  await list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' }).click();
+  await expect(page.getByRole('heading', { name: 'Charizard-Mega-X', level: 2 })).toBeVisible();
+  await page.getByRole('button', { name: 'Moves', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'Flare Blitz' }).first()).toBeVisible();
+
+  // Back to all Pokémon: Megas are gone from the list. (On a phone the entry hides the list; go back to it first.)
+  const back = page.getByRole('button', { name: 'All Pokémon' });
+  if (await back.isVisible()) await back.click();
+  await page.getByRole('button', { name: 'Pokémon', exact: true }).click();
+  await expect(list.getByRole('option').filter({ hasText: '-Mega' })).toHaveCount(0);
+});
