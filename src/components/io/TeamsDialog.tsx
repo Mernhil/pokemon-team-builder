@@ -214,6 +214,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   const select = (id: string) => {
     if (teams[id]?.shared) selectTeam(id);
     else editTeam(id);
+    useTeamStore.getState().setView('builder'); // "Edit team" lands on the builder screen, whichever tab you were on
     onOpenChange(false);
   };
 
