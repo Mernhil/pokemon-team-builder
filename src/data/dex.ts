@@ -7,7 +7,7 @@ import type {
   Pokemon,
   TypeName,
 } from '@/domain/types';
-import { TYPE_NAMES } from '@/domain/types';
+import { STAT_IDS, TYPE_NAMES } from '@/domain/types';
 import { SIDE_LOADED_DATA, fetchGenerated } from './generated-loader';
 
 /** Showdown-style id: lowercase alphanumerics only. */
@@ -123,6 +123,19 @@ export class Dex {
     const item = this.item(itemId);
     const megaId = item?.megaStone?.[toID(speciesId)];
     return megaId ? this.species(megaId) : undefined;
+  }
+
+  /**
+   * A battle-only forme with different base stats that this species switches into in battle
+   * (Aegislash-Blade via Stance Change, Palafin-Hero), if any. Formes with the same stats (Mimikyu-Busted, Morpeko-Hangry) don't count.
+   * Megas are `megaFor`; Castform's formes change typing, not stats, so they don't count.
+   */
+  statForm(speciesId: string): Pokemon | undefined {
+    const base = this.species(speciesId);
+    if (!base) return undefined;
+    return this.speciesList.find(
+      (s) => !s.isMega && s.battleOnly === base.id && STAT_IDS.some((k) => s.baseStats[k] !== base.baseStats[k]),
+    );
   }
 
   // ---- types -----------------------------------------------------------------------------

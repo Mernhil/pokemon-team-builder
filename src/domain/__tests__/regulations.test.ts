@@ -38,6 +38,16 @@ describe('Regulation overlays', () => {
     expect(data.learnsets.kingambit).not.toContain('fakeout');
   });
 
+  it('statForm finds the battle forme that changes stats, and nothing else', () => {
+    expect(dex.statForm('aegislash')?.id).toBe('aegislashblade');
+    expect(dex.statForm('palafin')?.id).toBe('palafinhero');
+    expect(dex.statForm('mimikyu')).toBeUndefined(); // Busted keeps Mimikyu's base stats
+    expect(dex.statForm('morpeko')).toBeUndefined(); // Hangry only changes the type
+    expect(dex.statForm('castform')).toBeUndefined(); // Castform's formes change typing, not stats
+    expect(dex.statForm('garchomp')).toBeUndefined(); // Megas are megaFor
+    expect(dex.statForm('aegislashblade')).toBeUndefined();
+  });
+
   it('applies species patches and new abilities from announcements', () => {
     expect(dex.species('lucariomegaz')!.abilities['0']).toBe('Aura Guard');
     expect(dex.ability('auraguard')?.name).toBe('Aura Guard');

@@ -120,3 +120,14 @@ test('saving under a name that is taken asks: add a variation, or overwrite', as
   await dialog.getByRole('button', { name: 'Overwrite' }).click();
   await expect(page.getByText('Overwrote “Dup”.')).toBeVisible();
 });
+
+test('Aegislash: the stats panel switches between Shield and Blade Forme stats', async ({ page }) => {
+  await openApp(page);
+  await pickOption(page, 'Species', 'Aegislash');
+  await openStatCalculator(page);
+  const group = page.getByRole('group', { name: 'Stats shown for' });
+  await expect(group.getByRole('button', { name: 'Base' })).toHaveAttribute('aria-pressed', 'true');
+  await group.getByRole('button', { name: 'Blade' }).click();
+  await expect(group.getByRole('button', { name: 'Blade' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Blade Spe').first()).toBeVisible();
+});

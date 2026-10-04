@@ -23,7 +23,10 @@ import { STAT_COLOR_VAR } from '../ui/color';
 interface Props {
   set: PokemonSet;
   species: Pokemon;
+  /** The other forme to compare: a Mega, or a stat-changing battle forme (Aegislash-Blade). */
   mega?: Pokemon;
+  /** Name of that forme in the switch and headings (default 'Mega'). */
+  altLabel?: string;
   format: FormatRules;
   dex: Dex;
   /** Edit one stat of the format's spread (SP, EVs or Stat Exp). */
@@ -78,8 +81,8 @@ const zero = (): StatTable => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
  *  - Legends: Arceus Effort Levels (0–10 each; IVs are folded into them)
  * Inline +/− buttons on each stat set the nature Showdown-style (Gen 3+).
  */
-export function StatDistributor({ set, species, mega, format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive, slotKey }: Props) {
-  const [localMega, setLocalMega] = useState(true);
+export function StatDistributor({ set, species, mega, altLabel = 'Mega', format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive, slotKey }: Props) {
+  const [localMega, setLocalMega] = useState(altLabel === 'Mega');
   const [optimizerOpen, setOptimizerOpen] = useState(false);
   const request = useOptimizerStore((s) => s.request);
   const clearRequest = useOptimizerStore((s) => s.clear);
@@ -102,7 +105,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
   const other = mega ? (showMega ? species : mega) : undefined;
   const stats = calcStats(shown.baseStats, set, format, nature);
   const otherStats = other ? calcStats(other.baseStats, set, format, nature) : undefined;
-  const otherLabel = showMega ? 'Base' : 'Mega';
+  const otherLabel = showMega ? 'Base' : altLabel;
   const budget = spendBudget(sys, spread);
   const pct = budget ? Math.min(100, (budget.used / budget.cap) * 100) : 0;
   const unit = { 'champions-sp': 'SP', 'modern-ev': 'EVs', 'gb-statexp': 'Stat Exp', 'lgpe-av': 'AVs', 'pla-effort': 'Effort Lv' }[sys.kind];
@@ -130,8 +133,8 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
             showMega === m && m && 'text-accent',
           )}
         >
-          {m && <Sparkles size={11} />}
-          {m ? 'Mega' : 'Base'}
+          {m && altLabel === 'Mega' && <Sparkles size={11} />}
+          {m ? altLabel : 'Base'}
         </button>
       ))}
     </span>
@@ -228,7 +231,7 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
           </span>
           <span className="text-center">{unit}</span>
           <span className="text-center">{showIV ? ivUnit : ''}</span>
-          <span className={cn('text-right', showMega && 'text-accent')}>{showMega ? 'Mega' : `Lv${level}`}</span>
+          <span className={cn('text-right', showMega && 'text-accent')}>{showMega ? altLabel : `Lv${level}`}</span>
           {otherStats && <span className="text-right">{otherLabel}</span>}
         </div>
         <div className="divide-y divide-border/60 @xl:divide-y-0">
@@ -426,13 +429,13 @@ export function StatDistributor({ set, species, mega, format, dex, onSpread, onR
         />
         </Suspense>
       )}
-      <SpeedBenchmark mega={showMega} set={set} species={shown} format={format} dex={dex} onSpread={onSpread} speed={stats.spe} unit={unit} />
+      <SpeedBenchmark altLabel={showMega ? altLabel : undefined} set={set} species={shown} format={format} dex={dex} onSpread={onSpread} speed={stats.spe} unit={unit} />
     </div>
   );
 }
 
 function SpeedBenchmark({
-  mega,
+  altLabel,
   set,
   species,
   format,
@@ -441,7 +444,7 @@ function SpeedBenchmark({
   speed,
   unit,
 }: {
-  mega: boolean;
+  altLabel?: string;
   set: PokemonSet;
   species: Pokemon;
   format: FormatRules;
@@ -459,7 +462,7 @@ function SpeedBenchmark({
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-surface-2 px-3 py-2 text-xs">
       <span className="font-mono tabular-nums">
-        <span className="text-muted">{mega ? 'Mega Spe' : 'Spe'}</span> <b>{speed}</b>
+        <span className="text-muted">{altLabel ? `${altLabel} Spe` : 'Spe'}</span> <b>{speed}</b>
         {mech.tailwind && mech.battleSim && (
           <>
             <span className="text-muted"> · Tailwind </span>

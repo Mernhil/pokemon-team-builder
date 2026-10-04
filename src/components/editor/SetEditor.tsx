@@ -89,6 +89,8 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
     );
   }
   const mega = format.capabilities.mega ? dex.megaFor(species.id, set.itemId) : undefined;
+  // Aegislash-Blade, Palafin-Hero…: another set of base stats the same Pokémon fights with.
+  const statForm = dex.statForm(species.id);
   const ability = dex.ability(set.abilityId);
   const item = dex.item(set.itemId);
   const slotIssues = issues.filter((i) => i.slot === slot && i.severity !== 'info');
@@ -310,7 +312,8 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
             slotKey={`${teamId}:${slot}`}
             set={set}
             species={species}
-            mega={mega}
+            mega={mega ?? statForm}
+            altLabel={mega ? undefined : statForm?.forme}
             format={format}
             dex={dex}
             onSpread={(stat, v) => setSpread(slot, spreadKey(format.statSystem), stat, v)}
@@ -340,6 +343,8 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
 /** Stat distributor whose Base/Mega switch drives the same Mega toggle as Advanced details. */
 function SlotStatDistributor(props: Omit<ComponentProps<typeof StatDistributor>, 'megaActive' | 'onMegaActive'>) {
   const [battle, updateBattle] = useSlotBattle(props.set.uid, !!props.mega);
+  // A battle forme (not a Mega) is only a stats comparison: the switch is local, the Mega toggle isn't involved.
+  if (props.altLabel) return <StatDistributor {...props} />;
   return (
     <StatDistributor
       {...props}
