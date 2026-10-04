@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { SAMPLE_TEAM, SIX_TEAM, expectNoA11yViolations, importTeam, openApp, openStatCalculator, setTheme } from './helpers';
+import { SAMPLE_TEAM, SIX_TEAM, expectNoA11yViolations, importTeam, openApp, openStatCalculator, pickOption, setTheme } from './helpers';
 
 // axe-core (WCAG 2.0/2.1 A + AA) on each main view, in both themes.
 for (const theme of ['light', 'dark'] as const) {
@@ -66,6 +66,14 @@ for (const theme of ['light', 'dark'] as const) {
       await importTeam(page, SAMPLE_TEAM);
       await page.goto('/#threats');
       await page.getByRole('status').filter({ hasText: /threats calculated/ }).waitFor({ timeout: 30_000 });
+      await expectNoA11yViolations(page);
+    });
+
+    test('Reverse search', async ({ page }) => {
+      await page.goto('/#reverse');
+      await page.getByRole('combobox', { name: 'Condition type' }).selectOption({ label: 'One-shots' });
+      await pickOption(page, 'Species', 'Rillaboom');
+      await page.getByRole('status').filter({ hasText: /Checked \d+ Pokémon/ }).waitFor({ timeout: 30_000 });
       await expectNoA11yViolations(page);
     });
 
