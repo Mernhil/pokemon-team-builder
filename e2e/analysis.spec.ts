@@ -35,3 +35,19 @@ test('Damage Calc loads the team and shows a range and KO text for every move', 
   await expect(forme.getByRole('radio', { name: 'Mega' })).toBeVisible();
   await expect(forme.getByRole('radio', { name: 'Both' })).toBeVisible();
 });
+
+test('The defensive matrix says "immune" for a Pokémon that takes no damage (Aegislash vs Fighting)', async ({ page }) => {
+  await openApp(page);
+  await importTeam(page, "Aegislash @ Spooky Plate\nAbility: Stance Change\nModest Nature\n- Shadow Ball\n- Flash Cannon\n- King's Shield\n- Shadow Sneak\n");
+
+  // Steel's weakness to Fighting is cancelled by Ghost: it must not count as weak, and must be called out as immune.
+  const fighting = page.locator('[title^="Aegislash: immune (×0)"]').filter({ hasText: 'FIGH' });
+  await expect(fighting).toBeVisible();
+  await expect(fighting.getByLabel('0 weak')).toBeVisible();
+  await expect(fighting.getByLabel('1 immune')).toBeVisible();
+  await expect(fighting.getByLabel('0 resist')).toBeVisible();
+  // A real weakness still counts.
+  const ground = page.locator('[title^="Aegislash: ×2"]').filter({ hasText: 'GROU' });
+  await expect(ground.getByLabel('1 weak')).toBeVisible();
+  await expect(page.getByText('immune (no effect)').first()).toBeVisible();
+});

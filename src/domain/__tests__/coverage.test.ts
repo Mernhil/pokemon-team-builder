@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
-import { defensiveFixSuggestion, defensiveSuggestions, offensiveCoverage, offensiveFixSuggestion, offensiveSuggestions } from '@/domain/coverage';
+import { defensiveCoverage, defensiveFixSuggestion, defensiveSuggestions, offensiveCoverage, offensiveFixSuggestion, offensiveSuggestions } from '@/domain/coverage';
 import { getFormat } from '@/domain/formats';
 import { createSet, createTeam } from '@/domain/team';
 import type { Dataset, PokemonSet } from '@/domain/types';
@@ -42,6 +42,18 @@ describe('offensiveCoverage', () => {
     expect(water.walled).toBe(1);
   });
 
+  it('counts a move with no effect separately from a resisted one', () => {
+    const flying = row(rows, 'Flying');
+    expect(flying.noEffect).toBe(0); // Garchomp falls back to Dragon Claw
+    const t = createTeam(fmt);
+    t.slots[0] = mk('garchomp', ['earthquake']);
+    t.slots[1] = mk('charizard', ['heatwave']);
+    const r = row(offensiveCoverage(t, dex), 'Flying');
+    expect(r.walled).toBe(1);
+    expect(r.noEffect).toBe(1); // Earthquake can't hit a Flying type at all
+    expect(row(offensiveCoverage(t, dex), 'Water').noEffect).toBe(0); // Heat Wave is only resisted
+  });
+
   it('skips members with no damaging moves', () => {
     const t = createTeam(fmt);
     t.slots[0] = mk('garchomp', ['protect']);
@@ -55,6 +67,7 @@ describe('defensiveSuggestions', () => {
     mults: [],
     weak,
     resist,
+    immune: 0,
     danger: weak >= 3 || (weak >= 2 && resist === 0),
   });
 
@@ -90,6 +103,7 @@ describe('defensiveFixSuggestion', () => {
     mults: [],
     weak,
     resist,
+    immune: 0,
     danger: weak >= 3 || (weak >= 2 && resist === 0),
   });
 
@@ -110,6 +124,7 @@ describe('offensiveSuggestions', () => {
     hits: Array.from({ length: hitCount }, () => ({ name: '', mult: 1, move: '' })),
     superEffective,
     walled,
+    noEffect: 0,
   });
 
   it('flags a type nobody hits super-effectively, worst (mostly walled) first', () => {
@@ -138,6 +153,7 @@ describe('offensiveFixSuggestion', () => {
     hits: Array.from({ length: hitCount }, () => ({ name: '', mult: 1, move: '' })),
     superEffective,
     walled,
+    noEffect: 0,
   });
 
   it('picks the move type that hits the most current gaps super-effectively at once', () => {
@@ -148,5 +164,22 @@ describe('offensiveFixSuggestion', () => {
 
   it('says nothing when no single type covers 2+ of the gaps', () => {
     expect(offensiveFixSuggestion(dex, offensiveSuggestions([row('Ghost', 3, 0, 1)]))).toBeNull();
+  });
+});
+
+describe('defensiveCoverage: immunities', () => {
+  it('counts a Pokémon that takes no damage as immune (and as resisting), not as weak', () => {
+    const t = createTeam(fmt);
+    t.slots[0] = mk('aegislash', ['shadowball']); // Steel/Ghost: Fighting 2 × 0
+    t.slots[1] = mk('garchomp', ['earthquake']); // Dragon/Ground: weak to Ice, Dragon, Fairy
+    const rows = defensiveCoverage(t, dex, false);
+    const fighting = rows.find((r) => r.atkType === 'Fighting')!;
+    expect(fighting.mults[0]).toEqual({ name: 'Aegislash', mult: 0 });
+    expect(fighting).toMatchObject({ weak: 0, immune: 1 });
+    expect(fighting.resist).toBeGreaterThanOrEqual(1);
+    const normal = rows.find((r) => r.atkType === 'Normal')!;
+    expect(normal.immune).toBe(1); // Ghost ignores Normal as well
+    const ground = rows.find((r) => r.atkType === 'Ground')!;
+    expect(ground).toMatchObject({ weak: 1, immune: 0 }); // Steel is weak to Ground; Garchomp is neutral
   });
 });
