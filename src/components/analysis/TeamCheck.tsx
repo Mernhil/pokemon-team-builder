@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo } from 'react';
-import { Gauge } from 'lucide-react';
+import { Crosshair, Gauge, Skull } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useMetaFor } from '@/data/useMeta';
 import { defensiveCoverage } from '@/domain/coverage';
@@ -85,6 +85,18 @@ export function TeamCheck({ team, dex, format, issues }: { team: Team; dex: Dex;
           <a href="#speed" className="inline-flex min-h-8 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
             <Gauge size={15} aria-hidden /> Speed tiers
             <span className="font-normal text-muted">where your team sits against the meta</span>
+          </a>
+        )}
+        {format.datasetId === 'champions' && team.slots.some(Boolean) && (
+          <a href="#ohkod" className="inline-flex min-h-8 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
+            <Skull size={15} aria-hidden /> OHKO’d by
+            <span className="font-normal text-muted">which common Pokémon can one-shot yours</span>
+          </a>
+        )}
+        {format.datasetId === 'champions' && team.slots.some(Boolean) && (
+          <a href="#ohko" className="inline-flex min-h-8 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
+            <Crosshair size={15} aria-hidden /> Can OHKO
+            <span className="font-normal text-muted">which common Pokémon yours can one-shot</span>
           </a>
         )}
       </div>

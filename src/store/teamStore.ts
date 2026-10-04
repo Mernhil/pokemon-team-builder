@@ -11,7 +11,7 @@ import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
 export type Theme = 'dark' | 'light';
-export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta' | 'speed' | 'threats' | 'reverse' | 'regdiff' | 'compare';
+export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta' | 'speed' | 'threats' | 'ohko' | 'ohkod' | 'reverse' | 'regdiff' | 'compare';
 
 /** Advanced-details state for one team member (keyed by set uid). */
 export interface SlotBattleState {
@@ -200,7 +200,7 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
     editingDraft,
     activeTeamId,
     theme: p.theme === 'light' ? 'light' : 'dark',
-    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' || p.view === 'speed' || p.view === 'threats' || p.view === 'reverse' || p.view === 'regdiff' || p.view === 'compare' ? p.view : 'builder',
+    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' || p.view === 'speed' || p.view === 'threats' || p.view === 'ohko' || p.view === 'ohkod' || p.view === 'reverse' || p.view === 'regdiff' || p.view === 'compare' ? p.view : 'builder',
     battle,
   };
 }
