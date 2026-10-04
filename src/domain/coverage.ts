@@ -17,6 +17,8 @@ export interface OffenseRow {
   superEffective: number;
   /** Members whose best move is resisted or blocked. */
   walled: number;
+  /** Of those, members whose best move has no effect at all (×0: Earthquake into a Flying type). */
+  noEffect: number;
 }
 
 /**
@@ -47,6 +49,7 @@ export function offensiveCoverage(team: Team, dex: Dex): OffenseRow[] {
       hits,
       superEffective: hits.filter((h) => h.mult > 1).length,
       walled: hits.filter((h) => h.mult < 1).length,
+      noEffect: hits.filter((h) => h.mult === 0).length,
     };
   });
 }
@@ -158,8 +161,10 @@ export interface DefenseRow {
   mults: { name: string; mult: number }[];
   /** Members hit super-effectively. */
   weak: number;
-  /** Members resisting or immune. */
+  /** Members resisting or immune (immune ones are counted here too). */
   resist: number;
+  /** Members immune (×0): Fighting into a Ghost, Ground into a Flying type. A subset of `resist`. */
+  immune: number;
   /** Three or more weak, or two weak and nobody resisting. */
   danger: boolean;
 }
@@ -181,7 +186,8 @@ export function defensiveCoverage(team: Team, dex: Dex, megaTyping: boolean): De
     const mults = mons.map((m) => ({ name: m.name, mult: dex.effectiveness(atkType, m.types) }));
     const weak = mults.filter((m) => m.mult > 1).length;
     const resist = mults.filter((m) => m.mult < 1).length;
-    return { atkType, mults, weak, resist, danger: weak >= 3 || (weak >= 2 && resist === 0) };
+    const immune = mults.filter((m) => m.mult === 0).length;
+    return { atkType, mults, weak, resist, immune, danger: weak >= 3 || (weak >= 2 && resist === 0) };
   });
 }
 

@@ -42,10 +42,10 @@ export function TeamCheck({ team, dex, format, issues }: { team: Team; dex: Dex;
             <Label>Most exposed to</Label>
             <ul className="flex flex-wrap gap-2">
               {exposed.map((r) => (
-                <li key={r.atkType} className="flex items-center gap-1.5 text-sm" title={r.mults.map((m) => `${m.name}: ×${m.mult}`).join('\n')}>
+                <li key={r.atkType} className="flex items-center gap-1.5 text-sm" title={r.mults.map((m) => `${m.name}: ${m.mult === 0 ? 'immune (×0)' : `×${m.mult}`}`).join('\n')}>
                   <TypeBadge type={r.atkType} size="xs" />
                   <span className={r.danger ? 'font-semibold text-bad' : 'text-muted'}>
-                    {r.weak} weak{r.resist ? ` · ${r.resist} resist` : ''}
+                    {r.weak} weak{r.resist - r.immune ? ` · ${r.resist - r.immune} resist` : ''}{r.immune ? ` · ${r.immune} immune` : ''}
                   </span>
                 </li>
               ))}
