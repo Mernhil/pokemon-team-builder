@@ -2,6 +2,15 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## Unreleased
+
+### New
+- **Edit team** in Saved teams: loads a saved team (or one of its variations) into the builder so you can change it; **Save** then offers to *Update* that team, or save the result as a separate one.
+
+### Changed
+- **Saved teams no longer change while you build.** Saving keeps a copy and leaves your build open as a separate draft, so trying a change after saving no longer alters the saved team. A saved team only changes when you Save over it from an Edit team session. Opening, duplicating, importing or adding a variation also loads a draft copy. A saved team that an older version left open is kept as it was, with a draft copy in the builder.
+- **Reverse search and Optimise spread use the builder's stat sliders and nature picker** for the opposing Pokémon (with the nature +/− buttons and presets), instead of number boxes and a drop-down.
+
 ## 0.20.0 — 2026-10-04
 
 ### New

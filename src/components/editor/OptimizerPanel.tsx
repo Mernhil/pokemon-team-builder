@@ -10,7 +10,7 @@ import { metaSets, type MetaSet } from '@/domain/metaSets';
 import { describeGoal, optimize, type Goal, type Leftover, type OptimizeResult } from '@/domain/optimizer';
 import { pickSpeedSnapshot } from '@/domain/speedTiers';
 import { createSet } from '@/domain/team';
-import { investRange, setSpreadValue, spreadKey, sumStats } from '@/domain/stats';
+import { spreadKey, sumStats } from '@/domain/stats';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type PokemonSet, type StatId, type StatTable } from '@/domain/types';
 import { useOptimizerStore, type OptimizerRequest } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
@@ -18,6 +18,7 @@ import { toast } from '@/store/toastStore';
 import { Combobox } from '../ui/Combobox';
 import { Button, Chip, Disclosure, Field, Label, Select } from '../ui/primitives';
 import { NaturePicker } from './NaturePicker';
+import { OpponentStats } from './OpponentStats';
 import { comboProps, useItemPicker, useMovePicker } from './options';
 import { Modal } from '../ui/Modal';
 import { cn } from '../ui/styles';
@@ -366,41 +367,6 @@ function GoalRow({ dex, format, goal, mine, onChange, onRemove }: { dex: Dex; fo
   );
 }
 
-/** A set's stat investment (Stat Points or EVs, by format), one number box per stat, within the format's caps. */
-function SpreadInputs({ format, set, onChange }: { format: FormatRules; set: PokemonSet; onChange: (spread: StatTable) => void }) {
-  const sys = format.statSystem;
-  const key = spreadKey(sys);
-  const unit = key === 'sp' ? 'SP' : 'EVs';
-  const spread = (key === 'sp' ? set.sp : set.evs) as StatTable;
-  const { max, step } = investRange(sys);
-  const total = sys.kind === 'champions-sp' || sys.kind === 'modern-ev' ? sys.totalCap : Infinity;
-  return (
-    <div>
-      <p className="mb-1 text-xs text-muted">
-        {unit} {Number.isFinite(total) ? `(${sumStats(spread)}/${total})` : ''}
-      </p>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-        {STAT_IDS.map((st) => (
-          <label key={st} className="flex flex-col gap-0.5 text-xs">
-            <span className="font-semibold text-muted">{STAT_LABELS[st]}</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={max}
-              step={step}
-              aria-label={`Their ${STAT_LABELS[st]} ${unit}`}
-              value={spread[st]}
-              onChange={(e) => onChange(setSpreadValue(spread, st, Number(e.target.value), total, max))}
-              className="h-8 w-full rounded border border-border bg-surface px-1.5 font-mono pointer-coarse:h-11"
-            />
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /** Pick a move: the set's own / most-used moves as one-tap suggestions, then the whole learnset as in the builder. */
 function MovePick({
   dex,
@@ -629,7 +595,7 @@ function GoalAdder({ kind, dex, format, mine, field, onAdd }: { kind: GoalKind; 
                 </Field>
               )}
             </div>
-            <SpreadInputs format={format} set={them} onChange={(spread) => setTweaks((t) => ({ ...t, [key]: spread }))} />
+            <OpponentStats dex={dex} format={format} set={them} onChange={(patch) => setTweaks((t) => ({ ...t, ...patch }))} />
           </div>
         </Disclosure>
       )}
