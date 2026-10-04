@@ -33,13 +33,26 @@ export interface Condition {
   allowPossible?: boolean;
 }
 
-export interface Candidate {
+/** Usage as a meta source gives it: a % of teams, or only a rank (the game's own Battle Data). */
+export interface CandidateUsage {
+  usagePct?: number;
+  usageRank?: number;
+}
+
+/** "47.2%", or "#3" when only a rank is known. */
+export const candidateUsageLabel = (u: CandidateUsage): string =>
+  u.usagePct !== undefined ? `${u.usagePct.toFixed(1)}%` : u.usageRank !== undefined ? `#${u.usageRank}` : '';
+
+/** Most used first: by %, else by rank. */
+const byCandidateUsage = (a: CandidateUsage, b: CandidateUsage): number =>
+  (b.usagePct ?? -1) - (a.usagePct ?? -1) || (a.usageRank ?? Number.MAX_SAFE_INTEGER) - (b.usageRank ?? Number.MAX_SAFE_INTEGER);
+
+export interface Candidate extends CandidateUsage {
   speciesId: string;
   set: PokemonSet;
   megaMode: MegaMode;
   /** 'meta': the most-used set; 'default': a computed attacker build (no item). */
   build: 'meta' | 'default';
-  usagePct: number;
 }
 
 export const CONDITION_LABEL: Record<ConditionKind, string> = {
@@ -110,12 +123,13 @@ export function buildCandidates(dex: Dex, format: FormatRules, snapshot?: MetaSn
     const entry = snapshot?.entries.find((e) => e.speciesId === species.id);
     const m = entry && metaSet(entry, dex, format);
     if (m) {
-      out.push({ speciesId: species.id, set: m.set, megaMode: m.megaMode, build: 'meta', usagePct: m.usagePct });
+      const usage: CandidateUsage = m;
+      out.push({ speciesId: species.id, set: m.set, megaMode: m.megaMode, build: 'meta', usagePct: usage.usagePct, usageRank: usage.usageRank });
       continue;
     }
     const set = defaultSet(dex, species.id, format);
     if (!set.moves[0]) continue; // nothing worth attacking with: not a sensible answer to "one-shots"
-    out.push({ speciesId: species.id, set, megaMode: 'base', build: 'default', usagePct: 0 });
+    out.push({ speciesId: species.id, set, megaMode: 'base', build: 'default' });
   }
   return out;
 }
@@ -224,7 +238,7 @@ export function rankMatches(matches: Match[]): Match[] {
   return [...matches].sort(
     (a, b) =>
       Number(b.candidate.build === 'meta') - Number(a.candidate.build === 'meta') ||
-      b.candidate.usagePct - a.candidate.usagePct ||
+      byCandidateUsage(a.candidate, b.candidate) ||
       b.score - a.score ||
       a.candidate.speciesId.localeCompare(b.candidate.speciesId),
   );

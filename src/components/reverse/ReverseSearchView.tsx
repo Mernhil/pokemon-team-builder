@@ -7,6 +7,7 @@ import { REGULATION_MANIFEST } from '@/domain/formats';
 import {
   CONDITION_LABEL,
   attackingTypes,
+  candidateUsageLabel,
   describeCondition,
   targetFor,
   type Condition,
@@ -206,7 +207,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
                       <div className="flex flex-wrap gap-1">{sp?.types.map((t) => <TypeBadge key={t} type={t} size="xs" />)}</div>
                     </div>
                     <Chip tone={m.candidate.build === 'meta' ? 'accent' : 'neutral'}>
-                      {m.candidate.build === 'meta' ? `Meta set · ${m.candidate.usagePct.toFixed(1)}%` : 'Generic build'}
+                      {m.candidate.build === 'meta' ? `Meta set · ${candidateUsageLabel(m.candidate)}` : 'Generic build'}
                     </Chip>
                   </div>
                   <ul className="space-y-0.5 text-xs">
