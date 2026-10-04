@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
+import { typeMultiplier } from '@/domain/abilityTypes';
 import { moveCoverage, defensiveCoverage, defensiveFixSuggestion, defensiveSuggestions, offensiveCoverage, offensiveFixSuggestion, offensiveSuggestions } from '@/domain/coverage';
 import { getFormat } from '@/domain/formats';
 import { createSet, createTeam } from '@/domain/team';
@@ -201,5 +202,44 @@ describe('moveCoverage', () => {
 
   it('has no multiplier without a damaging move', () => {
     expect(moveCoverage(dex, ['protect', '']).every((r) => r.mult === undefined)).toBe(true);
+  });
+});
+
+describe('abilities in the type matrices', () => {
+  const withAbility = (species: string, abilityId: string, moves: string[] = []) => ({ ...mk(species, moves), abilityId });
+
+  it('Levitate makes a Pokémon immune to Ground (Rotom-Wash is not weak to it)', () => {
+    const team = createTeam(fmt);
+    team.slots[0] = withAbility('rotomwash', 'levitate');
+    const ground = defensiveCoverage(team, dex, false).find((r) => r.atkType === 'Ground')!;
+    expect(ground.mults[0].mult).toBe(0);
+    expect(ground.weak).toBe(0);
+    expect(ground.immune).toBe(1);
+  });
+
+  it('without the ability the type chart alone decides', () => {
+    const team = createTeam(fmt);
+    team.slots[0] = withAbility('rotomwash', 'notlevitate');
+    expect(defensiveCoverage(team, dex, false).find((r) => r.atkType === 'Ground')!.mults[0].mult).toBe(2);
+  });
+
+  it('Thick Fat halves Fire and Ice, and a Mega stone holder uses its Mega ability', () => {
+    expect(typeMultiplier(dex, 'Fire', ['Normal'], { defender: 'thickfat' })).toBe(0.5);
+    expect(typeMultiplier(dex, 'Ice', ['Grass'], { defender: 'thickfat' })).toBe(1);
+    const team = createTeam(fmt);
+    team.slots[0] = { ...withAbility('garchomp', 'sandveil'), itemId: 'garchompite' };
+    const row = (mega: boolean) => defensiveCoverage(team, dex, mega).find((r) => r.atkType === 'Ice')!;
+    expect(row(false).mults[0].mult).toBe(4);
+  });
+
+  it('Pixilate makes a Normal move Fairy, Scrappy hits Ghosts, and Mold Breaker ignores Levitate', () => {
+    const team = createTeam(fmt);
+    team.slots[0] = withAbility('sylveon', 'pixilate', ['hypervoice']);
+    const dragon = offensiveCoverage(team, dex).find((r) => r.defType === 'Dragon')!;
+    expect(dragon.hits[0]).toMatchObject({ mult: 2, move: 'Hyper Voice' });
+    expect(typeMultiplier(dex, 'Normal', ['Ghost'], { attacker: 'scrappy' })).toBe(1);
+    expect(typeMultiplier(dex, 'Normal', ['Ghost'])).toBe(0);
+    expect(typeMultiplier(dex, 'Ground', ['Steel'], { defender: 'levitate' })).toBe(0);
+    expect(typeMultiplier(dex, 'Ground', ['Steel'], { defender: 'levitate', attacker: 'moldbreaker' })).toBe(2);
   });
 });

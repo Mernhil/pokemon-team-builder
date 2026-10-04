@@ -135,7 +135,7 @@ function Comparison({ a, b, names }: { a: Team; b: Team; names: Record<string, s
       {note}
       <Pair label="Teams" a={header(a, dexA, 'A')} b={header(b, dexB, 'B')} />
       <Pair label="Defensive type matrix" a={<DefenseMatrix team={a} dex={dexA} format={fa} />} b={<DefenseMatrix team={b} dex={dexB} format={fb} />} />
-      <Pair label="Offensive type matrix" a={<OffenseMatrix team={a} dex={dexA} />} b={<OffenseMatrix team={b} dex={dexB} />} />
+      <Pair label="Offensive type matrix" a={<OffenseMatrix team={a} dex={dexA} mega={fa.capabilities.mega} />} b={<OffenseMatrix team={b} dex={dexB} mega={fb.capabilities.mega} />} />
       <Pair label="Speed" a={<SpeedPanel team={a} dex={dexA} format={fa} />} b={<SpeedPanel team={b} dex={dexB} format={fb} />} />
       {(fa.datasetId === 'champions' || fb.datasetId === 'champions') && (
         <Pair

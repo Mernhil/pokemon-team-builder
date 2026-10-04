@@ -11,8 +11,8 @@ import { SuggestionList } from './SuggestionList';
  * Compact offensive coverage: for each defending type, how many team members hit it
  * super-effectively / are walled by it, based on their damaging moves.
  */
-export function OffenseMatrix({ team, dex }: { team: Team; dex: Dex }) {
-  const rows = useMemo(() => offensiveCoverage(team, dex), [team, dex]);
+export function OffenseMatrix({ team, dex, mega = false }: { team: Team; dex: Dex; /** The game has Megas: a stone holder uses its Mega's ability. */ mega?: boolean }) {
+  const rows = useMemo(() => offensiveCoverage(team, dex, mega), [team, dex, mega]);
   const suggestions = useMemo(() => offensiveSuggestions(rows), [rows]);
   const fix = useMemo(() => offensiveFixSuggestion(dex, suggestions), [dex, suggestions]);
   if (!rows[0]?.hits.length) return null;
@@ -46,7 +46,7 @@ export function OffenseMatrix({ team, dex }: { team: Team; dex: Dex }) {
       </div>
       <p className="mt-2 text-xs text-muted">
         Count of members hitting each defending type <span className="text-good">super-effectively</span> /{' '}
-        <span className="text-bad">only resisted</span> / <span className="text-accent">no effect at all</span>, from their damaging moves. Hover a cell for each member's best
+        <span className="text-bad">only resisted</span> / <span className="text-accent">no effect at all</span>, from their damaging moves and abilities (Pixilate, Scrappy, Tinted Lens). Hover a cell for each member's best
         move.
       </p>
       <SuggestionList suggestions={suggestions} fix={fix} />

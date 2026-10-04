@@ -7,6 +7,7 @@
  * never disagree with the Damage Calc. "Resists" is a pure type check.
  */
 import type { Dex } from '@/data/dex';
+import { activeAbility, typeMultiplier } from './abilityTypes';
 import type { FieldConditions, MegaMode } from './battle/conditions';
 import type { MetaSnapshot } from './meta';
 import { metaSet } from './metaSets';
@@ -168,15 +169,16 @@ export function attackingTypes(dex: Dex, t: SearchTarget): TypeName[] {
 export function resistCheck(dex: Dex, cand: Candidate, target: SearchTarget): { pass: boolean; detail: string } {
   const attacks = attackingTypes(dex, target);
   if (!attacks.length) return { pass: false, detail: 'target has no attacking types' };
-  const forms = [dex.species(cand.speciesId)];
+  const forms = [{ form: dex.species(cand.speciesId), mega: false }];
   if (cand.megaMode !== 'base') {
     const mega = dex.megaFor(cand.speciesId, cand.set.itemId);
-    if (mega) forms.push(mega);
+    if (mega) forms.push({ form: mega, mega: true });
   }
   const worst = new Map<string, number>();
-  for (const f of forms) {
+  for (const { form: f, mega } of forms) {
     if (!f) continue;
-    for (const t of attacks) worst.set(t, Math.max(worst.get(t) ?? 0, dex.effectiveness(t, f.types)));
+    const ability = activeAbility(dex, cand.set, mega);
+    for (const t of attacks) worst.set(t, Math.max(worst.get(t) ?? 0, typeMultiplier(dex, t, f.types, { defender: ability })));
   }
   const bad = [...worst].filter(([, e]) => e > 0.5);
   const fmt = (e: number) => (e === 0 ? 'immune' : `${e}×`);

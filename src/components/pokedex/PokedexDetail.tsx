@@ -22,6 +22,7 @@ import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
+import { abilityTypeEffects } from '@/domain/abilityTypes';
 import { Button, Panel, TypeBadge } from '../ui/primitives';
 import { TypeFilter } from '../ui/TypeFilter';
 import { cn } from '../ui/styles';
@@ -262,6 +263,11 @@ function TypeDefenses({ species, dex }: { species: Pokemon; dex: Dex }) {
     byMult.set(m, [...(byMult.get(m) ?? []), t]);
   }
   const label: Record<number, string> = { 4: '×4', 2: '×2', 1: '×1', 0.5: '×½', 0.25: '×¼', 0: '×0' };
+  // Abilities that change a matchup, on top of the types above.
+  const abilityNotes = [...new Set(Object.values(species.abilities))].flatMap((a) => {
+    const effects = abilityTypeEffects(a);
+    return effects.length ? [{ ability: dex.ability(a)?.name ?? a, text: effects.map((e) => `${e.mult === 0 ? 'immune to' : `×${e.mult} from`} ${e.type}`).join(', ') }] : [];
+  });
   return (
     <div className="space-y-2">
       {groups
@@ -276,6 +282,15 @@ function TypeDefenses({ species, dex }: { species: Pokemon; dex: Dex }) {
             </div>
           </div>
         ))}
+      {abilityNotes.length > 0 && (
+        <ul className="space-y-0.5 border-t border-border pt-2 text-xs text-muted">
+          {abilityNotes.map((n) => (
+            <li key={n.ability}>
+              <b className="text-fg">{n.ability}</b>: {n.text}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -114,7 +114,7 @@ export function TrainerDetail({ group, initial }: { group: string; initial?: str
       )}
 
       <DefenseMatrix team={team} dex={dex} format={format} />
-      <OffenseMatrix team={team} dex={dex} />
+      <OffenseMatrix team={team} dex={dex} mega={format.capabilities.mega} />
     </div>
   );
 }

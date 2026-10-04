@@ -2,6 +2,14 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## Unreleased
+
+### New
+- **Recommended items and way to use** (Champions): a light-bulb info button next to the held item's own lists the items people actually run on that Pokémon, with usage %. A **Recommended way to use** section under the Pokémon shows its most-used items (tap one to take it), ability, nature, spread and moves, and **Use the most-used build** applies them all in one go (Undo puts yours back).
+
+### Fixed
+- **Abilities now count in the type matrices and suggestions.** Rotom-Wash with Levitate was shown weak to Ground. The defensive matrix, Team check's *Most exposed to* and its suggestions now apply Levitate, Flash Fire, Water Absorb, Volt Absorb, Lightning Rod, Storm Drain, Sap Sipper, Motor Drive, Earth Eater, Well-Baked Body, Dry Skin, Thick Fat, Heatproof, Water Bubble, Fluffy, Purifying Salt and Wonder Guard (and a Mega Stone holder's Mega ability). The offensive matrices, the calculator's move coverage, Matchup builder, bring planner and Reverse search's *resists* condition apply the Pokémon's own abilities too: Pixilate, Aerilate, Refrigerate, Galvanize and Normalize, Scrappy and Mind's Eye, Tinted Lens, and Mold Breaker ignoring the target's ability. A Pokémon's Pokédex page lists what each of its abilities does to incoming types.
+
 ## 0.21.1 — 2026-10-04
 
 ### Fixed
