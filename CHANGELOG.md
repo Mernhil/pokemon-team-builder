@@ -2,7 +2,7 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## Unreleased
+## 0.22.0 — 2026-10-04
 
 ### New
 - **Recommended items and way to use** (Champions): a light-bulb info button next to the held item's own lists the items people actually run on that Pokémon, with usage %. A **Recommended way to use** section under the Pokémon shows its most-used items (tap one to take it), ability, nature, spread and moves, and **Use the most-used build** applies them all in one go (Undo puts yours back).
