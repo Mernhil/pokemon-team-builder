@@ -4,6 +4,9 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 ## 0.20.0 — 2026-10-04
 
+### New
+- **Move coverage in the Damage Calc:** a panel under Results shows, for each side, the best multiplier of the moves currently selected against all 18 types (×2, ×1, ½, 0), updating live as you change a move. It counts the types the move hits super-effectively, lists the ones that resist or block it, and outlines the opposing Pokémon's own types. Hover a type to see which moves reach that multiplier.
+
 ### Changed
 - **Optimise spread is more granular.** When you add a goal, the other Pokémon's move now comes with one-tap suggestions (the moves people actually run on it, with usage %, or your own moves for *Knock out*) and the builder's full move search over its whole learnset. Only attacking moves can be added. A new section under the goal lets you edit the other Pokémon's item, ability, nature and spread (SP or EVs) before you add it, for Survive, Knock out and Outspeed goals.
 

@@ -12,6 +12,7 @@ import { Sprite } from '../ui/Sprite';
 import { Button, EmptyState, Notice, Panel, TypeBadge } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { CalcSideEditor } from './CalcSideEditor';
+import { MoveCoverage } from './MoveCoverage';
 
 /**
  * Damage calculator: same dual-pane building blocks as the team builder (attacker | defender),
@@ -105,6 +106,8 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
               </div>
             )}
           </Panel>
+
+          <MoveCoverage dex={dex} attacker={attacker.set ?? undefined} defender={defender.set ?? undefined} />
         </div>
 
         <div className="xl:order-1">

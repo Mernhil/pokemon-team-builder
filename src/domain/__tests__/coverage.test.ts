@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
-import { defensiveCoverage, defensiveFixSuggestion, defensiveSuggestions, offensiveCoverage, offensiveFixSuggestion, offensiveSuggestions } from '@/domain/coverage';
+import { moveCoverage, defensiveCoverage, defensiveFixSuggestion, defensiveSuggestions, offensiveCoverage, offensiveFixSuggestion, offensiveSuggestions } from '@/domain/coverage';
 import { getFormat } from '@/domain/formats';
 import { createSet, createTeam } from '@/domain/team';
 import type { Dataset, PokemonSet } from '@/domain/types';
@@ -181,5 +181,25 @@ describe('defensiveCoverage: immunities', () => {
     expect(normal.immune).toBe(1); // Ghost ignores Normal as well
     const ground = rows.find((r) => r.atkType === 'Ground')!;
     expect(ground).toMatchObject({ weak: 1, immune: 0 }); // Steel is weak to Ground; Garchomp is neutral
+  });
+});
+
+describe('moveCoverage', () => {
+  const at = (rows: ReturnType<typeof moveCoverage>, t: string) => rows.find((r) => r.defType === t)!;
+
+  it('takes the best multiplier among the damaging moves and names the moves reaching it', () => {
+    const rows = moveCoverage(dex, ['earthquake', 'dragonclaw', 'protect']);
+    expect(rows).toHaveLength(18);
+    expect(at(rows, 'Steel')).toMatchObject({ mult: 2, moves: ['Earthquake'] });
+    expect(at(rows, 'Flying')).toMatchObject({ mult: 1, moves: ['Dragon Claw'] });
+    expect(at(rows, 'Fairy')).toMatchObject({ mult: 1, moves: ['Earthquake'] });
+  });
+
+  it('reports a fully blocked type as ×0', () => {
+    expect(at(moveCoverage(dex, ['earthquake']), 'Flying')).toMatchObject({ mult: 0 });
+  });
+
+  it('has no multiplier without a damaging move', () => {
+    expect(moveCoverage(dex, ['protect', '']).every((r) => r.mult === undefined)).toBe(true);
   });
 });
