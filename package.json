@@ -20,6 +20,7 @@
     "icons:tauri": "tauri icon src-assets/logo-source.png --output src-tauri/icons",
     "splash": "node scripts/build-splash.mjs",
     "meta": "tsx scripts/build-meta.ts",
+    "meta:check": "tsx scripts/check-meta.ts",
     "test": "vitest run",
     "e2e": "npm run build && playwright test",
     "e2e:ui": "npm run build && playwright test --ui",

@@ -91,13 +91,26 @@ unreliable.
 
 ## Automatic updates
 
-`.github/workflows/meta.yml` runs every day (and on demand from the Actions tab):
+`.github/workflows/meta.yml` runs twice a day, at 06:17 and 19:47 UTC (and on demand from the Actions
+tab). The mirror publishes in the evening UTC and sometimes a day late, so a single morning run kept
+seeing yesterday's files and reported "No change in the data"; the evening run picks up what the
+mirror published in the meantime.
 
 1. `npm run meta` — every source above; a source that fails keeps its previous snapshot in play, and
    a file that fails validation is never written. A day with no new numbers changes nothing.
-2. `npm run typecheck && npm test` with the new data.
-3. If `meta.json` changed: opens (or updates) the `meta/update` pull request. **Merging it redeploys
+2. `npm run meta:check` — the guard (`scripts/check-meta.ts`, rules in `src/domain/metaGuard.ts`): the
+   new `meta.json` must validate, must not drop a regulation that had data and must not shrink one to
+   under half its entries.
+3. `npm run typecheck && npm test` with the new data.
+4. If `meta.json` changed: opens (or updates) the `meta/update` pull request. **Merging it redeploys
    the web app.** Desktop apps pick it up with their next release.
+5. `npm run meta:check -- --lag` — the stall check: fails the run when the in-game data in `meta.json`
+   trails the mirror's newest snapshot by more than 2 days.
+
+**Alerts.** When a scheduled run fails (any step, including the stall check), the `alert` job opens one
+issue, "Meta data update failing", or comments on it if it is already open, with the run link. The next
+successful scheduled run closes it. A mirror that is itself behind does not trip this; it shows in the
+run log ("Mirror newest …").
 
 One-time setting: Settings → Actions → General → Workflow permissions → tick **Allow GitHub Actions to
 create and approve pull requests**.

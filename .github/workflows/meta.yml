@@ -5,7 +5,10 @@ name: Meta data
 # every Champions regulation and, for a regulation with neither, builds provisional numbers from Limitless tournament team lists, public Showdown
 # replays and the previous regulation (scripts/build-meta.ts, scripts/meta/).
 #
-# - Daily schedule (the in-game data moves day by day): when the data changed, opens (or
+# - Twice-daily schedule (the in-game data moves day by day; the mirror publishes in the evening,
+#   UTC, and sometimes a day late, so one morning run kept seeing yesterday's files): when the
+#   data changed and passed the guard (scripts/check-meta.ts: validates, loses no regulation, none
+#   under half its entries), opens (or
 #   updates) a pull request against the default branch. Merging it redeploys the web app
 #   (Cloudflare builds every push); desktop apps get it with their next release.
 # - .cache/meta/ (replays and tournaments already read) is kept between runs with actions/cache, so
@@ -16,11 +19,15 @@ name: Meta data
 #   or a push that changes this workflow or scripts/build-meta.ts) it commits the new data straight
 #   to that branch, which is how changes to the pipeline get tested against real data.
 #
+# - A scheduled run that fails, or whose in-game data trails the mirror by more than 2 days, opens
+#   (or comments on) one issue, "Meta data update failing", and closes it on the next good run.
+#
 # Needs Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"
 # for the pull request step. See docs/UPDATING_META.md.
 on:
   schedule:
     - cron: '17 6 * * *'
+    - cron: '47 19 * * *'
   workflow_dispatch:
   # A change to the pipeline itself runs it right away on that branch (against real data).
   push:
@@ -69,6 +76,9 @@ jobs:
           LIMITLESS_FORMATS: ${{ vars.LIMITLESS_FORMATS }}
         run: npm run meta
 
+      - name: Guard the new data
+        run: npm run meta:check
+
       - name: Typecheck and test with the new data
         run: npm run typecheck && npm test
 
@@ -97,3 +107,38 @@ jobs:
           body="Automated update of \`src/data/generated/meta.json\` by \`npm run meta\` (Smogon usage statistics; provisional numbers from tournament team lists, Showdown replays or the previous regulation where Smogon has no month yet — see the run log for which source each regulation uses). Typecheck and tests passed with the new data. Merging redeploys the web app."
           gh pr view "$branch" --json number >/dev/null 2>&1 \
             || gh pr create --base "$DEFAULT_BRANCH" --head "$branch" --title "Meta data update ($(date -u +%Y-%m-%d))" --body "$body"
+
+      # Fails when the in-game data trails the mirror's newest snapshot by more than 2 days.
+      - name: Stall check
+        run: npm run meta:check -- --lag
+
+  # One issue for a stalled or failing scheduled run: opened or commented on while it lasts, closed
+  # on the next good run.
+  alert:
+    needs: update
+    if: always() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.update.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Meta data update failing"
+          number=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
+          if [ "$RESULT" = "success" ]; then
+            if [ -n "$number" ]; then
+              gh issue close "$number" --comment "Back to normal: $RUN_URL"
+            fi
+            exit 0
+          fi
+          body="The scheduled Meta data run did not finish cleanly (result: $RESULT): $RUN_URL. Either a step failed (a source, the guard, typecheck/tests, the push) or the in-game data trails the mirror by more than 2 days. See docs/UPDATING_META.md."
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
