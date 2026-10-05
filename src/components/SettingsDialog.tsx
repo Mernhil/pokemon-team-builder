@@ -1,9 +1,11 @@
 import { Suspense, lazy } from 'react';
 import { Moon, Sparkles, Sun } from 'lucide-react';
+import { DEFAULT_NAV, NAV_IDS, NAV_LABELS, NAV_LIMITS, resizeBar, setSlot, type NavKind } from '@/domain/navigation';
+import { usePrefsStore } from '@/store/prefsStore';
 import { useTeamStore } from '@/store/teamStore';
 import { UpdateCheckButton } from './DesktopUpdater';
 import { Modal } from './ui/Modal';
-import { Button, Label, Tabs } from './ui/primitives';
+import { Button, Label, Select, Tabs } from './ui/primitives';
 
 // Cloud sync loads when Settings opens (its engine loads only once sync is on).
 const SyncSettings = lazy(() => import('./SyncSettings'));
@@ -33,6 +35,17 @@ export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: b
             ]}
           />
           <p className="text-xs text-muted">Motion follows your system’s “reduce motion” setting.</p>
+        </section>
+
+        <section className="space-y-2" aria-labelledby="set-nav">
+          <h3 id="set-nav">
+            <Label>Navigation</Label>
+          </h3>
+          <p className="text-xs text-muted">
+            Choose what the main bar shows. Everything else stays under <b>More</b>. For Pokémon Champions, Pokénav is replaced by Reverse search.
+          </p>
+          <NavEditor kind="phone" title="Phone (bottom bar)" />
+          <NavEditor kind="desktop" title="Desktop and tablet (top bar)" />
         </section>
 
         <section className="space-y-1.5" aria-labelledby="set-whatsnew">
@@ -103,5 +116,43 @@ export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: b
         </section>
       </div>
     </Modal>
+  );
+}
+
+/** The slots of one bar: a picker per slot (choosing something already in the bar swaps the two), add, remove, reset. */
+function NavEditor({ kind, title }: { kind: NavKind; title: string }) {
+  const saved = usePrefsStore((s) => s.nav[kind]);
+  const setNav = usePrefsStore((s) => s.setNav);
+  const resetNav = usePrefsStore((s) => s.resetNav);
+  // Edited as stored (Pokénav stays Pokénav here; Champions swaps it only where it's shown).
+  const ids = saved ?? DEFAULT_NAV[kind];
+  const { min, max } = NAV_LIMITS[kind];
+  return (
+    <fieldset className="space-y-1.5 rounded-lg border border-border p-2.5">
+      <legend className="px-1 text-xs font-semibold">{title}</legend>
+      {ids.map((id, i) => (
+        <label key={i} className="flex items-center gap-2">
+          <span className="w-14 shrink-0 text-xs text-muted">Slot {i + 1}</span>
+          <Select aria-label={`${title}, slot ${i + 1}`} value={id} onChange={(e) => setNav(kind, setSlot(ids, i, e.target.value as (typeof NAV_IDS)[number]))} className="w-full">
+            {NAV_IDS.map((n) => (
+              <option key={n} value={n}>
+                {NAV_LABELS[n]}
+              </option>
+            ))}
+          </Select>
+        </label>
+      ))}
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => setNav(kind, resizeBar(ids, kind, 1))} disabled={ids.length >= max}>
+          Add a slot
+        </Button>
+        <Button size="sm" onClick={() => setNav(kind, resizeBar(ids, kind, -1))} disabled={ids.length <= min}>
+          Remove a slot
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => resetNav(kind)} disabled={!saved}>
+          Reset
+        </Button>
+      </div>
+    </fieldset>
   );
 }

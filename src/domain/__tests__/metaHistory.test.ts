@@ -40,6 +40,17 @@ describe('history entries', () => {
     expect(list[1].r[0][0]).toBe('c');
   });
 
+  it('keeps a Smogon month and an in-game day with the same date apart, and trends ignore the other source inside a run', () => {
+    let list: HistoryEntry[] = [];
+    for (let i = 0; i < 6; i++) list = appendHistory(list, ingame(i, ['a', 'b']));
+    list = appendHistory(list, smogon(day(3), [['a', 50]]));
+    expect(list).toHaveLength(7);
+    const r = computeTrends(list, 30)!;
+    expect(r.kind).toBe('ingame');
+    expect(r.baseline).toBe(day(0));
+    expect(r.breakAt).toBeUndefined();
+  });
+
   it('thins old entries to weekly and never exceeds the cap', () => {
     const all = Array.from({ length: 200 }, (_, i) => ingame(i, ['a']));
     const thin = thinHistory(all, 120, 60);

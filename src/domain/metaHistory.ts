@@ -90,13 +90,13 @@ export function thinHistory(entries: HistoryEntry[], max = HISTORY_MAX_ENTRIES, 
   return [...weekly, ...recent].slice(-max);
 }
 
-/** Adds `entry` to a regulation's entries: one per date (the newer data replaces the same date), sorted, thinned. */
+/** Adds `entry` to a regulation's entries: one per date and source (the newer data replaces it), sorted, thinned. */
 export function appendHistory(entries: HistoryEntry[], entry: HistoryEntry, max = HISTORY_MAX_ENTRIES): HistoryEntry[] {
-  return thinHistory([...entries.filter((e) => e.d !== entry.d), entry], max);
+  return thinHistory([...entries.filter((e) => !(e.d === entry.d && e.k === entry.k)), entry], max);
 }
 
-/** Does a regulation's history already have this date? */
-export const hasDate = (entries: HistoryEntry[], d: string) => entries.some((e) => e.d === d);
+/** Does a regulation's history already have this date from this source? */
+export const hasDate = (entries: HistoryEntry[], d: string, k: HistoryKind) => entries.some((e) => e.d === d && e.k === k);
 
 // ---------------------------------------------------------------------------
 // Backfill: the in-game data mirror's index lists every daily snapshot
@@ -165,14 +165,22 @@ export interface TrendReport {
 
 const sourceLabel = (e: Pick<HistoryEntry, 'k' | 's'>) => (e.k === 'ingame' ? `in-game ranking${e.s ? ` ${e.s}` : ''}` : 'Smogon usage');
 
-/** The newest run of entries measured the same way (same source and season), oldest first. */
+/**
+ * The newest run of entries measured the same way (same source and season), oldest first. Entries
+ * from the other source are left out (a Smogon month dated inside an in-game season doesn't split
+ * it); `before` is what precedes the run: an earlier season of the same source, else an earlier
+ * entry of the other source: the break the trends must not cross.
+ */
 export function currentRun(entries: HistoryEntry[]): { run: HistoryEntry[]; before?: HistoryEntry } {
   const sorted = entries.slice().sort((a, b) => a.d.localeCompare(b.d));
   const last = sorted.at(-1);
   if (!last) return { run: [] };
-  let i = sorted.length - 1;
-  while (i > 0 && sorted[i - 1].k === last.k && sorted[i - 1].s === last.s) i--;
-  return { run: sorted.slice(i), before: sorted[i - 1] };
+  const same = sorted.filter((e) => e.k === last.k);
+  let i = same.length - 1;
+  while (i > 0 && same[i - 1].s === last.s) i--;
+  const run = same.slice(i);
+  const before = same[i - 1] ?? sorted.filter((e) => e.k !== last.k && e.d < run[0].d).at(-1);
+  return { run, before };
 }
 
 /**

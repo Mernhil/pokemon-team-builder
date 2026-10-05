@@ -40,8 +40,11 @@ export async function goTo(page: Page, label: 'Build' | 'Calc' | 'Analyse' | 'Po
     // Compare is a tab of Analyse.
     await nav.getByRole('button', { name: 'Analyse', exact: true }).click();
     await page.getByRole('tab', { name: 'Compare' }).click();
+  } else if (label === 'Pokénav' && (await nav.getByRole('button', { name: 'Pokénav', exact: true }).count()) === 0) {
+    // Champions has no use for it: its default bar and More leave Pokénav out, and its hash opens it.
+    await page.evaluate(() => { location.hash = '#atlas'; });
   } else if (label === 'Match log' || label === 'Meta' || (label === 'Pokénav' && (await nav.getByRole('button', { name: 'Pokénav', exact: true }).count()) === 0)) {
-    await nav.getByRole('button', { name: /^More|^Match log|^Meta|^Reverse search|^Regulation diff/ }).click();
+    await nav.getByRole('button').last().click();
     await page.getByRole('menuitem', { name: label }).click();
   } else {
     await nav.getByRole('button', { name: label, exact: true }).click();
@@ -59,7 +62,7 @@ export async function expectNoA11yViolations(page: Page) {
 /** Switch theme through Settings (More → Settings & credits → Appearance), then close the dialog. */
 export async function setTheme(page: Page, theme: 'light' | 'dark') {
   const nav = page.getByRole('navigation', { name: 'Main' }).locator('visible=true');
-  await nav.getByRole('button', { name: /^More|^Match log|^Meta|^Reverse search|^Regulation diff/ }).click();
+  await nav.getByRole('button').last().click();
   await page.getByRole('menuitem', { name: /Settings/ }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('tab', { name: theme === 'light' ? 'Light' : 'Dark' }).click();

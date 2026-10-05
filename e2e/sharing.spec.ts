@@ -83,7 +83,7 @@ async function fakeSharing(page: Page, role: 'view' | 'edit') {
 }
 
 async function enableSync(page: Page) {
-  await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More|^Match log|^Meta|^Reverse search|^Regulation diff/ }).click();
+  await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button').last().click();
   await page.getByRole('menuitem', { name: /Settings/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
   await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();

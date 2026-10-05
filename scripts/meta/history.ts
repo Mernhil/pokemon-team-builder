@@ -28,7 +28,7 @@ export async function addIngameHistory(ctx: Context, history: MetaHistory): Prom
     const reg = regulationOn(ctx, day.iso);
     if (!reg) continue;
     const entries = history.regulations[reg.id]?.entries ?? [];
-    if (hasDate(entries, day.iso)) continue;
+    if (hasDate(entries, day.iso, 'ingame')) continue;
     const raw = await getJson(`${BASE}/${day.season}/${day.date}/Doubles.json`);
     if (!raw) continue;
     const names = Object.keys(z.object({ pokemon: z.record(z.string(), z.unknown()) }).parse(raw).pokemon);

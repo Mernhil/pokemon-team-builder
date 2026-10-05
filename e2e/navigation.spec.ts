@@ -35,21 +35,45 @@ test('Analyse: one team picker over every tab, the tab is in the URL', async ({ 
   await expect(page).toHaveURL(/#analyse\/ohko\/to$/);
 });
 
-test('the main bar: Analyse is a destination, and a phone keeps five slots with Pokénav under More', async ({ page }) => {
+test('the main bar: Analyse is a destination; for Champions Reverse search takes Pokénav’s place', async ({ page }) => {
   await openApp(page);
   await expect(nav(page).getByRole('button', { name: 'Analyse', exact: true })).toBeVisible();
   const labels = (await nav(page).getByRole('button').allInnerTexts()).map((t) => t.trim());
   if (isPhone(page)) {
     expect(labels).toEqual(['Build', 'Calc', 'Analyse', 'Pokédex', 'More']);
     await nav(page).getByRole('button', { name: 'More' }).click();
-    for (const item of ['Match log', 'Meta', 'Reverse search', 'Regulation diff', 'Pokénav']) await expect(page.getByRole('menuitem', { name: item })).toBeVisible();
+    for (const item of ['Match log', 'Meta', 'Reverse search', 'Regulation diff']) await expect(page.getByRole('menuitem', { name: item })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Pokénav' })).toHaveCount(0);
     await expect(page.getByRole('menuitem', { name: 'Settings & credits' })).toBeVisible();
   } else {
-    expect(labels).toEqual(['Build', 'Calc', 'Analyse', 'Pokédex', 'Pokénav', 'More']);
+    expect(labels).toEqual(['Build', 'Calc', 'Analyse', 'Pokédex', 'Reverse search', 'More']);
     await nav(page).getByRole('button', { name: 'More' }).click();
-    for (const item of ['Match log', 'Meta', 'Reverse search', 'Regulation diff', 'Settings & credits']) await expect(page.getByRole('menuitem', { name: item })).toBeVisible();
+    for (const item of ['Match log', 'Meta', 'Regulation diff', 'Settings & credits']) await expect(page.getByRole('menuitem', { name: item })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Pokénav' })).toHaveCount(0);
+    await expect(page.getByRole('menuitem', { name: 'Reverse search' })).toHaveCount(0);
   }
+});
+
+test('Settings → Navigation: choose the bar’s destinations, and Reset restores the default', async ({ page }) => {
+  await openApp(page);
+  await nav(page).getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'Settings & credits' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
+  const group = isPhone(page) ? 'Phone (bottom bar)' : 'Desktop and tablet (top bar)';
+  const slots = isPhone(page) ? 4 : 5;
+  await dialog.getByRole('combobox', { name: `${group}, slot ${slots}` }).selectOption({ label: 'Meta' });
+  await page.keyboard.press('Escape');
+  const labels = (await nav(page).getByRole('button').allInnerTexts()).map((t) => t.trim());
+  expect(labels).toContain('Meta');
+  expect(labels[slots - 1]).toBe('Meta');
+  // it survives a reload, and Pokénav (the old fifth slot) isn't swapped for Reverse search once chosen
+  await page.reload();
+  expect((await nav(page).getByRole('button').allInnerTexts()).map((t) => t.trim())).toContain('Meta');
+  await nav(page).getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'Settings & credits' }).click();
+  await page.getByRole('dialog', { name: 'Settings & credits' }).getByRole('group', { name: group }).getByRole('button', { name: 'Reset' }).click();
+  await page.keyboard.press('Escape');
+  expect((await nav(page).getByRole('button').allInnerTexts()).map((t) => t.trim())).not.toContain('Meta');
 });
 
 test.describe('command palette', () => {
