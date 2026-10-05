@@ -126,7 +126,7 @@ describe('0.6.x saves (teams v2, matches v1, calc v1) → current', () => {
     expect(backup.version).toBe(2);
     expect(backup.state.teams.champ.slots[0].teraType).toBe('Grass');
     useTeamStore.getState().setTheme('dark');
-    expect(JSON.parse(storage.getItem('ptb:v1')!).version).toBe(3);
+    expect(JSON.parse(storage.getItem('ptb:v1')!).version).toBe(4);
   });
 
   it('never overwrites an existing backup', async () => {
@@ -272,5 +272,64 @@ describe('runs store (ptb:runs:v1)', () => {
     useRunStore.getState().deleteRun(a);
     expect(useRunStore.getState().active.platinum).toBeUndefined();
     expect(useRunStore.getState().order).toEqual([c]);
+  });
+});
+
+describe('teams v3 → v4 (notes, benchmarks, matchup notes)', () => {
+  const v3 = {
+    version: 3,
+    state: {
+      teams: {
+        a: { id: 'a', name: 'Rain', formatId: 'champions-vgc-reg-mc', slots: [set('incineroar'), ...empty], createdAt: 1, updatedAt: 2 },
+        b: {
+          id: 'b',
+          name: 'Hand-edited',
+          formatId: 'champions-vgc-reg-mc',
+          slots: [{ ...set('garchomp'), notes: ' why ', benchmarks: [{ id: 'k1', kind: 'survive', savedAt: 1, metAtSave: true, foe: { speciesId: 'kingambit', source: 'meta' }, moveId: 'suckerpunch', rolls: 16 }, 'junk'] }, ...empty],
+          matchupNotes: [{ id: 'm1', title: 'vs Rain', leads: ['u-garchomp', 'gone'], text: 'Lead it.' }, { id: 'm2', title: '' }],
+          createdAt: 1,
+          updatedAt: 3,
+        },
+      },
+      order: ['b', 'a'],
+      activeTeamId: 'b',
+      theme: 'dark',
+      view: 'speed',
+      battle: {},
+    },
+  };
+  let storage: ReturnType<typeof fakeStorage>;
+  beforeEach(() => {
+    storage = fakeStorage({ ptb: '', 'ptb:v1': JSON.stringify(v3) });
+    vi.stubGlobal('localStorage', storage);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('keeps every team as it was; the new fields start empty and bad ones are sanitised', async () => {
+    await useTeamStore.persist.rehydrate();
+    const s = useTeamStore.getState();
+    expect(Object.keys(s.teams).length).toBeGreaterThanOrEqual(2);
+    const a = Object.values(s.teams).find((t) => t.name === 'Rain')!;
+    expect(a.slots[0]).toMatchObject({ speciesId: 'incineroar', abilityId: 'intimidate', notes: undefined, benchmarks: undefined });
+    expect(a.matchupNotes).toBeUndefined();
+    const b = Object.values(s.teams).find((t) => t.name === 'Hand-edited')!;
+    expect(b.slots[0]).toMatchObject({ notes: 'why' });
+    expect(b.slots[0]!.benchmarks).toHaveLength(1);
+    expect(b.matchupNotes).toEqual([{ id: 'm1', title: 'vs Rain', leads: ['u-garchomp'], text: 'Lead it.' }]);
+  });
+
+  it('an old saved view that moved into Analyse reopens on its tab', async () => {
+    await useTeamStore.persist.rehydrate();
+    expect(useTeamStore.getState()).toMatchObject({ view: 'analyse', analyseTab: 'speed' });
+  });
+
+  it('no backup is made (the change is additive) and the next write is v4', async () => {
+    await useTeamStore.persist.rehydrate();
+    expect(storage.getItem(TEAM_BACKUP_V2_KEY)).toBeNull();
+    const id = Object.values(useTeamStore.getState().teams).find((t) => t.name === 'Hand-edited')!.id;
+    useTeamStore.getState().updateTeam(id, { notes: 'game plan' });
+    const saved = JSON.parse(storage.getItem('ptb:v1')!);
+    expect(saved.version).toBe(4);
+    expect(saved.state.teams[id].notes).toBe('game plan');
   });
 });

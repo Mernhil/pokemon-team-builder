@@ -50,7 +50,7 @@ export interface TeamState {
    * team is just shown. Returns the id of the team now open.
    */
   editTeam: (id: string) => string;
-  updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'replicaCode' | 'variationLabel'>>) => void;
+  updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'matchupNotes' | 'replicaCode' | 'variationLabel'>>) => void;
   /**
    * Switches a team to a different format, saving its current roster under its old formatId and
    * restoring whatever roster it last had under the new one (empty, the first time). Keeps a
@@ -143,8 +143,10 @@ export const TEAM_BACKUP_V2_KEY = 'ptb:v1:backup-v2';
  */
 export function migrateTeamState(persisted: unknown, version: number): TeamState {
   const p = (persisted ?? {}) as Partial<TeamState>;
-  if (version < 3 && p.teams && typeof p.teams === 'object') {
-    if (safeStorage.getItem(TEAM_BACKUP_V2_KEY) === null) {
+  // v4: sets may carry notes and benchmarks and teams matchup notes. Purely additive, so a v3 save only
+  // needs the sanitiser (which validates the new fields); no backup is made for it.
+  if (version < 4 && p.teams && typeof p.teams === 'object') {
+    if (version < 3 && safeStorage.getItem(TEAM_BACKUP_V2_KEY) === null) {
       safeStorage.setItem(TEAM_BACKUP_V2_KEY, JSON.stringify({ version, backedUpAt: new Date().toISOString(), state: persisted }));
     }
     const teams: Record<string, unknown> = {};
@@ -257,7 +259,7 @@ export const useTeamStore = create<TeamState>()(
         const copy = cloneTeam(src, DEFAULT_TEAM_NAME);
         let draft: Team = copy;
         if (reuse) {
-          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: Date.now() };
+          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, matchupNotes: copy.matchupNotes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: Date.now() };
           if (reuse.slots.some(Boolean)) {
             const prev = { team: reuse, editingFrom: s.editingFrom, editingDraft: s.editingDraft };
             toast(`Loaded “${src.name}${src.variationLabel ? ` · ${src.variationLabel}` : ''}” into the builder.`, {
@@ -346,6 +348,7 @@ export const useTeamStore = create<TeamState>()(
               formatId: copy.formatId,
               category: copy.category,
               notes: copy.notes,
+              matchupNotes: copy.matchupNotes,
               replicaCode: copy.replicaCode,
               slots: copy.slots,
               slotsByFormat: copy.slotsByFormat,
@@ -508,7 +511,7 @@ export const useTeamStore = create<TeamState>()(
     },
     {
       name: 'ptb:v1',
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, editingFrom: s.editingFrom, theme: s.theme, view: s.view, battle: s.battle }),
       migrate: migrateTeamState,

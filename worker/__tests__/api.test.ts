@@ -181,3 +181,44 @@ describe('last write wins, tombstones, sequence numbers', () => {
     expect((await pull(env, 'a@b.c')).docs.map((d) => d.kind).sort()).toEqual(['match', 'team']);
   });
 });
+
+describe('notes and benchmarks sync with the team', () => {
+  const bench = (i: number) => ({
+    id: `k${i}`,
+    kind: 'ko' as const,
+    savedAt: NOW,
+    metAtSave: true,
+    foe: { speciesId: 'kingambit', source: 'custom' as const, set: { speciesId: 'kingambit', abilityId: 'defiant', itemId: 'blackglasses', nature: 'Adamant', moves: ['suckerpunch', 'ironhead', 'kowtowcleave', 'protect'], spread: [32, 32, 2, 0, 0, 0] } },
+    seen: { itemId: 'blackglasses', abilityId: 'defiant', nature: 'Adamant', spread: [32, 32, 2, 0, 0, 0] },
+    moveId: 'closecombat',
+    hits: 1 as const,
+    rolls: 16,
+    cond: { field: { weather: 'Rain' }, foe: { megaMode: 'both' as const, stage: 1 }, mine: { tailwind: true } },
+  });
+  const full = () => {
+    const t = team('Everything');
+    const sets = t.slots.map((_, i) => ({ ...createSet(i), notes: 'n'.repeat(300), benchmarks: Array.from({ length: 8 }, (_, k) => bench(k + 10 * i)) }));
+    return { ...t, slots: sets as never, notes: 'x'.repeat(5000), matchupNotes: Array.from({ length: 12 }, (_, i) => ({ id: `m${i}`, title: 't'.repeat(60), leads: [sets[0].uid, sets[1].uid], text: 'w'.repeat(500) })) };
+  };
+  function createSet(i: number) {
+    return { uid: `u${i}`, speciesId: 'garchomp', nature: 'Jolly', moves: ['earthquake', 'dragonclaw', 'rockslide', 'protect'], level: 50, sp: { hp: 0, atk: 32, def: 0, spa: 0, spd: 2, spe: 32 }, evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 } };
+  }
+
+  it('pushes and pulls a team with set notes, benchmarks and matchup notes intact', async () => {
+    const env = makeEnv();
+    const t = { ...team('Notes'), slots: [{ ...createSet(0), notes: 'why', benchmarks: [bench(1)] }, null, null, null, null, null] as never, matchupNotes: [{ id: 'm1', title: 'vs Rain', leads: ['u0'], text: 'Lead it.' }] };
+    expect((await push(env, 'me@example.com', [teamDoc(t as never)])).status).toBe(200);
+    const got = (await pull(env, 'me@example.com')).docs[0].json as { slots: Record<string, unknown>[]; matchupNotes: unknown };
+    expect(got.slots[0]).toMatchObject({ notes: 'why', benchmarks: [expect.objectContaining({ id: 'k1', kind: 'ko', moveId: 'closecombat' })] });
+    expect(got.matchupNotes).toEqual([{ id: 'm1', title: 'vs Rain', leads: ['u0'], text: 'Lead it.' }]);
+  });
+
+  it('the largest team the app lets you build still fits in one document', async () => {
+    const t = full();
+    expect(JSON.stringify(t).length).toBeLessThan(LIMITS.maxDocChars);
+    const env = makeEnv();
+    const r = await push(env, 'me@example.com', [teamDoc(t as never)]);
+    expect(r.status).toBe(200);
+    expect((r.body as unknown as PushResponse).results[0].status).toBe('applied');
+  });
+});
