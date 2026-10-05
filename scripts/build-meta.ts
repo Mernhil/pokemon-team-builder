@@ -32,8 +32,11 @@ import { ingameSnapshot } from './meta/ingame.ts';
 import { tournamentsSnapshot } from './meta/limitless.ts';
 import { replaysSnapshot } from './meta/replays.ts';
 import { listMonths, smogonSnapshot } from './meta/smogon.ts';
+import { addIngameHistory, addSmogonHistory } from './meta/history.ts';
+import { parseMetaHistory, EMPTY_HISTORY, type MetaHistory } from '../src/domain/metaHistory.ts';
 
 const OUT = resolve(ROOT, 'src/data/generated/meta.json');
+const HISTORY_OUT = resolve(ROOT, 'src/data/generated/meta-history.json');
 const SOURCES = ['ingame', 'smogon', 'tournaments', 'replays', 'carryover'] as const;
 
 const arg = (name: string) => {
@@ -136,3 +139,16 @@ parseMetaFile(file); // never write a file the app would reject
 const unchanged = JSON.stringify(previous.regulations) === JSON.stringify(out);
 if (!unchanged) writeFileSync(OUT, JSON.stringify(file, null, 1) + '\n');
 console.log(unchanged ? 'No change in the data; meta.json left as is.' : `wrote ${OUT}`);
+
+// History for the Meta tab's Trends: the game's daily snapshots (backfilled from the mirror's index)
+// and Smogon's months, appended per regulation (src/domain/metaHistory.ts).
+const prevHistoryText = existsSync(HISTORY_OUT) ? readFileSync(HISTORY_OUT, 'utf8') : '';
+const history: MetaHistory = prevHistoryText ? parseMetaHistory(JSON.parse(prevHistoryText)) : structuredClone(EMPTY_HISTORY);
+const before = JSON.stringify(history);
+if (wanted.has('ingame')) await attempt('In-game history', async () => (console.log(`History: ${await addIngameHistory(ctx, history)} in-game day(s) added.`), 1));
+if (wanted.has('smogon') && months.length) await attempt('Smogon history', async () => (console.log(`History: ${await addSmogonHistory(ctx, history, months)} Smogon month(s) added.`), 1));
+if (JSON.stringify(history) !== before) {
+  parseMetaHistory(history);
+  writeFileSync(HISTORY_OUT, JSON.stringify(history) + '\n');
+  console.log(`wrote ${HISTORY_OUT}`);
+}

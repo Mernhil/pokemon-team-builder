@@ -18,6 +18,7 @@ import { Sprite } from '../ui/Sprite';
 import { Chip, EmptyState, LoadingState, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useThreatReport } from './useThreatReport';
+import { RisingThreats } from './RisingThreats';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions');
 const fmtMonth = (month: string) => new Date(`${month}-15T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -192,6 +193,8 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
           <p role="status" className="text-xs text-muted">
             {done ? `${calculated} threats calculated against ${members.length} of your Pokémon.` : `Calculating… ${calculated} of ${threats.length}`}
           </p>
+
+          <RisingThreats dex={dex} format={format} regulationId={picked?.regulationId} threatIds={threats.map((t) => t.speciesId)} rows={rows} />
 
           {summaries.length > 0 && (
             <Panel title="Biggest threats">

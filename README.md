@@ -129,6 +129,8 @@ After an update the app shows **What's new**: the New / Changed / Fixed notes of
 ### Meta tab
 
 The Meta tab lists each Champions regulation's most-used Pokémon with their common items, moves, abilities, spreads and teammates.
+
+**Trends.** `src/data/generated/meta-history.json` keeps per regulation one dated [species, rank or %] list per day (the game's ranked Battle Data) or month (Smogon); `npm run meta` appends the day's entry, thins old ones to weekly (≤120 per regulation) and backfills the mirror's older days. `src/domain/metaHistory.ts` (pure) computes Rising / Falling / New / Dropped over 7 days, 30 days or the season, only inside one unbroken run (a source or season change is a *break*, never bridged); the Meta tab's **Trends** tab, each card's trend line and Analyse → Threats' *Rising threats* use it. Loaded lazily through `useMetaHistory()`.
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
 
