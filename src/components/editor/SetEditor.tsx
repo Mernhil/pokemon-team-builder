@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { lazy, Suspense, type ComponentProps } from 'react';
 import { Info, Sparkles, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
@@ -23,6 +23,10 @@ import { comboProps, optionCount, useItemPicker, useMovePicker } from './options
 import { SpeciesPicker } from './SpeciesPicker';
 import { SpriteHistory } from './SpriteHistory';
 import { StatDistributor } from './StatDistributor';
+
+// The meta data behind the recommendations loads on first use, outside the first-load bundle.
+const RecommendedPanel = lazy(() => import('./RecommendedPanel').then((m) => ({ default: m.RecommendedPanel })));
+const RecommendedItemsInfo = lazy(() => import('./RecommendedPanel').then((m) => ({ default: m.RecommendedItemsInfo })));
 
 interface Props {
   teamId: string;
@@ -154,11 +158,18 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
             <Field
               label={mech.megaStoneOnly ? 'Mega Stone (in the Bag)' : 'Held item'}
               hint={
-                item?.shortDesc && (
-                  <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]} label={`About ${item.name}`}>
-                    <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
-                  </InfoTooltip>
-                )
+                <>
+                  {item?.shortDesc && (
+                    <InfoTooltip title={item.name} summary={item.shortDesc} interactions={ITEM_INTERACTIONS[item.id]} label={`About ${item.name}`}>
+                      <span className="inline-flex size-6 items-center justify-center"><Info size={14} aria-hidden /></span>
+                    </InfoTooltip>
+                  )}
+                  {format.datasetId === 'champions' && (
+                    <Suspense fallback={null}>
+                      <RecommendedItemsInfo dex={dex} format={format} speciesId={species.id} />
+                    </Suspense>
+                  )}
+                </>
               }
             >
               <Combobox
@@ -256,6 +267,12 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
         )}
         <SpriteHistory species={species} />
       </Panel>
+
+      {format.datasetId === 'champions' && (
+        <Suspense fallback={null}>
+          <RecommendedPanel dex={dex} format={format} set={set} onApply={(patch) => updateSet(slot, patch)} />
+        </Suspense>
+      )}
 
       {/* Moves: four cards, two per row. */}
       <Panel

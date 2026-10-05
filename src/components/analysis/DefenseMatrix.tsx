@@ -8,7 +8,7 @@ import { SuggestionList } from './SuggestionList';
 
 /**
  * Compact defensive coverage: for each attacking type, how many team members are weak / resist.
- * (Uses Mega typing when the Pokémon holds its stone. Abilities like Levitate aren't applied yet.)
+ * (Uses Mega typing when the Pokémon holds its stone. Abilities count: Levitate and the absorbing abilities are immune, Thick Fat resists Fire and Ice, and so on.)
  */
 export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; format: FormatRules }) {
   const rows = defensiveCoverage(team, dex, format.capabilities.mega);

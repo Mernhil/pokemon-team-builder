@@ -1,4 +1,5 @@
 import type { Dex } from '@/data/dex';
+import { activeAbility, moveTypeFor, typeMultiplier } from './abilityTypes';
 import type { Move, Team, TypeName } from './types';
 
 /** One member's best damaging move against a defending type. */
@@ -23,23 +24,23 @@ export interface OffenseRow {
 
 /**
  * Offensive type coverage: for each defending (mono-)type, how well each member's damaging moves
- * hit it. Only move types count — type-changing abilities (Pixilate…), Freeze-Dry, Flying Press and
- * Tera Blast aren't modelled. Members without damaging moves are left out.
+ * hit it. Attacking abilities count (Pixilate and the other "-ate" abilities, Scrappy, Tinted Lens); Freeze-Dry,
+ * Flying Press and Tera Blast aren't modelled. Members without damaging moves are left out.
  */
-export function offensiveCoverage(team: Team, dex: Dex): OffenseRow[] {
+export function offensiveCoverage(team: Team, dex: Dex, megaAbilities = false): OffenseRow[] {
   const members = team.slots.flatMap((s) => {
     if (!s) return [];
     const sp = dex.species(s.speciesId);
     const moves = s.moves.map((m) => dex.move(m)).filter((m) => m && m.category !== 'Status');
-    return sp && moves.length ? [{ name: sp.name, moves: moves as NonNullable<(typeof moves)[number]>[] }] : [];
+    return sp && moves.length ? [{ name: sp.name, ability: activeAbility(dex, s, megaAbilities), moves: moves as NonNullable<(typeof moves)[number]>[] }] : [];
   });
 
   // Only the types that exist in the format's generation (no Dark/Steel in Gen 1, no Fairy before Gen 6).
   return dex.types.map((defType) => {
-    const hits = members.map(({ name, moves }) => {
+    const hits = members.map(({ name, ability, moves }) => {
       let best: MemberHit = { name, mult: -1, move: '' };
       for (const mv of moves) {
-        const mult = dex.effectiveness(mv.type, [defType]);
+        const mult = typeMultiplier(dex, moveTypeFor(mv.type, ability), [defType], { attacker: ability });
         if (mult > best.mult) best = { name, mult, move: mv.name };
       }
       return best;
@@ -67,7 +68,7 @@ export interface MoveCoverageRow {
  * Coverage of the moves currently selected on one set: for each defending (mono-)type, the best
  * multiplier among its damaging moves. Only move types count (same limits as `offensiveCoverage`).
  */
-export function moveCoverage(dex: Dex, moveIds: string[]): MoveCoverageRow[] {
+export function moveCoverage(dex: Dex, moveIds: string[], ability?: string): MoveCoverageRow[] {
   const attacks = moveIds.flatMap((id) => {
     const mv = id ? dex.move(id) : undefined;
     return mv && mv.category !== 'Status' ? [mv] : [];
@@ -76,7 +77,7 @@ export function moveCoverage(dex: Dex, moveIds: string[]): MoveCoverageRow[] {
     let mult: number | undefined;
     let moves: string[] = [];
     for (const mv of attacks) {
-      const m = dex.effectiveness(mv.type, [defType]);
+      const m = typeMultiplier(dex, moveTypeFor(mv.type, ability), [defType], { attacker: ability });
       if (mult === undefined || m > mult) {
         mult = m;
         moves = [mv.name];
@@ -103,16 +104,17 @@ export function teamVsTeam(attackers: Team, defenders: Team, dex: Dex): MatchupR
     if (!s) return [];
     const sp = dex.species(s.speciesId);
     const moves = s.moves.map((m) => dex.move(m)).filter((m): m is Move => !!m && m.category !== 'Status');
-    return sp && moves.length ? [{ name: s.nickname || sp.name, moves }] : [];
+    return sp && moves.length ? [{ name: s.nickname || sp.name, ability: activeAbility(dex, s, false), moves }] : [];
   });
   return defenders.slots.flatMap((s) => {
     if (!s) return [];
     const sp = dex.species(s.speciesId);
     if (!sp) return [];
+    const defAbility = activeAbility(dex, s, false);
     let best: MatchupRow['best'] = null;
     for (const a of atkMembers) {
       for (const mv of a.moves) {
-        const mult = dex.effectiveness(mv.type, sp.types);
+        const mult = typeMultiplier(dex, moveTypeFor(mv.type, a.ability), sp.types, { attacker: a.ability, defender: defAbility });
         if (!best || mult > best.mult) best = { attacker: a.name, move: mv.name, mult };
       }
     }
@@ -203,19 +205,20 @@ export interface DefenseRow {
 
 /**
  * Defensive type coverage: for each attacking type, the multiplier every member takes. Uses a
- * Mega's typing when the member holds its stone and the game has Megas (`megaTyping`). Abilities
- * (Levitate…) aren't applied.
+ * Mega's typing and ability when the member holds its stone and the game has Megas (`megaTyping`).
+ * Abilities that change what a type does count: Levitate and the absorbing abilities are immune,
+ * Thick Fat resists Fire and Ice, Fluffy is weak to Fire, and so on (src/domain/abilityTypes.ts).
  */
 export function defensiveCoverage(team: Team, dex: Dex, megaTyping: boolean): DefenseRow[] {
   const mons = team.slots.flatMap((s) => {
     if (!s) return [];
     const sp = dex.species(s.speciesId);
     const mega = megaTyping ? dex.megaFor(s.speciesId, s.itemId) : undefined;
-    return sp ? [{ name: (mega ?? sp).name, types: (mega ?? sp).types }] : [];
+    return sp ? [{ name: (mega ?? sp).name, types: (mega ?? sp).types, ability: activeAbility(dex, s, megaTyping) }] : [];
   });
   if (!mons.length) return [];
   return dex.types.map((atkType) => {
-    const mults = mons.map((m) => ({ name: m.name, mult: dex.effectiveness(atkType, m.types) }));
+    const mults = mons.map((m) => ({ name: m.name, mult: typeMultiplier(dex, atkType, m.types, { defender: m.ability }) }));
     const weak = mults.filter((m) => m.mult > 1).length;
     const resist = mults.filter((m) => m.mult < 1).length;
     const immune = mults.filter((m) => m.mult === 0).length;

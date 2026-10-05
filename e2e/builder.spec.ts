@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { expectPicked, openApp, openStatCalculator, pickOption } from './helpers';
+import { SAMPLE_TEAM, expectPicked, importTeam, openApp, openStatCalculator, pickOption } from './helpers';
 
 
 /** Slot 1 filled the way a player would: species, item, ability, nature, four moves, SP in two stats. */
@@ -145,6 +145,20 @@ test('saved teams are only changed by Edit team + Save: the build stays a separa
   await expectBuilt(page);
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Save team' }).getByRole('radio', { name: /Update “Keep”/ })).toBeChecked();
+});
+
+test('Recommended items and way of use come from the meta data, and one tap applies an item', async ({ page }) => {
+  await openApp(page);
+  await importTeam(page, SAMPLE_TEAM);
+  // The info button next to the item's own lists the most-used items.
+  await expect(page.getByLabel('Recommended items for Garchomp').first()).toBeVisible();
+  // The recommended way to use opens from its own section; its item chips apply with one tap.
+  await page.getByText('Recommended way to use').click();
+  const items = page.getByRole('region', { name: 'Recommended items' });
+  await expect(items).toBeVisible();
+  const chip = items.getByRole('button').first();
+  await chip.click();
+  await expect(chip).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('Aegislash: the stats panel switches between Shield and Blade Forme stats', async ({ page }) => {

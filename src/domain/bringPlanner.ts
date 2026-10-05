@@ -14,6 +14,7 @@
  *    come, but only one of them gets its Mega stats in any one plan.
  */
 import type { Dex } from '@/data/dex';
+import { activeAbility, moveTypeFor, typeMultiplier } from './abilityTypes';
 import { defaultField, type FieldConditions, type MegaMode } from './battle/conditions';
 import { metaSet } from './metaSets';
 import type { BringLimits, LoggedMon, Match } from './matches';
@@ -261,10 +262,12 @@ export function planBring(input: PlanInput): PlanResult {
   const coverage = mine.map((m) =>
     opponents.map((o) => {
       const types = dex.species(o.speciesId)?.types ?? [];
+      const mine = activeAbility(dex, m.set, false);
+      const theirs = activeAbility(dex, o.set, o.megaMode !== 'base');
       let top = 0;
       for (const id of m.set.moves) {
         const mv = id ? dex.move(id) : undefined;
-        if (mv && mv.category !== 'Status') top = Math.max(top, dex.effectiveness(mv.type, types));
+        if (mv && mv.category !== 'Status') top = Math.max(top, typeMultiplier(dex, moveTypeFor(mv.type, mine), types, { attacker: mine, defender: theirs }));
       }
       return top;
     }),

@@ -107,7 +107,7 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
             )}
           </Panel>
 
-          <MoveCoverage dex={dex} attacker={attacker.set ?? undefined} defender={defender.set ?? undefined} />
+          <MoveCoverage dex={dex} attacker={attacker.set ?? undefined} defender={defender.set ?? undefined} attackerMega={attacker.cond.megaMode !== 'base'} defenderMega={defender.cond.megaMode !== 'base'} />
         </div>
 
         <div className="xl:order-1">
