@@ -6,13 +6,20 @@ test('Team overview: sets with stats, Megas and moves on one tab, the team as a 
   await importTeam(page, SAMPLE_TEAM);
   await page.goto('/#showcase');
 
-  // One card per Pokémon, with its moves and finished stats; Mega Stone holders show their Mega.
-  const garchomp = page.getByRole('article', { name: 'Garchomp' });
+  // "Moves & More": a card per Pokémon with its ability, item and moves.
+  const garchomp = page.getByRole('article', { name: 'Garchomp, moves' });
   await expect(garchomp).toBeVisible();
   await expect(garchomp.getByText('Garchompite')).toBeVisible();
   await expect(garchomp.getByRole('list', { name: 'Moves' })).toBeVisible();
-  await expect(garchomp.getByRole('table')).toBeVisible();
-  await expect(garchomp.getByText('Mega').first()).toBeVisible();
+
+  // "Stats": finished stats with their SP; Megas switch the numbers to the Mega forme.
+  await page.getByRole('tab', { name: 'Stats' }).click();
+  const stats = page.getByRole('article', { name: 'Garchomp, stats' });
+  await expect(stats.getByRole('table')).toBeVisible();
+  const hp = await stats.getByRole('row').first().innerText();
+  await page.getByLabel('Show Megas').check();
+  await expect(page.getByRole('table', { name: /Finished stats of Garchomp-Mega/ })).toBeVisible();
+  expect(hp.length).toBeGreaterThan(0);
 
   // The Team tab: speed order and the two type matrices.
   await page.getByRole('tab', { name: 'Team' }).click();
@@ -29,5 +36,5 @@ test('Team overview: Saved teams opens it on the chosen team', async ({ page }) 
   await page.getByRole('button', { name: /^Overview of / }).first().click();
   await expect(page).toHaveURL(/#showcase$/);
   await expect(page.getByRole('combobox', { name: 'Team to show' })).toBeVisible();
-  await expect(page.getByRole('article', { name: 'Garchomp' })).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Garchomp, moves' })).toBeVisible();
 });
