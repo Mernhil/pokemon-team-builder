@@ -10,6 +10,9 @@ export const CODE_LENGTH = 10;
 export const CODE_TTL_MS = 10 * 60 * 1000;
 export const MAX_LIVE_CODES = 5;
 export const MAX_DEVICES = 10;
+/** Redeem attempts one client address may make per window (the Worker answers 429 beyond it). */
+export const REDEEM_WINDOW_MS = 10 * 60 * 1000;
+export const MAX_REDEEMS_PER_WINDOW = 10;
 
 export const TOKEN_RE = /^ptbd_[A-Za-z0-9_-]{43}$/;
 
@@ -55,7 +58,8 @@ export function normalizeServer(input: string): string | undefined {
 
 export const RedeemSchema = z.object({
   code: z.string().max(40).transform(normalizeCode).refine(isValidCode, { message: 'not a pairing code' }),
-  name: z.string().trim().min(1).max(40),
+  // Control and invisible formatting characters (bidi overrides, zero-width) are dropped: the name is shown in the device list.
+  name: z.string().max(200).transform((s) => s.replace(/[\p{Cc}\p{Cf}]/gu, '').trim()).pipe(z.string().min(1).max(40)),
 });
 
 export interface PairResponse {

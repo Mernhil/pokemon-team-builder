@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createTeam } from '../../src/domain/team';
-import { CODE_TTL_MS, MAX_DEVICES, MAX_LIVE_CODES, formatCode } from '../../src/domain/pairing';
+import { CODE_TTL_MS, MAX_DEVICES, MAX_LIVE_CODES, MAX_REDEEMS_PER_WINDOW, REDEEM_WINDOW_MS, formatCode } from '../../src/domain/pairing';
 import { handleApi } from '../api';
 import { NOW, goodClaims, makeEnv, makeKey, signJwt, type TestKey } from './helpers';
 
@@ -18,8 +18,10 @@ async function access(env: Env, method: string, path: string, who: string, body?
   const res = await handleApi(new Request(`https://app.example${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }), env, deps());
   return { status: res.status, body: (await res.json()) as Record<string, any> };
 }
+let nextClient = 0;
 async function device(env: Env, method: string, path: string, token: string | null, body?: unknown, origin?: string) {
-  const headers: Record<string, string> = { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(origin ? { origin } : {}) };
+  // Each call comes from its own client address, so the redeem throttle only bites in the tests about it.
+  const headers: Record<string, string> = { 'cf-connecting-ip': `10.1.${nextClient >> 8}.${nextClient++ & 255}`, ...(token ? { authorization: `Bearer ${token}` } : {}), ...(origin ? { origin } : {}) };
   const res = await handleApi(new Request(`https://app.example/api/device${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }), env, deps());
   return { status: res.status, res, body: (await res.json().catch(() => ({}))) as Record<string, any> };
 }
@@ -150,5 +152,136 @@ describe('a linked device', () => {
     const pre = await handleApi(new Request('https://app.example/api/device/sync', { method: 'OPTIONS', headers: { origin: 'tauri://localhost' } }), env, deps());
     expect(pre.status).toBe(204);
     expect(pre.headers.get('access-control-allow-headers')).toContain('authorization');
+  });
+});
+
+/** A request with the path exactly as written (no helper prefix) and any headers. */
+async function raw(env: Env, method: string, path: string, headers: Record<string, string> = {}, body?: unknown) {
+  const res = await handleApi(new Request(`https://app.example${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }), env, deps());
+  return { status: res.status, res, body: (await res.json().catch(() => ({}))) as Record<string, any> };
+}
+
+describe('what /api/device/* can reach (the Access Bypass path)', () => {
+  it('only the listed sub-routes, whatever the path looks like', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    const token = await link(env);
+    const auth = { authorization: `Bearer ${token}` };
+    // The intended routes work, a query string is just a query string.
+    expect((await raw(env, 'GET', '/api/device/sync?since=0', auth)).status).toBe(200);
+    expect((await raw(env, 'GET', '/api/device/sync?since=0&x=/pair', auth)).status).toBe(200);
+    // Everything else under the prefix is a 404, even with a valid token.
+    for (const path of [
+      '/api/device/',
+      '/api/device/pair',
+      '/api/device/devices',
+      '/api/device/sync/',
+      '/api/device//sync',
+      '/api/device/sync%2F..%2Fpair',
+      '/api/device/..%2Fpair',
+      '/api/device/%73ync',
+      '/api/device/redeem/extra',
+      '/api/device/self/x',
+    ]) {
+      expect((await raw(env, 'GET', path, auth)).status, path).toBe(404);
+    }
+    // A dot-dot path is normalised by the URL parser to a path outside the prefix: it gets no device
+    // treatment at all, so without an Access login it is a 401 even with a valid device token.
+    expect((await raw(env, 'POST', '/api/device/../pair', auth)).status).toBe(401);
+    expect((await raw(env, 'GET', '/api/device/../devices', auth)).status).toBe(401);
+    expect((await raw(env, 'GET', '/api/device/../sync?since=0', auth)).status).toBe(401);
+  });
+
+  it('every route but redeem needs a device token: an Access login or an e-mail header means nothing here', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    const jwt = await signJwt(key, goodClaims('me@example.com'));
+    const sneaky = { 'Cf-Access-Jwt-Assertion': jwt, 'Cf-Access-Authenticated-User-Email': 'me@example.com', 'X-Forwarded-User': 'me@example.com' };
+    for (const [method, path] of [
+      ['GET', '/api/device/sync?since=0'],
+      ['POST', '/api/device/sync'],
+      ['GET', '/api/device/shared'],
+      ['GET', '/api/device/shares'],
+      ['PUT', '/api/device/profile'],
+      ['DELETE', '/api/device/self'],
+    ]) {
+      expect((await raw(env, method, path, sneaky)).status, `${method} ${path}`).toBe(401);
+    }
+    // Pairing and the device list are not device routes at all, even for a signed-in account.
+    expect((await raw(env, 'POST', '/api/device/pair', sneaky)).status).toBe(404);
+    expect((await raw(env, 'GET', '/api/device/devices', sneaky)).status).toBe(404);
+  });
+
+  it('never hands a token out again: the device list has none', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    const token = await link(env);
+    const list = await access(env, 'GET', '/api/devices', 'me@example.com');
+    expect(JSON.stringify(list.body)).not.toContain(token);
+    expect(Object.keys(list.body.devices[0]).sort()).toEqual(['createdAt', 'id', 'lastSeenAt', 'name']);
+  });
+});
+
+describe('redeem throttle, limits and input', () => {
+  const redeem = (env: Env, ip: string | null, code = 'AAAAAAAAAA') =>
+    raw(env, 'POST', '/api/device/redeem', ip ? { 'cf-connecting-ip': ip } : {}, { code, name: 'x' });
+
+  it('answers 429 after too many attempts from one address, per address and per window', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    for (let i = 0; i < MAX_REDEEMS_PER_WINDOW; i++) expect((await redeem(env, '203.0.113.7')).status).toBe(400);
+    const blocked = await redeem(env, '203.0.113.7');
+    expect(blocked.status).toBe(429);
+    expect(blocked.res.headers.get('retry-after')).toBe('600');
+    // Even the right code is refused while blocked, and another address is unaffected.
+    const code = await pair(env);
+    expect((await redeem(env, '203.0.113.7', code)).status).toBe(429);
+    expect((await redeem(env, '203.0.113.8', code)).status).toBe(200);
+    // A new window starts afresh and the old rows are deleted.
+    clock = NOW + REDEEM_WINDOW_MS;
+    expect((await redeem(env, '203.0.113.7')).status).toBe(400);
+    expect(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM redeem_attempts WHERE bucket < ?').get(Math.floor(clock / REDEEM_WINDOW_MS))).toEqual({ n: 0 });
+    clock = NOW;
+  });
+
+  it('stores only a hash of the address', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    await redeem(env, '198.51.100.23');
+    expect(JSON.stringify(env.DB.raw.prepare('SELECT * FROM redeem_attempts').all())).not.toContain('198.51.100.23');
+  });
+
+  it('cannot exceed the device limit even when codes are redeemed at the same moment', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    for (let i = 0; i < MAX_DEVICES - 1; i++) await link(env, 'me@example.com', `D${i}`);
+    const codes = await Promise.all([pair(env), pair(env), pair(env)]);
+    const results = await Promise.all(codes.map((c, i) => raw(env, 'POST', '/api/device/redeem', { 'cf-connecting-ip': `192.0.2.${i}` }, { code: c, name: `late ${i}` })));
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    expect(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM devices').get()).toEqual({ n: MAX_DEVICES });
+  });
+
+  it('strips control and invisible characters from the device name, and refuses an empty one', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    const ok = await raw(env, 'POST', '/api/device/redeem', {}, { code: await pair(env), name: '  My\u202E PC\u200B\u0007  ' });
+    expect(ok.status).toBe(200);
+    expect((await access(env, 'GET', '/api/devices', 'me@example.com')).body.devices[0].name).toBe('My PC');
+    expect((await raw(env, 'POST', '/api/device/redeem', {}, { code: await pair(env), name: '\u200B\u202E' })).status).toBe(400);
+    expect((await raw(env, 'POST', '/api/device/redeem', {}, { code: await pair(env), name: 'x'.repeat(41) })).status).toBe(400);
+    expect((await raw(env, 'POST', '/api/device/redeem', {}, { code: await pair(env), name: 'x'.repeat(5000) })).status).toBe(413);
+  });
+});
+
+describe('CORS for the device routes', () => {
+  it('does not answer the Tauri dev server in production, only when DEVICE_EXTRA_ORIGINS lists it', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    const token = await link(env);
+    const dev = 'http://localhost:1420';
+    expect((await device(env, 'GET', '/sync?since=0', token, undefined, dev)).res.headers.get('access-control-allow-origin')).toBeNull();
+    const local = { ...env, DEVICE_EXTRA_ORIGINS: ' http://localhost:1420 , http://127.0.0.1:1420' };
+    expect((await device(local, 'GET', '/sync?since=0', token, undefined, dev)).res.headers.get('access-control-allow-origin')).toBe(dev);
+    expect((await device(local, 'GET', '/sync?since=0', token, undefined, 'https://evil.example')).res.headers.get('access-control-allow-origin')).toBeNull();
   });
 });

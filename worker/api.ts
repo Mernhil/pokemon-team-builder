@@ -22,7 +22,7 @@ import {
 import { ALL_MATCHES, accessTo, canWrite, type Target } from './access';
 import { AuthError, jwksProvider, verifyAccessJwt, type KeyProvider } from './auth';
 import { RedeemSchema, type DevicesResponse, type PairResponse, type RedeemResponse, TOKEN_RE } from '../src/domain/pairing';
-import { createPairCode, deviceByToken, listDevices, redeemPairCode, revokeDevice } from './devices';
+import { createPairCode, deviceByToken, listDevices, redeemAttemptAllowed, redeemPairCode, revokeDevice } from './devices';
 import { deleteShare, groupOfTeam, isLiveRootTeam, namesFor, putShare, setDisplayName, sharedDocs, sharesBetween, sharesOf } from './shares';
 import { pullDocs, pushDoc, type StoredDoc } from './store';
 import type { Env } from './types';
@@ -31,9 +31,10 @@ const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-
 const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 
 /** The desktop app's webview origins. A linked device sends a bearer token (never cookies), so this only lets its page read the answers. */
-const DEVICE_ORIGINS = new Set(['tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost', 'http://localhost:1420']);
-const withCors = (res: Response, origin: string | null): Response => {
-  if (!origin || !DEVICE_ORIGINS.has(origin)) return res;
+const DEVICE_ORIGINS = ['tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost'];
+const deviceOrigins = (env: Env) => new Set([...DEVICE_ORIGINS, ...(env.DEVICE_EXTRA_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean)]);
+const withCors = (res: Response, origin: string | null, env: Env): Response => {
+  if (!origin || !deviceOrigins(env).has(origin)) return res;
   const r = new Response(res.body, res);
   r.headers.set('access-control-allow-origin', origin);
   r.headers.set('vary', 'origin');
@@ -69,9 +70,9 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
     const origin = request.headers.get('origin');
     if (request.method === 'OPTIONS') {
       const preflight = new Response(null, { status: 204, headers: { 'access-control-allow-methods': 'GET, POST, PUT, DELETE', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '86400' } });
-      return withCors(preflight, origin);
+      return withCors(preflight, origin, env);
     }
-    return withCors(await handleDevice(request, env, url, deps), origin);
+    return withCors(await handleDevice(request, env, url, deps), origin, env);
   }
   const route = ROUTES[url.pathname];
   if (!route) return fail(404, 'not found');
@@ -102,6 +103,10 @@ async function handleDevice(request: Request, env: Env, url: URL, deps: ApiDeps)
 
   if (sub === '/api/redeem') {
     if (request.method !== 'POST') return fail(405, 'method not allowed');
+    // Cloudflare sets this header at its edge; a request without it (local development) shares one bucket.
+    if (!(await redeemAttemptAllowed(env.DB, request.headers.get('cf-connecting-ip') ?? 'unknown', now))) {
+      return new Response(JSON.stringify({ error: 'too many attempts: wait a few minutes and try again' }), { status: 429, headers: { ...JSON_HEADERS, 'retry-after': '600' } });
+    }
     const r = await readJson(request, 1024);
     if ('response' in r) return r.response;
     const parsed = RedeemSchema.safeParse(r.body);

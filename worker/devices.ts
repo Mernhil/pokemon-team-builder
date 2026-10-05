@@ -3,7 +3,7 @@
  * stored. A code is single-use and expires; redeeming it turns it into a long-lived bearer token
  * that the Worker maps to the account that created the code.
  */
-import { CODE_TTL_MS, MAX_DEVICES, MAX_LIVE_CODES, generateCode, type DeviceInfo } from '../src/domain/pairing';
+import { CODE_TTL_MS, MAX_DEVICES, MAX_LIVE_CODES, MAX_REDEEMS_PER_WINDOW, REDEEM_WINDOW_MS, generateCode, type DeviceInfo } from '../src/domain/pairing';
 import type { D1Like } from './types';
 
 export async function sha256Hex(text: string): Promise<string> {
@@ -28,6 +28,20 @@ export async function createPairCode(db: D1Like, owner: string, now: number): Pr
   return { code, expiresAt };
 }
 
+/**
+ * Counts one redeem attempt for a client address (every attempt, right or wrong) and says whether it
+ * is within the limit. A fixed window per address; only a hash of the address is stored.
+ */
+export async function redeemAttemptAllowed(db: D1Like, address: string, now: number): Promise<boolean> {
+  const bucket = Math.floor(now / REDEEM_WINDOW_MS);
+  await db.prepare('DELETE FROM redeem_attempts WHERE bucket < ?').bind(bucket).run();
+  const row = await db
+    .prepare('INSERT INTO redeem_attempts (ip_hash, bucket, n) VALUES (?, ?, 1) ON CONFLICT (ip_hash, bucket) DO UPDATE SET n = n + 1 RETURNING n')
+    .bind(await sha256Hex(address), bucket)
+    .first<{ n: number }>();
+  return (row?.n ?? 1) <= MAX_REDEEMS_PER_WINDOW;
+}
+
 export type RedeemResult = { token: string; owner: string } | { error: 'invalid' | 'too-many-devices' };
 
 /** Trades a code for a device token. The code is consumed whether or not the device limit stops it. */
@@ -36,13 +50,13 @@ export async function redeemPairCode(db: D1Like, code: string, name: string, now
   // One statement deletes the code and returns it, so two requests can't both redeem it.
   const row = await db.prepare('DELETE FROM pair_codes WHERE code_hash = ? RETURNING owner, expires_at').bind(hash).first<{ owner: string; expires_at: number }>();
   if (!row || row.expires_at <= now) return { error: 'invalid' };
-  const count = await db.prepare('SELECT COUNT(*) AS n FROM devices WHERE owner = ?').bind(row.owner).first<{ n: number }>();
-  if ((count?.n ?? 0) >= MAX_DEVICES) return { error: 'too-many-devices' };
   const token = randomToken();
-  await db
-    .prepare('INSERT INTO devices (id, owner, name, token_hash, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(randomId(), row.owner, name, await sha256Hex(token), now, now)
-    .run();
+  // One statement checks the limit and inserts, so concurrent redeems can't push an account past it.
+  const inserted = await db
+    .prepare('INSERT INTO devices (id, owner, name, token_hash, created_at, last_seen_at) SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM devices WHERE owner = ?) < ? RETURNING id')
+    .bind(randomId(), row.owner, name, await sha256Hex(token), now, now, row.owner, MAX_DEVICES)
+    .first<{ id: string }>();
+  if (!inserted) return { error: 'too-many-devices' };
   return { token, owner: row.owner };
 }
 
