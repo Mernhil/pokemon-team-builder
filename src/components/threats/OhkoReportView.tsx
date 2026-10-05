@@ -11,7 +11,7 @@ import { useCalcStore } from '@/store/calcStore';
 import { useTeamStore } from '@/store/teamStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
-import { Chip, EmptyState, LoadingState, Notice, Panel, Select, Tabs } from '../ui/primitives';
+import { Chip, EmptyState, Help, LoadingState, Notice, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useThreatReport } from './useThreatReport';
 
@@ -194,10 +194,10 @@ export function OhkoReportView({ dex, format, team, mode }: { dex: Dex; format: 
               );
             })}
           </ul>
-          <p className="text-xs text-muted">
+          <Help label="How to read this list">
             “OHKO” means every damage roll knocks out from full HP; “Possible” only some rolls. {by ? 'The Pokémon is read at its better forme and your Mega Stone holders at their worse one.' : 'Your Mega Stone holders are read at their worse forme, theirs at their better one.'} Calculated
             with the Damage Calc on each Pokémon’s most-used set, under the conditions above. Tap a row to open it there.
-          </p>
+          </Help>
         </>
       )}
     </div>

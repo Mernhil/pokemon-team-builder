@@ -141,7 +141,7 @@ function TeamTab({ team, dex, format, members }: { team: Team; dex: Dex; format:
 
   return (
     <section aria-label={`${team.name}: team`} className="space-y-3">
-      <Panel title="Speed order">
+      <Panel title="Speed order" help="Final Speed with each Pokémon’s spread and nature, before any boosts. Megas are listed as their own rows.">
         <ol className="space-y-1" aria-label="Speed, fastest first">
           {speeds.map((r) => (
             <li key={r.id} className="flex items-center gap-2 text-sm">
@@ -154,7 +154,6 @@ function TeamTab({ team, dex, format, members }: { team: Team; dex: Dex; format:
             </li>
           ))}
         </ol>
-        <p className="mt-2 text-xs text-muted">Final Speed with each Pokémon’s spread and nature, before any boosts. Megas are listed as their own rows.</p>
       </Panel>
       <div className="grid gap-3 lg:grid-cols-2">
         <DefenseMatrix team={team} dex={dex} format={format} />

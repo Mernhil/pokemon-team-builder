@@ -18,7 +18,16 @@ export function OffenseMatrix({ team, dex, mega = false }: { team: Team; dex: De
   if (!rows[0]?.hits.length) return null;
 
   return (
-    <Panel title="Offensive type matrix">
+    <Panel
+      title="Offensive type matrix"
+      help={
+        <>
+        Count of members hitting each defending type <span className="text-good">super-effectively</span> /{' '}
+        <span className="text-bad">only resisted</span> / <span className="text-accent">no effect at all</span>, from their damaging moves and abilities (Pixilate, Scrappy, Tinted Lens). Hover a cell for each member's best
+        move.
+        </>
+      }
+    >
       <div className="grid grid-cols-6 gap-1 sm:grid-cols-9">
         {rows.map(({ defType, hits, superEffective, walled, noEffect }) => {
           // No super-effective hit on this type, and most of the team can't even hit it neutrally.
@@ -44,11 +53,6 @@ export function OffenseMatrix({ team, dex, mega = false }: { team: Team; dex: De
           );
         })}
       </div>
-      <p className="mt-2 text-xs text-muted">
-        Count of members hitting each defending type <span className="text-good">super-effectively</span> /{' '}
-        <span className="text-bad">only resisted</span> / <span className="text-accent">no effect at all</span>, from their damaging moves and abilities (Pixilate, Scrappy, Tinted Lens). Hover a cell for each member's best
-        move.
-      </p>
       <SuggestionList suggestions={suggestions} fix={fix} />
     </Panel>
   );

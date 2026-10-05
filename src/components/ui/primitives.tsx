@@ -1,5 +1,5 @@
-import { useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
-import { ChevronDown, Loader2, type LucideIcon } from 'lucide-react';
+import { useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { ChevronDown, Info, Loader2, type LucideIcon } from 'lucide-react';
 import type { MoveType, TeraType } from '@/domain/types';
 import { TYPE_BADGE } from './color';
 import { buttonClass, cn, controlClass, typeGradient, type ButtonSize, type ButtonVariant } from './styles';
@@ -102,9 +102,57 @@ export function Field({ label, children, hint, className }: { label: string; chi
 }
 
 /** A section of a screen. No header rule and no inner borders: spacing separates, the card groups. */
+/**
+ * A round "i" that shows or hides an explanation. The text stays out of the way until asked for
+ * (how to read a matrix, what a number means); `HelpToggle` is the button, `Help` the button plus its text.
+ */
+export function HelpToggle({ open, onToggle, controls, label = 'About this' }: { open: boolean; onToggle: () => void; controls: string; label?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={controls}
+      aria-label={label}
+      title={label}
+      className={cn(
+        'hit grid size-6 shrink-0 place-items-center rounded-full border transition-colors',
+        open ? 'border-accent bg-accent text-accent-fg' : 'border-border-strong text-muted hover:text-fg',
+      )}
+    >
+      <Info size={13} aria-hidden />
+    </button>
+  );
+}
+
+export function HelpText({ id, open, children }: { id: string; open: boolean; children: ReactNode }) {
+  return (
+    <div id={id} hidden={!open} className="mb-2 rounded-lg bg-surface-2 p-2.5 text-xs leading-relaxed text-muted">
+      {children}
+    </div>
+  );
+}
+
+/** Stand-alone explanation: a small "i" on the right that opens the text below it. */
+export function Help({ children, label, className }: { children: ReactNode; label?: string; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <div className={className}>
+      <div className="flex justify-end">
+        <HelpToggle open={open} onToggle={() => setOpen((o) => !o)} controls={id} label={label} />
+      </div>
+      <HelpText id={id} open={open}>
+        {children}
+      </HelpText>
+    </div>
+  );
+}
+
 export function Panel({
   title,
   actions,
+  help,
   children,
   className,
   bodyClassName,
@@ -112,20 +160,36 @@ export function Panel({
 }: {
   title?: ReactNode;
   actions?: ReactNode;
+  /** An explanation kept behind an info button in the header instead of printed under the content. */
+  help?: ReactNode;
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
   as?: 'section' | 'div' | 'aside';
 }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpId = useId();
   return (
     <As className={cn('rounded-xl border border-border bg-surface', className)}>
-      {(title || actions) && (
+      {(title || actions || help) && (
         <header className="flex min-h-11 items-center justify-between gap-2 px-4 pt-3">
           {title && <h2 className="min-w-0 text-sm font-semibold">{title}</h2>}
-          {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
+          {(actions || help) && (
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              {actions}
+              {help && <HelpToggle open={helpOpen} onToggle={() => setHelpOpen((o) => !o)} controls={helpId} label={`About ${typeof title === 'string' ? title.toLowerCase() : 'this panel'}`} />}
+            </div>
+          )}
         </header>
       )}
-      <div className={cn('p-4', (title || actions) && 'pt-2', bodyClassName)}>{children}</div>
+      <div className={cn('p-4', (title || actions || help) && 'pt-2', bodyClassName)}>
+        {help && (
+          <HelpText id={helpId} open={helpOpen}>
+            {help}
+          </HelpText>
+        )}
+        {children}
+      </div>
     </As>
   );
 }
