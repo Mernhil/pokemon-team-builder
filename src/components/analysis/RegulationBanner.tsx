@@ -18,8 +18,8 @@ const fmtDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
 /**
- * Regulation status strip: which set is live, when it ends, what's announced next, and when the
- * data was last checked by the weekly updater. Offers a one-click move to the live regulation.
+ * Regulation status strip: which set is live, when it ends and what's announced next.
+ * Offers a one-click move to the live regulation.
  */
 export function RegulationBanner({ team, format }: { team: Team; format: FormatRules }) {
   if (format.datasetId !== 'champions') return <GenerationStrip format={format} />;
@@ -88,7 +88,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
   );
 
   if (!live) return null;
-  const daysLeft = live.end ? Math.ceil((new Date(live.end).getTime() - Date.now()) / 86_400_000) : undefined;
+  const daysLeft = live.end ? daysUntil(live.end) : undefined;
 
   const copyToLive = () => {
     if (dexState.status !== 'ready') return;
@@ -109,7 +109,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
         <b className="text-fg">{live.shortName} is live</b>
         <span className="text-muted">
           {fmtDate(live.start)} – {fmtDate(live.end)}
-          {daysLeft !== undefined && daysLeft >= 0 && ` · ${daysLeft} days left`}
+          {daysLeft !== undefined && ` · ${daysLeft} days left`}
         </span>
       </span>
       <span className="hidden text-muted sm:inline">
@@ -127,7 +127,6 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
         <span className="hidden text-muted sm:inline">Next regulation not announced yet</span>
       )}
       <span className="ml-auto flex items-center gap-2">
-        {REGULATION_MANIFEST.lastChecked && <span className="hidden text-muted sm:inline">Checked {fmtDate(REGULATION_MANIFEST.lastChecked)}</span>}
         <a href="#regdiff" className="font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center">
           Regulation diff
         </a>

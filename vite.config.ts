@@ -6,7 +6,6 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
 import { configDefaults } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
-import { viteSingleFile } from 'vite-plugin-singlefile';
 
 // The desktop app version (src-tauri/tauri.conf.json), not package.json's — it's the one bumped on
 // every Tauri release, so it's what actually changes and busts the webview's icon cache.
@@ -29,8 +28,7 @@ const emitMeta = (): Plugin => ({
   },
 });
 
-// `vite build --mode singlefile` inlines everything into one index.html (portable/offline build).
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   base: './',
   // Module workers (the Threat report's engine) share code-split chunks with the app.
   worker: { format: 'es' },
@@ -40,11 +38,10 @@ export default defineConfig(({ mode }) => ({
     react(),
     tailwindcss(),
     cacheBustIcons(),
-    ...(mode === 'singlefile' ? [viteSingleFile()] : [emitMeta()]),
+    emitMeta(),
     // Installable web app ("Add to Home Screen" on iPhone). The service worker precaches the whole
     // app, sprites included, so it works offline; src/pwa.ts picks up new deploys automatically.
     VitePWA({
-      disable: mode === 'singlefile',
       registerType: 'autoUpdate',
       injectRegister: false,
       manifest: {
@@ -84,4 +81,4 @@ export default defineConfig(({ mode }) => ({
   // Fixed port so the Tauri desktop shell (src-tauri/tauri.conf.json's devUrl) always finds the dev server.
   server: { port: 1420, strictPort: true },
   test: { environment: 'node', exclude: [...configDefaults.exclude, 'e2e/**'] },
-}));
+});

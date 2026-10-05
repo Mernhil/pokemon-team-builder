@@ -12,14 +12,15 @@ import { cn } from '../ui/styles';
  */
 export function SpriteHistory({ species }: { species: Pokemon }) {
   const [open, setOpen] = useState(false);
-  const [available, setAvailable] = useState<SpriteSetId[] | null>(null);
+  const [loaded, setLoaded] = useState<{ id: string; sets: SpriteSetId[] } | null>(null);
+  // Only what was loaded for this species counts, so switching species shows "loading" without a reset.
+  const available = loaded?.id === species.id ? loaded.sets : null;
 
   useEffect(() => {
     if (!open) return;
     let alive = true;
-    setAvailable(null);
     Promise.all(SPRITE_SETS.map((s) => loadSpriteSheet(s.id).then((sheet) => (sheet?.index[species.id] !== undefined ? s.id : null)))).then(
-      (ids) => alive && setAvailable(ids.filter((x): x is SpriteSetId => !!x)),
+      (ids) => alive && setLoaded({ id: species.id, sets: ids.filter((x): x is SpriteSetId => !!x) }),
     );
     return () => {
       alive = false;

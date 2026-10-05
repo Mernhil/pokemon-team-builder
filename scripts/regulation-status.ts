@@ -23,4 +23,3 @@ if (live?.end) {
   const days = Math.ceil((new Date(live.end).getTime() - now.getTime()) / 86_400_000);
   console.log(`\n${live.shortName} ends in ${days} day(s).${days <= 21 ? ' Look for the next regulation announcement.' : ''}`);
 }
-console.log(`last checked     ${manifest.lastChecked ?? 'never'}`);

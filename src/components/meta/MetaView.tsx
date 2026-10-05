@@ -16,8 +16,8 @@ import { cn } from '../ui/styles';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
 
-/** Refresh only makes sense where a newer deploy can exist: the hosted web app (not the desktop app or the single-file build). */
-const CAN_REFRESH = import.meta.env.MODE !== 'singlefile' && typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window) && /^https?:$/.test(location.protocol);
+/** Refresh only makes sense where a newer deploy can exist: the hosted web app (not the desktop app). */
+const CAN_REFRESH = typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window) && /^https?:$/.test(location.protocol);
 
 const fmtDate = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 const fmtMonth = (month: string) => new Date(`${month}-15T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });

@@ -51,7 +51,7 @@ test('Threat report: the count selector and the non-Champions empty state', asyn
 
 test('Threat report: still works without Web Workers (main-thread fallback)', async ({ page }) => {
   await page.addInitScript(() => {
-    // @ts-expect-error simulate a browser (or the single-file build) with no Worker
+    // @ts-expect-error simulate a browser with no Worker
     delete window.Worker;
   });
   await openApp(page);

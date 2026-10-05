@@ -32,6 +32,16 @@ jobs:
 
       - run: npm ci
 
+      # One version bump per PR, and every bump has a CHANGELOG section (the release workflow tags
+      # only the last bump of a merge).
+      - name: CHANGELOG has a section for this version
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if ! grep -Eq "^## ${v//./\\.}( |$)" CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::package.json is at $v but CHANGELOG.md has no '## $v' section. Add one."
+            exit 1
+          fi
+
       - name: Lint
         run: npm run lint
 

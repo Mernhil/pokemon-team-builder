@@ -413,7 +413,7 @@ async function main() {
   const schedule = JSON.parse(readFileSync(resolve(REG_DIR, 'schedule.json'), 'utf8'));
   writeFileSync(
     resolve(OUT, 'regulations.json'),
-    JSON.stringify({ generatedAt, regulations, upcoming: schedule.upcoming ?? [], lastChecked: schedule.lastChecked }, null, 2),
+    JSON.stringify({ generatedAt, regulations, upcoming: schedule.upcoming ?? [] }, null, 2),
   );
 
   // What each regulation's species patches change, with the value before (Showdown's, or an earlier

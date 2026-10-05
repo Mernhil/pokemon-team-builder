@@ -14,14 +14,12 @@ npm test              # vitest: stat engines, codecs, validation
 npm run typecheck
 npm run e2e           # browser smoke tests (Playwright) against the production build; see docs/E2E.md
 npm run build         # static site in dist/
-npm run build:single  # one self-contained index.html (works offline)
 npm run data          # regenerate src/data/generated/*.json (Showdown data + regulation files + Gen 1–9 datasets)
 npm run pokedex       # Pokédex entries + wild encounters per book (PokeAPI CSVs + PKHeX encounter tables)
 npm run maps          # Area maps: in-game maps from the pret disassemblies + src/data/maps/*.json schematics
 npm run atlas         # Atlas databases per game (locations, items, NPCs, shops, every trainer's team) from the pret decompilations; needs `npm run data`, `pokedex` and `maps` first
 npm run sprites       # rebuild sprite atlases in public/sprites/ (PokeAPI)
 npm run reg:status    # regulation calendar: live set, end date, announced sets
-npm run build:artifact  # single-file build for the hosted claude.ai app
 npm run icons         # re-render the home-screen icons in public/icons/ from favicon.svg
 ```
 
@@ -129,7 +127,7 @@ A regulation without published statistics falls back to your own logged matches.
 ### Cloud sync
 
 **Settings → Sync → Sync with my account** (web and phone app, opt-in) keeps your teams (with folders and variations) and your match log the same on every device you sign in on, through the Cloudflare deployment that already hosts the app. It is offline-first (localStorage stays the source of truth), syncs on start, on focus, a few seconds after a change and on "Sync now", and merges with what is already on a new device instead of wiping it. Last write wins per document; when two devices changed the same team the older change is kept as a variation named "Conflict copy (device, date)"; an edit beats a delete unless the delete is clearly later.
-`worker/` is the Worker behind `/api/sync` (Cloudflare Access JWT verification, D1 storage, zod-validated and sanitised payloads), `src/domain/sync.ts` the merge rules and `src/sync/` the client. One-time setup (D1, migration, Access variables), backups, turning it off and the desktop options are in [`docs/SYNC.md`](docs/SYNC.md). The desktop app and the single-file build don't sync.
+`worker/` is the Worker behind `/api/sync` (Cloudflare Access JWT verification, D1 storage, zod-validated and sanitised payloads), `src/domain/sync.ts` the merge rules and `src/sync/` the client. One-time setup (D1, migration, Access variables), backups, turning it off and the desktop options are in [`docs/SYNC.md`](docs/SYNC.md). The desktop app doesn't sync.
 
 ### Sharing and Compare
 
@@ -165,7 +163,7 @@ The result sits next to your current spread with ✓/✗ per goal; **Apply** wri
 **More → Threat report** (`#threats`, with a "Top threats" line in Team check) runs the Damage Calc for your whole team against the most-used Champions sets, in both directions, on one screen.
 Each threat is a meta set (`src/domain/metaSets.ts`: the most common ability, item, spread and nature, and the top four moves, never four status moves; anything the format doesn't allow is dropped and reported). Every cell shows your best move and its best move as OHKO / possible OHKO / 2HKO / 3HKO+ with the damage range, and who moves first; Mega Stone holders are read at their worse forme for you and their better one for the threat. Plain-language summaries rank the worst threats first ("Kingambit OHKOs 3 of your Pokémon and none of yours OHKO it back", "Nothing on your team outspeeds and 2HKOs Flutter Mane").
 The field (Doubles by default, weather, terrain, Trick Room) and the number of threats (10/20/30) change everything at once. The grid uses a blue-to-orange scale with ✓/✗/~ and words in every cell, and becomes one card per threat on phones; tapping a cell opens the Damage Calc pre-filled with that attacker, defender and field.
-The engine (`src/domain/threats.ts`) is pure; the page runs it in a Web Worker (`src/workers/`) with memoised cells and streams rows in as they finish, so it doesn't freeze a phone (the single-file build runs it on the main thread in small slices instead). It uses the same newest-published-regulation fallback and data-age notice as Speed tiers. Other formats show an explanation instead.
+The engine (`src/domain/threats.ts`) is pure; the page runs it in a Web Worker (`src/workers/`) with memoised cells and streams rows in as they finish, so it doesn't freeze a phone (browsers without Web Workers run it on the main thread in small slices instead). It uses the same newest-published-regulation fallback and data-age notice as Speed tiers. Other formats show an explanation instead.
 
 ### Speed tiers
 

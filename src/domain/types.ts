@@ -186,7 +186,6 @@ export interface RegulationManifest {
   generatedAt: string;
   regulations: RegulationInfo[];
   upcoming: UpcomingRegulation[];
-  lastChecked?: string;
 }
 
 export interface Dataset {
