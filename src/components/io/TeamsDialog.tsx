@@ -17,6 +17,7 @@ import { ShareDialog } from './ShareDialog';
 import { Modal } from '../ui/Modal';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip } from '../ui/primitives';
+import { ArchetypeChips } from '../team/ArchetypeChips';
 import { cn, typeGradient } from '../ui/styles';
 
 /** Click (or the pencil icon) to edit; commits on blur/Enter, discards on Escape. */
@@ -273,6 +274,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                 <div className="flex min-w-0 flex-1 basis-44 flex-wrap items-center gap-x-2 gap-y-1 pt-1.5">
                   <InlineEditable value={t.name} ariaLabel="Saved team name" textClassName="text-base font-semibold" onCommit={(name) => updateTeam(id, { name })} />
                   <Chip>{t.category || f.shortName}</Chip>
+                  <ArchetypeChips team={t} dex={dex} />
                   {variations.length > 0 && <Chip>{variations.length + 1} variations</Chip>}
                   <RegulationChips team={t} impacts={impacts.get(t.id)} live={live} />
                   {groupIsActive && <Chip tone="accent">Editing</Chip>}
@@ -360,6 +362,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="min-w-0 truncate text-base font-semibold">{root.name}</span>
                     <Chip>{root.category || f.shortName}</Chip>
+                    <ArchetypeChips team={root} dex={dex} />
                     <Chip tone="accent">From {nameOf(root.shared!.owner, names)}</Chip>
                     <Chip tone={editable ? 'good' : 'neutral'}>{editable ? 'Can edit' : 'View only'}</Chip>
                     {variations.length > 0 && <Chip>{variations.length + 1} variations</Chip>}

@@ -156,24 +156,8 @@ export function megaOptions(holders: number[]): (number | undefined)[] {
 // Support and speed control
 // ---------------------------------------------------------------------------
 
-export type SupportKind = 'Fake Out' | 'Intimidate' | 'redirection' | 'Wide Guard';
-export type ControlKind = 'Tailwind' | 'Trick Room' | 'Icy Wind' | 'Electroweb';
-
-const SUPPORT_MOVES: Record<string, SupportKind> = { fakeout: 'Fake Out', followme: 'redirection', ragepowder: 'redirection', wideguard: 'Wide Guard' };
-const CONTROL_MOVES: Record<string, ControlKind> = { tailwind: 'Tailwind', trickroom: 'Trick Room', icywind: 'Icy Wind', electroweb: 'Electroweb' };
-
-export function supportOf(set: PokemonSet): SupportKind[] {
-  const out = new Set<SupportKind>();
-  for (const m of set.moves) if (SUPPORT_MOVES[m]) out.add(SUPPORT_MOVES[m]);
-  if (set.abilityId === 'intimidate') out.add('Intimidate');
-  return [...out];
-}
-
-export function controlOf(set: PokemonSet): ControlKind[] {
-  const out = new Set<ControlKind>();
-  for (const m of set.moves) if (CONTROL_MOVES[m]) out.add(CONTROL_MOVES[m]);
-  return [...out];
-}
+import { controlOf, supportOf } from './roles';
+export { controlOf, supportOf, type ControlKind, type SupportKind } from './roles';
 
 // ---------------------------------------------------------------------------
 // Planning

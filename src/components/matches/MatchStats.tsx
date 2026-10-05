@@ -35,6 +35,7 @@ import {
   type WinRate,
 } from '@/domain/matches';
 import { useTeamStore } from '@/store/teamStore';
+import { TagUntagged } from './TagUntagged';
 import { Button, Field, Input, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
@@ -81,6 +82,7 @@ export function MatchStats({ dex, format, matches: allMatches }: { dex: Dex; for
   return (
     <div className="grid gap-3 lg:grid-cols-2">
       <StatsFilters all={allMatches} filter={filter} onChange={setFilter} teams={teams} shown={matches.length} />
+      <TagUntagged dex={dex} format={format} matches={matches} />
       {matches.length === 0 && <p className="text-sm text-muted lg:col-span-2">No matches fit these filters.</p>}
       <Panel title={`Overall: ${overall.wins}-${overall.losses} (${pct(overall)})`}>
         <div className="space-y-3">

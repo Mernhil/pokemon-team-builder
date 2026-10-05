@@ -9,6 +9,7 @@ import { calcStats } from '@/domain/stats';
 import type { FormatRules, Team } from '@/domain/types';
 import { useShowcaseStore } from '@/store/showcaseStore';
 import { editingTeam, useTeamStore } from '@/store/teamStore';
+import { ArchetypeChips } from '../team/ArchetypeChips';
 import { DefenseMatrix } from '../analysis/DefenseMatrix';
 import { OffenseMatrix } from '../analysis/OffenseMatrix';
 import { Sprite } from '../ui/Sprite';
@@ -94,7 +95,14 @@ function Showcase({ team, tab, mega, onMega }: { team: Team; tab: Tab; mega: boo
       </EmptyState>
     );
   }
-  return tab === 'team' ? <TeamTab team={team} dex={dex} format={format} members={members} /> : <SetsTab team={team} dex={dex} format={format} members={members} view={tab} mega={mega} onMega={onMega} />;
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
+        <ArchetypeChips team={team} dex={dex} max={3} />
+      </div>
+      {tab === 'team' ? <TeamTab team={team} dex={dex} format={format} members={members} /> : <SetsTab team={team} dex={dex} format={format} members={members} view={tab} mega={mega} onMega={onMega} />}
+    </div>
+  );
 }
 
 type Members = { set: NonNullable<Team['slots'][number]>; slot: number }[];

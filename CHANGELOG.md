@@ -9,6 +9,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 - **Search everything** (Ctrl/⌘ + K, or the search button in the header): find any screen or Analyse tab, your saved teams, a Pokémon (its Pokédex page, or the Calc with it as the attacker), a Pokénav game or a setting.
 - **What's new**: after an update a sheet lists what changed since the version you last saw, with a **Try it** link on the notes that name a screen. Settings → What's new shows it any time.
 
+- **Automatic archetype tags.** The app now works out a team's archetype (Rain, Sun, Sand, Snow, Trick Room, Tailwind, Hyper Offense, Bulky Offense, Balance, Stall) from its Pokémon, with the reasons. The match form suggests one for an empty archetype field (one tap to use it); the match log's stats offer **Tag N untagged matches** with a preview and an Undo; saved teams and Team overview show archetype chips. A tag you wrote yourself is never changed.
+
 ### Changed
 - **The menu is reorganised.** More now holds Match log, Meta, a Tools group (Reverse search, Regulation diff) and Settings. On a phone the bottom bar is Build, Calc, Analyse, Pokédex and More, with Pokénav under More.
 - **Desktop updates now come from a separate public releases repository** (`Mernhil/pokemon-team-builder-releases`), so the app's own repository can be made private. This is the transition release: it is published to both places, so apps installed before it find it where they always looked. Nothing changes in the app itself.
