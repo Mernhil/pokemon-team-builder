@@ -13,6 +13,7 @@ import { Button, EmptyState, LoadingState, Panel, Select, Tabs } from '../ui/pri
 // Each tab loads when first opened.
 const TeamShowcaseView = lazy(() => import('../showcase/TeamShowcaseView').then((m) => ({ default: m.TeamShowcaseView })));
 const SpeedTiersView = lazy(() => import('../speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
+const SuggestTeammate = lazy(() => import('../team/SuggestTeammate').then((m) => ({ default: m.SuggestTeammate })));
 const ThreatReportView = lazy(() => import('../threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
 const OhkoReportView = lazy(() => import('../threats/OhkoReportView').then((m) => ({ default: m.OhkoReportView })));
 const CompareView = lazy(() => import('../compare/CompareView').then((m) => ({ default: m.CompareView })));
@@ -85,7 +86,17 @@ function TabBody({ team, tab }: { team: Team; tab: AnalyseTab }) {
   const state = useDex(format.datasetId);
   const loading = (label: string) => <LoadingState label={label} />;
 
-  if (tab === 'overview') return <Suspense fallback={loading('Loading team overview…')}><TeamShowcaseView team={team} /></Suspense>;
+  if (tab === 'overview')
+    return (
+      <div className="space-y-3">
+        <Suspense fallback={loading('Loading team overview…')}><TeamShowcaseView team={team} /></Suspense>
+        {state.status === 'ready' && (
+          <Suspense fallback={null}>
+            <SuggestTeammate team={team} dex={state.dex} format={format} />
+          </Suspense>
+        )}
+      </div>
+    );
   if (tab === 'compare') return <Suspense fallback={loading('Loading compare…')}><CompareView teamId={team.id} /></Suspense>;
   if (state.status === 'error') return <p className="p-10 text-center text-sm text-bad" role="alert">{state.error}</p>;
   if (state.status !== 'ready') return loading('Loading Pokédex data…');

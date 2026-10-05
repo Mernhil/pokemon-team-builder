@@ -13,6 +13,7 @@ import { Sprite } from '../ui/Sprite';
 import { Label, Panel, TypeBadge } from '../ui/primitives';
 import { IssueCounts, IssueList } from './ValidationPanel';
 
+const SuggestTeammate = lazy(() => import('../team/SuggestTeammate').then((m) => ({ default: m.SuggestTeammate })));
 const TopThreats = lazy(() => import('../threats/TopThreats').then((m) => ({ default: m.TopThreats })));
 
 /**
@@ -102,6 +103,11 @@ export function TeamCheck({ team, dex, format, issues }: { team: Team; dex: Dex;
               {meta?.source.month ? `, ${new Date(`${meta.source.month}-15T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}` : ''}; more on the Meta
               tab.</p>
           </div>
+        )}
+        {format.datasetId === 'champions' && team.slots.some(Boolean) && team.slots.some((x) => x === null) && (
+          <Suspense fallback={null}>
+            <SuggestTeammate team={team} dex={dex} format={format} />
+          </Suspense>
         )}
         {format.datasetId === 'champions' && team.slots.some(Boolean) && (
           <Suspense fallback={null}>
