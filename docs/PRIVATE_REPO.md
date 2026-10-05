@@ -6,7 +6,7 @@ in place first, and what to check afterwards. Do it in this order.
 ## Before
 
 1. **Desktop updates.** Set up the releases repository and secret, run the transition, and wait until
-   every installed desktop app shows 0.23.1 or later (docs/DESKTOP_RELEASES.md → *Switching to the new
+   every installed desktop app shows 0.24.0 or later (docs/DESKTOP_RELEASES.md → *Switching to the new
    endpoint*). Then remove the variable `MIRROR_RELEASES_TO_THIS_REPO`.
 2. **Secrets I create by hand** (Settings → Secrets and variables → Actions, in this repository):
 
@@ -22,7 +22,7 @@ in place first, and what to check afterwards. Do it in this order.
    nine days of history: CI used about 460 runner minutes (about 1,500 a month at that pace), the
    daily meta job under 1 minute a run, and a desktop release about 25 billed minutes (Linux 7, Windows
    8 × 2, checks 2). Releases are built only on a version bump, never on every push. The CI cuts in
-   0.23.1 (docs-only changes skip CI, WebKit only for app changes, desktop project only after a
+   0.24.0 (docs-only changes skip CI, WebKit only for app changes, desktop project only after a
    merge) should bring CI to roughly 1,000 a month at the same pace. Watch Settings → Billing → Usage
    in the first weeks, and bump only when a feature is finished, not after every fix.
 

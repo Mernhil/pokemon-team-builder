@@ -1,0 +1,37 @@
+{
+  "note": "Known, intentional differences between our Champions data and upstream Showdown (npm run data:audit). One entry per difference or family (a trailing * covers every id with that prefix), each with the reason. An entry that matches nothing is reported as stale: delete it.",
+  "entries": [
+    {
+      "id": "move-only-upstream:champions-reg-mb:*",
+      "reason": "Upstream's championsregmb mod inherits move legality from `champions` (Reg M-C); these 15 moves arrived in Reg M-C (addMoves in champions-reg-mc.json), so Reg M-B here is right."
+    },
+    {
+      "id": "item-only-upstream:champions-reg-mb:wiseglasses",
+      "reason": "Single source (Showdown only) and the regulation it arrived in is unknown, so not added; the regulation source rule needs the official source or two independent sites. Re-check at the next update."
+    },
+    {
+      "id": "item-only-upstream:champions-reg-mc:wiseglasses",
+      "reason": "Single source (Showdown only), so not added to Reg M-C; the regulation source rule needs the official source or two independent sites. Re-check at the next update."
+    },
+    {
+      "id": "abilities:absolmegaz:0",
+      "reason": "speciesPatches in champions-reg-mc.json: Sharpness, as revealed by Play! Pokémon coverage (rotomlabs.net, thegamehaus.com); upstream still carries Showdown's earlier value."
+    },
+    {
+      "id": "abilities:garchompmegaz:0",
+      "reason": "speciesPatches in champions-reg-mc.json: Levitate, as revealed by Play! Pokémon coverage (rotomlabs.net, thegamehaus.com); upstream still carries Showdown's earlier value."
+    },
+    {
+      "id": "abilities:lucariomegaz:0",
+      "reason": "speciesPatches in champions-reg-mc.json: Aura Guard, as revealed by Play! Pokémon coverage (rotomlabs.net, thegamehaus.com); upstream still carries Showdown's earlier value."
+    },
+    {
+      "id": "abilities:golisopodmega:0",
+      "reason": "speciesPatches in champions-reg-mc.json: Tough Claws, from the sources listed there (pokemon-zone.com's Mega Golisopod page); upstream has Showdown's placeholder. Not officially announced yet: re-check."
+    },
+    {
+      "id": "abilities:baxcaliburmega:H",
+      "reason": "speciesPatches in champions-reg-mc.json: Thermal Exchange only (no hidden ability), from the sources listed there; upstream has Showdown's placeholder. Not officially announced yet: re-check."
+    }
+  ]
+}

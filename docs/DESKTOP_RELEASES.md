@@ -35,13 +35,13 @@ Installed apps look at the endpoint that was built into *them*, so the first rel
 the new endpoint has to be published where the old apps look too:
 
 1. With the repository **still public**, do the one-time setup above (variable included), merge the
-   change that carries the new endpoint (version 0.23.1) and let the release run. It builds once,
+   change that carries the new endpoint (version 0.24.0) and let the release run. It builds once,
    publishes to the releases repository, then the `publish` job copies the release (installers and
    `latest.json`) into this repository's Releases as well.
-2. Open each installed desktop app once: it finds 0.23.1 through the old endpoint, installs it and
+2. Open each installed desktop app once: it finds 0.24.0 through the old endpoint, installs it and
    restarts. Settings & credits shows the version. From now on that app looks at the releases
    repository.
-3. When **every** installed app shows 0.23.1 (or later), delete the variable
+3. When **every** installed app shows 0.24.0 (or later), delete the variable
    `MIRROR_RELEASES_TO_THIS_REPO` (or set it to anything but `true`) and then make the repository
    private (docs/PRIVATE_REPO.md). An app still on 0.23.0 or older would never see another update
    after that; fix it by installing the newest installer from the releases repository by hand.

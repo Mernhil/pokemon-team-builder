@@ -1,7 +1,7 @@
 {
   "name": "pokemon-team-builder",
   "private": true,
-  "version": "0.23.1",
+  "version": "0.24.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -32,6 +32,7 @@
     "desktop:build": "tauri build",
     "reg:status": "tsx scripts/regulation-status.ts",
     "data:strict": "tsx scripts/build-data.ts --strict",
+    "data:audit": "tsx scripts/audit-data.ts",
     "bump": "node scripts/bump-version.mjs"
   },
   "dependencies": {

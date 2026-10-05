@@ -20,6 +20,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Dex, type ModData } from '@pkmn/dex';
 import * as ChampionsMod from '@pkmn/mods/champions';
+import { learnsetFor, type AnyDex } from './lib/champions-learnsets.ts';
+import { loadShowdownMod } from './lib/showdown-mods.ts';
+import { ensure } from './sources.js';
 import * as RegMAMod from '@pkmn/mods/championsregma';
 import { buildGames } from './build-games.js';
 import { buildGenerations } from './build-gens.js';
@@ -28,7 +31,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, '../src/data/generated');
 const REG_DIR = resolve(here, '../src/data/regulations');
 
-type AnyDex = ReturnType<typeof Dex.mod>;
 const STAT_IDS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const;
 const STRICT = process.argv.includes('--strict');
 /** "Mega", "Mega-X", "Mega-Z", and Meowstic's "M-Mega" / "F-Mega". */
@@ -162,31 +164,13 @@ function resolveRegulations(files: RegulationFile[]): Resolved[] {
   return files.map((f) => resolveOne(f));
 }
 
-/**
- * A species' own Showdown learnset plus what it inherits from its pre-evolutions: egg moves live on the base
- * form (Rillaboom's Fake Out is Grookey's) and level-up moves a pre-evolution learned stay with the evolution.
- * TMs/tutors don't carry over, and only Generation 9 sources count (older ones are moves Champions dropped).
- */
-async function withPrevoMoves(dex: AnyDex, s: ReturnType<AnyDex['species']['get']>, own: string[]): Promise<string[]> {
-  if (!own.length) return own;
-  const moves = [...own];
-  const have = new Set(moves);
-  for (let prevo = s.prevo ? dex.species.get(s.prevo) : undefined; prevo?.exists; prevo = prevo.prevo ? dex.species.get(prevo.prevo) : undefined) {
-    const ls = (await dex.learnsets.get(prevo.id))?.learnset;
-    for (const [m, sources] of Object.entries(ls ?? {})) {
-      if (!have.has(m) && sources.some((c) => /^9[LE]/.test(c))) {
-        have.add(m);
-        moves.push(m);
-      }
-    }
-  }
-  return moves;
-}
-
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const files = loadRegulations();
   const regs = resolveRegulations(files);
+  // Showdown's current Champions mod (the pinned checkout, scripts/sources.ts): its learnsets are newer than
+  // @pkmn/mods', which predates the Pokémon and moves of Reg M-C. Species it has no learnset for keep the old path.
+  const upstream = Dex.mod('championsshowdown' as never, (await loadShowdownMod(ensure('showdown', ['data/mods/champions']), 'champions')) as never) as AnyDex;
   console.log(`regulations: ${regs.map((r) => `${r.meta.id} (${r.species.size} species)`).join(', ')}`);
 
   const patches: NonNullable<RegulationFile['speciesPatches']> = {};
@@ -238,28 +222,12 @@ async function main() {
     const patch = patches[id] ?? {};
 
     if (!isMega) {
-      // Learnset: Champions learnset, falling back to the out-of-battle forme, then to the
-      // Scarlet/Violet learnset (flagged provisional) for Pokémon Showdown hasn't covered yet.
-      const chain = [s.id, s.changesFrom && toID(s.changesFrom), toID(s.baseSpecies)].filter(Boolean) as string[];
-      let moves: string[] = [];
-      for (const src of chain) {
-        const ls = await base.learnsets.get(src);
-        if (ls?.learnset) {
-          moves = Object.keys(ls.learnset);
-          break;
-        }
-      }
-      moves = await withPrevoMoves(base, s, moves);
-      if (!moves.length) {
-        for (const src of chain) {
-          const ls = await gen9.learnsets.get(src);
-          if (ls?.learnset) {
-            moves = await withPrevoMoves(gen9, s, Object.keys(ls.learnset));
-            provisional.push(id);
-            break;
-          }
-        }
-      }
+      // Learnset: Showdown's current Champions mod when it has one, else @pkmn/mods' (see learnsetFor: the
+      // out-of-battle forme, then provisionally Scarlet/Violet).
+      const us = upstream.species.get(id);
+      const current = us.exists ? await learnsetFor(upstream, gen9, us) : undefined;
+      const { moves, provisional: fromGen9 } = current && !current.provisional && current.moves.length ? current : await learnsetFor(base, gen9, s);
+      if (fromGen9) provisional.push(id);
       learnsets[id] = moves.filter((m) => legalMoveAnywhere.has(m)).sort();
     }
 

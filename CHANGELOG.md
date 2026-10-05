@@ -2,12 +2,16 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## 0.23.1 — 2026-10-05
+## 0.24.0 — 2026-10-05
 
 ### Changed
 - **Desktop updates now come from a separate public releases repository** (`Mernhil/pokemon-team-builder-releases`), so the app's own repository can be made private. This is the transition release: it is published to both places, so apps installed before it find it where they always looked. Nothing changes in the app itself.
 - **Fewer CI minutes:** documentation-only changes skip CI, and the iPhone WebKit tests run only on a pull request that changes the app.
+- **Champions learnsets come from Showdown's current Champions data** (a newer pinned checkout) instead of the older @pkmn/mods release, for every Pokémon it covers (@pkmn/dex and @pkmn/mods are already at their latest versions).
 - The single-file artifact build is gone (the app ships as the web app and the desktop app), and the regulation banner no longer says when the data was "checked".
+
+### Fixed
+- **Champions data audit** (`npm run data:audit`, also a weekly check against Showdown) found and fixed these gaps: the Squawkabilly colour formes (Blue, White, Yellow) were missing from Reg M-C, and 41 Pokémon had learnsets that lagged Showdown's current Champions data: about 70 moves were missing (Slash on Absol, Aegislash, Gallade, Skarmory and more; Megahorn on Gogoat; Wish on Indeedee; Sirfetch'd, Golisopod and Grapploct lacked a dozen each) and about 80 were wrongly listed (Toxic, Swagger and Double Team on Mr. Mime, Farfetch'd and Golisopod). 22 intentional differences are explained in `scripts/audit-allowlist.json` (for example the new Megas' abilities, which follow the announcements rather than Showdown's placeholders).
 
 ## 0.23.0 — 2026-10-05
 
