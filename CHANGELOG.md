@@ -2,7 +2,7 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## Unreleased
+## 0.22.1 — 2026-10-05
 
 ### New
 - **Reverse search: "Has to know a move".** Pick up to four moves every answer has to know, alone or on top of the other conditions, e.g. a Fake Out user that one-shots Sylveon. Only Pokémon that can learn the move in the format show up, and each is built to know it: if its usual set lacks the move, it goes in place of a status move first (then its last attack), and the result says what it replaced. The calculations use the build with the move in it.
