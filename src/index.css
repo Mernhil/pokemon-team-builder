@@ -257,3 +257,13 @@ input[type='number'].no-spin {
 @media (prefers-reduced-motion: reduce) {
   .area-ring { animation: none; opacity: 0.9; }
 }
+
+/* Team sheet: print only the sheet, black on white, whatever the theme. */
+@media print {
+  body * { visibility: hidden !important; }
+  .team-sheet, .team-sheet * { visibility: visible !important; }
+  .team-sheet {
+    position: absolute; inset: 0 auto auto 0; width: 100%; max-height: none !important; overflow: visible !important;
+    background: #fff !important; color: #000 !important; padding: 0 !important; font-size: 11pt;
+  }
+}

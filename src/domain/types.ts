@@ -9,6 +9,7 @@
  * modern EVs (Gen 3–9) and Game Boy Stat Exp / DVs (Gen 1–2) share one pipeline.
  */
 
+import type { Benchmark } from './benchmarks';
 import type { Capabilities } from './capabilities';
 
 export const STAT_IDS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const;
@@ -186,7 +187,6 @@ export interface RegulationManifest {
   generatedAt: string;
   regulations: RegulationInfo[];
   upcoming: UpcomingRegulation[];
-  lastChecked?: string;
 }
 
 export interface Dataset {
@@ -313,6 +313,10 @@ export interface PokemonSet {
   shiny?: boolean;
   /** Let's Go: friendship 0–255 (stats get up to +10% at 255). */
   friendship?: number;
+  /** Why this spread (a few lines for the player; not part of the Showdown export). */
+  notes?: string;
+  /** Goals this spread was built to meet, checked again when the meta changes (src/domain/benchmarks.ts). */
+  benchmarks?: Benchmark[];
 }
 
 export type TeamSlots = [
@@ -324,6 +328,15 @@ export type TeamSlots = [
   PokemonSet | null,
 ];
 
+/** A plan against one kind of opponent: "vs Rain: lead Incineroar + Garchomp, keep Kingambit in the back". */
+export interface MatchupNote {
+  id: string;
+  title: string;
+  /** The Pokémon to lead (set uids, at most two). */
+  leads?: string[];
+  text: string;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -331,6 +344,8 @@ export interface Team {
   /** Free-form category, e.g. "Champions Reg M-B", "Gen 4 Playthrough". */
   category?: string;
   notes?: string;
+  /** Plans against kinds of opponents (at most 12). */
+  matchupNotes?: MatchupNote[];
   /** In-game Champions Replica Team code (10 chars) — stored as metadata. */
   replicaCode?: string;
   slots: TeamSlots;

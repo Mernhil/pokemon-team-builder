@@ -40,7 +40,7 @@ Compare the research with `npm run reg:status`.
 
 | Situation | Action |
 |---|---|
-| Nothing new | Update `lastChecked` in `src/data/regulations/schedule.json` only. |
+| Nothing new | Change nothing: no commit, no branch, no PR. (There is no `lastChecked` any more; a quiet week leaves no trace.) |
 | Next set announced, details not published yet | Add it to `schedule.json` → `upcoming` with name, dates, one-line summary and sources. |
 | Details published (before or after the start date) | Create `src/data/regulations/<id>.json` and remove the entry from `upcoming`. |
 | An existing set changed (ban, errata, extension) | Edit that file and bump its `updatedAt`. |
@@ -72,9 +72,9 @@ If a new Showdown mod exists for the regulation (like `championsregma`), prefer 
 npm run data:strict        # fails on any id Showdown/newSpecies can't resolve — fix ids, don't skip
 npm run sprites -- champions   # picks up sprites for new species/Megas (PokeAPI)
 npm run meta -- --sources carryover   # the new regulation's provisional Meta data: the previous one's usage for what's still allowed (offline)
+npm run data:audit -- --strict   # vs Showdown's current Champions mods; docs/data-audit.md says what differs (explain intended ones in scripts/audit-allowlist.json)
 npm run typecheck && npm test
 npm run reg:status         # confirm dates, counts and the LIVE marker
-npm run build:artifact     # dist/artifact.html + dist/sprites/*, dist/maps/*, dist/data/*
 ```
 
 Add a test to `src/domain/__tests__/regulations.test.ts` for the new set: one added species, one new item and the live-date switch.
@@ -83,9 +83,12 @@ If a sprite is missing because PokeAPI hasn't added a new Mega yet, the app fall
 
 ## 5. Ship
 
-1. Commit on a branch off the default branch (`claude/pokemon-team-builder-otextg`) with a message like `data: add Champions Reg M-D (starts 2026-12-02)`, push it and open a PR into the default branch.
-2. Republish the web app to its existing artifact URL (https://claude.ai/artifact/LPVBSr6M3VNhWcPbFB3xcm). Publish `dist/artifact.html` with `files` = every file in `dist/sprites/`, `dist/maps/` and `dist/data/`, at `sprites/<name>`, `maps/<name>` and `data/<name>`.
-3. Send the owner a short summary:
+Only when regulation data changed. On a quiet week stop here.
+
+1. Branch off the default branch (`claude/pokemon-team-builder-otextg`), e.g. `reg/champions-reg-md`.
+2. Bump the version so the desktop app gets the data too: `npm run bump -- <next patch>`, plus a `CHANGELOG.md` section for it (one version bump per PR; every bump has a section).
+3. Commit with a message like `data: add Champions Reg M-D (starts 2026-12-02)`, push, and open a PR into the default branch. Merging redeploys the web app and, through the version bump, publishes the desktop installers (docs/DESKTOP_RELEASES.md).
+4. Send the owner a short summary:
    - what changed
    - start and end dates
    - counts before and after

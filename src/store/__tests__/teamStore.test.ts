@@ -221,7 +221,7 @@ describe('teamStore: addTeams (JSON backup restore)', () => {
 describe('persist migration (v1 flat teams -> v2 grouped teams)', () => {
   it('migrate from the current version is an identity pass — normalisation happens in merge', () => {
     const flat = { teams: { a: { id: 'a' } }, order: ['a'] };
-    expect(migrateTeamState(flat, 3)).toBe(flat);
+    expect(migrateTeamState(flat, 4)).toBe(flat);
   });
 
   it('migrate leaves teams it cannot recognise for merge to handle', () => {

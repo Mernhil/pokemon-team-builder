@@ -6,9 +6,45 @@ GitHub Release together with a signed `latest.json` — that's what the in-app "
 banner (`src/components/DesktopUpdater.tsx`) checks on launch, every 4 hours while the app is open,
 and on demand from the header's refresh button (which also flags a failed background check).
 
-The updater downloads `latest.json` and the installers **without authentication**, so the
-repository (or wherever releases are published) must be **public** — on a private repo GitHub
-answers 404 and no update is ever found.
+The updater downloads `latest.json` and the installers **without authentication**, so wherever
+releases are published must be **public** — on a private repo GitHub answers 404 and no update is
+ever found. That is why releases are published to a **separate public repository**,
+`Mernhil/pokemon-team-builder-releases` (it holds only the Releases, no code), and the app's own
+repository can be private (docs/PRIVATE_REPO.md). `src-tauri/tauri.conf.json`'s updater endpoint is
+`https://github.com/Mernhil/pokemon-team-builder-releases/releases/latest/download/latest.json`.
+
+## One-time setup: the releases repository
+
+1. Create a **public** repository `Mernhil/pokemon-team-builder-releases` with a README (it needs one
+   commit, so releases can create their tags).
+2. Create a **fine-grained personal access token** (GitHub → Settings → Developer settings →
+   Personal access tokens → Fine-grained): resource owner `Mernhil`, *Only select repositories* →
+   `pokemon-team-builder-releases`, permission **Contents: Read and write**, nothing else, an
+   expiry you will remember (renew it before it runs out: releases fail with "Bad credentials"
+   otherwise).
+3. In this repository: Settings → Secrets and variables → Actions → New repository secret
+   `RELEASES_REPO_TOKEN` = that token.
+4. Settings → Secrets and variables → Actions → **Variables** → New repository variable
+   `MIRROR_RELEASES_TO_THIS_REPO` = `true` (the transition below).
+
+The `verify` job refuses to build a release while `RELEASES_REPO_TOKEN` is missing.
+
+## Switching to the new endpoint (transition)
+
+Installed apps look at the endpoint that was built into *them*, so the first release that carries
+the new endpoint has to be published where the old apps look too:
+
+1. With the repository **still public**, do the one-time setup above (variable included), merge the
+   change that carries the new endpoint (version 0.24.0) and let the release run. It builds once,
+   publishes to the releases repository, then the `publish` job copies the release (installers and
+   `latest.json`) into this repository's Releases as well.
+2. Open each installed desktop app once: it finds 0.24.0 through the old endpoint, installs it and
+   restarts. Settings & credits shows the version. From now on that app looks at the releases
+   repository.
+3. When **every** installed app shows 0.24.0 (or later), delete the variable
+   `MIRROR_RELEASES_TO_THIS_REPO` (or set it to anything but `true`) and then make the repository
+   private (docs/PRIVATE_REPO.md). An app still on 0.23.0 or older would never see another update
+   after that; fix it by installing the newest installer from the releases repository by hand.
 
 ## One-time setup: signing secrets
 
@@ -42,12 +78,13 @@ The release happens by itself once a version bump is merged: **bump → CHANGELO
    (`claude/pokemon-team-builder-otextg`).
 3. Merge the PR. The push to the default branch changes `package.json`, which starts
    `desktop-release.yml`. Its `plan` job reads the version; if `v<version>` doesn't exist as a tag yet,
-   the release runs for it, and the release step creates the tag at the merged commit. If the tag
+   the release runs for it, and the `publish` job creates the tag at the merged commit. If the tag
    already exists (e.g. a `package.json` edit that didn't bump the version, or a re-push after a
    release) nothing happens.
 4. The workflow first checks that the tag matches the version from step 1 (a mismatch fails the run
    before anything is built or uploaded) and that typecheck + tests pass, then builds both
-   platforms and attaches the installers and `latest.json` to that tag's **public** Release. Watch it
+   platforms and attaches the installers and `latest.json` to that tag's Release in the **public
+   releases repository**. Watch it
    under the Actions tab; the assets appear on the release after ~15–20 minutes. Apps already
    installed will offer the update next time they're launched (already-running instances: at the next
    4-hourly check, or right away from the header's "Check for updates" button).

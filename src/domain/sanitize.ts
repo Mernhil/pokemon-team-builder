@@ -1,6 +1,7 @@
+import { sanitizeBenchmarks } from './benchmarks';
 import type { LoggedMon, Match, MatchResult } from './matches';
 import { emptySlots, uid } from './team';
-import { STAT_IDS, type PokemonSet, type StatTable, type Team, type TeamSlots, type TeraType } from './types';
+import { STAT_IDS, type MatchupNote, type PokemonSet, type StatTable, type Team, type TeamSlots, type TeraType } from './types';
 
 /**
  * Structural coercion for teams coming from outside the app (JSON backups, share codes, persisted
@@ -10,6 +11,11 @@ import { STAT_IDS, type PokemonSet, type StatTable, type Team, type TeamSlots, t
 
 const MAX_NAME = 100;
 const MAX_NOTES = 5000;
+/** A Pokémon's "why this spread", a matchup note's title and text, and how many matchup notes a team keeps. */
+export const MAX_SET_NOTES = 300;
+export const MAX_MATCHUP_TITLE = 60;
+export const MAX_MATCHUP_TEXT = 500;
+export const MAX_MATCHUP_NOTES = 12;
 const MAX_ID = 64;
 /** Ids key plain objects: restrict to what uid() produces (no `__proto__`). */
 const ID_RE = /^[A-Za-z0-9-]{1,64}$/;
@@ -49,7 +55,27 @@ export function sanitizeSet(v: unknown): PokemonSet | null {
     gender,
     shiny: v.shiny === true ? true : undefined,
     friendship: v.friendship === undefined ? undefined : int(v.friendship, 0, 255, 255),
+    notes: str(v.notes, MAX_SET_NOTES)?.trim() || undefined,
+    benchmarks: sanitizeBenchmarks(v.benchmarks),
   };
+}
+
+function sanitizeMatchupNotes(v: unknown, uids: ReadonlySet<string>): MatchupNote[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const seen = new Set<string>();
+  const out: MatchupNote[] = [];
+  for (const raw of v) {
+    if (!isObj(raw)) continue;
+    const id = typeof raw.id === 'string' && ID_RE.test(raw.id) ? raw.id : undefined;
+    const title = str(raw.title, MAX_MATCHUP_TITLE)?.trim();
+    if (!id || seen.has(id) || !title) continue;
+    seen.add(id);
+    // Leads are Pokémon of this team: an id that is not (any more) is dropped.
+    const leads = Array.isArray(raw.leads) ? [...new Set(raw.leads.filter((x): x is string => typeof x === 'string' && uids.has(x)))].slice(0, 2) : [];
+    out.push({ id, title, ...(leads.length ? { leads } : {}), text: str(raw.text, MAX_MATCHUP_TEXT)?.trim() ?? '' });
+    if (out.length >= MAX_MATCHUP_NOTES) break;
+  }
+  return out.length ? out : undefined;
 }
 
 /** Returns a well-formed copy of `v`, or null when it isn't recognisably a team. */
@@ -74,6 +100,7 @@ export function sanitizeTeam(v: unknown): Team | null {
     formatId: str(v.formatId, MAX_ID) ?? '',
     category: str(v.category, MAX_NAME),
     notes: str(v.notes, MAX_NOTES),
+    matchupNotes: sanitizeMatchupNotes(v.matchupNotes, new Set(slots.flatMap((s) => (s ? [s.uid] : [])))),
     replicaCode: str(v.replicaCode, 16),
     slots,
     slotsByFormat: slotsByFormat && Object.keys(slotsByFormat).length ? slotsByFormat : undefined,

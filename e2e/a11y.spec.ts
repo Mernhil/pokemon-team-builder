@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { SAMPLE_TEAM, SIX_TEAM, expectNoA11yViolations, importTeam, openApp, openStatCalculator, pickOption, setTheme } from './helpers';
+import { SAMPLE_TEAM, SIX_TEAM, expectNoA11yViolations, goTo, importTeam, openApp, openStatCalculator, pickOption, setTheme } from './helpers';
 
 // axe-core (WCAG 2.0/2.1 A + AA) on each main view, in both themes.
 for (const theme of ['light', 'dark'] as const) {
@@ -29,7 +29,7 @@ for (const theme of ['light', 'dark'] as const) {
     });
 
     test('Pokénav', async ({ page }) => {
-      await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: 'Pokénav', exact: true }).click();
+      await goTo(page, 'Pokénav');
       await page.getByRole('tab', { name: 'Map' }).waitFor();
       await expectNoA11yViolations(page);
     });

@@ -9,7 +9,7 @@ test('Speed tiers: ladder with my team, Trick Room flips it, Outspeed this appli
   await importTeam(page, SAMPLE_TEAM);
   // The Team check links to it.
   await page.getByRole('link', { name: /Speed tiers/ }).click();
-  await expect(page).toHaveURL(/#speed$/);
+  await expect(page).toHaveURL(/#analyse\/speed$/);
 
   // The live regulation always has numbers of its own (Smogon's, or provisional ones), so no fallback.
   const ladder = page.getByRole('list', { name: 'Speed tiers' });

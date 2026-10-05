@@ -29,14 +29,16 @@ function Pair({ label, a, b }: { label: string; a: ReactNode; b: ReactNode }) {
 }
 
 /** Compare: two teams side by side — type matrices, speeds, top threats — and a set-by-set diff. */
-export function CompareView() {
+export function CompareView({ teamId }: { teamId?: string } = {}) {
   const teams = useTeamStore((s) => s.teams);
   const order = useTeamStore((s) => s.order);
   const activeId = useTeamStore((s) => s.activeTeamId);
   const names = useShareStore((s) => s.names);
   const choices = useMemo(() => teamChoices(teams, order), [teams, order]);
 
-  const [aId, setA] = useState(() => (teams[activeId] ? activeId : choices[0]?.id ?? ''));
+  const [pickedA, setA] = useState(() => (teams[activeId] ? activeId : choices[0]?.id ?? ''));
+  // Inside Analyse, team A is the team picked in its header.
+  const aId = teamId && teams[teamId] ? teamId : pickedA;
   const [bId, setB] = useState(() => {
     const a = teams[activeId];
     const sibling = a && choices.find((c) => c.id !== a.id && (teams[c.id]?.groupId ?? c.id) === (a.groupId ?? a.id));
@@ -76,15 +78,29 @@ export function CompareView() {
   return (
     <div className="space-y-3">
       <Panel bodyClassName="flex flex-wrap items-end gap-3 p-3">
-        {picker('Team A', aId, setA)}
-        <Button size="icon" aria-label="Swap the two teams" onClick={() => (setA(bId), setB(aId))}>
-          <ArrowLeftRight size={15} aria-hidden />
-        </Button>
+        {teamId ? (
+          <p className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold text-muted">
+            Team A
+            <span className="truncate text-sm font-medium text-fg">{a ? `${a.name}${a.variationLabel ? ` · ${a.variationLabel}` : ''}` : '—'} (picked above)</span>
+          </p>
+        ) : (
+          <>
+            {picker('Team A', aId, setA)}
+            <Button size="icon" aria-label="Swap the two teams" onClick={() => (setA(bId), setB(aId))}>
+              <ArrowLeftRight size={15} aria-hidden />
+            </Button>
+          </>
+        )}
         {picker('Team B', bId, setB)}
       </Panel>
       {a && b ? <Comparison a={a} b={b} names={names} /> : <EmptyState title="Pick two teams." />}
     </div>
   );
+}
+
+/** Two teams side by side, either of which may be one that isn't saved (a tournament team). */
+export function CompareTeams({ a, b }: { a: Team; b: Team }) {
+  return <Comparison a={a} b={b} names={{}} />;
 }
 
 function Comparison({ a, b, names }: { a: Team; b: Team; names: Record<string, string> }) {

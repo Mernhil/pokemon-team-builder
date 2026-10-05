@@ -14,7 +14,7 @@ nothing else is synced: not the theme, picker favourites or calculator state.
 - **Merge rule** (`src/domain/sync.ts`): last write wins per document by `updatedAt`, a delete is just another version. When both sides changed a team since the last sync, the losing version is kept as a variation labelled **Conflict copy (<device>, <date>)**; matches follow the same rule without copies. Clocks within 5 seconds of each other are treated as a tie (the server's version wins and the other is kept as a copy), and an edit beats a delete unless the delete is clearly later.
 - **Client** (`src/sync/`): syncs when it starts, when the window regains focus, 5 seconds after teams or matches change, and on "Sync now". The first sync on a new device merges with what is already there (nothing is wiped). The code loads only once sync is on.
 
-Only the web app can sync. The Tauri desktop app can't pass Cloudflare Access without a browser login, so Settings says "Sync is available in the web app" there. The single-file/artifact build has sync disabled.
+Only the web app can sync. The Tauri desktop app can't pass Cloudflare Access without a browser login, so Settings says "Sync is available in the web app" there.
 
 ## One-time setup (by hand)
 

@@ -56,7 +56,16 @@ export function createSet(dex: Dex, speciesId: string, format: FormatRules): Pok
  */
 export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: Partial<Pick<Team, 'groupId' | 'variationLabel'>>): Team {
   const now = Date.now();
-  const cloneSlots = (slots: TeamSlots): TeamSlots => slots.map((s) => (s ? { ...structuredClone(s), uid: uid() } : null)) as TeamSlots;
+  // A copy's Pokémon get new ids, so a matchup note's leads follow them to the new ones.
+  const renamed = new Map<string, string>();
+  const cloneSlots = (slots: TeamSlots, track = false): TeamSlots =>
+    slots.map((s) => {
+      if (!s) return null;
+      const copy = { ...structuredClone(s), uid: uid() };
+      if (track) renamed.set(s.uid, copy.uid);
+      return copy;
+    }) as TeamSlots;
+  const slotsCopy = cloneSlots(team.slots, true);
   return {
     ...structuredClone(team),
     id: uid(),
@@ -65,7 +74,8 @@ export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: 
     variationLabel: undefined,
     shared: undefined, // a copy is always mine
     ...overrides,
-    slots: cloneSlots(team.slots),
+    slots: slotsCopy,
+    matchupNotes: team.matchupNotes?.map((n) => ({ ...n, ...(n.leads ? { leads: n.leads.flatMap((l) => (renamed.has(l) ? [renamed.get(l)!] : [])) } : {}) })),
     slotsByFormat: team.slotsByFormat && Object.fromEntries(Object.entries(team.slotsByFormat).map(([id, s]) => [id, cloneSlots(s)])),
     createdAt: now,
     updatedAt: now,

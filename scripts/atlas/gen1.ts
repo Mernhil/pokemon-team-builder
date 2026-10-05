@@ -423,6 +423,7 @@ function buildGen1(cfg: Gen1Config): { file: AtlasFile; gaps: string } {
   const marts = new Map<string, string[]>();
   for (const m of martSrc.matchAll(/^(\w+)::\n\tscript_mart ([^\n]*)/gm)) marts.set(m[1], m[2].split(',').map((x) => x.trim()));
 
+  const hiddenSkipped: string[] = [];
   // hidden items (per map, in the order of HiddenEventMaps)
   const hiddenSrc = read(dir, 'data/events/hidden_events.asm');
   const hiddenItems = new Map<string, { x: number; y: number; item: string }[]>();
@@ -510,6 +511,7 @@ function buildGen1(cfg: Gen1Config): { file: AtlasFile; gaps: string } {
     }
     for (const h of hiddenItems.get(mc) ?? []) {
       const id = itemId(h.item);
+      if (!(id && items[id])) hiddenSkipped.push(`${mc}: ${h.item} (not an item the atlas knows)`);
       if (id && items[id]) loc.items.push({ item: id, qty: 1, how: 'hidden', where: `${sub ? `${sub}: ` : ''}hidden at tile (${h.x}, ${h.y}); the Itemfinder points to it`, at: [h.x, h.y], respawns: false, ...(sub ? { sub } : {}) });
     }
   }
@@ -594,7 +596,7 @@ function buildGen1(cfg: Gen1Config): { file: AtlasFile; gaps: string } {
     `| Town-map places with data | ${L.filter((l) => l.maps.length).length} | ${L.length} | no map folded in: ${L.filter((l) => !l.maps.length).map((l) => l.id).join(', ') || '—'} |`,
     `| Wild-encounter locations present | ${encounterLocs.size - missing.length} | ${encounterLocs.size} | missing: ${missing.join(', ') || '—'} |`,
     `| Trainer parties found on a map | ${Object.values(trainers).filter((t) => t.loc).length} | ${totalParties} | Gen 1 has class parties, not named trainers; unplaced (scripted or unused): ${unplaced.length} |`,
-    `| Hidden items | ${hiddenN} | ${hiddenExpected} | HiddenItems events |`,
+    `| Hidden items | ${hiddenN} | ${hiddenExpected} | HiddenItems events${hiddenN < hiddenExpected ? `; not placed: ${[...hiddenSkipped, ...[...hiddenItems].filter(([mc]) => !place.get(mc)).map(([mc, r]) => `${mc} (${r.length}: the map has no Town Map place)`)].join('; ') || 'unknown'}` : ''} |`,
     `| Visible items (balls, TMs) | ${visibleN} | — | poké-ball objects with an item |`,
     `| NPCs with dialogue | ${npcWithText} | ${npcTotal} | NPCs whose reachable script shows text |`,
     `| Shops | ${L.reduce((n, l) => n + l.shops.length, 0)} | ${marts.size} | clerk texts in marts.asm (vending, prize and Celadon floor lists included where a clerk object exists) |`,

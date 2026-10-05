@@ -1,4 +1,5 @@
 import { toID, type Dex } from '@/data/dex';
+import type { Benchmark } from './benchmarks';
 import { formatMechanics } from './games';
 import { calcStats, evToStatExp, statExpToEV } from './stats';
 import { sanitizeTeam } from './sanitize';
@@ -269,7 +270,7 @@ export const formatReplicaCode = (code: string) => `${code.slice(0, 5)} ${code.s
 // Local share string (portable, self-contained — works offline between builders)
 // ===========================================================================
 
-type CompactSet = [string, string?, string?, string?, string?, string[]?, number[]?, number[]?, number[]?, number?];
+type CompactSet = [string, string?, string?, string?, string?, string[]?, number[]?, number[]?, number[]?, number?, string?, Benchmark[]?];
 
 function toCompact(s: PokemonSet): CompactSet {
   return [
@@ -283,6 +284,8 @@ function toCompact(s: PokemonSet): CompactSet {
     STAT_IDS.map((k) => s.evs[k]),
     STAT_IDS.map((k) => s.ivs[k]),
     s.level,
+    s.notes,
+    s.benchmarks,
   ];
 }
 
@@ -300,13 +303,16 @@ const b64url = {
 
 export function encodeShareString(team: Team): string {
   const caps = getFormat(team.formatId).capabilities;
-  const payload = { v: 1, n: team.name, f: team.formatId, s: team.slots.map((s) => (s ? toCompact(stripUnsupported(s, caps)) : 0)) };
+  // Notes and benchmarks travel with the sets; a matchup note's leads are slot numbers here (set ids are new on the other side).
+  const slotOf = new Map(team.slots.flatMap((s, i) => (s ? [[s.uid, i] as const] : [])));
+  const matchups = team.matchupNotes?.map((m) => ({ t: m.title, x: m.text, ...(m.leads?.length ? { l: m.leads.flatMap((u) => (slotOf.has(u) ? [slotOf.get(u)!] : [])) } : {}) }));
+  const payload = { v: 1, n: team.name, f: team.formatId, s: team.slots.map((s) => (s ? toCompact(stripUnsupported(s, caps)) : 0)), ...(team.notes ? { tn: team.notes } : {}), ...(matchups?.length ? { mn: matchups } : {}) };
   return 'PTB1.' + b64url.enc(JSON.stringify(payload));
 }
 
 export function decodeShareString(str: string, dex: Dex, format: FormatRules): Team {
   const raw = str.trim().replace(/^PTB1\./, '');
-  const p = JSON.parse(b64url.dec(raw)) as { n: string; f: string; s: (CompactSet | 0)[] } | null;
+  const p = JSON.parse(b64url.dec(raw)) as { n: string; f: string; s: (CompactSet | 0)[]; tn?: string; mn?: { t: string; x: string; l?: number[] }[] } | null;
   if (!p || typeof p !== 'object' || !Array.isArray(p.s)) throw new Error('Not a valid share code.');
   const team = createTeam(format, p.n);
   team.formatId = p.f;
@@ -325,8 +331,16 @@ export function decodeShareString(str: string, dex: Dex, format: FormatRules): T
     set.evs = toTable(c[7]);
     set.ivs = toTable(c[8], 31);
     set.level = c[9] ?? set.level;
+    // Written by a newer version; the sanitiser below validates both.
+    set.notes = typeof c[10] === 'string' ? c[10] : undefined;
+    set.benchmarks = Array.isArray(c[11]) ? c[11] : undefined;
     return set;
   }) as TeamSlots;
+  team.notes = typeof p.tn === 'string' ? p.tn : undefined;
+  const uids = team.slots;
+  team.matchupNotes = Array.isArray(p.mn)
+    ? p.mn.map((m, i) => ({ id: `m${i}`, title: String(m.t ?? ''), text: String(m.x ?? ''), leads: (m.l ?? []).flatMap((slot) => (uids[slot] ? [uids[slot]!.uid] : [])) }))
+    : undefined;
   while (team.slots.length < 6) (team.slots as (PokemonSet | null)[]).push(null);
   // Codes from older versions carry a Tera Type for every game; keep it only where the game has Tera.
   return enforceCapabilities(sanitizeTeam(team)!);

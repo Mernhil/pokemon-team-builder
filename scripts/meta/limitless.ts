@@ -18,18 +18,18 @@ import { teamFromDecklist, teamsToSnapshot, type TeamRecord } from '../../src/do
 import { getJson, HttpDenied, pool } from './http.ts';
 import type { Context, Regulation } from './context.ts';
 
-const API = 'https://play.limitlesstcg.com/api';
+export const API = 'https://play.limitlesstcg.com/api';
 const MIN_PLAYERS = 16;
 const MAX_PAGES = 20;
 /** Share of a tournament's teams that must be legal in the regulation, and hold a Mega Stone. */
-const MIN_LEGAL = 0.8;
-const MIN_MEGA = 0.5;
+export const MIN_LEGAL = 0.8;
+export const MIN_MEGA = 0.5;
 
 const games = (process.env.LIMITLESS_GAMES || 'VGC').split(',').map((s) => s.trim()).filter(Boolean);
-const pinnedFormats = new Set((process.env.LIMITLESS_FORMATS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
-const headers: Record<string, string> = process.env.LIMITLESS_API_KEY ? { 'X-Access-Key': process.env.LIMITLESS_API_KEY } : {};
+export const pinnedFormats = new Set((process.env.LIMITLESS_FORMATS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
+export const headers: Record<string, string> = process.env.LIMITLESS_API_KEY ? { 'X-Access-Key': process.env.LIMITLESS_API_KEY } : {};
 
-const Tournament = z.object({ id: z.string(), game: z.string().nullish(), format: z.string().nullish(), name: z.string().nullish(), date: z.string(), players: z.number().nullish() }).passthrough();
+export const Tournament = z.object({ id: z.string(), game: z.string().nullish(), format: z.string().nullish(), name: z.string().nullish(), date: z.string(), players: z.number().nullish() }).passthrough();
 const Standing = z.object({ placing: z.number().nullish(), decklist: z.unknown() }).passthrough();
 
 interface CachedTournament {
@@ -44,7 +44,7 @@ interface Cache {
   tournaments: Record<string, CachedTournament>;
 }
 
-async function listTournaments(game: string, sinceIso: string) {
+export async function listTournaments(game: string, sinceIso: string) {
   const out: z.infer<typeof Tournament>[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
     const parsed = z.array(Tournament).safeParse(await getJson(`${API}/tournaments?game=${encodeURIComponent(game)}&limit=50&page=${page}`, headers));

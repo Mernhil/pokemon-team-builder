@@ -28,7 +28,9 @@ describe('Atlas · Platinum data', () => {
     const plat = ATLAS_GAMES.find((g) => g.id === 'platinum')!;
     const places = maps.maps[plat.mapIds[0]].places;
     expect(maps.games.platinum).toContain(plat.mapIds[0]);
-    for (const id of Object.keys(file.locations)) expect(places[id], `${id} is not on the Platinum map`).toBeDefined();
+    // Wild-encounter places with no spot on a map (roaming Pokémon, region-wide tables) are listed without a pin.
+    const offMap = (id: string) => file.locations[id].maps.length === 0 && file.locations[id].events.length > 0 && !file.locations[id].items.length && !file.locations[id].trainers.length;
+    for (const id of Object.keys(file.locations)) if (!places[id]) expect(offMap(id), `${id} is not on the Platinum map`).toBe(true);
     for (const id of Object.keys(places)) expect(file.locations[id], `map place ${id} has no atlas data`).toBeDefined();
   });
 
@@ -177,7 +179,13 @@ describe.each(ATLAS_GAMES.filter((g) => g.available && !g.lite))('Atlas · $name
   it('puts every location on the map and every place in the data', () => {
     const places: Record<string, unknown> = Object.assign({}, ...g.mapIds.map((m) => maps.maps[m].places));
     for (const m of g.mapIds) expect(maps.games[g.dexGame], `${g.id}: map ${m} is not shown for ${g.dexGame}`).toContain(m);
-    for (const id of Object.keys(f!.locations)) expect(places[id], `${g.id}: ${id} is not on any of its maps`).toBeDefined();
+    // Off-map wild-encounter places (roaming Pokémon, region-wide tables, event islands) are listed without a pin:
+    // they hold nothing but a note and their Pokédex encounters, and are the only locations allowed off the map.
+    for (const id of Object.keys(f!.locations)) {
+      const l = f!.locations[id];
+      if (!places[id]) expect(l.maps.length === 0 && l.events.length > 0 && !l.items.length && !l.trainers.length && !l.npcs.length, `${g.id}: ${id} is not on any of its maps`).toBe(true);
+    }
+    expect(Object.keys(f!.locations).filter((id) => !places[id]).length, `${g.id}: too many places off the map`).toBeLessThanOrEqual(8);
     for (const id of Object.keys(places)) expect(f!.locations[id], `${g.id}: map place ${id} has no atlas data`).toBeDefined();
   });
   it('keeps references valid and teams legal for the dex', async () => {

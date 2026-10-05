@@ -67,6 +67,6 @@ export const useSyncStore = create<SyncStoreState>()(
   ),
 );
 
-/** Sync needs the hosted web app: not the desktop shell (no Access login there) and not the single-file/artifact build. */
+/** Sync needs the hosted web app: not the desktop shell (no Access login there). */
 export const syncAvailable = (): boolean =>
-  import.meta.env.MODE !== 'singlefile' && typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window) && /^https?:$/.test(location.protocol);
+  typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window) && /^https?:$/.test(location.protocol);

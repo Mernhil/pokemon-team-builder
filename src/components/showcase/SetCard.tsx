@@ -7,6 +7,7 @@ import { STAT_COLOR_VAR, TYPE_BADGE } from '../ui/color';
 import { CATEGORY_ICON } from '../ui/categoryIcon';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
+import { BenchmarkList } from '../editor/BenchmarkList';
 import { Sprite } from '../ui/Sprite';
 import { TypeBadge } from '../ui/primitives';
 import { typeGradient } from '../ui/styles';
@@ -116,6 +117,7 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
               );
             })}
           </ul>
+          {set.notes && <p className="border-t border-border pt-1 whitespace-pre-wrap text-muted">{set.notes}</p>}
         </div>
       ) : (
         <div className="p-1.5 sm:p-2">
@@ -151,6 +153,11 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
             </tbody>
           </table>
           <p className="mt-0.5 hidden text-right text-[10px] text-muted sm:block">{sumStats(spread)} {unit} used</p>
+          {set.benchmarks?.length ? (
+            <div className="mt-1.5 border-t border-border pt-1.5">
+              <BenchmarkList dex={dex} format={format} set={set} />
+            </div>
+          ) : null}
         </div>
       )}
     </article>

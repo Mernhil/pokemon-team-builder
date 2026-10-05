@@ -13,8 +13,7 @@ offline — without the App Store or an Apple developer account.
 - `public/splash/*`: iOS launch screens for every iPhone size since the SE, rendered from the same
   logo by `npm run splash` (the `<link rel="apple-touch-startup-image">` tags in `index.html` list
   them). They're left out of the service worker's precache; iOS fetches them once on install.
-- Not active in the Tauri desktop shell (it has its own updater) nor in the single-file/artifact
-  build (`--mode singlefile`).
+- Not active in the Tauri desktop shell (it has its own updater).
 
 ## How the app adapts to the iPhone
 

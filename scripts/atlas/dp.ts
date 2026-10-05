@@ -14,7 +14,8 @@ import { resolve } from 'node:path';
 import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasLocation, AtlasMon, AtlasTrainer, LocationKind, TrainerKind } from '../../src/domain/atlasTypes.ts';
 import { ensure } from '../sources.ts';
 import { Dex } from '@pkmn/dex';
-import { NATURES, OUT, cid, cleanText, readJSON, title } from './common.ts';
+import { existsSync } from 'node:fs';
+import { NATURES, OUT, cid, cleanText, otherTrainersOf, readJSON, title } from './common.ts';
 
 const COMMIT = '5bc4b1a3d8f100f77a4c64e59a0d544a0e29b3ec';
 const read = (dir: string, f: string) => readFileSync(resolve(dir, f), 'utf8');
@@ -65,7 +66,7 @@ const kindFor = (cls: string): TrainerKind =>
   /LEADER_/.test(cls) ? 'leader' : /ELITE_FOUR/.test(cls) ? 'elite-four' : /CHAMPION/.test(cls) ? 'champion' : /BARRY|RIVAL/.test(cls) ? 'rival' : /COMMANDER|GALACTIC/.test(cls) ? 'boss' : /PKMN_TRAINER_/.test(cls) ? 'other' : 'trainer';
 
 export function buildDp(): { file: AtlasFile; gaps: string } {
-  const dir = ensure('pokediamond', ['files/poketool', 'files/msgdata/msg', 'include/constants', 'arm9/src/trainer_data.c']);
+  const dir = ensure('pokediamond', ['files/poketool', 'files/msgdata/msg', 'include/constants', 'arm9/src/trainer_data.c', 'arm9/src/map_header.c', 'files/fielddata/eventdata/zone_event_release']);
   const itemNames = bank(dir, 'narc_0344');
   const classNames = bank(dir, 'narc_0560');
   const itemDefs = defines(read(dir, 'include/constants/items.h'));
@@ -195,6 +196,24 @@ export function buildDp(): { file: AtlasFile; gaps: string } {
     const at = sc && headers.findIndex((h) => h.map === sc.map);
     if (sc && at !== undefined && at >= 0 && placeOfMap[at] && !trainerPlace.has(t.group)) trainerPlace.set(t.group, placeOfMap[at]!);
   }
+  // Platinum's atlas knows where most of the same named trainers stand (same name and class, one place only):
+  // used for the ones Diamond's compiled scripts hide, and marked unverified so the Pokénav says so.
+  const unverified: Record<string, string[]> = {};
+  const platinumFile = resolve(OUT, 'atlas-platinum.json');
+  if (existsSync(platinumFile)) {
+    const pt = readJSON<{ trainers: Record<string, { name: string; cls: string; loc?: string }>; locations: Record<string, { name: string }> }>(platinumFile);
+    const placesOf = new Map<string, Set<string>>();
+    for (const t of Object.values(pt.trainers)) if (t.loc) (placesOf.get(`${t.name}|${t.cls}`) ?? placesOf.set(`${t.name}|${t.cls}`, new Set()).get(`${t.name}|${t.cls}`)!).add(t.loc);
+    for (const t of Object.values(trainers)) {
+      if (trainerPlace.has(t.id) || trainerPlace.has(t.group) || /^(Mickey|Angelica|Tara & Tim)$/.test(t.name)) continue;
+      const set = placesOf.get(`${t.name}|${t.cls}`);
+      const only = set?.size === 1 ? [...set][0] : undefined;
+      if (only && locations[only]) {
+        trainerPlace.set(t.id, only);
+        unverified[t.id] = [`Its place comes from Pokémon Platinum (the same trainer, ${locations[only].name}); Diamond's own scripts are compiled bytecode.`];
+      }
+    }
+  }
   const unplaced: string[] = [];
   for (const t of Object.values(trainers)) {
     const p = trainerPlace.get(t.id) ?? trainerPlace.get(t.group);
@@ -224,7 +243,9 @@ export function buildDp(): { file: AtlasFile; gaps: string } {
 
   const file: AtlasFile = {
     version: 1, game: 'diamond', name: 'Pokémon Diamond', generation: 4, source: { repo: 'pret/pokediamond', commit: COMMIT },
-    locations: sorted, trainers, items, unplaced, badges, unverified: {},
+    locations: sorted, trainers, items, unplaced,
+    otherTrainers: otherTrainersOf(trainers, unplaced, (id) => (/^(Mickey|Angelica|Tara & Tim)$/.test(trainers[id].name) ? undefined : 'Fought by a story or event script: Diamond and Pearl compile their scripts to bytecode, so the map is not shown.')),
+    badges, unverified,
   };
   const L = Object.values(sorted);
   const gaps = [
@@ -235,10 +256,14 @@ export function buildDp(): { file: AtlasFile; gaps: string } {
     '| What | Found | Expected | Notes |',
     '|---|---|---|---|',
     `| Town-map places with data | ${L.filter((l) => l.maps.length).length} | ${L.length} | no zone folded in: ${L.filter((l) => !l.maps.length).map((l) => l.id).join(', ') || '—'} |`,
-    `| Trainers with full teams | ${Object.keys(trainers).length} | ${tj.filter((t) => t.party.length).length} | unplaced on a location: ${unplaced.length} |`,
+    `| Trainers with full teams | ${Object.keys(trainers).length} | ${tj.filter((t) => t.party.length).length} | unplaced on a location: ${unplaced.length} (${Object.keys(unverified).length} placed from Platinum, marked unverified) |`,
     `| Gyms with leader, badge, level cap | ${L.filter((l) => l.gym).length} | 8 | badge names are hand-written (the scripts that give them are binary) |`,
     '| Items, NPCs, shops | 0 | — | zone scripts are compiled bytecode, so what they give, say or sell is not read |',
     `| Map sections without a Town Map place | ${unmappedSections.size} | — | ${[...unmappedSections].slice(0, 40).join(', ') || '—'} |`,
+    '',
+    '## Trainers not placed on a location',
+    '',
+    ...unplaced.map((t) => `- \`${t}\` (${trainers[t].name}): ${file.otherTrainers![t]}`),
     '',
     '## Known limits',
     '',

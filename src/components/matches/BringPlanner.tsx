@@ -12,8 +12,8 @@ import { useMatchStore } from '@/store/matchStore';
 import { toast } from '@/store/toastStore';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { Sprite } from '../ui/Sprite';
+import { PlanCard } from './PlanCard';
 import { Button, Chip, EmptyState, Label, Panel, Select, TextArea } from '../ui/primitives';
-import { cn } from '../ui/styles';
 
 const champRegIds = REGULATION_MANIFEST.regulations
   .filter((r) => r.game === 'champions')
@@ -108,7 +108,7 @@ export function BringPlanner({
   };
 
   const nameOf = (id: string) => dex.species(id)?.name ?? id;
-  const byUid = new Map(mine.map((m) => [m.uid, m.set]));
+  const byUid = new Map(mine.map((m) => [m.uid, m.set] as const));
 
   return (
     <Panel title="Plan vs this team" actions={<Chip>A suggestion, not a prediction</Chip>}>
@@ -184,36 +184,19 @@ export function BringPlanner({
             </p>
             <ol className="space-y-3">
               {result.plans.map((plan, i) => (
-                <li key={plan.brought.join()} className="rounded-xl border border-border bg-surface-2 p-3">
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold">Plan {i + 1}</h3>
-                    <Button variant="primary" size="sm" onClick={() => applyPlan(plan, i)} aria-label={`Use plan ${i + 1}`}>
-                      {saved === i ? <Check size={14} aria-hidden /> : null} {saved === i ? 'Saved' : 'Use this plan'}
-                    </Button>
-                  </div>
-                  <ul aria-label={`Plan ${i + 1} Pokémon`} className="mb-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-                    {[...plan.brought, ...plan.back].map((uid) => {
-                      const set = byUid.get(uid)!;
-                      const sp = dex.species(set.speciesId);
-                      const lead = plan.leads.includes(uid);
-                      const back = plan.back.includes(uid);
-                      return (
-                        <li key={uid} className={cn('flex flex-col items-center gap-0.5 rounded-lg border p-1.5 text-center', lead ? 'border-accent bg-accent/15' : back ? 'border-dashed border-border' : 'border-border-strong bg-surface')}>
-                          <Sprite speciesId={set.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={34} />
-                          <span className="w-full truncate text-xs font-semibold">{sp?.name}</span>
-                          <span className="text-[11px] font-semibold text-fg">{lead ? '★ Lead' : back ? 'Back' : 'Brought'}{plan.mega === uid ? ' · Mega' : ''}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <ul className="list-disc space-y-0.5 pl-5 text-sm">
-                    {plan.reasons.map((r) => (
-                      <li key={r}>{r}</li>
-                    ))}
-                  </ul>
-                  <p className="mt-1.5 text-sm">
-                    <b>Main risk:</b> <span className="text-muted">{plan.risk}</span>
-                  </p>
+                <li key={plan.brought.join()}>
+                  <PlanCard
+                    plan={plan}
+                    index={i}
+                    dex={dex}
+                    format={format}
+                    sets={byUid}
+                    action={
+                      <Button variant="primary" size="sm" onClick={() => applyPlan(plan, i)} aria-label={`Use plan ${i + 1}`}>
+                        {saved === i ? <Check size={14} aria-hidden /> : null} {saved === i ? 'Saved' : 'Use this plan'}
+                      </Button>
+                    }
+                  />
                 </li>
               ))}
             </ol>

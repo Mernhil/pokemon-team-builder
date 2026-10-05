@@ -156,24 +156,8 @@ export function megaOptions(holders: number[]): (number | undefined)[] {
 // Support and speed control
 // ---------------------------------------------------------------------------
 
-export type SupportKind = 'Fake Out' | 'Intimidate' | 'redirection' | 'Wide Guard';
-export type ControlKind = 'Tailwind' | 'Trick Room' | 'Icy Wind' | 'Electroweb';
-
-const SUPPORT_MOVES: Record<string, SupportKind> = { fakeout: 'Fake Out', followme: 'redirection', ragepowder: 'redirection', wideguard: 'Wide Guard' };
-const CONTROL_MOVES: Record<string, ControlKind> = { tailwind: 'Tailwind', trickroom: 'Trick Room', icywind: 'Icy Wind', electroweb: 'Electroweb' };
-
-export function supportOf(set: PokemonSet): SupportKind[] {
-  const out = new Set<SupportKind>();
-  for (const m of set.moves) if (SUPPORT_MOVES[m]) out.add(SUPPORT_MOVES[m]);
-  if (set.abilityId === 'intimidate') out.add('Intimidate');
-  return [...out];
-}
-
-export function controlOf(set: PokemonSet): ControlKind[] {
-  const out = new Set<ControlKind>();
-  for (const m of set.moves) if (CONTROL_MOVES[m]) out.add(CONTROL_MOVES[m]);
-  return [...out];
-}
+import { controlOf, supportOf } from './roles';
+export { controlOf, supportOf, type ControlKind, type SupportKind } from './roles';
 
 // ---------------------------------------------------------------------------
 // Planning
@@ -215,6 +199,8 @@ export interface PlanResult {
   /** Their Pokémon the plan treats as probably coming: the ones most dangerous to my team. */
   likelyBring: string[];
   likelyLeads: string[];
+  /** Each of my Pokémon (rows, in `mine` order) against each of theirs (columns, in `opponents` order), as themselves. */
+  matrix: ThreatCell[][];
 }
 
 export interface PlanInput {
@@ -237,7 +223,7 @@ const listJoin = (items: string[]) => (items.length <= 1 ? items.join('') : `${i
 export function planBring(input: PlanInput): PlanResult {
   const { dex, mine, opponents, limits } = input;
   const field = input.field ?? defaultField();
-  if (mine.length === 0 || opponents.length === 0) return { plans: [], likelyBring: [], likelyLeads: [] };
+  if (mine.length === 0 || opponents.length === 0) return { plans: [], likelyBring: [], likelyLeads: [], matrix: [] };
 
   const holders = mine.map((m) => !!dex.megaFor(m.set.speciesId, m.set.itemId));
   // cells[i][o]: my Pokémon i against their o, as itself and (for a Mega Stone holder) Mega Evolved.
@@ -432,7 +418,12 @@ export function planBring(input: PlanInput): PlanResult {
     return 'No single Pokémon of theirs stands out as a problem.';
   }
 
-  return { plans, likelyBring: order.filter((o) => likely.has(o)).map((o) => opponents[o].speciesId), likelyLeads: likelyLeads.map((o) => opponents[o].speciesId) };
+  return {
+    plans,
+    likelyBring: order.filter((o) => likely.has(o)).map((o) => opponents[o].speciesId),
+    likelyLeads: likelyLeads.map((o) => opponents[o].speciesId),
+    matrix: cells.map((row) => row.map((c) => c.base)),
+  };
 }
 
 // ---------------------------------------------------------------------------

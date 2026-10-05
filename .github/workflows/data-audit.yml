@@ -1,0 +1,69 @@
+name: Data audit
+
+# Weekly: compares the generated Champions data with Showdown's current Champions mods
+# (`npm run data:audit`, scripts/audit-data.ts, report in docs/data-audit.md). When there are
+# differences nobody has explained in scripts/audit-allowlist.json it opens, or comments on, ONE
+# issue, "Champions data differs from Showdown", and closes it when the audit is clean again. It
+# never commits anything: a person (or the weekly regulation task) fixes the build script or the
+# regulation deltas, or adds an allowlist entry with the reason.
+on:
+  schedule:
+    - cron: '23 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: data-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Audit against Showdown
+        id: audit
+        run: |
+          set +e
+          npm run data:audit -- --strict
+          echo "clean=$([ $? -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          CLEAN: ${{ steps.audit.outputs.clean }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Champions data differs from Showdown"
+          number=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
+          if [ "$CLEAN" = "true" ]; then
+            [ -n "$number" ] && gh issue close "$number" --comment "The audit is clean again: $RUN_URL"
+            exit 0
+          fi
+          {
+            echo "The weekly audit ($RUN_URL) found differences between our Champions data and Showdown's current mods that scripts/audit-allowlist.json doesn't explain. Fix the build script or the regulation deltas (never the generated files), or add an allowlist entry with the reason. Run \`npm run data:audit\` locally for the full report (docs/data-audit.md)."
+            echo
+            sed -n '/^\*\*[0-9]* unexplained/,$p' docs/data-audit.md | head -c 55000
+          } > body.md
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi

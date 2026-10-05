@@ -3,6 +3,8 @@ import { Copy, Plus, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import { ARCHETYPE_PRESETS, CATEGORY_PRESETS, bringLimits, cloneOpponentTeam, matchCapabilities, normalizeBring, suggestRegulationForDate, type BringSelection, type LoggedMon, type Match, type MatchResult } from '@/domain/matches';
+import { suggestForMatch } from '@/domain/archetypeInputs';
+import type { ArchetypeTag } from '@/domain/archetypes';
 import { coreOverlapScore } from '@/domain/meta';
 import type { FormatRules } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
@@ -16,6 +18,22 @@ import { Button, Field, Input, Panel, Select, TextArea } from '../ui/primitives'
 import { cn } from '../ui/styles';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
+
+/** The archetype the app suggests for an empty field, marked as a suggestion; one tap takes it. */
+function SuggestedArchetype({ tag, onAccept }: { tag?: ArchetypeTag; onAccept: (tag: string) => void }) {
+  if (!tag) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => onAccept(tag.tag)}
+      title={tag.reasons.join('; ')}
+      aria-label={`Use the suggested archetype ${tag.tag}. ${tag.reasons.join('; ')}`}
+      className="mt-1 inline-flex min-h-8 items-center gap-1.5 rounded-full border border-dashed border-accent/60 px-2.5 text-xs font-semibold text-accent hover:bg-accent/10 pointer-coarse:min-h-11"
+    >
+      Suggested: {tag.tag} <span className="font-normal text-muted">· tap to use</span>
+    </button>
+  );
+}
 
 /** Add/edit form for one logged match. Every field beyond date + result is optional. */
 export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: FormatRules; match: Match; onDone?: () => void }) {
@@ -87,6 +105,8 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
   // the Meta tab's usage data for that regulation (when there is any).
   const metaFor = useMetaFor();
   const metaSnapshot = useMemo(() => (match.regulationId ? metaFor?.(match.regulationId) : undefined), [match.regulationId, metaFor]);
+  // Archetypes the app would suggest for the empty fields: one tap to accept, never over what you typed.
+  const suggested = useMemo(() => suggestForMatch(match, teams, dex, format, metaSnapshot), [match, teams, dex, format, metaSnapshot]);
   const knownCore = useMemo(() => {
     if (!metaSnapshot || match.opponentTeam.length < 2) return null;
     const species = match.opponentTeam.map((m) => m.speciesId).filter(Boolean);
@@ -196,6 +216,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
             <BringPicker dex={dex} format={format} label="I brought" roster={myRoster} value={mySel} limits={limits} onChange={setMyBring} />
             <Field label="My archetype" hint="optional · freeform">
               <Input list="archetype-presets" value={match.myArchetype ?? ''} onChange={(e) => set({ myArchetype: e.target.value || undefined })} placeholder="Trick Room, Rain…" />
+              <SuggestedArchetype tag={match.myArchetype ? undefined : suggested.myArchetype} onAccept={(t) => set({ myArchetype: t })} />
             </Field>
           </div>
 
@@ -219,6 +240,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
             <BringPicker dex={dex} format={format} label="They brought" roster={oppRoster} value={oppSel} limits={limits} onChange={setOppBring} />
             <Field label="Opponent archetype" hint="optional · freeform">
               <Input list="archetype-presets" value={match.opponentArchetype ?? ''} onChange={(e) => set({ opponentArchetype: e.target.value || undefined })} placeholder="Trick Room, Rain…" />
+              <SuggestedArchetype tag={match.opponentArchetype ? undefined : suggested.opponentArchetype} onAccept={(t) => set({ opponentArchetype: t })} />
             </Field>
           </div>
         </div>

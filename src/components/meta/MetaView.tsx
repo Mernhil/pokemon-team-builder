@@ -2,6 +2,8 @@ import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AlertTriangle, BarChart3, CloudOff, ExternalLink, RefreshCw } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useMetaFor } from '@/data/useMeta';
+import { useMetaHistory } from '@/data/useMetaHistory';
+import { TREND_PERIODS, type HistoryEntry, type TrendPeriod } from '@/domain/metaHistory';
 import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
 import { META_STALE_DAYS, isProvisional, localMetaFromMatches, metaAgeDays, metaDataDate, metaSourceKind, usageLabel, type MetaEntry, type MetaSnapshot } from '@/domain/meta';
 import { STAT_IDS, STAT_LABELS, type FormatRules } from '@/domain/types';
@@ -11,13 +13,16 @@ import { useShareStore } from '@/sync/shareStore';
 import { useMetaStore } from '@/store/metaStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, EmptyState, Label, LoadingState, Notice, Panel, Select } from '../ui/primitives';
+import { Button, Chip, EmptyState, Label, LoadingState, Notice, Panel, Select, Tabs } from '../ui/primitives';
+import { TrendLine } from './TrendLine';
+import { TeamsSection } from './TeamsSection';
+import { TrendsSection } from './TrendsSection';
 import { cn } from '../ui/styles';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions').sort((a, b) => b.start.localeCompare(a.start));
 
-/** Refresh only makes sense where a newer deploy can exist: the hosted web app (not the desktop app or the single-file build). */
-const CAN_REFRESH = import.meta.env.MODE !== 'singlefile' && typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window) && /^https?:$/.test(location.protocol);
+/** Refresh only makes sense where a newer deploy can exist: the hosted web app (not the desktop app). */
+const CAN_REFRESH = typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window) && /^https?:$/.test(location.protocol);
 
 const fmtDate = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 const fmtMonth = (month: string) => new Date(`${month}-15T12:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -52,6 +57,9 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const refresh = useMetaStore((s) => s.refresh);
   const matches = useMatchStore((s) => s.matches);
   const online = useOnline();
+  const [tab, setTab] = useState<'usage' | 'trends' | 'teams'>('usage');
+  const [period, setPeriod] = useState<TrendPeriod>(7);
+  const history = useMetaHistory(regId);
 
   const metaFor = useMetaFor();
   const built = useMemo(() => metaFor?.(regId), [regId, metaFor]);
@@ -139,7 +147,22 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
         </Notice>
       )}
 
-      {!metaFor ? (
+      {(published || reg) && (
+        <Tabs<'usage' | 'trends' | 'teams'>
+          label="Meta view"
+          size="sm"
+          className="w-fit"
+          tabs={[{ id: 'usage', label: 'Usage' }, ...(published && (metaSourceKind(published) === 'ingame' || metaSourceKind(published) === 'smogon') ? [{ id: 'trends' as const, label: 'Trends' }] : []), { id: 'teams', label: 'Teams' }]}
+          value={tab === 'trends' && !(published && (metaSourceKind(published) === 'ingame' || metaSourceKind(published) === 'smogon')) ? 'usage' : tab}
+          onChange={setTab}
+        />
+      )}
+
+      {tab === 'teams' ? (
+        <TeamsSection regulationId={regId} snapshot={published} />
+      ) : tab === 'trends' && published && (metaSourceKind(published) === 'ingame' || metaSourceKind(published) === 'smogon') ? (
+        <TrendsSection regulationId={regId} dex={dex} format={format} sourceName={published.source.name} />
+      ) : !metaFor ? (
         <LoadingState label="Loading usage data…" />
       ) : !snapshot ? (
         <EmptyState
@@ -151,11 +174,19 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
           its first month; the app picks them up with its next update. Meanwhile, log matches on the Match log to see what you face most.
         </EmptyState>
       ) : (
+        <>
+        {history && history.length > 1 && (
+          <div className="flex items-center gap-2 text-sm text-muted">
+            Trend line period
+            <Tabs<string> label="Trend line period" size="sm" tabs={TREND_PERIODS.map((p) => ({ id: String(p), label: p === 'season' ? 'Season' : `${p} d` }))} value={String(period)} onChange={(id) => setPeriod(id === 'season' ? 'season' : (Number(id) as TrendPeriod))} />
+          </div>
+        )}
         <ol className="grid gap-3 lg:grid-cols-2" aria-label={`Most used Pokémon in ${reg?.shortName ?? regId}`}>
           {snapshot.entries.map((e, i) => (
-            <MetaCard key={e.speciesId} rank={e.usageRank ?? i + 1} entry={e} dex={dex} format={format} revealedOnly={metaSourceKind(snapshot) === 'replays'} />
+            <MetaCard key={e.speciesId} rank={e.usageRank ?? i + 1} entry={e} dex={dex} format={format} revealedOnly={metaSourceKind(snapshot) === 'replays'} history={published ? history : undefined} period={period} />
           ))}
         </ol>
+        </>
       )}
     </div>
   );
@@ -209,7 +240,7 @@ function ProvisionalNotice({ snapshot, regName = 'this regulation', basedOnName 
   );
 }
 
-function MetaCard({ rank, entry: e, dex, format, revealedOnly }: { rank: number; entry: MetaEntry; dex: Dex; format: FormatRules; revealedOnly?: boolean }) {
+function MetaCard({ rank, entry: e, dex, format, revealedOnly, history, period }: { rank: number; entry: MetaEntry; dex: Dex; format: FormatRules; revealedOnly?: boolean; history?: HistoryEntry[]; period: TrendPeriod }) {
   const seen = revealedOnly ? ' seen' : '';
   const spreadFrom = e.spreadFrom === 'estimate' ? 'estimate' : e.spreadFrom && (champRegs.find((r) => r.id === e.spreadFrom)?.shortName ?? e.spreadFrom);
   const sp = dex.species(e.speciesId);
@@ -230,6 +261,7 @@ function MetaCard({ rank, entry: e, dex, format, revealedOnly }: { rank: number;
         // Rank-only (in-game) data: the rank on the left is the whole story.
         actions={e.usagePct !== undefined ? <Chip tone="accent">{usageLabel(e)}</Chip> : undefined}
       >
+        {history && history.length > 1 && <div className="mb-2"><TrendLine history={history} speciesId={e.speciesId} period={period} /></div>}
         <div className="grid gap-3 text-sm sm:grid-cols-2">
           <ShareList label={`Items${seen}`} rows={e.items.slice(0, 4)} render={(id) => <><ItemSprite itemId={id} name={name(id, 'item')} size={18} />{name(id, 'item')}</>} />
           <ShareList label={`Moves${seen}`} rows={e.moves.slice(0, 4)} render={(id) => name(id, 'move')} />

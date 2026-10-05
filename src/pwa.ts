@@ -9,7 +9,7 @@ const CHECK_INTERVAL_MS = 30 * 60 * 1000;
  * so nothing is lost. iOS keeps home-screen apps suspended rather than relaunching them, so we
  * also check whenever the app comes back to the foreground, not just on launch.
  *
- * No-op in dev, in the Tauri desktop shell (it has its own updater) and in the single-file build.
+ * No-op in dev, in the Tauri desktop shell (it has its own updater).
  */
 export function setupPwa() {
   if (!import.meta.env.PROD || !('serviceWorker' in navigator) || '__TAURI_INTERNALS__' in window) return;

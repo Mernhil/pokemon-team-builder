@@ -14,14 +14,12 @@ npm test              # vitest: stat engines, codecs, validation
 npm run typecheck
 npm run e2e           # browser smoke tests (Playwright) against the production build; see docs/E2E.md
 npm run build         # static site in dist/
-npm run build:single  # one self-contained index.html (works offline)
 npm run data          # regenerate src/data/generated/*.json (Showdown data + regulation files + Gen 1–9 datasets)
 npm run pokedex       # Pokédex entries + wild encounters per book (PokeAPI CSVs + PKHeX encounter tables)
 npm run maps          # Area maps: in-game maps from the pret disassemblies + src/data/maps/*.json schematics
 npm run atlas         # Atlas databases per game (locations, items, NPCs, shops, every trainer's team) from the pret decompilations; needs `npm run data`, `pokedex` and `maps` first
 npm run sprites       # rebuild sprite atlases in public/sprites/ (PokeAPI)
 npm run reg:status    # regulation calendar: live set, end date, announced sets
-npm run build:artifact  # single-file build for the hosted claude.ai app
 npm run icons         # re-render the home-screen icons in public/icons/ from favicon.svg
 ```
 
@@ -120,27 +118,59 @@ Champions formats are generated from these files, and the app switches to the li
 
 A weekly scheduled task follows [`docs/UPDATING_REGULATIONS.md`](docs/UPDATING_REGULATIONS.md). Each run researches new regulations, writes or updates these files, rebuilds, tests, commits and republishes the app.
 
+### Navigation: Analyse, the command palette and What's new
+
+The main bar is **Build · Calc · Analyse · Pokédex · Pokénav · More** (on a phone five slots: Build, Calc, Analyse, Pokédex, More, with Pokénav under More). **More** holds what the bar leaves out (Match log, Meta, a Tools group with Reverse search and Regulation diff) and Settings. Settings → Navigation chooses the bar's destinations per device kind (`src/domain/navigation.ts`, stored in the prefs store); for Champions the default bar has Reverse search where Pokénav would be. **Analyse** (`src/components/analyse/`) puts everything that looks at a team behind one team picker: tabs **Overview** (Team overview), **Speed** (Speed tiers), **Threats** (the Threat report), **OHKO** (the two lists, *can be OHKO'd by* and *can OHKO*) and **Compare**. The picker starts on the build that is open; any saved or shared team works without opening it in the builder. The tab is in the URL: `#analyse/speed`, `#analyse/ohko/to`. The hashes the screens had before (`#speed`, `#threats`, `#ohko`, `#ohkod`, `#showcase`, `#compare`) still work and land on the matching tab (`src/domain/routes.ts`, pure and tested).
+
+**Ctrl/⌘ + K**, or the search button in the header, opens the command palette (`src/components/CommandPalette.tsx`, a combobox; the matching is `src/domain/fuzzy.ts`): every screen and Analyse tab, your saved teams (open in the builder, or analyse), Pokémon (their Pokédex page, or the Calc with them as the attacker), Pokénav games and settings.
+
+After an update the app shows **What's new**: the New / Changed / Fixed notes of every release since the version you last saw, newest first; a note whose bold title names a screen has a **Try it** link. Not on a first install; Settings → What's new keeps it reachable. `CHANGELOG.md` is parsed at build time (`src/domain/changelog.ts` through the `virtual:changelog` module of `vite.config.ts`), the last 12 releases, and loaded only when the sheet opens.
+
 ### Meta tab
 
 The Meta tab lists each Champions regulation's most-used Pokémon with their common items, moves, abilities, spreads and teammates.
+
+**Trends.** `src/data/generated/meta-history.json` keeps per regulation one dated [species, rank or %] list per day (the game's ranked Battle Data) or month (Smogon); `npm run meta` appends the day's entry, thins old ones to weekly (≤120 per regulation) and backfills the mirror's older days. `src/domain/metaHistory.ts` (pure) computes Rising / Falling / New / Dropped over 7 days, 30 days or the season, only inside one unbroken run (a source or season change is a *break*, never bridged); the Meta tab's **Trends** tab, each card's trend line and Analyse → Threats' *Rising threats* use it. Loaded lazily through `useMetaHistory()`.
+
+**Teams.** `src/data/generated/tournament-teams.json` (built by `npm run meta`, `scripts/meta/tournamentTeams.ts`; pure parts in `src/domain/tournamentTeams.ts`) keeps the top 8 of Limitless VGC events with ≥ 32 players in the last 60 days, at most 300 teams per regulation (name, date, players, link, placing, player, and per Pokémon species/item/ability/moves; no spreads). The Meta tab's **Teams** tab (`TeamsSection.tsx`) lists, filters and opens them; `tournamentImport.ts` turns one into a team (category “Tournament teams”, source in the notes, each set's spread the species' most common meta spread or an estimate, marked “Spread estimated”). Loaded lazily through `useTournamentTeams()`.
+
+### Suggest a teammate
+
+`src/domain/teamSuggest.ts` (pure, tested) ranks candidates for the empty slots: `suggestCheap` scores everyone on synergy (`metaPartners`), defence (shared weaknesses resisted, abilities included), offence (types the team can't hit) and missing roles (`roles.ts`), with the weights in `WEIGHTS`; `shortlist` keeps `SHORTLIST_CAP` of them for the threat component, run by the threat worker through `threatJobFor` and folded in by `applyThreatAnswers` (OHKO, or outspeed and 2HKO, the threats that beat several members). Species and item clauses are respected; a second Mega holder is noted (`SECOND_MEGA_PENALTY`). UI: `components/team/SuggestTeammate.tsx` (Team check and Analyse → Overview), `useTeamSuggestions.ts` for the streaming.
 The numbers are [Smogon's monthly usage statistics](https://www.smogon.com/stats/) (rated Pokémon Showdown ladder battles), built into the app by `npm run meta` and kept current by a weekly GitHub Action.
 A regulation without published statistics falls back to your own logged matches. See [`docs/UPDATING_META.md`](docs/UPDATING_META.md).
 
 ### Cloud sync
 
 **Settings → Sync → Sync with my account** (web and phone app, opt-in) keeps your teams (with folders and variations) and your match log the same on every device you sign in on, through the Cloudflare deployment that already hosts the app. It is offline-first (localStorage stays the source of truth), syncs on start, on focus, a few seconds after a change and on "Sync now", and merges with what is already on a new device instead of wiping it. Last write wins per document; when two devices changed the same team the older change is kept as a variation named "Conflict copy (device, date)"; an edit beats a delete unless the delete is clearly later.
-`worker/` is the Worker behind `/api/sync` (Cloudflare Access JWT verification, D1 storage, zod-validated and sanitised payloads), `src/domain/sync.ts` the merge rules and `src/sync/` the client. One-time setup (D1, migration, Access variables), backups, turning it off and the desktop options are in [`docs/SYNC.md`](docs/SYNC.md). The desktop app and the single-file build don't sync.
+`worker/` is the Worker behind `/api/sync` (Cloudflare Access JWT verification, D1 storage, zod-validated and sanitised payloads), `src/domain/sync.ts` the merge rules and `src/sync/` the client. One-time setup (D1, migration, Access variables), backups, turning it off and the desktop options are in [`docs/SYNC.md`](docs/SYNC.md). The desktop app doesn't sync.
 
 ### Sharing and Compare
 
 With sync on, a team's **share button** in Saved teams shares that team and its variations with one other person (by the e-mail they sign in with) as *can view* or *can edit*, and Settings → Sync can share your match log (view only). What others share appears under **Shared with me** with the owner's name; view-only teams open read-only with **Make my own copy**, editable ones merge by the same rule as your own devices (the losing version is kept as a team of your own). Their matches are a separate choice in the Match log and Meta tabs (*Mine / <Name>'s / Both of us*). A toast says when the other person changed something. Access rules live in `worker/access.ts`, the details in [`docs/SYNC.md`](docs/SYNC.md).
 
-**Compare teams** (More → Compare teams) puts two teams (mine, shared, or two variations of one team) side by side: both type matrices, speeds, top threats and a set-by-set diff of species, item, ability, nature, moves and spread (`src/domain/teamCompare.ts`).
+**Compare teams** (Analyse → Compare; team A is the team picked in Analyse's header) puts two teams (mine, shared, or two variations of one team) side by side: both type matrices, speeds, top threats and a set-by-set diff of species, item, ability, nature, moves and spread (`src/domain/teamCompare.ts`).
 
 ### Regulation changes
 
 When a regulation changes, the app shows what it does. **More → Regulation diff** (`#regdiff`) compares any two Champions regulations: Pokémon, Megas, items, moves and abilities added or removed (with sprites and item icons), species patches as before → after (typing, stats, abilities) and the unconfirmed entries, labelled as such. Saved teams get a badge when their regulation isn't the live one and a "N problems in Reg M-D" chip when something of theirs isn't legal there; the Saved teams dialog gathers them under "3 of your teams have problems in Reg M-D". In the builder, the regulation banner shows the impact before "Move team to <live>" (what breaks, what changes, what is new, with the final-stat effect of a patched Pokémon) and **Copy to <regulation>** adds a variation with the illegal parts removed and a checklist of what to fix; the original is never modified. A next regulation with a start date counts down in the banner.
 `src/domain/regulationImpact.ts` (pure) computes legality from the Dex and from `validateTeam` for the target format, so it can't disagree with the validator, and works for Showdown-based sets as well as delta ones; only the patches and unconfirmed notes come from `src/data/generated/regulation-changes.json`, which `npm run data` builds from the delta files.
+
+### Automatic archetype tags
+
+`src/domain/archetypes.ts` (pure, tested) works out which of the match log's archetypes (Trick Room, Rain, Sun, Sand, Hail/Snow, Tailwind, Hyper Offense, Bulky Offense, Balance, Stall) a team plays, with a confidence and the reasons ("Pelipper sets rain; 2 rain users (Basculegion, Qwilfish)"). Signals: weather setters (abilities, Mega abilities, weather moves) and the Pokémon that use the weather, Trick Room setters and slow Pokémon, Tailwind, and the team's speed and bulk profile (base stats). A Pokémon with nothing known falls back to its most-used set in the regulation's meta. It would rather say nothing than something wrong: only tags at or above `ARCHETYPE_RULES.minConfidence` come back (a weather setter nobody uses stays a weak signal), and every threshold is a named constant in that one object. `src/domain/roles.ts` is the support/speed-control table it shares with the bring planner.
+
+Where it shows: the match form suggests a tag for an empty archetype field (marked *Suggested*, one tap to use it, never over what you typed); the match log's stats offer **Tag N untagged matches**, a preview you can untick, applied with an Undo (a tag you set is never replaced); saved teams and Team overview show the team's archetypes as chips.
+
+### Benchmarks, notes and the team sheet
+
+A spread is built for goals ("survive Garchomp's Earthquake", "outspeed Flutter Mane in Tailwind"). Tick **Keep these as benchmarks** when you apply an Optimise result, or press **Keep as benchmark** on a Speed tiers or Threat report row, and the goal is stored on the Pokémon (the intent, not numbers: who, which move, how sure, the conditions; at most 8 per Pokémon). The editor and Team overview's Stats tab show ✓/✗ for the current set, **Team check** counts the ones that held when saved and no longer do, and the regulation banner lists the benchmarks that would break in the live regulation. Notes: 300 characters per Pokémon, team notes and up to 12 matchup notes per team (title, up to two leads, text). **Team overview → Notes & sheet** edits them and offers Print and Copy as text. The light module is `src/domain/benchmarks.ts` (types, sanitising; first-load safe), the checking `src/domain/benchmarkEval.ts` (needs the damage engine; lazy via `useBenchmarkResults`), the sheet `src/domain/teamSheet.ts`.
+
+### Game day
+
+**Game day** (`#gameday`; Match log → **Start a match**, More → Game day, Analyse, or the search) takes a ranked game from team preview to a logged match on one scrolling phone screen: pick my saved team (it starts on the one of my latest match), tap their six from a grid of the regulation's 30 most-used Pokémon (or search the roster, or tap a recent opponent; Undo takes the last back), and the screen fills in: the best plan with plans 2 and 3 a tap away (bring four, lead two, why, the main risk), the four they will probably bring, a 6×6 grid of matchups on the Threat report's numbers (both best moves and who moves first), and the speed order of all twelve with Tailwind and Trick Room toggles. During the game note what they showed (item, ability, moves) and the plan recalculates with it; mark what they brought. **Win** or **Loss** logs the match (my team, what I brought and led, what they showed and brought, "Ranked Ladder", the regulation, the archetypes the app worked out) and starts the next game on the same team.
+
+Only my saved Champions teams can play (the log stores their Pokémon uids). The game in progress is kept in `ptb:gameday:v1` (sanitised on load, migration tested), so leaving the screen or a reload loses nothing; it is discarded when the match is logged, or by hand. The pure parts are `src/domain/gameday.ts` (their six, speed order, the logged match) and `src/store/gamedayStore.ts`; the plan is `planBring` as in the match form, and only the 6×6 matchups are calculated here, not the top-30 threat list (about 30 ms on a laptop).
 
 ### Bring planner
 
@@ -162,14 +192,14 @@ The result sits next to your current spread with ✓/✗ per goal; **Apply** wri
 
 ### Threat report
 
-**More → Threat report** (`#threats`, with a "Top threats" line in Team check) runs the Damage Calc for your whole team against the most-used Champions sets, in both directions, on one screen.
+**Analyse → Threats** (`#analyse/threats`, with a "Top threats" line in Team check) runs the Damage Calc for your whole team against the most-used Champions sets, in both directions, on one screen.
 Each threat is a meta set (`src/domain/metaSets.ts`: the most common ability, item, spread and nature, and the top four moves, never four status moves; anything the format doesn't allow is dropped and reported). Every cell shows your best move and its best move as OHKO / possible OHKO / 2HKO / 3HKO+ with the damage range, and who moves first; Mega Stone holders are read at their worse forme for you and their better one for the threat. Plain-language summaries rank the worst threats first ("Kingambit OHKOs 3 of your Pokémon and none of yours OHKO it back", "Nothing on your team outspeeds and 2HKOs Flutter Mane").
 The field (Doubles by default, weather, terrain, Trick Room) and the number of threats (10/20/30) change everything at once. The grid uses a blue-to-orange scale with ✓/✗/~ and words in every cell, and becomes one card per threat on phones; tapping a cell opens the Damage Calc pre-filled with that attacker, defender and field.
-The engine (`src/domain/threats.ts`) is pure; the page runs it in a Web Worker (`src/workers/`) with memoised cells and streams rows in as they finish, so it doesn't freeze a phone (the single-file build runs it on the main thread in small slices instead). It uses the same newest-published-regulation fallback and data-age notice as Speed tiers. Other formats show an explanation instead.
+The engine (`src/domain/threats.ts`) is pure; the page runs it in a Web Worker (`src/workers/`) with memoised cells and streams rows in as they finish, so it doesn't freeze a phone (browsers without Web Workers run it on the main thread in small slices instead). It uses the same newest-published-regulation fallback and data-age notice as Speed tiers. Other formats show an explanation instead.
 
 ### Speed tiers
 
-**More → Speed tiers** (`#speed`, also linked from Team check) is a ladder of the most-used Champions Pokémon's likely Speeds with your team on the same scale, fastest first.
+**Analyse → Speed** (`#analyse/speed`, also linked from Team check) is a ladder of the most-used Champions Pokémon's likely Speeds with your team on the same scale, fastest first.
 Each meta Pokémon is built from its published spreads (spreads with the same final Speed merge), its most common ability and item; a Mega Stone holder also gets its Mega forme's Speed, and a Choice Scarf row appears when at least 10% of its sets hold one.
 Every number comes from the Damage Calc's own speed (`calcSpeed`), so the two can't disagree. Toggle Tailwind, −1/+1/+2, paralysis and (for your side) Choice Scarf per side, plus weather, terrain and Trick Room, which flips the ladder.
 Tap a meta row for **Outspeed this**: the Stat Points (and nature, if needed) one of your Pokémon needs to beat it in that scenario, with an undoable Apply.

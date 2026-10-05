@@ -12,8 +12,8 @@ interface Handlers {
   onError: (message: string) => void;
 }
 
-/** The single-file build can't ship a separate worker file; everything else uses the worker. */
-const CAN_USE_WORKER = typeof Worker !== 'undefined' && import.meta.env.MODE !== 'singlefile';
+/** Browsers without Web Workers fall back to the main thread. */
+const CAN_USE_WORKER = typeof Worker !== 'undefined';
 
 let worker: Worker | undefined;
 let workerBroken = false;

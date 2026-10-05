@@ -1,7 +1,7 @@
 {
   "name": "pokemon-team-builder",
   "private": true,
-  "version": "0.23.0",
+  "version": "0.24.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,12 +20,11 @@
     "icons:tauri": "tauri icon src-assets/logo-source.png --output src-tauri/icons",
     "splash": "node scripts/build-splash.mjs",
     "meta": "tsx scripts/build-meta.ts",
+    "meta:check": "tsx scripts/check-meta.ts",
     "test": "vitest run",
     "e2e": "npm run build && playwright test",
     "e2e:ui": "npm run build && playwright test --ui",
     "typecheck": "tsc -b",
-    "build:single": "tsc -b && vite build --mode singlefile",
-    "build:artifact": "tsc -b && node scripts/build-artifact.mjs",
     "tauri": "tauri",
     "predesktop:dev": "npm run icons:tauri",
     "desktop:dev": "tauri dev",
@@ -33,6 +32,7 @@
     "desktop:build": "tauri build",
     "reg:status": "tsx scripts/regulation-status.ts",
     "data:strict": "tsx scripts/build-data.ts --strict",
+    "data:audit": "tsx scripts/audit-data.ts",
     "bump": "node scripts/bump-version.mjs"
   },
   "dependencies": {
@@ -71,7 +71,6 @@
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "vite-plugin-pwa": "^1.3.0",
-    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^5.0.2"
   },
   "overrides": {

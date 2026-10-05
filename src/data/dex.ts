@@ -8,7 +8,6 @@ import type {
   TypeName,
 } from '@/domain/types';
 import { STAT_IDS, TYPE_NAMES } from '@/domain/types';
-import { SIDE_LOADED_DATA, fetchGenerated } from './generated-loader';
 
 /** Showdown-style id: lowercase alphanumerics only. */
 export const toID = (s: unknown): string =>
@@ -190,19 +189,19 @@ const unpack = (m: { default: unknown }) => unpackDataset(m.default);
 
 const loaders: Record<string, () => Promise<Dataset>> = {
   champions: () => import('./generated/champions.json').then(unpack),
-  gen1: () => (SIDE_LOADED_DATA ? fetchGenerated('gen1').then(unpackDataset) : import('./generated/gen1.json').then(unpack)),
-  gen2: () => (SIDE_LOADED_DATA ? fetchGenerated('gen2').then(unpackDataset) : import('./generated/gen2.json').then(unpack)),
-  gen3: () => (SIDE_LOADED_DATA ? fetchGenerated('gen3').then(unpackDataset) : import('./generated/gen3.json').then(unpack)),
-  gen4: () => (SIDE_LOADED_DATA ? fetchGenerated('gen4').then(unpackDataset) : import('./generated/gen4.json').then(unpack)),
-  gen5: () => (SIDE_LOADED_DATA ? fetchGenerated('gen5').then(unpackDataset) : import('./generated/gen5.json').then(unpack)),
-  gen6: () => (SIDE_LOADED_DATA ? fetchGenerated('gen6').then(unpackDataset) : import('./generated/gen6.json').then(unpack)),
-  gen7: () => (SIDE_LOADED_DATA ? fetchGenerated('gen7').then(unpackDataset) : import('./generated/gen7.json').then(unpack)),
-  gen8: () => (SIDE_LOADED_DATA ? fetchGenerated('gen8').then(unpackDataset) : import('./generated/gen8.json').then(unpack)),
-  gen9: () => (SIDE_LOADED_DATA ? fetchGenerated('gen9').then(unpackDataset) : import('./generated/gen9.json').then(unpack)),
-  lgpe: () => (SIDE_LOADED_DATA ? fetchGenerated('lgpe').then(unpackDataset) : import('./generated/lgpe.json').then(unpack)),
-  bdsp: () => (SIDE_LOADED_DATA ? fetchGenerated('bdsp').then(unpackDataset) : import('./generated/bdsp.json').then(unpack)),
-  pla: () => (SIDE_LOADED_DATA ? fetchGenerated('pla').then(unpackDataset) : import('./generated/pla.json').then(unpack)),
-  za: () => (SIDE_LOADED_DATA ? fetchGenerated('za').then(unpackDataset) : import('./generated/za.json').then(unpack)),
+  gen1: () => import('./generated/gen1.json').then(unpack),
+  gen2: () => import('./generated/gen2.json').then(unpack),
+  gen3: () => import('./generated/gen3.json').then(unpack),
+  gen4: () => import('./generated/gen4.json').then(unpack),
+  gen5: () => import('./generated/gen5.json').then(unpack),
+  gen6: () => import('./generated/gen6.json').then(unpack),
+  gen7: () => import('./generated/gen7.json').then(unpack),
+  gen8: () => import('./generated/gen8.json').then(unpack),
+  gen9: () => import('./generated/gen9.json').then(unpack),
+  lgpe: () => import('./generated/lgpe.json').then(unpack),
+  bdsp: () => import('./generated/bdsp.json').then(unpack),
+  pla: () => import('./generated/pla.json').then(unpack),
+  za: () => import('./generated/za.json').then(unpack),
 };
 
 const cache = new Map<string, Promise<Dex>>();
