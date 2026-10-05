@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, Copy, Crosshair, ListChecks, Plus, Swords } from 'lucide-react';
+import { Check, Copy, Crosshair, Flag, ListChecks, Plus, Swords } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { regulationInfo } from '@/domain/formats';
 import { matchesToCSV, type Match } from '@/domain/matches';
@@ -119,16 +119,21 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
 
   return (
     <div className="space-y-3">
-      <Tabs
-        label="Matches"
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          { id: 'log', label: 'Match log', icon: ListChecks },
-          { id: 'builder', label: 'Your team vs. theirs', icon: Swords },
-        ]}
-        className="w-full sm:w-fit"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Tabs
+          label="Matches"
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { id: 'log', label: 'Match log', icon: ListChecks },
+            { id: 'builder', label: 'Your team vs. theirs', icon: Swords },
+          ]}
+          className="w-full sm:w-fit"
+        />
+        <Button variant="primary" className="max-sm:w-full sm:ml-auto" onClick={() => useTeamStore.getState().setView('gameday')}>
+          <Flag size={15} aria-hidden /> Start a match
+        </Button>
+      </div>
 
       {tab === 'builder' ? (
         <MatchupBuilder defaultFormatId={format.id} />

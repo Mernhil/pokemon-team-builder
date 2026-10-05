@@ -9,6 +9,7 @@ import {
   Check,
   ChevronDown,
   Eraser,
+  Flag,
   FolderOpen,
   GitCompare,
   MoreHorizontal,
@@ -61,6 +62,7 @@ const RegulationDiffView = lazy(() => import('./components/regulation/Regulation
 // The palette and the "What's new" sheet load when first opened.
 const CommandPalette = lazy(() => import('./components/CommandPalette'));
 const WhatsNew = lazy(() => import('./components/WhatsNew'));
+const GameDayView = lazy(() => import('./components/gameday/GameDayView').then((m) => ({ default: m.GameDayView })));
 const AnalyseView = lazy(() => import('./components/analyse/AnalyseView').then((m) => ({ default: m.AnalyseView })));
 const ReverseSearchView = lazy(() => import('./components/reverse/ReverseSearchView').then((m) => ({ default: m.ReverseSearchView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
@@ -81,6 +83,7 @@ const PRIMARY: Dest[] = [
 /** More: the rest, then a Tools group (Pokénav joins it on phones). */
 const MORE: Dest[] = [
   { id: 'matches', label: 'Match log', icon: Swords },
+  { id: 'gameday', label: 'Game day', icon: Flag },
   { id: 'meta', label: 'Meta', icon: BarChart3 },
 ];
 const TOOLS: Dest[] = [
@@ -210,6 +213,7 @@ export default function App() {
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
   else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
+  else if (view === 'gameday') content = <Suspense fallback={loading('Loading Game day…')}><GameDayView /></Suspense>;
   else if (view === 'analyse') content = <Suspense fallback={loading('Loading analysis…')}><AnalyseView /></Suspense>;
   else if (view === 'regdiff') content = <Suspense fallback={loading('Loading regulation diff…')}><RegulationDiffView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');

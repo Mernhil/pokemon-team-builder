@@ -4,7 +4,7 @@
  * of their own; their old hashes (#speed, #threats, #ohko, #ohkod, #showcase, #compare) still work and
  * land on the matching Analyse tab. Pure: no React, no store.
  */
-export const VIEWS = ['builder', 'calc', 'analyse', 'dex', 'atlas', 'matches', 'meta', 'reverse', 'regdiff'] as const;
+export const VIEWS = ['builder', 'calc', 'analyse', 'dex', 'atlas', 'matches', 'gameday', 'meta', 'reverse', 'regdiff'] as const;
 export type View = (typeof VIEWS)[number];
 
 export const ANALYSE_TABS = ['overview', 'speed', 'threats', 'ohko', 'compare'] as const;

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, Flag } from 'lucide-react';
 import { useDex } from '@/data/useDex';
 import { getFormat } from '@/domain/formats';
 import { ANALYSE_TABS, type AnalyseTab } from '@/domain/routes';
@@ -8,7 +8,7 @@ import { teamChoices } from '@/domain/teamCompare';
 import type { Team } from '@/domain/types';
 import { useShowcaseStore } from '@/store/showcaseStore';
 import { useTeamStore } from '@/store/teamStore';
-import { EmptyState, LoadingState, Panel, Select, Tabs } from '../ui/primitives';
+import { Button, EmptyState, LoadingState, Panel, Select, Tabs } from '../ui/primitives';
 
 // Each tab loads when first opened.
 const TeamShowcaseView = lazy(() => import('../showcase/TeamShowcaseView').then((m) => ({ default: m.TeamShowcaseView })));
@@ -69,6 +69,9 @@ export function AnalyseView() {
           value={tab}
           onChange={(id) => openAnalyse(id)}
         />
+        <Button size="sm" variant="ghost" onClick={() => useTeamStore.getState().setView('gameday')}>
+          <Flag size={14} aria-hidden /> Game day
+        </Button>
       </Panel>
       <TabBody team={team} tab={tab} />
     </div>

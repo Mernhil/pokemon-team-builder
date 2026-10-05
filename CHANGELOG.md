@@ -11,6 +11,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 - **Automatic archetype tags.** The app now works out a team's archetype (Rain, Sun, Sand, Snow, Trick Room, Tailwind, Hyper Offense, Bulky Offense, Balance, Stall) from its Pokémon, with the reasons. The match form suggests one for an empty archetype field (one tap to use it); the match log's stats offer **Tag N untagged matches** with a preview and an Undo; saved teams and Team overview show archetype chips. A tag you wrote yourself is never changed.
 
+- **Game day**: team preview to a logged match on one phone screen. Tap their six (a grid of the most used, a search, recent opponents), get the plan (bring four, lead two, why, the main risk, two more plans a tap away), a 6×6 grid of matchups and the speed order of all twelve with Tailwind and Trick Room toggles, note what they show during the game, then tap **Win** or **Loss**: the match is logged with what you brought and led, what they showed and brought, and the archetypes the app worked out, and the next game starts on the same team. Start it from the Match log's **Start a match**, More → Game day, Analyse or the search. The game in progress survives a reload.
+
 ### Changed
 - **The menu is reorganised.** More now holds Match log, Meta, a Tools group (Reverse search, Regulation diff) and Settings. On a phone the bottom bar is Build, Calc, Analyse, Pokédex and More, with Pokénav under More.
 - **Desktop updates now come from a separate public releases repository** (`Mernhil/pokemon-team-builder-releases`), so the app's own repository can be made private. This is the transition release: it is published to both places, so apps installed before it find it where they always looked. Nothing changes in the app itself.

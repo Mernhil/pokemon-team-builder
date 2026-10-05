@@ -59,7 +59,7 @@ export function LoggedMonEditor({
  * Item/ability/moves/Tera revealed in battle — only mounted once a row is expanded (a Team Preview
  * has up to 12 of these editors), with the same ordered pickers as the builder.
  */
-function LoggedMonDetails({ dex, format, tera, mon, onChange }: { dex: Dex; format: FormatRules; tera: boolean; mon: LoggedMon; onChange: (m: LoggedMon) => void }) {
+export function LoggedMonDetails({ dex, format, tera, mon, onChange }: { dex: Dex; format: FormatRules; tera: boolean; mon: LoggedMon; onChange: (m: LoggedMon) => void }) {
   const moves = mon.moves ?? [];
   const itemPicker = useItemPicker(dex, format, mon.speciesId);
   const movePicker = useMovePicker(dex, format, mon.speciesId ? { speciesId: mon.speciesId, itemId: mon.itemId, moves: [moves[0] ?? '', moves[1] ?? '', moves[2] ?? '', moves[3] ?? ''] } : null);

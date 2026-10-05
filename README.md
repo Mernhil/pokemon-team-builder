@@ -154,6 +154,12 @@ When a regulation changes, the app shows what it does. **More → Regulation dif
 
 Where it shows: the match form suggests a tag for an empty archetype field (marked *Suggested*, one tap to use it, never over what you typed); the match log's stats offer **Tag N untagged matches**, a preview you can untick, applied with an Undo (a tag you set is never replaced); saved teams and Team overview show the team's archetypes as chips.
 
+### Game day
+
+**Game day** (`#gameday`; Match log → **Start a match**, More → Game day, Analyse, or the search) takes a ranked game from team preview to a logged match on one scrolling phone screen: pick my saved team (it starts on the one of my latest match), tap their six from a grid of the regulation's 30 most-used Pokémon (or search the roster, or tap a recent opponent; Undo takes the last back), and the screen fills in: the best plan with plans 2 and 3 a tap away (bring four, lead two, why, the main risk), the four they will probably bring, a 6×6 grid of matchups on the Threat report's numbers (both best moves and who moves first), and the speed order of all twelve with Tailwind and Trick Room toggles. During the game note what they showed (item, ability, moves) and the plan recalculates with it; mark what they brought. **Win** or **Loss** logs the match (my team, what I brought and led, what they showed and brought, "Ranked Ladder", the regulation, the archetypes the app worked out) and starts the next game on the same team.
+
+Only my saved Champions teams can play (the log stores their Pokémon uids). The game in progress is kept in `ptb:gameday:v1` (sanitised on load, migration tested), so leaving the screen or a reload loses nothing; it is discarded when the match is logged, or by hand. The pure parts are `src/domain/gameday.ts` (their six, speed order, the logged match) and `src/store/gamedayStore.ts`; the plan is `planBring` as in the match form, and only the 6×6 matchups are calculated here, not the top-30 threat list (about 30 ms on a laptop).
+
 ### Bring planner
 
 **Plan vs this team** (on a logged match with a saved team picked, and in the Matchup tab) suggests which four of your six to bring and which two to lead, in doubles (bring 4, lead 2; singles 3 and 1), with the best three plans, each with two to four plain reasons and a main risk ("Nothing in this four outspeeds Dragapult outside Tailwind"). It is a suggestion, not a prediction.
