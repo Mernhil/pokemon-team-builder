@@ -13,7 +13,12 @@ name: Desktop release
 #   the tag matches the app version and that typecheck + tests pass, then builds, signs, and attaches
 #   the installers *and* the signed `latest.json` manifest the in-app updater polls
 #   (src-tauri/tauri.conf.json's plugins.updater.endpoints) to that tag's GitHub Release (created if
-#   it doesn't exist yet). This is what makes "check for updates" inside the app find the new version.
+#   it doesn't exist yet) in the separate public releases repository RELEASES_REPO, so this
+#   repository can be private. This is what makes "check for updates" inside the app find the new version.
+# - the `publish` job then tags this repository's commit (the planner looks for that tag, so a
+#   version is released once) and, while the repository variable MIRROR_RELEASES_TO_THIS_REPO is
+#   `true` (the transition, docs/DESKTOP_RELEASES.md), copies the release into this repository's
+#   Releases too, where the apps installed before the switch still look.
 # - "Run workflow" from the Actions tab: build-only smoke test, no release, no signing. Installers
 #   are attached to the run as downloadable artifacts (Summary tab) so it also works before the
 #   signing secrets below are configured.
@@ -22,6 +27,7 @@ name: Desktop release
 #   Settings → Secrets and variables → Actions → New repository secret
 #     TAURI_SIGNING_PRIVATE_KEY          (the private half of src-tauri/updater.key)
 #     TAURI_SIGNING_PRIVATE_KEY_PASSWORD (the password chosen when it was generated)
+#     RELEASES_REPO_TOKEN                (a fine-grained token: Contents read/write on RELEASES_REPO only)
 on:
   push:
     tags:
@@ -32,6 +38,9 @@ on:
     paths:
       - package.json
   workflow_dispatch:
+
+env:
+  RELEASES_REPO: Mernhil/pokemon-team-builder-releases
 
 # Least privilege by default; only the release job may write (to publish the GitHub Release).
 # Third-party actions are pinned to commit SHAs: the release job holds the updater signing key.
@@ -105,6 +114,15 @@ jobs:
             exit 1
           fi
 
+      - name: The releases repository token is set
+        env:
+          TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::The secret RELEASES_REPO_TOKEN is missing: releases are published to $RELEASES_REPO (docs/DESKTOP_RELEASES.md)."
+            exit 1
+          fi
+
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -167,18 +185,49 @@ jobs:
 
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # action-v0.6.2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Publishes to the releases repository, so the token is the one scoped to it.
+          GITHUB_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
+          owner: Mernhil
+          repo: pokemon-team-builder-releases
           tagName: ${{ needs.plan.outputs.tag }}
-          # Where a missing tag is created (a branch push): the exact commit that was merged.
-          commitish: ${{ github.sha }}
           releaseName: 'Pokémon Team Builder ${{ needs.plan.outputs.tag }}'
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
+
+  # Tags this repository's commit and, during the transition, mirrors the release into this repository.
+  publish:
+    needs: [plan, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ needs.plan.outputs.tag }}
+    steps:
+      # The release itself lives in RELEASES_REPO, so this repository gets its tag here: without it
+      # the next push that touches package.json would release the same version again.
+      - name: Tag this commit
+        if: github.ref_type != 'tag'
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA" || echo "Tag $TAG already exists."
+
+      # Apps installed before the switch poll this repository's latest.json. Its installer links
+      # point at RELEASES_REPO's public assets. Turn it off once both installed apps have updated.
+      - name: Mirror the release into this repository (transition)
+        if: vars.MIRROR_RELEASES_TO_THIS_REPO == 'true'
+        run: |
+          mkdir assets
+          gh release download "$TAG" --repo "$RELEASES_REPO" --dir assets
+          gh release view "$TAG" --repo "$RELEASES_REPO" --json body --jq .body > notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" assets/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --title "Pokémon Team Builder $TAG" --notes-file notes.md
+          fi
 
   # Manual "Run workflow": build only, no signing, no release — just proves the pipeline works.
   build-test:

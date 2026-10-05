@@ -2,6 +2,13 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.23.1 — 2026-10-05
+
+### Changed
+- **Desktop updates now come from a separate public releases repository** (`Mernhil/pokemon-team-builder-releases`), so the app's own repository can be made private. This is the transition release: it is published to both places, so apps installed before it find it where they always looked. Nothing changes in the app itself.
+- **Fewer CI minutes:** documentation-only changes skip CI, and the iPhone WebKit tests run only on a pull request that changes the app.
+- The single-file artifact build is gone (the app ships as the web app and the desktop app), and the regulation banner no longer says when the data was "checked".
+
 ## 0.23.0 — 2026-10-05
 
 ### New

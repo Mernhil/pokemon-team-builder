@@ -1,13 +1,26 @@
 name: CI
 
 # Lint, typecheck, unit tests, the production build (which enforces the bundle budget) and the
-# Playwright smoke tests (desktop Chromium + iPhone WebKit).
+# Playwright smoke tests (desktop Chromium, plus iPhone WebKit on a PR that can affect it).
+#
+# Actions minutes are limited on a private repository, so:
+#  - a change that only touches documentation or Markdown doesn't run CI;
+#  - the WebKit project (about half of the e2e time) runs on a PR that changes the app (src/,
+#    e2e/, public/, index.html, vite.config.ts, playwright.config.ts, package*.json), not on tooling,
+#    workflow, worker or documentation PRs, and not on the push after a merge (the PR already ran it);
+#  - a new push to a PR cancels the run before it.
 on:
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   push:
     # The default branch (it's not `main`; if it is renamed, rename it here too).
     branches:
       - claude/pokemon-team-builder-otextg
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
 
 permissions:
   contents: read
@@ -31,6 +44,26 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # Does this PR change anything WebKit could notice? Compares with the PR's base commit.
+      - name: Decide whether to run the WebKit project
+        id: webkit
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run=false
+          if [ "$EVENT" = "pull_request" ]; then
+            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            if git fetch --no-tags --depth=1 origin "$BASE" 2>/dev/null; then
+              if git diff --name-only "$BASE" HEAD | grep -Eq '^(src/|e2e/|public/|index\.html$|vite\.config\.ts$|playwright\.config\.ts$|package(-lock)?\.json$)'; then run=true; fi
+            else
+              run=true   # can't tell: run everything
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "WebKit project: $run"
 
       # One version bump per PR, and every bump has a CHANGELOG section (the release workflow tags
       # only the last bump of a merge).
@@ -63,18 +96,18 @@ jobs:
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ steps.webkit.outputs.run == 'true' && 'all' || 'chromium' }}
 
       - name: Install browsers and their system libraries
         if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium webkit
+        run: npx playwright install --with-deps chromium ${{ steps.webkit.outputs.run == 'true' && 'webkit' || '' }}
 
       - name: Install system libraries only (browsers cached)
         if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium webkit
+        run: npx playwright install-deps chromium ${{ steps.webkit.outputs.run == 'true' && 'webkit' || '' }}
 
       - name: Smoke tests
-        run: npx playwright test
+        run: npx playwright test ${{ steps.webkit.outputs.run == 'true' && '' || '--project=desktop' }}
 
       - name: Upload Playwright report
         if: failure()
