@@ -30,6 +30,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
   - *Hidden items*: Platinum's 257-entry table has 27 slots no map uses (unused, not missing); HeartGold 213 → 232 found (every one of its 231 entries is on a zone); Red's and Yellow's missing one is on `UNUSED_MAP_6F`, a map the game never reaches.
   - Not done: NPC dialogue coverage (lower priority; Emerald 1027 of 1366 and FireRed 585 of 812 are unchanged).
 
+- **Item icons.** Fairy Feather (and every other item that had a plain grey gem) now has a proper icon: Fairy Feather a pink feather, the new Mega Stones a gem in their Pokémon's type colour (gold-rimmed for Mega-Z), mails, badges, berries, boxes, tickets and the Game Corner coin their own look. 165 items that only had a placeholder because the old games spell them differently (Elixer, Blk Apricorn, Rm. 1 Key, X Defend, every TM and HM by move type…) now use the real artwork. These stylised icons stay until official art exists.
+
 ### Changed
 - **The menu is reorganised.** More now holds Match log, Meta, a Tools group (Reverse search, Regulation diff) and Settings. On a phone the bottom bar is Build, Calc, Analyse, Pokédex and More, with Pokénav under More.
 - **Desktop updates now come from a separate public releases repository** (`Mernhil/pokemon-team-builder-releases`), so the app's own repository can be made private. This is the transition release: it is published to both places, so apps installed before it find it where they always looked. Nothing changes in the app itself.
