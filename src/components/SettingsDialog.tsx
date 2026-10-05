@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTeamStore } from '@/store/teamStore';
+import { PaletteSettings } from './PaletteSettings';
 import { UpdateCheckButton } from './DesktopUpdater';
 import { Modal } from './ui/Modal';
 import { Label, Tabs } from './ui/primitives';
@@ -32,6 +33,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               { id: 'dark', label: 'Dark', icon: Moon },
             ]}
           />
+          <PaletteSettings />
           <p className="text-xs text-muted">Motion follows your system’s “reduce motion” setting.</p>
         </section>
 

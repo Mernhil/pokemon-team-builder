@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from './storage';
+import { sanitizePalette, type Palette } from '@/domain/palette';
 import { PICKER_ORDER, pushRecent, type PickerKey, type PickerPrefs } from '@/domain/pickerOrder';
 
 export type ListMode = 'grouped' | 'az';
@@ -13,11 +14,14 @@ interface PrefsState {
   listMode: Partial<Record<'items' | 'moves', ListMode>>;
   /** Champions: list species outside the selected regulation, greyed out. */
   showUnavailableSpecies: boolean;
+  /** Interface colours picked in Settings; null is the default look. */
+  palette: Palette | null;
 
   addRecent: (key: PickerKey, id: string) => void;
   toggleFavorite: (key: PickerKey, id: string) => void;
   setListMode: (key: 'items' | 'moves', mode: ListMode) => void;
   setShowUnavailableSpecies: (on: boolean) => void;
+  setPalette: (p: Palette | null) => void;
 }
 
 const KEYS: PickerKey[] = ['items', 'moves', 'species', 'natures'];
@@ -43,6 +47,7 @@ export const usePrefsStore = create<PrefsState>()(
       favorites: {},
       listMode: {},
       showUnavailableSpecies: PICKER_ORDER.species.showUnavailableByDefault,
+      palette: null,
 
       addRecent: (key, id) =>
         set((s) => ({
@@ -56,12 +61,13 @@ export const usePrefsStore = create<PrefsState>()(
         }),
       setListMode: (key, mode) => set((s) => ({ listMode: { ...s.listMode, [key]: mode } })),
       setShowUnavailableSpecies: (showUnavailableSpecies) => set({ showUnavailableSpecies }),
+      setPalette: (palette) => set({ palette: sanitizePalette(palette) }),
     }),
     {
       name: 'ptb:prefs:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies }),
+      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies, palette: s.palette }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PrefsState>;
         const mode = (v: unknown): ListMode | undefined => (v === 'az' || v === 'grouped' ? v : undefined);
@@ -71,6 +77,7 @@ export const usePrefsStore = create<PrefsState>()(
           recent: perKey(p.recent, PICKER_ORDER.recentsCap),
           favorites: perKey(p.favorites, MAX_FAVORITES),
           listMode: { items: mode(lm.items), moves: mode(lm.moves) },
+          palette: sanitizePalette(p.palette),
           showUnavailableSpecies: typeof p.showUnavailableSpecies === 'boolean' ? p.showUnavailableSpecies : current.showUnavailableSpecies,
         };
       },
