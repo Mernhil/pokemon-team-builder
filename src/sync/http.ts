@@ -1,3 +1,5 @@
+import { isDesktopApp, useDeviceStore } from './deviceStore';
+
 /** Talking to the sync Worker from the browser: one fetch wrapper that turns every failure into a message the player can act on. */
 export class SyncHttpError extends Error {
   kind: 'signin' | 'setup' | 'offline' | 'other';
@@ -7,15 +9,29 @@ export class SyncHttpError extends Error {
   }
 }
 
+/**
+ * The browser (web and phone app) talks to its own origin and is identified by the Access cookie.
+ * The desktop app talks to the linked server under /api/device/ with its device token instead.
+ */
+function target(path: string): { url: string; init: RequestInit } {
+  if (!isDesktopApp()) return { url: path, init: { credentials: 'same-origin', redirect: 'manual' } };
+  const { server, token } = useDeviceStore.getState();
+  if (!server || !token) throw new SyncHttpError('This desktop app is not linked to an account yet (Settings → Sync).', 'signin');
+  return { url: `${server}${path.replace(/^\/api\//, '/api/device/')}`, init: { credentials: 'omit', headers: { authorization: `Bearer ${token}` } } };
+}
+
 export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const { url, init } = target(path);
   let res: Response;
   try {
     // redirect: 'manual' so an expired Access session (a redirect to the login page) is noticed, not followed.
-    res = await fetch(path, { method, credentials: 'same-origin', redirect: 'manual', headers: { accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    res = await fetch(url, { method, ...init, headers: { ...(init.headers as Record<string, string> | undefined), accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
   } catch {
     throw new SyncHttpError("Couldn't reach the server. You may be offline.", 'offline');
   }
-  if (res.type === 'opaqueredirect' || res.status === 401 || res.status === 403) throw new SyncHttpError('Your sign-in has expired. Reload the page to sign in again.', 'signin');
+  if (res.type === 'opaqueredirect' || res.status === 401 || res.status === 403) {
+    throw new SyncHttpError(isDesktopApp() ? 'This desktop app was unlinked from your account. Link it again in Settings → Sync.' : 'Your sign-in has expired. Reload the page to sign in again.', 'signin');
+  }
   if (res.status === 501) throw new SyncHttpError("Sync isn't set up on this deployment yet (see docs/SYNC.md).", 'setup');
   const type = res.headers.get('content-type') ?? '';
   if (!type.includes('json')) throw new SyncHttpError(res.status === 404 ? 'This deployment has no sync service.' : `Unexpected response (HTTP ${res.status}).`, 'setup');

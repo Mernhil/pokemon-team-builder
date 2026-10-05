@@ -18,6 +18,6 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["worker", "src/domain/sanitize.ts", "src/domain/syncProtocol.ts", "src/domain/sync.ts"],
+  "include": ["worker", "src/domain/sanitize.ts", "src/domain/syncProtocol.ts", "src/domain/sync.ts", "src/domain/pairing.ts"],
   "exclude": ["worker/__tests__"]
 }

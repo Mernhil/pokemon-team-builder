@@ -107,3 +107,51 @@ test('Sync is remembered across a reload and syncs again on start', async ({ pag
   const again = await openSettings(page);
   await expect(again.getByRole('checkbox', { name: 'Sync with my account' })).toBeChecked();
 });
+
+test('The phone/web app makes a pairing code and lists and unlinks desktop apps', async ({ page }) => {
+  await openApp(page);
+  await fakeServer(page);
+  let devices = [{ id: 'dev1', name: 'My laptop', createdAt: 1_790_000_000_000, lastSeenAt: 1_790_000_000_000 }];
+  await page.route('**/api/pair', (route) => route.fulfill({ json: { code: 'ABCDEFGHJK', expiresAt: Date.now() + 600_000 } }));
+  await page.route('**/api/devices', (route) => {
+    if (route.request().method() === 'DELETE') devices = [];
+    return route.fulfill({ json: { devices } });
+  });
+  const dialog = await openSettings(page);
+  await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
+  await expect(dialog.getByText('My laptop')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Make a pairing code' }).click();
+  await expect(dialog.getByText('ABCDE-FGHJK')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Unlink My laptop' }).click();
+  await expect(dialog.getByText('My laptop')).toHaveCount(0);
+});
+
+test('The desktop app links with a pasted pairing link, then syncs with its token', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
+  });
+  const server = 'https://ptb.example.workers.dev';
+  let redeemed: unknown;
+  let auth: string | undefined;
+  await page.route(`${server}/api/device/redeem`, (route) => {
+    redeemed = route.request().postDataJSON();
+    return route.fulfill({ json: { token: `ptbd_${'A'.repeat(43)}`, owner: 'me@example.com' }, headers: { 'access-control-allow-origin': '*' } });
+  });
+  await page.route(`${server}/api/device/shares`, (route) => route.fulfill({ json: { me: { email: 'me@example.com' }, granted: [], received: [], names: {} }, headers: { 'access-control-allow-origin': '*' } }));
+  await page.route(`${server}/api/device/shared`, (route) => route.fulfill({ json: { docs: [], names: {} }, headers: { 'access-control-allow-origin': '*' } }));
+  await page.route(`${server}/api/device/sync**`, (route) => {
+    auth = route.request().headers().authorization;
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' } });
+    return route.fulfill({ json: route.request().method() === 'GET' ? { docs: [], cursor: 0, more: false } : { results: [] }, headers: { 'access-control-allow-origin': '*' } });
+  });
+  await openApp(page);
+  const dialog = await openSettings(page);
+  await expect(dialog.getByRole('checkbox', { name: 'Sync with my account' })).toHaveCount(0); // not linked yet
+  await dialog.getByRole('textbox', { name: 'Pairing code' }).fill(`${server}/#pair=abcde-fghjk`);
+  await expect(dialog.getByRole('textbox', { name: 'Server address' })).toHaveValue(server);
+  await dialog.getByRole('button', { name: 'Link this desktop app' }).click();
+  await expect(dialog.getByText('Unlink this desktop app')).toBeVisible();
+  expect(redeemed).toMatchObject({ code: 'ABCDE-FGHJK'.replace('-', '') });
+  await expect(dialog.getByRole('status').filter({ hasText: /Last sync:/ })).toBeVisible();
+  expect(auth).toBe(`Bearer ptbd_${'A'.repeat(43)}`);
+});

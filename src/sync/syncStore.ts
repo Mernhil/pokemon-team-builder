@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from '@/store/storage';
+import { isDesktopApp } from './deviceStore';
 import type { SyncState } from './engine';
 import type { SyncStats } from './engine';
 
@@ -67,6 +68,9 @@ export const useSyncStore = create<SyncStoreState>()(
   ),
 );
 
-/** Sync needs the hosted web app: not the desktop shell (no Access login there) and not the single-file/artifact build. */
+/**
+ * Sync needs the hosted web app (signed in through Access) or the desktop app (linked with a pairing
+ * code, src/sync/deviceStore.ts); not the single-file/artifact build.
+ */
 export const syncAvailable = (): boolean =>
-  import.meta.env.MODE !== 'singlefile' && typeof window !== 'undefined' && !('__TAURI_INTERNALS__' in window) && /^https?:$/.test(location.protocol);
+  import.meta.env.MODE !== 'singlefile' && typeof window !== 'undefined' && (isDesktopApp() || /^https?:$/.test(location.protocol));

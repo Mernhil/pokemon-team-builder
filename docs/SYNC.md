@@ -14,7 +14,7 @@ nothing else is synced: not the theme, picker favourites or calculator state.
 - **Merge rule** (`src/domain/sync.ts`): last write wins per document by `updatedAt`, a delete is just another version. When both sides changed a team since the last sync, the losing version is kept as a variation labelled **Conflict copy (<device>, <date>)**; matches follow the same rule without copies. Clocks within 5 seconds of each other are treated as a tie (the server's version wins and the other is kept as a copy), and an edit beats a delete unless the delete is clearly later.
 - **Client** (`src/sync/`): syncs when it starts, when the window regains focus, 5 seconds after teams or matches change, and on "Sync now". The first sync on a new device merges with what is already there (nothing is wiped). The code loads only once sync is on.
 
-Only the web app can sync. The Tauri desktop app can't pass Cloudflare Access without a browser login, so Settings says "Sync is available in the web app" there. The single-file/artifact build has sync disabled.
+The web app and the phone app sync through Cloudflare Access. The Tauri desktop app can't pass Access, so it is **linked with a pairing code** (below). The single-file/artifact build has sync disabled.
 
 ## One-time setup (by hand)
 
@@ -22,7 +22,7 @@ Until step 1 and 2 are done the app works exactly as before and `/api/sync` answ
 
 1. **Create the D1 database** (Cloudflare dashboard → Workers & Pages → D1 → Create database, or `npx wrangler d1 create pokemon-team-builder`). Copy its **database id**.
 2. **Bind it** in `wrangler.jsonc`: uncomment the `d1_databases` line at the bottom and paste the id (and add the comma shown on the line above it). Commit and push; Workers Builds redeploys.
-3. **Apply the migrations**: `npx wrangler d1 migrations apply pokemon-team-builder --remote` applies every file in `migrations/` that hasn't run yet (0001 creates the documents table, 0002 adds sharing and a `group_id` column). **Run it before the deploy of a version that adds a migration**: the sync code of this version writes `group_id`, so sync answers with an error until 0002 is applied. (Or paste the files into the D1 console, in order.)
+3. **Apply the migrations**: `npx wrangler d1 migrations apply pokemon-team-builder --remote` applies every file in `migrations/` that hasn't run yet (0001 creates the documents table, 0002 adds sharing and a `group_id` column, 0003 adds linked devices). **Run it before the deploy of a version that adds a migration**: the sync code of this version writes `group_id`, so sync answers with an error until 0002 is applied. (Or paste the files into the D1 console, in order.)
 4. **Find the Access values.** Zero Trust → Settings → Custom pages shows the team domain (`<team>.cloudflareaccess.com`). Zero Trust → Access → Applications → the app's application → Overview → **Application Audience (AUD) Tag**.
 5. **Set the two variables** on the Worker: Workers & Pages → pokemon-team-builder → Settings → Variables and Secrets → add `ACCESS_TEAM_DOMAIN` (e.g. `myteam.cloudflareaccess.com`) and `ACCESS_AUD` (the tag). `keep_vars` in `wrangler.jsonc` stops deploys from removing them.
 6. **Make Access cover `/api/*`.** The Access application protects the Worker's whole hostname (docs/IPHONE_APP.md step 2), so `/api/*` is already behind the login. If you used a path-limited application, add `/api/*` to it. Check: opening `https://<worker>/api/sync` in a private window must show the Access login, not JSON.
@@ -57,15 +57,29 @@ Built on the same Worker, D1 database and Access identity. Nothing is shared unl
 
 Settings → Sync → untick **Sync with my account**. Everything on the device stays exactly as it is; it just stops sending and receiving. Your documents stay on the server until you delete them there (`DELETE FROM documents WHERE owner = '<your e-mail>'`). Turning it on again later merges (it doesn't wipe either side).
 
-## Desktop app: future options
+## Linking the desktop app (pairing code)
 
-The desktop app has no Access login, so it can't sync today. Two ways to add it:
+The desktop app has no Access login, so the phone (or the website) vouches for it:
 
-1. **Access service token.** Create a service token in Zero Trust and a policy that allows it for `/api/*`; the desktop app sends `CF-Access-Client-Id` / `CF-Access-Client-Secret` headers (stored in the OS keychain through a Tauri plugin). Simple, but the token is a shared secret that identifies the *app*, not a person, so the Worker would need to map it to one account (an extra `ACCESS_SERVICE_OWNER` variable) and every desktop install shares it.
-2. **Browser login hand-off.** The desktop app opens the web app's login in the system browser (Tauri's `shell`/`opener`), Access redirects back to a `http://localhost:<port>` or `ptb://` callback with a short-lived code that the Worker exchanges for a per-device token. Better identity (per person, revocable per device), more to build: a token table in D1 and a callback listener in the Tauri shell.
+1. In the phone/web app: Settings → Sync → **Make a pairing code**. It shows `ABCDE-FGHJK` (10 symbols, 50 bits, valid 10 minutes, single use) and a **Copy link** button (`https://<worker>/#pair=ABCDE-FGHJK`, server and code in one).
+2. In the desktop app: Settings → Sync → paste the link (or type the server address and the code) → **Link this desktop app**. The app trades the code for a **device token** and turns sync on. From then on it syncs exactly like the web app (teams, match log, sharing).
+3. The phone's Settings → Sync lists the linked desktop apps; **Unlink** revokes one at once (its next request gets 401 and Settings says to link again). The desktop can also unlink itself.
 
-Either way the sync code in `src/sync/` and the Worker's `/api/sync` stay the same; only how a request proves who it is changes.
+How it works:
+- `migrations/0003_devices.sql`: `pair_codes` and `devices`. Only SHA-256 hashes are stored (of the code, of the token). A code is deleted when it is redeemed (one statement, so two requests can't both win) or when it expires; an account keeps at most 5 live codes and 10 linked devices.
+- `POST /api/pair`, `GET`/`DELETE /api/devices`: behind Access, for the signed-in account.
+- `/api/device/*` is what the desktop calls: `POST /api/device/redeem` (code → token, no auth) and the same `sync`, `shared`, `shares`, `profile` routes as bearer-token requests (`Authorization: Bearer ptbd_…`), plus `DELETE /api/device/self`. A device token acts for the one account that made its code. It can **not** create codes or list/revoke other devices. CORS answers only the desktop webview's origins.
+- The token lives in the desktop app's local storage (`ptb:device:v1`), like the rest of its data, not in the OS keychain. It is revocable, so a lost laptop is one tap on the phone.
+- The desktop's CSP allows `https:` for `connect-src` (your server's address isn't known at build time); scripts are still `'self'` only.
+
+### One-time setup for linking (by hand)
+
+Do the migration (`npx wrangler d1 migrations apply pokemon-team-builder --remote`, **before** deploying this version), then let `/api/device/*` through Access, because the desktop can't log in there and the Worker checks the code/token itself:
+
+- Zero Trust → Access → Applications → **Add an application** → Self-hosted, same hostname as the app, **path `/api/device/*`**, one policy with action **Bypass** and *Include: Everyone*. Access applies the most specific path, so the rest of the app stays protected.
+- Check: `curl -i https://<worker>/api/device/sync` must answer `401 {"error":"this device is not linked…"}` (from the Worker, not an Access login page), and `https://<worker>/api/sync` in a private window must still show the Access login.
+- Rate limiting is not built in (the code's 50 bits and 10-minute life make guessing hopeless); add a Cloudflare rate-limiting rule on `/api/device/redeem` if you want belt and braces.
 
 ## Tests
 
-`worker/__tests__` (the Access JWT checks with a local JWKS: valid, expired, wrong audience or issuer, bad signature, unknown or rotated key; payload validation; last-write-wins, tombstones, paging and account isolation against a real SQLite running the real migration), `src/domain/__tests__/sync.test.ts` (the merge rules: concurrent edits, delete versus edit, clock skew, first sync) and `src/sync/__tests__/engine.test.ts` (two devices talking to the real Worker handler).
+`worker/__tests__` (pairing and device tokens in `devices.test.ts`: one-time and expiring codes, hashes only, device limit, account isolation, revoke, CORS; the Access JWT checks with a local JWKS: valid, expired, wrong audience or issuer, bad signature, unknown or rotated key; payload validation; last-write-wins, tombstones, paging and account isolation against a real SQLite running the real migration), `src/domain/__tests__/sync.test.ts` (the merge rules: concurrent edits, delete versus edit, clock skew, first sync) and `src/sync/__tests__/engine.test.ts` (two devices talking to the real Worker handler).
