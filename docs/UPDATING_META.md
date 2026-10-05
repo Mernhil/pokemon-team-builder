@@ -102,8 +102,10 @@ mirror published in the meantime.
    new `meta.json` must validate, must not drop a regulation that had data and must not shrink one to
    under half its entries.
 3. `npm run typecheck && npm test` with the new data.
-4. If `meta.json` changed: opens (or updates) the `meta/update` pull request. **Merging it redeploys
-   the web app.** Desktop apps pick it up with their next release.
+4. If `meta.json` changed: commits it straight to the default branch (the guard, typecheck and tests
+   above are the checks; nothing to merge by hand). **The push redeploys the web app.** Desktop apps
+   pick it up with their next release. If the branch is protected and refuses the push, the run opens
+   (or updates) the `meta/update` pull request instead, to merge by hand.
 5. `npm run meta:check -- --lag` — the stall check: fails the run when the in-game data in `meta.json`
    trails the mirror's newest snapshot by more than 2 days.
 
@@ -112,8 +114,8 @@ issue, "Meta data update failing", or comments on it if it is already open, with
 successful scheduled run closes it. A mirror that is itself behind does not trip this; it shows in the
 run log ("Mirror newest …").
 
-One-time setting: Settings → Actions → General → Workflow permissions → tick **Allow GitHub Actions to
-create and approve pull requests**.
+Only for the pull request fallback: Settings → Actions → General → Workflow permissions → tick
+**Allow GitHub Actions to create and approve pull requests**.
 
 ## Running it by hand
 
