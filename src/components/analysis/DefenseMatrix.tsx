@@ -31,7 +31,7 @@ export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; for
         {rows.map(({ atkType, mults, weak, resist, immune, danger }) => (
           <div
             key={atkType}
-            className={cn('rounded-lg border p-1 text-center', danger ? 'border-bad/60 bg-bad/10' : 'border-border')}
+            className={cn('ui-cell rounded-lg border p-1 text-center', danger ? 'border-bad/60 bg-bad/10' : 'border-border')}
             title={mults.map((m) => `${m.name}: ${m.mult === 0 ? 'immune (×0)' : `×${m.mult}`}`).join('\n')}
           >
             <div className="truncate rounded text-[10px] font-bold uppercase" style={{ background: TYPE_BADGE[atkType].fill, color: TYPE_BADGE[atkType].text }}>

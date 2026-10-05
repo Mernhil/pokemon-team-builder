@@ -25,7 +25,7 @@ export function Modal({
         {/* Phones: a sheet from the bottom edge (above the home indicator). Wider: a centred dialog. */}
         <Dialog.Content
           className={cn(
-            'fixed z-50 flex flex-col border border-border bg-surface text-fg shadow-2xl',
+            'ui-sheet fixed z-50 flex flex-col border border-border bg-surface text-fg shadow-2xl',
             'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-2xl pb-[env(safe-area-inset-bottom)]',
             'sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:max-h-[88dvh] sm:w-[calc(100vw-32px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:pb-0',
             wide ? 'sm:max-w-3xl' : 'sm:max-w-lg',

@@ -288,3 +288,64 @@ input[type='range'].palette-range::-moz-range-thumb {
     height: 18px;
   }
 }
+
+/* The "Sticker" look (Settings → Appearance, on by default): thick outlines in the text colour and
+   hard offset shadows that press flat when tapped. Colours still come from the tokens, so every
+   palette works with it; "Classic" removes data-look and leaves the original soft style. */
+:root[data-look='sticker'] {
+  --line: var(--color-fg);
+}
+[data-look='sticker'] .ui-panel,
+[data-look='sticker'] .rounded-xl.border.bg-surface {
+  border: 2px solid var(--line);
+  box-shadow: 3px 3px 0 var(--line);
+}
+[data-look='sticker'] .ui-panel > header h2 {
+  font-weight: 800;
+}
+[data-look='sticker'] .ui-sheet {
+  border-width: 2px;
+  border-color: var(--line);
+}
+[data-look='sticker'] .ui-btn:not(.ui-ghost) {
+  border: 2px solid var(--line);
+  box-shadow: 2px 2px 0 var(--line);
+  transition: transform 80ms, box-shadow 80ms, background-color 150ms;
+}
+[data-look='sticker'] .ui-btn.ui-danger {
+  border-color: var(--color-bad);
+  box-shadow: 2px 2px 0 var(--color-bad);
+}
+[data-look='sticker'] .ui-btn:not(.ui-ghost):active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--line);
+}
+[data-look='sticker'] .ui-btn:disabled {
+  box-shadow: none;
+}
+[data-look='sticker'] .ui-field:not(.border-bad) {
+  border: 2px solid var(--line);
+}
+[data-look='sticker'] .ui-chip {
+  border: 1.5px solid var(--line);
+}
+[data-look='sticker'] .ui-tabs {
+  border: 2px solid var(--line);
+  padding: 2px;
+}
+[data-look='sticker'] .ui-tab[aria-selected='true'] {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+  box-shadow: none;
+}
+[data-look='sticker'] .ui-cell {
+  border-width: 2px;
+}
+[data-look='sticker'] .ui-cell:not([class*='border-bad']):not([class*='border-warn']) {
+  border-color: var(--line);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-look='sticker'] .ui-btn:not(.ui-ghost):active:not(:disabled) {
+    transform: none;
+  }
+}

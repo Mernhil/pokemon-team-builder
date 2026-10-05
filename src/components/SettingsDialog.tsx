@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sparkles, Square, Sun } from 'lucide-react';
+import { usePrefsStore } from '@/store/prefsStore';
 import { useTeamStore } from '@/store/teamStore';
 import { PaletteSettings } from './PaletteSettings';
 import { UpdateCheckButton } from './DesktopUpdater';
@@ -16,6 +17,8 @@ const SyncSettings = lazy(() => import('./SyncSettings'));
 export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const theme = useTeamStore((s) => s.theme);
   const setTheme = useTeamStore((s) => s.setTheme);
+  const look = usePrefsStore((s) => s.look);
+  const setLook = usePrefsStore((s) => s.setLook);
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Settings & credits" description={`Pokémon Team Builder v${__APP_VERSION__}`}>
@@ -31,6 +34,15 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             tabs={[
               { id: 'light', label: 'Light', icon: Sun },
               { id: 'dark', label: 'Dark', icon: Moon },
+            ]}
+          />
+          <Tabs
+            label="Style"
+            value={look}
+            onChange={setLook}
+            tabs={[
+              { id: 'sticker', label: 'Sticker', icon: Sparkles },
+              { id: 'classic', label: 'Classic', icon: Square },
             ]}
           />
           <PaletteSettings />

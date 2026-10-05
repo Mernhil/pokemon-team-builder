@@ -36,7 +36,7 @@ export function OffenseMatrix({ team, dex, mega = false }: { team: Team; dex: De
             <div
               key={defType}
               className={cn(
-                'rounded-md border p-1 text-center',
+                'ui-cell rounded-md border p-1 text-center',
                 gap ? 'border-bad/60 bg-bad/10' : superEffective === 0 ? 'border-warn/50 bg-warn/5' : 'border-border',
               )}
               title={hits.map((h) => `${h.name}: ${h.mult === 0 ? 'no effect (×0)' : `×${h.mult}`} (${h.move})`).join('\n')}

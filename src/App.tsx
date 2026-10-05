@@ -148,10 +148,12 @@ export default function App() {
   }, [view]);
 
   const palette = usePrefsStore((s) => s.palette);
+  const look = usePrefsStore((s) => s.look);
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', theme === 'dark');
     root.style.colorScheme = theme;
+    root.dataset.look = look;
     // A chosen palette overrides the colour tokens inline; none means the hand-tuned defaults in index.css.
     const tokens = palette ? paletteTokens(palette, theme) : null;
     for (const name of PALETTE_TOKEN_NAMES) {
@@ -160,7 +162,7 @@ export default function App() {
     }
     // Browser UI (Android address bar, iOS Safari tab bar) matches the header.
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tokens?.surface ?? (theme === 'dark' ? '#1c1f26' : '#fcfbf8'));
-  }, [theme, palette]);
+  }, [theme, palette, look]);
 
   const dex = dexState.status === 'ready' ? dexState.dex : undefined;
   const loading = (label: string) => <LoadingState label={label} />;

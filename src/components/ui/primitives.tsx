@@ -116,7 +116,7 @@ export function HelpToggle({ open, onToggle, controls, label = 'About this' }: {
       aria-label={label}
       title={label}
       className={cn(
-        'hit grid size-6 shrink-0 place-items-center rounded-full border transition-colors',
+        'ui-btn hit grid size-6 shrink-0 place-items-center rounded-full border transition-colors',
         open ? 'border-accent bg-accent text-accent-fg' : 'border-border-strong text-muted hover:text-fg',
       )}
     >
@@ -170,7 +170,7 @@ export function Panel({
   const [helpOpen, setHelpOpen] = useState(false);
   const helpId = useId();
   return (
-    <As className={cn('rounded-xl border border-border bg-surface', className)}>
+    <As className={cn('ui-panel rounded-xl border border-border bg-surface', className)}>
       {(title || actions || help) && (
         <header className="flex min-h-11 items-center justify-between gap-2 px-4 pt-3">
           {title && <h2 className="min-w-0 text-sm font-semibold">{title}</h2>}
@@ -227,7 +227,7 @@ export function Chip({ tone = 'neutral', icon: Icon, children, className }: { to
   return (
     <span
       className={cn(
-        'inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2 text-xs font-semibold whitespace-nowrap',
+        'ui-chip inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2 text-xs font-semibold whitespace-nowrap',
         tone === 'neutral' && 'text-muted',
         tone === 'good' && 'text-good',
         tone === 'warn' && 'text-warn',
@@ -272,7 +272,7 @@ export function Tabs<T extends string>({
     ref.current?.querySelector<HTMLElement>(`[data-tab="${t.id}"]`)?.focus();
   };
   return (
-    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn('flex gap-0.5 rounded-lg bg-surface-2 p-0.5', className)}>
+    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn('ui-tabs flex gap-0.5 rounded-lg bg-surface-2 p-0.5', className)}>
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -283,7 +283,7 @@ export function Tabs<T extends string>({
           tabIndex={value === t.id ? 0 : -1}
           onClick={() => onChange(t.id)}
           className={cn(
-            'flex flex-1 items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap transition-colors sm:flex-none',
+            'ui-tab flex flex-1 items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap transition-colors sm:flex-none',
             size === 'sm' ? 'h-7 px-2.5 text-xs pointer-coarse:h-10' : 'h-8 px-3 text-sm pointer-coarse:h-11',
             value === t.id ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg',
           )}
@@ -324,7 +324,7 @@ export function Notice({ tone = 'warn', icon: Icon, title, children, className }
     <div
       role={tone === 'bad' ? 'alert' : 'status'}
       className={cn(
-        'flex gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm',
+        'ui-panel flex gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm',
         tone === 'warn' && 'border-warn/35 bg-warn/8',
         tone === 'bad' && 'border-bad/35 bg-bad/8',
         tone === 'accent' && 'border-accent/35 bg-accent/8',
