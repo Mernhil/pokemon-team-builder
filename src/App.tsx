@@ -10,6 +10,7 @@ import {
   Eraser,
   FolderOpen,
   Gauge,
+  LayoutGrid,
   Columns2,
   Crosshair,
   GitCompare,
@@ -60,6 +61,7 @@ const AtlasView = lazy(() => import('./components/atlas/AtlasView').then((m) => 
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
 const RegulationDiffView = lazy(() => import('./components/regulation/RegulationDiffView').then((m) => ({ default: m.RegulationDiffView })));
 const ThreatReportView = lazy(() => import('./components/threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
+const TeamShowcaseView = lazy(() => import('./components/showcase/TeamShowcaseView').then((m) => ({ default: m.TeamShowcaseView })));
 const OhkoReportView = lazy(() => import('./components/threats/OhkoReportView').then((m) => ({ default: m.OhkoReportView })));
 const ReverseSearchView = lazy(() => import('./components/reverse/ReverseSearchView').then((m) => ({ default: m.ReverseSearchView })));
 const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
@@ -86,10 +88,11 @@ const SECONDARY: Dest[] = [
   { id: 'ohkod', label: 'OHKO’d by', icon: Skull },
   { id: 'ohko', label: 'Can OHKO', icon: Crosshair },
   { id: 'reverse', label: 'Reverse search', icon: Search },
+  { id: 'showcase', label: 'Team overview', icon: LayoutGrid },
   { id: 'compare', label: 'Compare teams', icon: Columns2 },
   { id: 'regdiff', label: 'Regulation diff', icon: GitCompare },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'ohkod', 'ohko', 'reverse', 'regdiff', 'compare'];
+const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'ohkod', 'ohko', 'showcase', 'reverse', 'regdiff', 'compare'];
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -155,6 +158,7 @@ export default function App() {
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
   else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
+  else if (view === 'showcase') content = <Suspense fallback={loading('Loading team overview…')}><TeamShowcaseView /></Suspense>;
   else if (view === 'compare') content = <Suspense fallback={loading('Loading compare…')}><CompareView /></Suspense>;
   else if (view === 'regdiff') content = <Suspense fallback={loading('Loading regulation diff…')}><RegulationDiffView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');

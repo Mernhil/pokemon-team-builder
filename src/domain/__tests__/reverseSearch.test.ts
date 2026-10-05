@@ -13,6 +13,7 @@ import {
   rankMatches,
   resistCheck,
   targetFor,
+  withRequiredMoves,
   type Candidate,
   type Condition,
 } from '@/domain/reverseSearch';
@@ -113,5 +114,42 @@ describe('usage as a percentage or only a rank', () => {
     expect(ranked.map((m) => m.candidate.speciesId)).toEqual(['a', 'b', 'c']);
     const mixed = rankMatches([mk('lo', { usagePct: 5 }), mk('hi', { usagePct: 40 })]);
     expect(mixed.map((m) => m.candidate.speciesId)).toEqual(['hi', 'lo']);
+  });
+});
+
+describe('required moves', () => {
+  const candidates = buildCandidates(dex, fmt, snap);
+  const reg = fmt.regulationId;
+  const inc = candidates.find((c) => c.speciesId === 'incineroar')!;
+
+  it('rejects a Pokémon that cannot learn the move', () => {
+    const chomp = candidates.find((c) => c.speciesId === 'garchomp')!;
+    expect(dex.learnset('garchomp', reg).some((m) => m.id === 'fakeout')).toBe(false);
+    expect(withRequiredMoves(dex, chomp, ['fakeout'], reg)).toBeUndefined();
+  });
+
+  it('keeps a set that already knows the move, and says nothing changed', () => {
+    expect(inc.set.moves).toContain('fakeout');
+    expect(withRequiredMoves(dex, inc, ['fakeout'], reg)).toBe(inc);
+  });
+
+  it('puts a missing move in place of a status move first, and reports it', () => {
+    const base: Candidate = { ...inc, set: { ...inc.set, moves: ['flareblitz', 'knockoff', 'protect', 'darkestlariat'] } };
+    const out = withRequiredMoves(dex, base, ['partingshot'], reg)!;
+    expect(out.set.moves).toContain('partingshot');
+    expect(out.set.moves).toContain('flareblitz');
+    expect(out.set.moves).not.toContain('protect');
+    expect(out.moveChanges).toEqual({ added: ['Parting Shot'], dropped: ['Protect'] });
+  });
+
+  it('every Fake Out user that one-shots something is built with Fake Out and can learn it', () => {
+    const target = cond('c1', 'ohko', 'sylveon', { allowPossible: true });
+    const matches = candidates
+      .flatMap((c) => withRequiredMoves(dex, c, ['fakeout'], reg) ?? [])
+      .flatMap((c) => evaluateCandidate(dex, c, [target], field) ?? []);
+    for (const m of matches) {
+      expect(m.candidate.set.moves).toContain('fakeout');
+      expect(dex.canLearn(m.candidate.speciesId, 'fakeout')).toBe(true);
+    }
   });
 });

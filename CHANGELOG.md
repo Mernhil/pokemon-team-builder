@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.23.0 — 2026-10-05
+
+### New
+- **Team overview** (More → *Team overview*, or **Overview** on a team in Saved teams): pick a saved team (or the build in progress) and see all of it at a glance, read-only, like the in-game team screen. **Moves & More** shows each Pokémon's ability, item and moves, **Stats** its finished stats with their SP or EVs and the nature's raised and lowered stat, and **Team** the speed order and both type matrices. The six Pokémon sit two to a row, so the whole team fits one phone screen; *Show Megas* switches the cards to the Mega formes.
+- **Reverse search: "Has to know a move".** Pick up to four moves every answer has to know, alone or on top of the other conditions, e.g. a Fake Out user that one-shots Sylveon. Only Pokémon that can learn the move in the format show up, and each is built to know it: if its usual set lacks the move, it goes in place of a status move first (then its last attack), and the result says what it replaced. The calculations use the build with the move in it.
+
 ## 0.22.0 — 2026-10-04
 
 ### New
