@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Copy, Pencil, Plus, Share2, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, Copy, LayoutGrid, Pencil, Plus, Share2, Trash2, Users } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useRegulationChanges } from '@/data/regulationChanges';
 import { useDex } from '@/data/useDex';
@@ -8,6 +8,7 @@ import { relevantRegulations, teamImpact, type TeamImpact } from '@/domain/regul
 import { nameOf, sharedFolders } from '@/domain/sharing';
 import { teamVariations } from '@/domain/team';
 import type { SpriteSetId, Team } from '@/domain/types';
+import { useShowcaseStore } from '@/store/showcaseStore';
 import { editingTeam, useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
@@ -211,6 +212,13 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   const headline = [...targets].reverse().map((reg) => ({ reg, broken: [...impacts.entries()].filter(([, per]) => (per.get(reg)?.counts.breaks ?? 0) > 0) })).find((h) => h.broken.length > 0);
 
   // Saved teams are never edited in place: this loads a copy into the builder, and Save updates the saved one.
+  // The full team at a glance (sets, stats, Megas, moves), without loading it into the builder.
+  const overview = (id: string) => {
+    useShowcaseStore.getState().show(id);
+    useTeamStore.getState().setView('showcase');
+    onOpenChange(false);
+  };
+
   const select = (id: string) => {
     if (teams[id]?.shared) selectTeam(id);
     else editTeam(id);
@@ -277,6 +285,9 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                     <Share2 size={15} aria-hidden />
                   </Button>
                 )}
+                <Button size="sm" variant="ghost" aria-label={`Overview of ${t.name}`} onClick={() => overview(id)}>
+                  <LayoutGrid size={14} aria-hidden /> Overview
+                </Button>
                 <Button size="sm" aria-label={`Edit team ${t.name}`} onClick={() => select(id)}>
                   <Pencil size={14} aria-hidden /> Edit team
                 </Button>
