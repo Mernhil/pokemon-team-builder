@@ -4,7 +4,13 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 ## 0.24.0 — 2026-10-05
 
+### New
+- **Analyse** (main bar, between Calc and Pokédex): Team overview, Speed tiers, the Threat report, the OHKO lists and Compare are now tabs of one view with a single team picker, so you can analyse any saved or shared team without opening it in the builder. `#analyse/speed`, `#analyse/ohko/to` and so on open a tab; every old link (`#speed`, `#threats`, `#ohko`, `#ohkod`, `#showcase`, `#compare`) still works. The two OHKO entries in the menu are one tab with its two lists.
+- **Search everything** (Ctrl/⌘ + K, or the search button in the header): find any screen or Analyse tab, your saved teams, a Pokémon (its Pokédex page, or the Calc with it as the attacker), a Pokénav game or a setting.
+- **What's new**: after an update a sheet lists what changed since the version you last saw, with a **Try it** link on the notes that name a screen. Settings → What's new shows it any time.
+
 ### Changed
+- **The menu is reorganised.** More now holds Match log, Meta, a Tools group (Reverse search, Regulation diff) and Settings. On a phone the bottom bar is Build, Calc, Analyse, Pokédex and More, with Pokénav under More.
 - **Desktop updates now come from a separate public releases repository** (`Mernhil/pokemon-team-builder-releases`), so the app's own repository can be made private. This is the transition release: it is published to both places, so apps installed before it find it where they always looked. Nothing changes in the app itself.
 - **Fewer CI minutes:** documentation-only changes skip CI, and the iPhone WebKit tests run only on a pull request that changes the app.
 - **Champions learnsets come from Showdown's current Champions data** (a newer pinned checkout) instead of the older @pkmn/mods release, for every Pokémon it covers (@pkmn/dex and @pkmn/mods are already at their latest versions).

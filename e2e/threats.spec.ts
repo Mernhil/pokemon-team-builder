@@ -8,7 +8,7 @@ test('Threat report: Team check links to it, cells show both directions, a cell 
   // Team check has a "Top threats" line with the worst few, and a link.
   await expect(page.getByText('Top threats', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Threat report/ }).click();
-  await expect(page).toHaveURL(/#threats$/);
+  await expect(page).toHaveURL(/#analyse\/threats$/);
 
   await expect(page.getByRole('status').filter({ hasText: /\d+ threats calculated against 2 of your Pokémon/ })).toBeVisible({ timeout: 30_000 });
   // The live regulation always has numbers of its own (Smogon's, or provisional ones), so no fallback.
@@ -66,13 +66,13 @@ test('OHKO reports: Team check links to both, each lists who can OHKO whom, a ro
   await importTeam(page, SAMPLE_TEAM);
 
   await page.getByRole('link', { name: /OHKO’d by/ }).click();
-  await expect(page).toHaveURL(/#ohkod$/);
+  await expect(page).toHaveURL(/#analyse\/ohko\/by$/);
   await expect(page.getByRole('status').filter({ hasText: /\d+ Pokémon calculated against 2 of yours/ })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('list', { name: 'Can be OHKO’d by' }).getByRole('listitem').first()).toBeVisible();
 
   // The tabs switch between the two reports.
   await page.getByRole('tab', { name: 'Can OHKO' }).click();
-  await expect(page).toHaveURL(/#ohko$/);
+  await expect(page).toHaveURL(/#analyse\/ohko\/to$/);
   await expect(page.getByRole('status').filter({ hasText: /\d+ Pokémon calculated against 2 of yours/ })).toBeVisible({ timeout: 30_000 });
   const rows = page.getByRole('button', { name: /Open in the Damage Calc/ }).locator('visible=true');
   if (await rows.count()) {

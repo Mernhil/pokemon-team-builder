@@ -35,7 +35,7 @@ test('Team overview: Saved teams opens it on the chosen team', async ({ page }) 
   await page.getByRole('button', { name: 'Team actions' }).click();
   await page.getByRole('menuitem', { name: 'Saved teams' }).click();
   await page.getByRole('button', { name: /^Overview of / }).first().click();
-  await expect(page).toHaveURL(/#showcase$/);
-  await expect(page.getByRole('combobox', { name: 'Team to show' })).toBeVisible();
+  await expect(page).toHaveURL(/#analyse\/overview$/);
+  await expect(page.getByRole('combobox', { name: 'Team to analyse' })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Garchomp, moves' })).toBeVisible();
 });

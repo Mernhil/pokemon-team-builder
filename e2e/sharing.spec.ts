@@ -27,11 +27,11 @@ test('Compare: two variations side by side, the same-team notice and a set-by-se
   await seedTeams(page, [rain, sun], 'rain');
   await page.reload();
   await goTo(page, 'Compare teams');
-  await expect(page).toHaveURL(/#compare$/);
+  await expect(page).toHaveURL(/#analyse\/compare$/);
 
-  // The build on the left by default; pick the saved team and its variation.
-  await page.getByRole('combobox', { name: 'Team A' }).selectOption('rain');
-  await expect(page.getByRole('combobox', { name: 'Team A' })).toHaveValue('rain');
+  // The build is analysed by default; pick the saved team (team A, from Analyse's picker) and its variation.
+  await page.getByRole('combobox', { name: 'Team to analyse' }).selectOption('rain');
+  await expect(page.getByRole('combobox', { name: 'Team to analyse' })).toHaveValue('rain');
   await page.getByRole('combobox', { name: 'Team B' }).selectOption('sun');
   await expect(page.getByRole('combobox', { name: 'Team B' })).toHaveValue('sun');
   await expect(page.getByText('These are variations of the same team')).toBeVisible();
@@ -50,8 +50,9 @@ test('Compare: two variations side by side, the same-team notice and a set-by-se
   await expect(diff.getByRole('listitem').filter({ hasText: 'Incineroar' })).toHaveAttribute('data-status', 'only-a');
   await expect(diff.getByRole('listitem').filter({ hasText: 'Kingambit' })).toHaveAttribute('data-status', 'only-b');
 
-  await page.getByRole('button', { name: 'Swap the two teams' }).click();
-  await expect(page.getByRole('combobox', { name: 'Team A' })).toHaveValue('sun');
+  // Team A is Analyse's picker: switch the two round and the diff flips.
+  await page.getByRole('combobox', { name: 'Team to analyse' }).selectOption('sun');
+  await page.getByRole('combobox', { name: 'Team B' }).selectOption('rain');
   await expect(diff.getByRole('listitem').filter({ hasText: 'Incineroar' })).toHaveAttribute('data-status', 'only-b');
 });
 
@@ -82,7 +83,7 @@ async function fakeSharing(page: Page, role: 'view' | 'edit') {
 }
 
 async function enableSync(page: Page) {
-  await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More|^Match log|^Meta|^Speed tiers|^Threat report|^Regulation diff|^Compare teams/ }).click();
+  await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More|^Match log|^Meta|^Reverse search|^Regulation diff/ }).click();
   await page.getByRole('menuitem', { name: /Settings/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
   await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();

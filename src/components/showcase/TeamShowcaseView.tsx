@@ -22,8 +22,9 @@ type Tab = 'moves' | 'stats' | 'team';
  * Team overview: pick a saved team (or the build in progress) and see everything about it at a
  * glance, like the in-game team showcase: the six sets with stats, Megas and moves on one tab, and the
  * team as a whole (type matrices, speed order) on the other. Read-only; use Edit team to change it.
+ * Inside Analyse the team comes from its shared picker (`team`); without one the view has its own.
  */
-export function TeamShowcaseView() {
+export function TeamShowcaseView({ team: given }: { team?: Team } = {}) {
   const teams = useTeamStore((s) => s.teams);
   const order = useTeamStore((s) => s.order);
   const activeId = useTeamStore((s) => s.activeTeamId);
@@ -37,7 +38,7 @@ export function TeamShowcaseView() {
   useEffect(() => () => useShowcaseStore.getState().clear(), []);
   const [tab, setTab] = useState<Tab>('moves');
   const [mega, setMega] = useState(false);
-  const team = teams[pickedId] ?? teams[activeId];
+  const team = given ?? teams[pickedId] ?? teams[activeId];
 
   if (!team) return <EmptyState icon={LayoutGrid} title="No team to show">Build or save a team and it appears here.</EmptyState>;
 
@@ -45,7 +46,7 @@ export function TeamShowcaseView() {
   return (
     <div className="space-y-3">
       <Panel bodyClassName="flex flex-wrap items-center gap-2 p-2 sm:p-3">
-        <label className="min-w-0 flex-1 basis-40">
+        {!given && <label className="min-w-0 flex-1 basis-40">
           <span className="sr-only">Team</span>
           <Select aria-label="Team to show" value={team.id} onChange={(e) => setPicked(e.target.value)} className="w-full">
             {(['mine', 'shared'] as const).map((g) => {
@@ -61,7 +62,7 @@ export function TeamShowcaseView() {
               ) : null;
             })}
           </Select>
-        </label>
+        </label>}
         <Tabs<Tab>
           label="Team overview"
           size="sm"

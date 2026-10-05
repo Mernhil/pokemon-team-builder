@@ -29,7 +29,7 @@ export function TopThreats({ team, dex, format }: { team: Team; dex: Dex; format
       ) : (
         <p className="text-sm text-muted">{done ? 'No clear problems against the most-used sets.' : 'Checking the most-used sets…'}</p>
       )}
-      <a href="#threats" className="inline-flex min-h-8 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
+      <a href="#analyse/threats" className="inline-flex min-h-8 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
         <ShieldAlert size={15} aria-hidden /> Threat report
         <span className="font-normal text-muted">your whole team against the meta, both ways</span>
       </a>

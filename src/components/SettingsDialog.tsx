@@ -1,9 +1,9 @@
 import { Suspense, lazy } from 'react';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sparkles, Sun } from 'lucide-react';
 import { useTeamStore } from '@/store/teamStore';
 import { UpdateCheckButton } from './DesktopUpdater';
 import { Modal } from './ui/Modal';
-import { Label, Tabs } from './ui/primitives';
+import { Button, Label, Tabs } from './ui/primitives';
 
 // Cloud sync loads when Settings opens (its engine loads only once sync is on).
 const SyncSettings = lazy(() => import('./SyncSettings'));
@@ -12,7 +12,7 @@ const SyncSettings = lazy(() => import('./SyncSettings'));
  * Settings & credits: appearance, where data lives, and who made the data and art the app uses.
  * The app claims no ownership of any Pokémon asset.
  */
-export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenWhatsNew: () => void }) {
   const theme = useTeamStore((s) => s.theme);
   const setTheme = useTeamStore((s) => s.setTheme);
 
@@ -33,6 +33,17 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
             ]}
           />
           <p className="text-xs text-muted">Motion follows your system’s “reduce motion” setting.</p>
+        </section>
+
+        <section className="space-y-1.5" aria-labelledby="set-whatsnew">
+          <h3 id="set-whatsnew">
+            <Label>What’s new</Label>
+          </h3>
+          <p>What changed in the latest releases.</p>
+          <Button onClick={onOpenWhatsNew}>
+            <Sparkles size={15} aria-hidden />
+            What’s new
+          </Button>
         </section>
 
         <section className="space-y-1.5" aria-labelledby="set-data">

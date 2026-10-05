@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  Activity,
   ArrowLeftRight,
   BarChart3,
   BookOpen,
@@ -9,18 +10,12 @@ import {
   ChevronDown,
   Eraser,
   FolderOpen,
-  Gauge,
-  LayoutGrid,
-  Columns2,
-  Crosshair,
   GitCompare,
   MoreHorizontal,
   Plus,
   Save,
   Search,
   Settings,
-  ShieldAlert,
-  Skull,
   Swords,
   Users,
   type LucideIcon,
@@ -32,10 +27,13 @@ import { gameInfo } from '@/domain/games';
 import { GEN_GAMES } from '@/domain/generations';
 import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
+import { compareVersions, releasesSince } from '@/domain/changelog';
+import { usePrefsStore } from '@/store/prefsStore';
 import { toast } from '@/store/toastStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { isSavedTeam } from '@/domain/team';
-import { useActiveTeam, useTeamStore, type View } from '@/store/teamStore';
+import { parseRoute, routeHash, type View } from '@/domain/routes';
+import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { DefenseMatrix } from './components/analysis/DefenseMatrix';
 import { OffenseMatrix } from './components/analysis/OffenseMatrix';
 import { TeamCheck } from './components/analysis/TeamCheck';
@@ -49,7 +47,7 @@ import { SaveTeamDialog } from './components/io/SaveTeamDialog';
 import { TeamsDialog } from './components/io/TeamsDialog';
 import { SettingsDialog } from './components/SettingsDialog';
 import { TeamSlots, TeamStrip } from './components/team/TeamSlots';
-import { Menu, MenuItem, MenuSeparator } from './components/ui/Menu';
+import { Menu, MenuItem, MenuLabel, MenuSeparator } from './components/ui/Menu';
 import { Toaster } from './components/ui/Toaster';
 import { Button, LoadingState, Panel } from './components/ui/primitives';
 import { buttonClass, cn, controlClass } from './components/ui/styles';
@@ -60,12 +58,11 @@ const PokedexView = lazy(() => import('./components/pokedex/PokedexView').then((
 const AtlasView = lazy(() => import('./components/atlas/AtlasView').then((m) => ({ default: m.AtlasView })));
 const MatchesView = lazy(() => import('./components/matches/MatchesView').then((m) => ({ default: m.MatchesView })));
 const RegulationDiffView = lazy(() => import('./components/regulation/RegulationDiffView').then((m) => ({ default: m.RegulationDiffView })));
-const ThreatReportView = lazy(() => import('./components/threats/ThreatReportView').then((m) => ({ default: m.ThreatReportView })));
-const TeamShowcaseView = lazy(() => import('./components/showcase/TeamShowcaseView').then((m) => ({ default: m.TeamShowcaseView })));
-const OhkoReportView = lazy(() => import('./components/threats/OhkoReportView').then((m) => ({ default: m.OhkoReportView })));
+// The palette and the "What's new" sheet load when first opened.
+const CommandPalette = lazy(() => import('./components/CommandPalette'));
+const WhatsNew = lazy(() => import('./components/WhatsNew'));
+const AnalyseView = lazy(() => import('./components/analyse/AnalyseView').then((m) => ({ default: m.AnalyseView })));
 const ReverseSearchView = lazy(() => import('./components/reverse/ReverseSearchView').then((m) => ({ default: m.ReverseSearchView })));
-const SpeedTiersView = lazy(() => import('./components/speed/SpeedTiersView').then((m) => ({ default: m.SpeedTiersView })));
-const CompareView = lazy(() => import('./components/compare/CompareView').then((m) => ({ default: m.CompareView })));
 const MetaView = lazy(() => import('./components/meta/MetaView').then((m) => ({ default: m.MetaView })));
 
 interface Dest {
@@ -73,26 +70,25 @@ interface Dest {
   label: string;
   icon: LucideIcon;
 }
-/** The three everyday destinations; the rest live under "More". */
+/** The everyday destinations. On a phone Pokénav moves into More (five slots in the bottom bar). */
 const PRIMARY: Dest[] = [
   { id: 'builder', label: 'Build', icon: Users },
   { id: 'calc', label: 'Calc', icon: Calculator },
+  { id: 'analyse', label: 'Analyse', icon: Activity },
   { id: 'dex', label: 'Pokédex', icon: BookOpen },
   { id: 'atlas', label: 'Pokénav', icon: MapIcon },
 ];
-const SECONDARY: Dest[] = [
+/** More: the rest, then a Tools group (Pokénav joins it on phones). */
+const MORE: Dest[] = [
   { id: 'matches', label: 'Match log', icon: Swords },
   { id: 'meta', label: 'Meta', icon: BarChart3 },
-  { id: 'speed', label: 'Speed tiers', icon: Gauge },
-  { id: 'threats', label: 'Threat report', icon: ShieldAlert },
-  { id: 'ohkod', label: 'OHKO’d by', icon: Skull },
-  { id: 'ohko', label: 'Can OHKO', icon: Crosshair },
+];
+const TOOLS: Dest[] = [
   { id: 'reverse', label: 'Reverse search', icon: Search },
-  { id: 'showcase', label: 'Team overview', icon: LayoutGrid },
-  { id: 'compare', label: 'Compare teams', icon: Columns2 },
   { id: 'regdiff', label: 'Regulation diff', icon: GitCompare },
 ];
-const VIEWS: View[] = ['builder', 'calc', 'dex', 'atlas', 'matches', 'meta', 'speed', 'threats', 'ohkod', 'ohko', 'showcase', 'reverse', 'regdiff', 'compare'];
+const POKENAV = PRIMARY.find((d) => d.id === 'atlas')!;
+const PHONE_PRIMARY = PRIMARY.filter((d) => d.id !== 'atlas');
 
 export default function App() {
   const theme = useTeamStore((s) => s.theme);
@@ -100,8 +96,53 @@ export default function App() {
   const format = getFormat(team.formatId);
   const dexState = useDex(format.datasetId);
   const view = useTeamStore((s) => s.view);
-  const setView = useTeamStore((s) => s.setView);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  /** Set when the sheet opens by itself after an update: the version whose notes were last seen. */
+  const [whatsNewSince, setWhatsNewSince] = useState<string>();
+  const setLastSeen = usePrefsStore((s) => s.setLastSeenVersion);
+
+  // Ctrl/Cmd+K opens the command palette from anywhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // After an update, show what's new since the version last seen. Not on a first install, which only notes the version.
+  useEffect(() => {
+    const seen = usePrefsStore.getState().lastSeenVersion;
+    const current = __APP_VERSION__;
+    if (seen === current) return;
+    const existing = Object.values(useTeamStore.getState().teams).some(isSavedTeam) || Object.values(usePrefsStore.getState().recent).some((l) => l?.length);
+    if ((!seen && !existing) || (seen && compareVersions(seen, current) > 0)) {
+      setLastSeen(current);
+      return;
+    }
+    let alive = true;
+    void import('virtual:changelog').then(({ default: releases }) => {
+      if (!alive) return;
+      // Someone who used the app before this feature existed has no version noted: show the latest release.
+      const base = seen ?? releases[1]?.version ?? '0.0.0';
+      if (releasesSince(releases, base, current).length) {
+        setWhatsNewSince(base);
+        setWhatsNewOpen(true);
+      } else setLastSeen(current);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [setLastSeen]);
+  const openWhatsNew = () => {
+    setWhatsNewSince(undefined);
+    setWhatsNewOpen(true);
+  };
 
   // Cloud sync (opt-in): its code loads only once it is turned on.
   const syncOn = useSyncStore((s) => s.enabled);
@@ -118,17 +159,21 @@ export default function App() {
     };
   }, [syncOn]);
 
-  // Deep link: #calc opens the calculator, #dex the Pokédex, #builder the team builder, …
+  // Deep link: #calc opens the calculator, #dex the Pokédex, #analyse/speed Analyse's Speed tab, … The hashes
+  // of the screens that moved into Analyse (#speed, #threats, #ohko, #ohkod, #showcase, #compare) still work.
+  const setRoute = useTeamStore((s) => s.setRoute);
   useEffect(() => {
     const fromHash = () => {
-      const h = location.hash.replace('#', '') as View;
-      if (VIEWS.includes(h)) setView(h);
+      const route = parseRoute(location.hash);
+      if (route) setRoute(route);
     };
     fromHash();
     window.addEventListener('hashchange', fromHash);
     return () => window.removeEventListener('hashchange', fromHash);
-  }, [setView]);
-  // Mirror the view into the hash — but not on mount, when the hash is the input (a deep link).
+  }, [setRoute]);
+  // Mirror the route into the hash — but not on mount, when the hash is the input (a deep link).
+  const analyseTab = useTeamStore((s) => s.analyseTab);
+  const ohkoMode = useTeamStore((s) => s.ohkoMode);
   const mounted = useRef(false);
   useEffect(() => {
     if (!mounted.current) {
@@ -136,11 +181,18 @@ export default function App() {
       return;
     }
     try {
-      history.replaceState(null, '', `#${view}`);
+      history.replaceState(null, '', routeHash({ view, tab: analyseTab, ohko: ohkoMode }));
     } catch {
       /* sandboxed */
     }
-    // A new screen starts at the top, and keyboard/screen-reader focus moves to it.
+  }, [view, analyseTab, ohkoMode]);
+  // A new screen starts at the top, and keyboard/screen-reader focus moves to it (not on a tab change inside Analyse).
+  const firstView = useRef(true);
+  useEffect(() => {
+    if (firstView.current) {
+      firstView.current = false;
+      return;
+    }
     document.getElementById('main')?.focus({ preventScroll: true });
     window.scrollTo({ top: 0 });
   }, [view]);
@@ -158,17 +210,13 @@ export default function App() {
   let content: ReactNode;
   if (view === 'dex') content = <Suspense fallback={loading('Loading Pokédex…')}><PokedexView format={format} /></Suspense>;
   else if (view === 'atlas') content = <Suspense fallback={loading('Loading Pokénav…')}><AtlasView /></Suspense>;
-  else if (view === 'showcase') content = <Suspense fallback={loading('Loading team overview…')}><TeamShowcaseView /></Suspense>;
-  else if (view === 'compare') content = <Suspense fallback={loading('Loading compare…')}><CompareView /></Suspense>;
+  else if (view === 'analyse') content = <Suspense fallback={loading('Loading analysis…')}><AnalyseView /></Suspense>;
   else if (view === 'regdiff') content = <Suspense fallback={loading('Loading regulation diff…')}><RegulationDiffView /></Suspense>;
   else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;
   else if (view === 'meta') content = <Suspense fallback={loading('Loading meta data…')}><MetaView dex={dex} format={format} /></Suspense>;
-  else if (view === 'speed') content = <Suspense fallback={loading('Loading speed tiers…')}><SpeedTiersView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'reverse') content = <Suspense fallback={loading('Loading reverse search…')}><ReverseSearchView dex={dex} format={format} team={team} /></Suspense>;
-  else if (view === 'ohko' || view === 'ohkod') content = <Suspense fallback={loading('Loading OHKO report…')}><OhkoReportView dex={dex} format={format} team={team} mode={view === 'ohko' ? 'to' : 'by'} /></Suspense>;
-  else if (view === 'threats') content = <Suspense fallback={loading('Loading threat report…')}><ThreatReportView dex={dex} format={format} team={team} /></Suspense>;
   else content = <Builder team={team} format={format} dex={dex} />;
 
   return (
@@ -177,23 +225,64 @@ export default function App() {
         Skip to content
       </a>
       <DesktopUpdater />
-      <Header team={team} format={format} dex={dex} onOpenSettings={() => setSettingsOpen(true)} />
+      <Header team={team} format={format} dex={dex} onOpenSettings={() => setSettingsOpen(true)} onOpenPalette={() => setPaletteOpen(true)} />
       <main id="main" tabIndex={-1} className={cn('mx-auto w-full flex-1 p-3 pb-24 outline-none sm:p-4 sm:pb-6', view === 'calc' ? 'max-w-[1800px]' : 'max-w-[1500px]')}>
-        <h1 className="sr-only">{[...PRIMARY, ...SECONDARY].find((d) => d.id === view)?.label ?? 'Build'} · Pokémon Team Builder</h1>
+        <h1 className="sr-only">{[...PRIMARY, ...MORE, ...TOOLS].find((d) => d.id === view)?.label ?? 'Build'} · Pokémon Team Builder</h1>
         {content}
       </main>
       <BottomTabs onOpenSettings={() => setSettingsOpen(true)} />
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onOpenWhatsNew={() => (setSettingsOpen(false), openWhatsNew())} />
+      {paletteOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette open onOpenChange={setPaletteOpen} onOpenSettings={() => setSettingsOpen(true)} onOpenWhatsNew={openWhatsNew} />
+        </Suspense>
+      )}
+      {whatsNewOpen && (
+        <Suspense fallback={null}>
+          <WhatsNew
+            open
+            since={whatsNewSince}
+            onOpenChange={(o) => {
+              setWhatsNewOpen(o);
+              if (!o) setLastSeen(__APP_VERSION__);
+            }}
+          />
+        </Suspense>
+      )}
       <Toaster />
     </div>
   );
 }
 
-/** Build · Calc · Pokédex, then More (Match log, Meta, Settings). Desktop and tablet. */
+/** The menu behind "More": Match log, Meta, a Tools group and Settings. Phones add Pokénav to Tools. */
+function MoreItems({ phone, onOpenSettings }: { phone: boolean; onOpenSettings: () => void }) {
+  const view = useTeamStore((s) => s.view);
+  const setView = useTeamStore((s) => s.setView);
+  const tools = phone ? [...TOOLS, POKENAV] : TOOLS;
+  const item = (d: Dest) => (
+    <MenuItem key={d.id} icon={d.icon} current={view === d.id} onSelect={() => setView(d.id)}>
+      {d.label}
+    </MenuItem>
+  );
+  return (
+    <>
+      {MORE.map(item)}
+      <MenuSeparator />
+      <MenuLabel>Tools</MenuLabel>
+      {tools.map(item)}
+      <MenuSeparator />
+      <MenuItem icon={Settings} onSelect={onOpenSettings}>
+        Settings &amp; credits
+      </MenuItem>
+    </>
+  );
+}
+
+/** Build · Calc · Analyse · Pokédex · Pokénav, then More. Desktop and tablet. */
 function TopNav({ onOpenSettings }: { onOpenSettings: () => void }) {
   const view = useTeamStore((s) => s.view);
   const setView = useTeamStore((s) => s.setView);
-  const secondary = SECONDARY.find((d) => d.id === view);
+  const secondary = [...MORE, ...TOOLS].find((d) => d.id === view);
   const item = (active: boolean) =>
     cn('flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-colors', active ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg');
   return (
@@ -215,25 +304,17 @@ function TopNav({ onOpenSettings }: { onOpenSettings: () => void }) {
           </button>
         }
       >
-        {SECONDARY.map((d) => (
-          <MenuItem key={d.id} icon={d.icon} current={view === d.id} onSelect={() => setView(d.id)}>
-            {d.label}
-          </MenuItem>
-        ))}
-        <MenuSeparator />
-        <MenuItem icon={Settings} onSelect={onOpenSettings}>
-          Settings &amp; credits
-        </MenuItem>
+        <MoreItems phone={false} onOpenSettings={onOpenSettings} />
       </Menu>
     </nav>
   );
 }
 
-/** Phone navigation: the same destinations as a bottom tab bar (clear of the home indicator). */
+/** Phone navigation: five slots in a bottom tab bar (clear of the home indicator): Build · Calc · Analyse · Pokédex · More. */
 function BottomTabs({ onOpenSettings }: { onOpenSettings: () => void }) {
   const view = useTeamStore((s) => s.view);
   const setView = useTeamStore((s) => s.setView);
-  const secondary = SECONDARY.find((d) => d.id === view);
+  const secondary = [...MORE, ...TOOLS, POKENAV].find((d) => d.id === view);
   const tab = (active: boolean) =>
     cn('flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold', active ? 'text-accent' : 'text-muted');
   return (
@@ -241,7 +322,7 @@ function BottomTabs({ onOpenSettings }: { onOpenSettings: () => void }) {
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-surface/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
     >
-      {PRIMARY.map((d) => (
+      {PHONE_PRIMARY.map((d) => (
         <button key={d.id} type="button" aria-current={view === d.id ? 'page' : undefined} onClick={() => setView(d.id)} className={tab(view === d.id)}>
           <d.icon size={21} aria-hidden />
           {d.label}
@@ -256,15 +337,7 @@ function BottomTabs({ onOpenSettings }: { onOpenSettings: () => void }) {
           </button>
         }
       >
-        {SECONDARY.map((d) => (
-          <MenuItem key={d.id} icon={d.icon} current={view === d.id} onSelect={() => setView(d.id)}>
-            {d.label}
-          </MenuItem>
-        ))}
-        <MenuSeparator />
-        <MenuItem icon={Settings} onSelect={onOpenSettings}>
-          Settings &amp; credits
-        </MenuItem>
+        <MoreItems phone onOpenSettings={onOpenSettings} />
       </Menu>
     </nav>
   );
@@ -283,7 +356,7 @@ function FormatBadge({ format }: { format: FormatRules }) {
   return <GenBadge gen={format.generation} />;
 }
 
-function Header({ team, format, dex, onOpenSettings }: { team: Team; format: FormatRules; dex?: Dex; onOpenSettings: () => void }) {
+function Header({ team, format, dex, onOpenSettings, onOpenPalette }: { team: Team; format: FormatRules; dex?: Dex; onOpenSettings: () => void; onOpenPalette: () => void }) {
   const { switchFormat, saveTeam, clearTeam, restoreSlots, newTeam, selectTeam, deleteTeam } = useTeamStore.getState();
   const isEmpty = team.slots.every((s) => s === null);
   const [teamsOpen, setTeamsOpen] = useState(false);
@@ -368,6 +441,9 @@ function Header({ team, format, dex, onOpenSettings }: { team: Team; format: For
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
+          <button type="button" className={buttonClass('default', 'icon')} onClick={onOpenPalette} aria-label="Search (Ctrl K)" title="Search · Ctrl/⌘ K">
+            <Search size={17} aria-hidden />
+          </button>
           <UpdateCheckButton />
           <Button variant="primary" onClick={() => setSaveOpen(true)}>
             {justSaved ? <Check size={15} aria-hidden /> : <Save size={15} aria-hidden />}

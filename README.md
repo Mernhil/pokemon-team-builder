@@ -118,6 +118,14 @@ Champions formats are generated from these files, and the app switches to the li
 
 A weekly scheduled task follows [`docs/UPDATING_REGULATIONS.md`](docs/UPDATING_REGULATIONS.md). Each run researches new regulations, writes or updates these files, rebuilds, tests, commits and republishes the app.
 
+### Navigation: Analyse, the command palette and What's new
+
+The main bar is **Build · Calc · Analyse · Pokédex · Pokénav · More** (on a phone five slots: Build, Calc, Analyse, Pokédex, More, with Pokénav under More). **More** holds Match log, Meta, a Tools group (Reverse search, Regulation diff) and Settings. **Analyse** (`src/components/analyse/`) puts everything that looks at a team behind one team picker: tabs **Overview** (Team overview), **Speed** (Speed tiers), **Threats** (the Threat report), **OHKO** (the two lists, *can be OHKO'd by* and *can OHKO*) and **Compare**. The picker starts on the build that is open; any saved or shared team works without opening it in the builder. The tab is in the URL: `#analyse/speed`, `#analyse/ohko/to`. The hashes the screens had before (`#speed`, `#threats`, `#ohko`, `#ohkod`, `#showcase`, `#compare`) still work and land on the matching tab (`src/domain/routes.ts`, pure and tested).
+
+**Ctrl/⌘ + K**, or the search button in the header, opens the command palette (`src/components/CommandPalette.tsx`, a combobox; the matching is `src/domain/fuzzy.ts`): every screen and Analyse tab, your saved teams (open in the builder, or analyse), Pokémon (their Pokédex page, or the Calc with them as the attacker), Pokénav games and settings.
+
+After an update the app shows **What's new**: the New / Changed / Fixed notes of every release since the version you last saw, newest first; a note whose bold title names a screen has a **Try it** link. Not on a first install; Settings → What's new keeps it reachable. `CHANGELOG.md` is parsed at build time (`src/domain/changelog.ts` through the `virtual:changelog` module of `vite.config.ts`), the last 12 releases, and loaded only when the sheet opens.
+
 ### Meta tab
 
 The Meta tab lists each Champions regulation's most-used Pokémon with their common items, moves, abilities, spreads and teammates.
@@ -133,7 +141,7 @@ A regulation without published statistics falls back to your own logged matches.
 
 With sync on, a team's **share button** in Saved teams shares that team and its variations with one other person (by the e-mail they sign in with) as *can view* or *can edit*, and Settings → Sync can share your match log (view only). What others share appears under **Shared with me** with the owner's name; view-only teams open read-only with **Make my own copy**, editable ones merge by the same rule as your own devices (the losing version is kept as a team of your own). Their matches are a separate choice in the Match log and Meta tabs (*Mine / <Name>'s / Both of us*). A toast says when the other person changed something. Access rules live in `worker/access.ts`, the details in [`docs/SYNC.md`](docs/SYNC.md).
 
-**Compare teams** (More → Compare teams) puts two teams (mine, shared, or two variations of one team) side by side: both type matrices, speeds, top threats and a set-by-set diff of species, item, ability, nature, moves and spread (`src/domain/teamCompare.ts`).
+**Compare teams** (Analyse → Compare; team A is the team picked in Analyse's header) puts two teams (mine, shared, or two variations of one team) side by side: both type matrices, speeds, top threats and a set-by-set diff of species, item, ability, nature, moves and spread (`src/domain/teamCompare.ts`).
 
 ### Regulation changes
 
@@ -160,14 +168,14 @@ The result sits next to your current spread with ✓/✗ per goal; **Apply** wri
 
 ### Threat report
 
-**More → Threat report** (`#threats`, with a "Top threats" line in Team check) runs the Damage Calc for your whole team against the most-used Champions sets, in both directions, on one screen.
+**Analyse → Threats** (`#analyse/threats`, with a "Top threats" line in Team check) runs the Damage Calc for your whole team against the most-used Champions sets, in both directions, on one screen.
 Each threat is a meta set (`src/domain/metaSets.ts`: the most common ability, item, spread and nature, and the top four moves, never four status moves; anything the format doesn't allow is dropped and reported). Every cell shows your best move and its best move as OHKO / possible OHKO / 2HKO / 3HKO+ with the damage range, and who moves first; Mega Stone holders are read at their worse forme for you and their better one for the threat. Plain-language summaries rank the worst threats first ("Kingambit OHKOs 3 of your Pokémon and none of yours OHKO it back", "Nothing on your team outspeeds and 2HKOs Flutter Mane").
 The field (Doubles by default, weather, terrain, Trick Room) and the number of threats (10/20/30) change everything at once. The grid uses a blue-to-orange scale with ✓/✗/~ and words in every cell, and becomes one card per threat on phones; tapping a cell opens the Damage Calc pre-filled with that attacker, defender and field.
 The engine (`src/domain/threats.ts`) is pure; the page runs it in a Web Worker (`src/workers/`) with memoised cells and streams rows in as they finish, so it doesn't freeze a phone (browsers without Web Workers run it on the main thread in small slices instead). It uses the same newest-published-regulation fallback and data-age notice as Speed tiers. Other formats show an explanation instead.
 
 ### Speed tiers
 
-**More → Speed tiers** (`#speed`, also linked from Team check) is a ladder of the most-used Champions Pokémon's likely Speeds with your team on the same scale, fastest first.
+**Analyse → Speed** (`#analyse/speed`, also linked from Team check) is a ladder of the most-used Champions Pokémon's likely Speeds with your team on the same scale, fastest first.
 Each meta Pokémon is built from its published spreads (spreads with the same final Speed merge), its most common ability and item; a Mega Stone holder also gets its Mega forme's Speed, and a Choice Scarf row appears when at least 10% of its sets hold one.
 Every number comes from the Damage Calc's own speed (`calcSpeed`), so the two can't disagree. Toggle Tailwind, −1/+1/+2, paralysis and (for your side) Choice Scarf per side, plus weather, terrain and Trick Room, which flips the ladder.
 Tap a meta row for **Outspeed this**: the Stat Points (and nature, if needed) one of your Pokémon needs to beat it in that scenario, with an undoable Apply.

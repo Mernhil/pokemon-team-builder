@@ -13,11 +13,14 @@ interface PrefsState {
   listMode: Partial<Record<'items' | 'moves', ListMode>>;
   /** Champions: list species outside the selected regulation, greyed out. */
   showUnavailableSpecies: boolean;
+  /** The app version whose "What's new" has been shown (or dismissed); absent on a first install. */
+  lastSeenVersion?: string;
 
   addRecent: (key: PickerKey, id: string) => void;
   toggleFavorite: (key: PickerKey, id: string) => void;
   setListMode: (key: 'items' | 'moves', mode: ListMode) => void;
   setShowUnavailableSpecies: (on: boolean) => void;
+  setLastSeenVersion: (version: string) => void;
 }
 
 const KEYS: PickerKey[] = ['items', 'moves', 'species', 'natures'];
@@ -56,12 +59,13 @@ export const usePrefsStore = create<PrefsState>()(
         }),
       setListMode: (key, mode) => set((s) => ({ listMode: { ...s.listMode, [key]: mode } })),
       setShowUnavailableSpecies: (showUnavailableSpecies) => set({ showUnavailableSpecies }),
+      setLastSeenVersion: (lastSeenVersion) => set({ lastSeenVersion }),
     }),
     {
       name: 'ptb:prefs:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies }),
+      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies, lastSeenVersion: s.lastSeenVersion }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PrefsState>;
         const mode = (v: unknown): ListMode | undefined => (v === 'az' || v === 'grouped' ? v : undefined);
@@ -72,6 +76,7 @@ export const usePrefsStore = create<PrefsState>()(
           favorites: perKey(p.favorites, MAX_FAVORITES),
           listMode: { items: mode(lm.items), moves: mode(lm.moves) },
           showUnavailableSpecies: typeof p.showUnavailableSpecies === 'boolean' ? p.showUnavailableSpecies : current.showUnavailableSpecies,
+          lastSeenVersion: typeof p.lastSeenVersion === 'string' && /^\d{1,5}\.\d{1,5}\.\d{1,5}$/.test(p.lastSeenVersion) ? p.lastSeenVersion : undefined,
         };
       },
     },

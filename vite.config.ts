@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
 import { configDefaults } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
+import { parseChangelog } from './src/domain/changelog.ts';
 
 // The desktop app version (src-tauri/tauri.conf.json), not package.json's — it's the one bumped on
 // every Tauri release, so it's what actually changes and busts the webview's icon cache.
@@ -16,6 +17,18 @@ const appVersion = JSON.parse(readFileSync(new URL('./src-tauri/tauri.conf.json'
 const cacheBustIcons = (): Plugin => ({
   name: 'cache-bust-icons',
   transformIndexHtml: (html) => html.replaceAll('%APP_VERSION%', appVersion),
+});
+
+// "What's new": CHANGELOG.md as data (src/domain/changelog.ts), the latest releases only. Imported lazily
+// as `virtual:changelog`, so it costs nothing until the sheet opens.
+const changelog = (): Plugin => ({
+  name: 'changelog',
+  resolveId: (id) => (id === 'virtual:changelog' ? '\0virtual:changelog' : undefined),
+  load(id) {
+    if (id !== '\0virtual:changelog') return undefined;
+    this.addWatchFile(fileURLToPath(new URL('./CHANGELOG.md', import.meta.url)));
+    return `export default ${JSON.stringify(parseChangelog(readFileSync(new URL('./CHANGELOG.md', import.meta.url), 'utf-8'), 12))};`;
+  },
 });
 
 // The Meta tab's "Check for newer data" fetches the deployed copy of the usage data
@@ -38,6 +51,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     cacheBustIcons(),
+    changelog(),
     emitMeta(),
     // Installable web app ("Add to Home Screen" on iPhone). The service worker precaches the whole
     // app, sprites included, so it works offline; src/pwa.ts picks up new deploys automatically.

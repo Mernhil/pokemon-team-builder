@@ -410,7 +410,7 @@ function Nemesis({ dex, format, row, matches }: { dex: Dex; format: FormatRules;
   };
   const go = (view: 'speed' | 'threats') => {
     focus(row.speciesId);
-    setView(view);
+    useTeamStore.getState().openAnalyse(view);
   };
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">

@@ -215,7 +215,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   // The full team at a glance (sets, stats, Megas, moves), without loading it into the builder.
   const overview = (id: string) => {
     useShowcaseStore.getState().show(id);
-    useTeamStore.getState().setView('showcase');
+    useTeamStore.getState().openAnalyse('overview');
     onOpenChange(false);
   };
 
