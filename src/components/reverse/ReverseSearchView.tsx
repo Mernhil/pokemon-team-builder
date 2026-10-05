@@ -15,12 +15,14 @@ import {
   type Match,
 } from '@/domain/reverseSearch';
 import { snapshotAge } from '@/domain/speedTiers';
+import { MAX_REQUIRED_MOVES } from '@/domain/reverseSearch';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
 import { FieldControls, Segmented, Toggle } from '../battle/Controls';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
+import { Combobox, type ComboOption } from '../ui/Combobox';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip, Disclosure, EmptyState, LoadingState, Notice, Panel, Select, TypeBadge } from '../ui/primitives';
 import { TargetEditor } from './TargetEditor';
@@ -47,10 +49,12 @@ const nextId = () => `c${++counter}`;
  */
 export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: FormatRules; team: Team }) {
   const [conditions, setConditions] = useState<Condition[]>([]);
+  // Moves every answer has to know ("a Fake Out user that…").
+  const [knows, setKnows] = useState<string[]>([]);
   const [field, setField] = useState<FieldConditions>(defaultField());
   const [kind, setKind] = useState<ConditionKind>('ohko');
   const [shown, setShown] = useState(SHOWN);
-  const search = useReverseSearch({ dex, format, conditions, field });
+  const search = useReverseSearch({ dex, format, conditions, knows, field });
   const { picked, loading, candidates, matches, checked, done } = search;
   const setView = useTeamStore((s) => s.setView);
 
@@ -75,9 +79,41 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
     const against = conditions.find((c) => c.kind !== 'resist') ?? conditions[0];
     const calc = useCalcStore.getState();
     calc.setSide('attacker', { set: m.candidate.set, cond: defaultSide(m.candidate.megaMode !== 'base'), crits: [false, false, false, false] });
+    if (!against) {
+      setView('calc');
+      return;
+    }
     calc.setSide('defender', { set: against.target.set, cond: { ...defaultSide(against.target.megaMode !== 'base'), megaMode: against.target.megaMode }, crits: [false, false, false, false] });
     calc.setField(field);
     setView('calc');
+  };
+
+  // Every move the format allows, for the "has to know" picker.
+  const moveOptions = useMemo<ComboOption[]>(
+    () =>
+      Object.values(dex.data.moves)
+        .filter((mv) => !format.regulationId || mv.legalIn.includes(format.regulationId))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((mv) => ({
+          id: mv.id,
+          label: mv.name,
+          keywords: `${mv.type} ${mv.category}`,
+          disabled: knows.includes(mv.id),
+          render: (
+            <span className="flex items-center gap-2">
+              <TypeBadge type={mv.type} size="xs" />
+              <span className="flex-1 truncate">{mv.name}</span>
+              <span className="text-[11px] text-muted">{mv.category}</span>
+            </span>
+          ),
+        })),
+    [dex, format.regulationId, knows],
+  );
+  const addKnows = (id: string) => {
+    if (id && !knows.includes(id) && knows.length < MAX_REQUIRED_MOVES) {
+      setKnows((k) => [...k, id]);
+      setShown(SHOWN);
+    }
   };
 
   const age = picked ? snapshotAge(picked.snapshot) : undefined;
@@ -155,6 +191,33 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
             </div>
           </div>
           <p className="text-xs text-muted">{KIND_HINT[kind]}</p>
+
+          <div className="space-y-2 border-t border-border pt-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Has to know a move</div>
+            {knows.length > 0 && (
+              <ul className="flex flex-wrap gap-1.5" aria-label="Required moves">
+                {knows.map((id) => {
+                  const mv = dex.move(id);
+                  return (
+                    <li key={id} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 py-0.5 pr-1 pl-2 text-sm">
+                      {mv && <TypeBadge type={mv.type} size="xs" />}
+                      <span className="font-medium">{mv?.name ?? id}</span>
+                      <button type="button" aria-label={`Remove ${mv?.name ?? id}`} onClick={() => setKnows((k) => k.filter((x) => x !== id))} className="rounded-full p-1 text-muted hover:text-bad pointer-coarse:p-2.5">
+                        <X size={13} aria-hidden />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {knows.length < MAX_REQUIRED_MOVES && (
+              <Combobox aria-label="Add a required move" options={moveOptions} value="" placeholder="Fake Out, Wide Guard, Trick Room… pick a move" onChange={addKnows} />
+            )}
+            <p className="text-xs text-muted">
+              Only Pokémon that can learn it show up, built to know it: if its usual set lacks the move, it goes in place of a status move first, and the answer says what it replaced.
+              Combine it with the conditions above, e.g. a Fake Out user that one-shots Sylveon.
+            </p>
+          </div>
         </div>
       </Panel>
 
@@ -175,9 +238,9 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
 
       {loading ? (
         <LoadingState label="Loading meta data…" />
-      ) : conditions.length === 0 ? (
+      ) : conditions.length === 0 && knows.length === 0 ? (
         <EmptyState icon={Search} title="Nothing to search for yet">
-          Try &quot;One-shots&quot; one Pokémon and &quot;Survives&quot; another to find a counter to both.
+          Try &quot;One-shots&quot; one Pokémon and &quot;Survives&quot; another to find a counter to both, or pick a move it has to know.
         </EmptyState>
       ) : (
         <section aria-labelledby="rs-results" className="space-y-3">
@@ -211,6 +274,23 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
                     </Chip>
                   </div>
                   <ul className="space-y-0.5 text-xs">
+                    {knows.map((id) => {
+                      const mv = dex.move(id);
+                      const changes = m.candidate.moveChanges;
+                      const added = !!mv && !!changes?.added.includes(mv.name);
+                      return (
+                        <li key={`knows-${id}`} className="flex items-start gap-1.5">
+                          <Check size={13} className="mt-0.5 shrink-0 text-good" aria-hidden />
+                          <span>
+                            <span className="font-medium">Knows {mv?.name ?? id}</span>
+                            <span className="text-muted">
+                              {' · '}
+                              {added ? `added${changes && changes.dropped.length ? `, replacing ${changes.dropped.join(', ')}` : ''}` : 'in its usual set'}
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    })}
                     {m.results.map((r) => {
                       const c = conditions.find((x) => x.id === r.conditionId);
                       return (

@@ -54,6 +54,8 @@ export interface Candidate extends CandidateUsage {
   megaMode: MegaMode;
   /** 'meta': the most-used set; 'default': a computed attacker build (no item). */
   build: 'meta' | 'default';
+  /** Set when moves had to be changed so it knows the required ones: what came in and what went out. */
+  moveChanges?: { added: string[]; dropped: string[] };
 }
 
 export const CONDITION_LABEL: Record<ConditionKind, string> = {
@@ -133,6 +135,44 @@ export function buildCandidates(dex: Dex, format: FormatRules, snapshot?: MetaSn
     out.push({ speciesId: species.id, set, megaMode: 'base', build: 'default' });
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Required moves
+// ---------------------------------------------------------------------------
+
+/** The most moves a search can require: a Pokémon has four. */
+export const MAX_REQUIRED_MOVES = 4;
+
+/**
+ * The candidate knowing every required move, or undefined when it can't learn one of them in this
+ * format. A build that lacks a move gets it in place of its least useful ones: status moves go
+ * first (last slot first), then damaging moves from the last slot, so the build keeps its attacks
+ * as long as it can. `moveChanges` says what changed, so the answer is never a silent swap.
+ */
+export function withRequiredMoves(dex: Dex, cand: Candidate, required: string[], regulationId: string | undefined): Candidate | undefined {
+  if (required.length === 0) return cand;
+  const legal = new Set(dex.learnset(cand.speciesId, regulationId).map((m) => m.id));
+  if (!required.every((id) => legal.has(id))) return undefined;
+
+  const own = cand.set.moves.filter(Boolean);
+  const missing = required.filter((id) => !own.includes(id));
+  if (missing.length === 0) return cand;
+
+  // Slots left for the moves it already had, once the required ones are in.
+  const room = Math.max(0, 4 - required.length);
+  const others = own.filter((id) => !required.includes(id));
+  const drop = new Set<string>();
+  const status = (id: string) => dex.move(id)?.category === 'Status';
+  const order = [...others.filter(status).reverse(), ...others.filter((id) => !status(id)).reverse()];
+  for (const id of order) {
+    if (others.length - drop.size <= room) break;
+    drop.add(id);
+  }
+  const kept = own.filter((id) => !drop.has(id));
+  const moves = [...kept, ...missing, '', '', '', ''].slice(0, 4) as PokemonSet['moves'];
+  const name = (id: string) => dex.move(id)?.name ?? id;
+  return { ...cand, set: { ...cand.set, moves }, moveChanges: { added: missing.map(name), dropped: [...drop].map(name) } };
 }
 
 // ---------------------------------------------------------------------------

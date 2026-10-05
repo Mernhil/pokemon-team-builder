@@ -3,7 +3,7 @@ import type { Dex } from '@/data/dex';
 import { useMetaFor } from '@/data/useMeta';
 import type { FieldConditions } from '@/domain/battle/conditions';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import { buildCandidates, evaluateCandidate, rankMatches, type Candidate, type Condition, type Match } from '@/domain/reverseSearch';
+import { buildCandidates, evaluateCandidate, rankMatches, withRequiredMoves, type Candidate, type Condition, type Match } from '@/domain/reverseSearch';
 import { pickSpeedSnapshot, type PickedSnapshot } from '@/domain/speedTiers';
 import type { FormatRules } from '@/domain/types';
 
@@ -29,7 +29,7 @@ export interface ReverseSearch {
  * Runs the reverse search in slices on the main thread (a few hundred cheap calcs) and returns the
  * ranked matches as they accumulate. Restarts, debounced, whenever the conditions or the field change.
  */
-export function useReverseSearch({ dex, format, conditions, field, delay = 200 }: { dex: Dex; format: FormatRules; conditions: Condition[]; field: FieldConditions; delay?: number }): ReverseSearch {
+export function useReverseSearch({ dex, format, conditions, knows = [], field, delay = 200 }: { dex: Dex; format: FormatRules; conditions: Condition[]; /** Move ids every answer has to know. */ knows?: string[]; field: FieldConditions; delay?: number }): ReverseSearch {
   const metaFor = useMetaFor();
   const champions = format.datasetId === 'champions';
   const picked = useMemo(
@@ -37,8 +37,14 @@ export function useReverseSearch({ dex, format, conditions, field, delay = 200 }
     [champions, format.regulationId, metaFor],
   );
   const loading = champions && !metaFor;
-  const candidates = useMemo(() => (loading ? [] : buildCandidates(dex, format, picked?.snapshot)), [dex, format, picked, loading]);
-  const job = useMemo(() => (conditions.length && candidates.length ? { conditions, field, candidates } : undefined), [conditions, field, candidates]);
+  const everyone = useMemo(() => (loading ? [] : buildCandidates(dex, format, picked?.snapshot)), [dex, format, picked, loading]);
+  // Only Pokémon that can learn every required move, each built to know them.
+  const knowsKey = knows.join(',');
+  const candidates = useMemo(
+    () => (knowsKey ? everyone.flatMap((c) => withRequiredMoves(dex, c, knowsKey.split(','), format.regulationId) ?? []) : everyone),
+    [everyone, knowsKey, dex, format.regulationId],
+  );
+  const job = useMemo(() => ((conditions.length || knowsKey) && candidates.length ? { conditions, field, candidates } : undefined), [conditions, knowsKey, field, candidates]);
 
   const [state, setState] = useState<{ job?: typeof job; matches: Match[]; checked: number; done: boolean }>({ matches: [], checked: 0, done: false });
   useEffect(() => {

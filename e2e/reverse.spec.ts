@@ -39,3 +39,32 @@ test('Reverse search: every condition has to hold, and a match can be added to t
     await expect(page.getByText(/^Added .* to /)).toBeVisible();
   }
 });
+
+test('Reverse search: a required move narrows the answers to Pokémon that know it, with the other conditions', async ({ page }) => {
+  await openApp(page, '#reverse');
+  await addCondition(page, 'One-shots', 'Sylveon');
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  const any = await count(page);
+
+  // "A Fake Out user that one-shots Sylveon".
+  await pickOption(page, 'Add a required move', 'Fake Out');
+  await expect(page.getByRole('list', { name: 'Required moves' }).getByText('Fake Out')).toBeVisible();
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  const withFakeOut = await count(page);
+  expect(withFakeOut).toBeGreaterThan(0);
+  expect(withFakeOut).toBeLessThan(any);
+  // Every answer says it knows the move.
+  const cards = page.getByRole('list').filter({ hasText: 'Knows Fake Out' });
+  await expect(cards.first()).toBeVisible();
+
+  // Removing the move widens the search again.
+  await page.getByRole('button', { name: 'Remove Fake Out' }).click();
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  expect(await count(page)).toBe(any);
+
+  // A move on its own works too: everything that can learn it.
+  await page.getByRole('button', { name: /^Remove: One-shots Sylveon/ }).click();
+  await pickOption(page, 'Add a required move', 'Fake Out');
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  expect(await count(page)).toBeGreaterThan(withFakeOut);
+});
