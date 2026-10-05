@@ -13,7 +13,7 @@ import { KIND_LABEL } from './TrainerDetail';
 
 const HOW_LABEL: Record<AtlasItemSpot['how'], string> = { visible: 'On the ground', hidden: 'Hidden', gift: 'Gift', tm: 'TM', hm: 'HM', mart: 'Mart', berry: 'Berry' };
 const KIND_NAME: Record<AtlasLocation['kind'], string> = {
-  city: 'City', town: 'Town', route: 'Route', 'sea-route': 'Sea route', cave: 'Cave', dungeon: 'Dungeon', landmark: 'Landmark', building: 'Building',
+  city: 'City', town: 'Town', route: 'Route', 'sea-route': 'Sea route', cave: 'Cave', dungeon: 'Dungeon', landmark: 'Landmark', building: 'Building', roaming: 'Roaming (no fixed place)',
 };
 
 const TABS: { id: LocationTab; label: string; icon: typeof MapPin }[] = [
@@ -82,6 +82,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Overview({ loc }: { loc: AtlasLocation }) {
   const { locName, openLocation, file } = useAtlasCtx();
+  const twin = loc.sameAs ? file.locations[loc.sameAs] : undefined;
   const badge = loc.gym;
   const leaderId = loc.trainers.find((id) => file.trainers[id]?.kind === 'leader' && file.trainers[id].order === 0);
   const { openTrainer } = useAtlasCtx();
@@ -93,8 +94,13 @@ function Overview({ loc }: { loc: AtlasLocation }) {
         {badge && <Chip tone="accent" icon={Swords}>Gym</Chip>}
         {loc.obstacles.map((o) => <Chip key={o} tone="warn">{o}</Chip>)}
       </div>
+      {twin && (
+        <p className="rounded-lg border border-border bg-surface-2/50 p-2 text-sm">
+          The Town Map draws this apart from <button type="button" className="font-semibold text-accent hover:underline" onClick={() => openLocation(twin.id)}>{twin.name}</button>, but the game has one map for both: its trainers, items and people are listed there.
+        </p>
+      )}
       <p className="text-sm text-muted">
-        {loc.maps.length ? `${loc.maps.length} in-game map${loc.maps.length > 1 ? 's' : ''} (${loc.maps.slice(0, 4).map((m) => m.replace(/_/g, ' ')).join(', ')}${loc.maps.length > 4 ? '…' : ''}).` : 'This place is on the Town Map but has no map of its own in the game data.'}
+        {loc.maps.length ? `${loc.maps.length} in-game map${loc.maps.length > 1 ? 's' : ''} (${loc.maps.slice(0, 4).map((m) => m.replace(/_/g, ' ')).join(', ')}${loc.maps.length > 4 ? '…' : ''}).` : (twin ? '' : 'This place is on the Town Map but has no map of its own in the game data.')}
       </p>
       {badge && (
         <Section title="Gym">

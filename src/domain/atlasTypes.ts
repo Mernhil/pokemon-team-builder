@@ -3,7 +3,7 @@
  * script and the app share one definition; the helpers live in atlas.ts.
  */
 
-export type LocationKind = 'city' | 'town' | 'route' | 'sea-route' | 'cave' | 'dungeon' | 'landmark' | 'building';
+export type LocationKind = 'city' | 'town' | 'route' | 'sea-route' | 'cave' | 'dungeon' | 'landmark' | 'building' | 'roaming';
 
 /** Everything the game source doesn't fully pin down is flagged; the UI shows an "unverified" badge. */
 export type Verified = boolean;
@@ -118,6 +118,8 @@ export interface AtlasLocation {
   items: AtlasItemSpot[];
   npcs: AtlasNpc[];
   trainers: string[];
+  /** The Town Map draws this place apart from another one (a sea route and its land route share one game map): everything is listed there. */
+  sameAs?: string;
   /** Story / static events in plain words. */
   events: string[];
 }
@@ -143,6 +145,12 @@ export interface AtlasFile {
   items: Record<string, AtlasItemInfo>;
   /** Decomp trainer ids that couldn't be placed on a location (Battle Frontier, unused maps…). */
   unplaced: string[];
+  /**
+   * Why each unplaced trainer has no location (trainer id → words): an unused slot, a battle
+   * facility, a script shared by many maps, a rematch of one that has no map… so they are listed as
+   * "Other trainers" instead of dropped. Absent in older files.
+   */
+  otherTrainers?: Record<string, string>;
   /** Badge order of the game, for progress and stock. */
   badges: string[];
   /** Fields the decomp doesn't settle: surfaced as "unverified" in the UI. */

@@ -51,8 +51,9 @@ export function ensure(repo: keyof typeof REPOS, paths: string[]): string {
     } catch {
       execSync(`git fetch -q --depth 1 origin ${commit}`, { cwd: abs, stdio: 'inherit' });
     }
-    const missing = paths.filter((p) => !existsSync(resolve(abs, p)));
-    if (missing.length) execSync(`git checkout ${commit} -- ${missing.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
+    // Always ask git for the requested paths: a directory another script checked out in part (a single file of it)
+    // exists but isn't complete, so "exists" can't mean "present". Files already there are rewritten with the same content.
+    if (paths.length) execSync(`git checkout ${commit} -- ${paths.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
     stamp();
     return abs;
   }
