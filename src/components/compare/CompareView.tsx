@@ -98,6 +98,11 @@ export function CompareView({ teamId }: { teamId?: string } = {}) {
   );
 }
 
+/** Two teams side by side, either of which may be one that isn't saved (a tournament team). */
+export function CompareTeams({ a, b }: { a: Team; b: Team }) {
+  return <Comparison a={a} b={b} names={{}} />;
+}
+
 function Comparison({ a, b, names }: { a: Team; b: Team; names: Record<string, string> }) {
   const fa = getFormat(a.formatId);
   const fb = getFormat(b.formatId);

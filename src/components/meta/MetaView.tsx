@@ -15,6 +15,7 @@ import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip, EmptyState, Label, LoadingState, Notice, Panel, Select, Tabs } from '../ui/primitives';
 import { TrendLine } from './TrendLine';
+import { TeamsSection } from './TeamsSection';
 import { TrendsSection } from './TrendsSection';
 import { cn } from '../ui/styles';
 
@@ -56,7 +57,7 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const refresh = useMetaStore((s) => s.refresh);
   const matches = useMatchStore((s) => s.matches);
   const online = useOnline();
-  const [tab, setTab] = useState<'usage' | 'trends'>('usage');
+  const [tab, setTab] = useState<'usage' | 'trends' | 'teams'>('usage');
   const [period, setPeriod] = useState<TrendPeriod>(7);
   const history = useMetaHistory(regId);
 
@@ -146,11 +147,20 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
         </Notice>
       )}
 
-      {published && (metaSourceKind(published) === 'ingame' || metaSourceKind(published) === 'smogon') && (
-        <Tabs<'usage' | 'trends'> label="Meta view" size="sm" className="w-fit" tabs={[{ id: 'usage', label: 'Usage' }, { id: 'trends', label: 'Trends' }]} value={tab} onChange={setTab} />
+      {(published || reg) && (
+        <Tabs<'usage' | 'trends' | 'teams'>
+          label="Meta view"
+          size="sm"
+          className="w-fit"
+          tabs={[{ id: 'usage', label: 'Usage' }, ...(published && (metaSourceKind(published) === 'ingame' || metaSourceKind(published) === 'smogon') ? [{ id: 'trends' as const, label: 'Trends' }] : []), { id: 'teams', label: 'Teams' }]}
+          value={tab === 'trends' && !(published && (metaSourceKind(published) === 'ingame' || metaSourceKind(published) === 'smogon')) ? 'usage' : tab}
+          onChange={setTab}
+        />
       )}
 
-      {tab === 'trends' && published && (metaSourceKind(published) === 'ingame' || metaSourceKind(published) === 'smogon') ? (
+      {tab === 'teams' ? (
+        <TeamsSection regulationId={regId} snapshot={published} />
+      ) : tab === 'trends' && published && (metaSourceKind(published) === 'ingame' || metaSourceKind(published) === 'smogon') ? (
         <TrendsSection regulationId={regId} dex={dex} format={format} sourceName={published.source.name} />
       ) : !metaFor ? (
         <LoadingState label="Loading usage data…" />

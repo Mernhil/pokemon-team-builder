@@ -33,9 +33,12 @@ import { tournamentsSnapshot } from './meta/limitless.ts';
 import { replaysSnapshot } from './meta/replays.ts';
 import { listMonths, smogonSnapshot } from './meta/smogon.ts';
 import { addIngameHistory, addSmogonHistory } from './meta/history.ts';
+import { tournamentTeamsFor } from './meta/tournamentTeams.ts';
+import { EMPTY_TOURNAMENT_TEAMS, parseTournamentTeams, type TournamentTeamsFile } from '../src/domain/tournamentTeams.ts';
 import { parseMetaHistory, EMPTY_HISTORY, type MetaHistory } from '../src/domain/metaHistory.ts';
 
 const OUT = resolve(ROOT, 'src/data/generated/meta.json');
+const TEAMS_OUT = resolve(ROOT, 'src/data/generated/tournament-teams.json');
 const HISTORY_OUT = resolve(ROOT, 'src/data/generated/meta-history.json');
 const SOURCES = ['ingame', 'smogon', 'tournaments', 'replays', 'carryover'] as const;
 
@@ -151,4 +154,24 @@ if (JSON.stringify(history) !== before) {
   parseMetaHistory(history);
   writeFileSync(HISTORY_OUT, JSON.stringify(history) + '\n');
   console.log(`wrote ${HISTORY_OUT}`);
+}
+
+// Top cuts of recent tournaments for the Meta tab's Teams tab (src/domain/tournamentTeams.ts). A
+// regulation whose source can't be read keeps its previous teams.
+if (wanted.has('tournaments')) {
+  const prevTeamsText = existsSync(TEAMS_OUT) ? readFileSync(TEAMS_OUT, 'utf8') : '';
+  const prevTeams: TournamentTeamsFile = prevTeamsText ? parseTournamentTeams(JSON.parse(prevTeamsText)) : structuredClone(EMPTY_TOURNAMENT_TEAMS);
+  const nextTeams: TournamentTeamsFile = { version: 1, generatedAt: now.slice(0, 10), regulations: {} };
+  for (const reg of ctx.regulations) {
+    console.log(`${reg.shortName} tournament teams:`);
+    const got = await attempt('Tournament teams', () => tournamentTeamsFor(ctx, reg));
+    const use = got ?? prevTeams.regulations[reg.id];
+    if (use?.teams.length) nextTeams.regulations[reg.id] = use;
+  }
+  const same = JSON.stringify(nextTeams.regulations) === JSON.stringify(prevTeams.regulations);
+  if (!same || !existsSync(TEAMS_OUT)) {
+    parseTournamentTeams(nextTeams);
+    writeFileSync(TEAMS_OUT, JSON.stringify(nextTeams) + '\n');
+    console.log(`wrote ${TEAMS_OUT}`);
+  }
 }

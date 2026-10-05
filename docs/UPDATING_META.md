@@ -102,7 +102,7 @@ mirror published in the meantime.
    new `meta.json` must validate, must not drop a regulation that had data and must not shrink one to
    under half its entries.
 3. `npm run typecheck && npm test` with the new data.
-4. If `meta.json` or `meta-history.json` (the Trends data: one rank or % list per day, see `src/domain/metaHistory.ts`; appended by step 1, backfilled from the mirror's index and Smogon's months, at most 120 entries per regulation) changed: commits them straight to the default branch (the guard, typecheck and tests
+4. If `meta.json` or `tournament-teams.json` (the Teams tab: top 8 of Limitless events with 32+ players in the last 60 days, ≤ 300 teams per regulation; a regulation whose Limitless read fails keeps its previous teams) or `meta-history.json` (the Trends data: one rank or % list per day, see `src/domain/metaHistory.ts`; appended by step 1, backfilled from the mirror's index and Smogon's months, at most 120 entries per regulation) changed: commits them straight to the default branch (the guard, typecheck and tests
    above are the checks; nothing to merge by hand). **The push redeploys the web app.** Desktop apps
    pick it up with their next release. If the branch is protected and refuses the push, the run opens
    (or updates) the `meta/update` pull request instead, to merge by hand.

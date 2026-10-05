@@ -109,6 +109,17 @@ export function setReveal(g: GameDayState, id: string, reveal: Reveal): GameDayS
   return { ...g, reveals: clean.itemId || clean.abilityId || clean.moves ? { ...rest, [id]: clean } : rest };
 }
 
+/**
+ * A new game against a known team (a tournament team, say): their species in order, with the sheet's
+ * item, ability and moves noted as shown. Keeps my team and drops everything else of the old game.
+ */
+export function prefillOpponent(g: Pick<GameDayState, 'myTeamId'>, sets: readonly ({ speciesId: string } & Reveal)[]): GameDayState {
+  let next = emptyGame(g.myTeamId);
+  for (const m of sets) next = addOpponent(next, m.speciesId);
+  for (const m of sets) next = setReveal(next, m.speciesId, { itemId: m.itemId, abilityId: m.abilityId, moves: m.moves });
+  return next;
+}
+
 /** Their six as a match log would hold them: species plus what was shown. */
 export const opponentLog = (g: GameDayState): LoggedMon[] =>
   g.opponents.map((speciesId) => {

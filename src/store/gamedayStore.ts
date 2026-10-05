@@ -5,6 +5,7 @@ import { useMatchStore } from './matchStore';
 import {
   addOpponent,
   emptyGame,
+  prefillOpponent,
   matchFromGame,
   removeOpponent,
   sanitizeGameDay,
@@ -28,6 +29,8 @@ interface GameDayStore extends GameDayState {
   setBring: (bring: Bring | undefined) => void;
   setOppBring: (bring: Bring) => void;
   setNotes: (notes: string) => void;
+  /** A new game against a known team: their six with what the team sheet shows, on my current team. */
+  startAgainst: (sets: readonly ({ speciesId: string } & Reveal)[]) => void;
   /** Throws the game in progress away and keeps my team: "Next game". */
   nextGame: () => void;
   /**
@@ -56,6 +59,7 @@ export const useGameDayStore = create<GameDayStore>()(
       setBring: (bring) => set({ bring }),
       setOppBring: (oppBring) => set({ oppBring }),
       setNotes: (notes) => set({ notes: notes.slice(0, 500) }),
+      startAgainst: (sets) => set((s) => prefillOpponent(pick(s), sets)),
       nextGame: () => set((s) => emptyGame(s.myTeamId)),
       logMatch: ({ result, team, plan, regulationId, limits, archetypes }) => {
         const { addMatch, updateMatch } = useMatchStore.getState();
