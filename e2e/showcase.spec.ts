@@ -16,10 +16,11 @@ test('Team overview: sets with stats, Megas and moves on one tab, the team as a 
   await page.getByRole('tab', { name: 'Stats' }).click();
   const stats = page.getByRole('article', { name: 'Garchomp, stats' });
   await expect(stats.getByRole('table')).toBeVisible();
-  const hp = await stats.getByRole('row').first().innerText();
+  const before = await stats.getByRole('table').innerText();
   await page.getByLabel('Show Megas').check();
-  await expect(page.getByRole('table', { name: /Finished stats of Garchomp-Mega/ })).toBeVisible();
-  expect(hp.length).toBeGreaterThan(0);
+  const mega = page.getByRole('table', { name: /Finished stats of Garchomp-Mega/ });
+  await expect(mega).toBeVisible();
+  expect(await mega.innerText()).not.toBe(before); // the Mega's stats differ
 
   // The Team tab: speed order and the two type matrices.
   await page.getByRole('tab', { name: 'Team' }).click();

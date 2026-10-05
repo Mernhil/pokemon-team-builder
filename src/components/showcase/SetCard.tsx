@@ -16,12 +16,18 @@ export type CardView = 'moves' | 'stats';
 /** A stat is sized out of this for its bar (the highest finished stat at Lv 50 is around 250). */
 const BAR_MAX = 255;
 
-/** A small round chip in a type's colour: a type icon that fits a phone-width card. */
+/** Two letters per type, so Fire / Fighting / Fairy (and the other first-letter pairs) read apart on a small chip. */
+const ABBR: Record<string, string> = {
+  Normal: 'Nm', Fire: 'Fi', Water: 'Wa', Electric: 'El', Grass: 'Gr', Ice: 'Ic', Fighting: 'Fg', Poison: 'Po', Ground: 'Gd',
+  Flying: 'Fl', Psychic: 'Ps', Bug: 'Bu', Rock: 'Ro', Ghost: 'Gh', Dragon: 'Dr', Dark: 'Dk', Steel: 'St', Fairy: 'Fy', Stellar: 'Sl',
+};
+
+/** A small chip in a type's colour: a type icon that fits a phone-width card. */
 function TypeDot({ type }: { type: Parameters<typeof TypeBadge>[0]['type'] }) {
   const { fill, text } = TYPE_BADGE[type];
   return (
-    <span className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[8px] leading-none font-bold uppercase" style={{ background: fill, color: text }} title={type} role="img" aria-label={type}>
-      {type.slice(0, 1)}
+    <span className="inline-flex h-4 min-w-5 shrink-0 items-center justify-center rounded-full px-0.5 text-[8px] leading-none font-bold" style={{ background: fill, color: text }} title={type} role="img" aria-label={type}>
+      {ABBR[type] ?? type.slice(0, 2)}
     </span>
   );
 }
@@ -41,7 +47,8 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
   const spread = set[key];
   const stats = calcStats(form.baseStats, set, format, nature);
   const item = dex.item(set.itemId);
-  const ability = dex.ability(showMega && mega ? Object.values(mega.abilities)[0] : set.abilityId);
+  // A Mega's own ability while Megas are shown (the set's if the data has none).
+  const ability = dex.ability((showMega && mega ? Object.values(mega.abilities)[0] : undefined) ?? set.abilityId);
   const unit = key === 'sp' ? 'SP' : 'EVs';
   const nick = set.nickname && set.nickname !== species.name ? set.nickname : undefined;
 
@@ -58,7 +65,7 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
             ))}
             {mega && (
               <span className="ml-0.5 inline-flex items-center gap-0.5 text-[9px] font-bold uppercase" title={showMega ? `${mega.name} (Mega)` : `Holds ${item?.name}: can Mega Evolve`}>
-                <Sparkles size={9} aria-hidden /> {showMega ? 'Mega' : ''}
+                <Sparkles size={9} aria-hidden /> {showMega ? 'Mega' : <span className="sr-only">Can Mega Evolve</span>}
               </span>
             )}
           </div>

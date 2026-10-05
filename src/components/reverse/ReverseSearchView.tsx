@@ -142,7 +142,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
                 <li key={c.id} className="rounded-lg border border-border bg-surface-2/40 p-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Sprite speciesId={c.target.speciesId} name={name} types={dex.species(c.target.speciesId)?.types} set={format.spriteSet} size={36} />
-                    <span className="min-w-0 flex-1 text-sm font-semibold">{describeCondition(dex, c)}</span>
+                    <span className="min-w-0 flex-1 basis-40 text-sm font-semibold">{describeCondition(dex, c)}</span>
                     {c.kind === 'survive' && (
                       <Segmented<'1' | '2'> label="Hits" value={String(c.hits ?? 1) as '1' | '2'} options={[{ id: '1', label: '1' }, { id: '2', label: '2' }]} onChange={(v) => patch(c.id, { hits: Number(v) as 1 | 2 })} />
                     )}
@@ -262,7 +262,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
               const sp = dex.species(m.candidate.speciesId);
               const set = m.candidate.set;
               return (
-                <li key={m.candidate.speciesId} className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3">
+                <li key={m.candidate.speciesId} className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-surface p-3">
                   <div className="flex items-center gap-2">
                     <Sprite speciesId={m.candidate.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={48} />
                     <div className="min-w-0 flex-1">

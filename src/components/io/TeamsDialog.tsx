@@ -269,8 +269,8 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
 
           return (
             <li key={id} className={cn('rounded-2xl border bg-surface p-3', groupIsActive ? 'border-accent ring-1 ring-accent' : 'border-border')}>
-              <div className="flex items-start gap-1">
-                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 pt-1.5">
+              <div className="flex flex-wrap items-start gap-1">
+                <div className="flex min-w-0 flex-1 basis-44 flex-wrap items-center gap-x-2 gap-y-1 pt-1.5">
                   <InlineEditable value={t.name} ariaLabel="Saved team name" textClassName="text-base font-semibold" onCommit={(name) => updateTeam(id, { name })} />
                   <Chip>{t.category || f.shortName}</Chip>
                   {variations.length > 0 && <Chip>{variations.length + 1} variations</Chip>}
@@ -280,6 +280,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                     <Chip icon={Users}>Shared with {granted.filter((g) => g.kind === 'team-group' && g.ref === id).map((g) => nameOf(g.grantee, names)).join(', ')}</Chip>
                   )}
                 </div>
+                <div className="ml-auto flex items-center gap-1">
                 {syncOn && (
                   <Button size="icon" variant="ghost" aria-label={`Share ${t.name}`} onClick={() => setShareTeam(t)}>
                     <Share2 size={15} aria-hidden />
@@ -295,6 +296,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                   <Copy size={15} aria-hidden />
                 </Button>
                 <DeleteButton id={id} label={t.name} confirmId={confirmId} setConfirmId={setConfirmId} onDelete={deleteTeam} />
+                </div>
               </div>
               <button type="button" onClick={() => select(id)} className="mt-2 block w-full rounded-xl text-left" aria-label={`Open ${t.name}`}>
                 <TeamTiles team={t} dex={dex} spriteSet={f.spriteSet} />
