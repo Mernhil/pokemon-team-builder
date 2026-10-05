@@ -23,10 +23,15 @@ export const megaStone = (color: string, z = false) =>
   <polygon points="14,14 24,10 20,25" fill="${shade(color, -0.2)}"/><path d="M14 6l1.2 3 3 1.2-3 1.2L14 14.4l-1.2-3-3-1.2 3-1.2z" fill="#fff" opacity="0.9"/>
   ${z ? '<polygon points="14,2 24,10 20,25 8,25 4,10" fill="none" stroke="#f4c430" stroke-width="2"/>' : ''}`);
 
-/** Fairy Feather: a soft pink feather. */
+/** Fairy Feather, after the game's art: a salmon, pink and white feather with a white curl, a dark outline and a mauve quill. */
 export const fairyFeather = () =>
-  wrap(`<path d="M22 3C12 3 5 10 5 20c0 1.7.4 3.3 1 4.7C7.6 26 9 26 9 26c1-4 3-7 6-9.5-2 3-3 6-3 9.5C20 26 26 17 22 3z" fill="#f7b6d8" stroke="#c0568f" stroke-width="1.2" stroke-linejoin="round"/>
-  <path d="M6 25c3-7 8-12 15-17" fill="none" stroke="#c0568f" stroke-width="1.3" stroke-linecap="round"/><path d="M12 15l5 2M10 19l5 1.5M15 11l4 1.5" stroke="#e48ab8" stroke-width="1" stroke-linecap="round"/>`);
+  wrap(`<defs><clipPath id="b"><path d="M26 3.4C19 3.4 13.5 5.2 11.2 6.6L10.7 4.6C8 7 6.4 10 6.2 13C6 15.5 6 17.5 6.9 18.4C9.5 19.4 13.6 18.8 16.5 16C21 12.5 24.8 8 26 3.4Z"/></clipPath></defs>
+  <path d="M7.9 18.2L3.2 23.6" stroke="#2a1d24" stroke-width="2.8" stroke-linecap="round"/><path d="M7.9 18.2L3.2 23.6" stroke="#b9788f" stroke-width="1.4" stroke-linecap="round"/>
+  <g clip-path="url(#b)"><rect width="28" height="28" fill="#e89a9c"/>
+  <polygon points="11.4,6.5 27,2.5 27,9 13,12.2 13.2,19" fill="#e87fb7"/><polygon points="14,5 27,2.5 27,6 17,8.5" fill="#eea6cc"/>
+  <polygon points="13,12.2 27,8 21,15 14,19.5" fill="#f4eef2"/></g>
+  <path d="M26 3.4C19 3.4 13.5 5.2 11.2 6.6L10.7 4.6C8 7 6.4 10 6.2 13C6 15.5 6 17.5 6.9 18.4C9.5 19.4 13.6 18.8 16.5 16C21 12.5 24.8 8 26 3.4Z" fill="none" stroke="#2a1d24" stroke-width="1.1" stroke-linejoin="round"/>
+  <circle cx="11.8" cy="13.6" r="3.3" fill="#f7f1f4" stroke="#2a1d24" stroke-width="1"/><path d="M12.6 13.2a1.2 1.2 0 00-2.2.5 1.7 1.7 0 002.6 1.3" fill="none" stroke="#6b5a64" stroke-width="0.8" stroke-linecap="round"/>`);
 
 export const mail = (color: string) =>
   wrap(`<rect x="3" y="7" width="22" height="15" rx="2" fill="${shade(color, 0.55)}" stroke="${shade(color, -0.4)}" stroke-width="1.3"/><path d="M3.5 8.5L14 16l10.5-7.5" fill="none" stroke="${shade(color, -0.4)}" stroke-width="1.3" stroke-linejoin="round"/><circle cx="14" cy="16" r="2" fill="${color}"/>`);
