@@ -12,6 +12,7 @@ import { useCalcStore } from '@/store/calcStore';
 import { useFocusStore } from '@/store/focusStore';
 import { useOptimizerStore } from '@/store/optimizerStore';
 import { useTeamStore } from '@/store/teamStore';
+import { toast } from '@/store/toastStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
 import { Chip, EmptyState, LoadingState, Notice, Panel, Select } from '../ui/primitives';
@@ -63,6 +64,20 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
     });
     useTeamStore.getState().setActiveSlot(slot);
     setView('builder');
+  };
+
+  // Keep "survive this move" on the Pokémon as a benchmark, checked again when the meta changes.
+  const keepBenchmark = async (slot: number, threat: MetaSet, cell: ThreatCell) => {
+    const member = team.slots[slot];
+    if (!cell.theirs || !member) return;
+    const [{ benchmarkFromGoal, evaluateBenchmarks }, { mergeBenchmarks }] = await Promise.all([import('@/domain/benchmarkEval'), import('@/domain/benchmarks')]);
+    const goal = { kind: 'survive' as const, attacker: threat.set, attackerCond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode }, moveId: cell.theirs.moveId, rolls: 16, foe: { speciesId: threat.speciesId, source: 'meta' as const } };
+    const draft = benchmarkFromGoal(dex, format, goal, { snapshot: picked?.snapshot, field, met: false });
+    if (!draft) return;
+    const [now] = evaluateBenchmarks(dex, format, member, [draft], picked?.snapshot);
+    const b = { ...draft, metAtSave: now?.status === 'met' };
+    useTeamStore.getState().updateSet(team.id, slot, { benchmarks: mergeBenchmarks(member.benchmarks, [b]) });
+    toast(`Kept “survive ${dex.species(threat.speciesId)?.name}'s ${cell.theirs.move}” as a benchmark of ${dex.species(member.speciesId)?.name}.`);
   };
 
   // A hand-off from the match log: widen the list if needed, scroll to that species and mark its row.
@@ -240,7 +255,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                       </th>
                       {members.map((m, j) => (
                         <td key={m.slot} className="p-1 align-top">
-                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} survive={rows[i]?.[j]?.theirs ? `Optimise ${dex.species(m.set.speciesId)?.name} to survive ${dex.species(t.speciesId)?.name}'s ${rows[i]![j].theirs!.move}` : ''} onOpen={() => openCalc(m.set, m.slot, t)} onSurvive={() => openOptimizer(m.slot, t, rows[i]![j])} />
+                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} survive={rows[i]?.[j]?.theirs ? `Optimise ${dex.species(m.set.speciesId)?.name} to survive ${dex.species(t.speciesId)?.name}'s ${rows[i]![j].theirs!.move}` : ''} onOpen={() => openCalc(m.set, m.slot, t)} onSurvive={() => openOptimizer(m.slot, t, rows[i]![j])} keep={`Keep surviving ${dex.species(t.speciesId)?.name}'s ${rows[i]?.[j]?.theirs?.move ?? 'move'} as a benchmark of ${dex.species(m.set.speciesId)?.name}`} onKeep={() => void keepBenchmark(m.slot, t, rows[i]![j])} />
                         </td>
                       ))}
                     </tr>
@@ -270,7 +285,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                       <div key={m.slot} className="flex items-center gap-2">
                         <Sprite speciesId={m.set.speciesId} name={dex.species(m.set.speciesId)?.name} types={dex.species(m.set.speciesId)?.types} set={format.spriteSet} size={28} />
                         <div className="min-w-0 flex-1">
-                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} survive={rows[i]?.[j]?.theirs ? `Optimise ${dex.species(m.set.speciesId)?.name} to survive ${dex.species(t.speciesId)?.name}'s ${rows[i]![j].theirs!.move}` : ''} onOpen={() => openCalc(m.set, m.slot, t)} onSurvive={() => openOptimizer(m.slot, t, rows[i]![j])} />
+                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} survive={rows[i]?.[j]?.theirs ? `Optimise ${dex.species(m.set.speciesId)?.name} to survive ${dex.species(t.speciesId)?.name}'s ${rows[i]![j].theirs!.move}` : ''} onOpen={() => openCalc(m.set, m.slot, t)} onSurvive={() => openOptimizer(m.slot, t, rows[i]![j])} keep={`Keep surviving ${dex.species(t.speciesId)?.name}'s ${rows[i]?.[j]?.theirs?.move ?? 'move'} as a benchmark of ${dex.species(m.set.speciesId)?.name}`} onKeep={() => void keepBenchmark(m.slot, t, rows[i]![j])} />
                         </div>
                       </div>
                     ))}
@@ -290,7 +305,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   );
 }
 
-function Cell({ cell, sentence, survive, onOpen, onSurvive }: { cell: ThreatCell | undefined; sentence: string; survive: string; onOpen: () => void; onSurvive: () => void }) {
+function Cell({ cell, sentence, survive, onOpen, onSurvive, keep, onKeep }: { cell: ThreatCell | undefined; sentence: string; survive: string; onOpen: () => void; onSurvive: () => void; keep: string; onKeep: () => void }) {
   if (!cell) return <div className="min-h-16 rounded-lg border border-dashed border-border p-2 text-center text-muted">…</div>;
   const b = bucket(cell.verdict);
   const range = (m: NonNullable<ThreatCell['mine']>) => (m.percent[0] === m.percent[1] ? `${m.percent[0]}%` : `${m.percent[0]}–${m.percent[1]}%`);
@@ -317,6 +332,11 @@ function Cell({ cell, sentence, survive, onOpen, onSurvive }: { cell: ThreatCell
       {cell.theirs && (
         <button type="button" onClick={onSurvive} aria-label={survive} title={survive} className="block w-full rounded px-1 py-0.5 text-left text-[11px] font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
           Survive this…
+        </button>
+      )}
+      {cell.theirs && (
+        <button type="button" onClick={onKeep} aria-label={keep} title={keep} className="block w-full rounded px-1 py-0.5 text-left text-[11px] font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
+          Keep as benchmark
         </button>
       )}
     </div>

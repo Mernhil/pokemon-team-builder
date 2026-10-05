@@ -5,11 +5,13 @@ import { useDex } from '@/data/useDex';
 import { getFormat } from '@/domain/formats';
 import { isSavedTeam } from '@/domain/team';
 import { teamChoices } from '@/domain/teamCompare';
-import { calcStats } from '@/domain/stats';
+import { speedOrder } from '@/domain/teamSheet';
 import type { FormatRules, Team } from '@/domain/types';
 import { useShowcaseStore } from '@/store/showcaseStore';
 import { editingTeam, useTeamStore } from '@/store/teamStore';
 import { ArchetypeChips } from '../team/ArchetypeChips';
+import { TeamNotes } from '../team/TeamNotes';
+import { TeamSheet } from '../team/TeamSheet';
 import { DefenseMatrix } from '../analysis/DefenseMatrix';
 import { OffenseMatrix } from '../analysis/OffenseMatrix';
 import { Sprite } from '../ui/Sprite';
@@ -17,7 +19,7 @@ import { Chip, EmptyState, LoadingState, Panel, Select, Tabs } from '../ui/primi
 import { cn } from '../ui/styles';
 import { SetCard, type CardView } from './SetCard';
 
-type Tab = 'moves' | 'stats' | 'team';
+type Tab = 'moves' | 'stats' | 'team' | 'notes';
 
 /**
  * Team overview: pick a saved team (or the build in progress) and see everything about it at a
@@ -71,6 +73,7 @@ export function TeamShowcaseView({ team: given }: { team?: Team } = {}) {
             { id: 'moves', label: 'Moves & More' },
             { id: 'stats', label: 'Stats' },
             { id: 'team', label: 'Team' },
+            { id: 'notes', label: 'Notes & sheet' },
           ]}
           value={tab}
           onChange={setTab}
@@ -100,7 +103,12 @@ function Showcase({ team, tab, mega, onMega }: { team: Team; tab: Tab; mega: boo
       <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
         <ArchetypeChips team={team} dex={dex} max={3} />
       </div>
-      {tab === 'team' ? <TeamTab team={team} dex={dex} format={format} members={members} /> : <SetsTab team={team} dex={dex} format={format} members={members} view={tab} mega={mega} onMega={onMega} />}
+      {tab === 'notes' ? (
+        <div className="space-y-3">
+          <TeamNotes team={team} dex={dex} />
+          <TeamSheet team={team} dex={dex} format={format} />
+        </div>
+      ) : tab === 'team' ? <TeamTab team={team} dex={dex} format={format} /> : <SetsTab team={team} dex={dex} format={format} members={members} view={tab} mega={mega} onMega={onMega} />}
     </div>
   );
 }
@@ -132,20 +140,8 @@ function SetsTab({ team, dex, format, members, view, mega, onMega }: { team: Tea
   );
 }
 
-function TeamTab({ team, dex, format, members }: { team: Team; dex: Dex; format: FormatRules; members: Members }) {
-  // Final Speed of each member (a Mega's too), fastest first.
-  const speeds = useMemo(() => {
-    const out = members.flatMap(({ set }) => {
-      const sp = dex.species(set.speciesId);
-      if (!sp) return [];
-      const nature = dex.nature(set.nature);
-      const mega = format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
-      const rows = [{ id: sp.id, name: sp.name, types: sp.types, speed: calcStats(sp.baseStats, set, format, nature).spe, mega: false }];
-      if (mega) rows.push({ id: mega.id, name: mega.name, types: mega.types, speed: calcStats(mega.baseStats, set, format, nature).spe, mega: true });
-      return rows;
-    });
-    return out.sort((a, b) => b.speed - a.speed || a.name.localeCompare(b.name));
-  }, [members, dex, format]);
+function TeamTab({ team, dex, format }: { team: Team; dex: Dex; format: FormatRules }) {
+  const speeds = useMemo(() => speedOrder(team, dex, format), [team, dex, format]);
   const top = speeds[0]?.speed ?? 1;
 
   return (

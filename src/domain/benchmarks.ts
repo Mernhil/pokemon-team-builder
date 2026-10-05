@@ -211,3 +211,7 @@ export const savedOn = (ms: number): string => new Date(ms).toLocaleDateString('
 
 /** A new benchmark id. */
 export const benchmarkId = (): string => `b${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
+/** How many of a list of results have drifted from met to not met (what Team check counts). */
+export const brokenCount = (results: readonly import('./benchmarkEval').BenchmarkResult[], benchmarks: readonly Benchmark[]): number =>
+  results.filter((r) => r.status === 'notmet' && benchmarks.find((b) => b.id === r.id)?.metAtSave).length;

@@ -1,11 +1,14 @@
 import { Suspense, lazy, useMemo } from 'react';
-import { Crosshair, Gauge, Skull } from 'lucide-react';
+import { Crosshair, Gauge, Skull, Target } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useMetaFor } from '@/data/useMeta';
+import { brokenCount } from '@/domain/benchmarks';
 import { defensiveCoverage } from '@/domain/coverage';
 import { metaPartners } from '@/domain/meta';
 import type { FormatRules, Team } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
+import { useTeamStore } from '@/store/teamStore';
+import { useBenchmarkResults } from '../editor/useBenchmarks';
 import { Sprite } from '../ui/Sprite';
 import { Label, Panel, TypeBadge } from '../ui/primitives';
 import { IssueCounts, IssueList } from './ValidationPanel';
@@ -32,11 +35,35 @@ export function TeamCheck({ team, dex, format, issues }: { team: Team; dex: Dex;
     return meta && species.length < 6 ? metaPartners(meta, species).filter((p) => dex.species(p.speciesId)) : [];
   }, [meta, team.slots, dex]);
 
+  const setActiveSlot = useTeamStore((s) => s.setActiveSlot);
+  const { results } = useBenchmarkResults(dex, format, team.slots);
+  const broken = useMemo(() => {
+    let count = 0;
+    let first = -1;
+    team.slots.forEach((s, i) => {
+      const r = s && results.get(s.uid);
+      const n = r && s.benchmarks ? brokenCount(r, s.benchmarks) : 0;
+      count += n;
+      if (n && first < 0) first = i;
+    });
+    return { count, first };
+  }, [team.slots, results]);
+
   return (
     <Panel title="Team check">
       <div className="space-y-4">
         <IssueCounts issues={issues} />
         <IssueList issues={issues} />
+        {broken.count > 0 && (
+          <button
+            type="button"
+            onClick={() => setActiveSlot(broken.first)}
+            className="inline-flex min-h-8 items-center gap-1.5 text-left text-sm font-semibold text-warn underline-offset-2 hover:underline pointer-coarse:min-h-11"
+          >
+            <Target size={15} aria-hidden /> {broken.count} {broken.count === 1 ? 'benchmark no longer holds' : 'benchmarks no longer hold'}
+            <span className="font-normal text-muted">open the first Pokémon</span>
+          </button>
+        )}
         {exposed.length > 0 && (
           <div className="space-y-2">
             <Label>Most exposed to</Label>

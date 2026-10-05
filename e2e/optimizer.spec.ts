@@ -90,3 +90,21 @@ test('Optimise works with EVs in a Gen 9 team', async ({ page }) => {
   await expect(dialog.getByText(/\d+\/510 EVs used/)).toBeVisible();
   await expect(dialog.getByRole('list', { name: 'Goal results' }).getByRole('listitem')).toHaveCount(1);
 });
+
+test('Optimise: a kept goal shows as a benchmark in the editor and in Team overview', async ({ page }) => {
+  await openApp(page);
+  await importTeam(page, TEAM);
+  await openStatCalculator(page);
+  await page.getByRole('button', { name: 'Optimise', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Optimise spread' });
+  await dialog.getByRole('button', { name: 'Survive a move' }).click();
+  await dialog.getByRole('button', { name: 'Add goal' }).click();
+  await expect(dialog.getByRole('checkbox', { name: /as a benchmark/ })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect(page.getByRole('list', { name: 'Benchmarks' }).first()).toBeVisible();
+  await page.goto('/#analyse/overview');
+  await page.getByRole('tab', { name: 'Stats' }).click();
+  await expect(page.getByRole('list', { name: 'Benchmarks' }).first()).toBeVisible();
+});

@@ -18,7 +18,9 @@ import {
   type SpeedScenario,
   type SpeedStage,
 } from '@/domain/speedTiers';
-import { TERRAINS, WEATHERS } from '@/domain/battle/conditions';
+import { TERRAINS, WEATHERS, defaultField, defaultSide } from '@/domain/battle/conditions';
+import { benchmarkFromGoal } from '@/domain/benchmarkEval';
+import { mergeBenchmarks } from '@/domain/benchmarks';
 import type { FormatRules, Team } from '@/domain/types';
 import { useFocusStore } from '@/store/focusStore';
 import { useOptimizerStore } from '@/store/optimizerStore';
@@ -311,11 +313,39 @@ function OutspeedPanel({
   teamId: string;
   onApply: () => void;
 }) {
+  const metaFor = useMetaFor();
+  const snapshot = useMemo(() => (metaFor ? pickSpeedSnapshot(format.regulationId, champRegs.map((r) => r.id), metaFor)?.snapshot : undefined), [metaFor, format.regulationId]);
   if (!mover) return <p className="text-sm text-muted">Add a Pokémon to your team to see what it needs to {scenario.trickRoom ? 'move before' : 'outspeed'} this.</p>;
   const forme = dex.megaFor(mover.set.speciesId, mover.set.itemId) ? 'mega' : 'base';
   const plan = planOutspeed(dex, format, mover.set, forme, row.speed, scenario);
   const name = dex.species(mover.set.speciesId)?.name ?? mover.set.speciesId;
   const can = plan.status === 'reachable' && !plan.overBudget;
+  // Who the goal is about and the scenario, so it can be kept as a benchmark and checked again later.
+  const goal = {
+    kind: 'outspeed' as const,
+    target: row.speed,
+    mode: scenario.trickRoom ? ('under' as const) : ('over' as const),
+    label: `${row.name} at ${row.speed}`,
+    foe: { speciesId: row.speciesId, source: 'meta' as const },
+    scenario: {
+      tailwind: scenario.theirs.tailwind || undefined,
+      stage: scenario.theirs.stage || undefined,
+      paralyzed: scenario.theirs.paralyzed || undefined,
+      scarf: row.scarf || undefined,
+      myTailwind: scenario.mine.tailwind || undefined,
+    },
+  };
+  const keep = () => {
+    const b = benchmarkFromGoal(dex, format, goal, {
+      snapshot,
+      field: { ...defaultField(), weather: scenario.weather, terrain: scenario.terrain, trickRoom: scenario.trickRoom },
+      myCond: { ...defaultSide(false), tailwind: scenario.mine.tailwind },
+      met: plan.status === 'already',
+    });
+    if (!b) return;
+    useTeamStore.getState().updateSet(teamId, mover.slot, { benchmarks: mergeBenchmarks(mover.set.benchmarks, [b]) });
+    toast(`Kept “${scenario.trickRoom ? 'move before' : 'outspeed'} ${row.name}” as a benchmark of ${name}.`);
+  };
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
       <div className="min-w-0 flex-1">
@@ -336,7 +366,7 @@ function OutspeedPanel({
         onClick={() => {
           useOptimizerStore.getState().open({
             slotKey: `${teamId}:${mover.slot}`,
-            goals: [{ kind: 'outspeed', target: row.speed, mode: scenario.trickRoom ? 'under' : 'over', label: `${row.name} at ${row.speed}` }],
+            goals: [goal],
             tailwind: scenario.mine.tailwind,
           });
           useTeamStore.getState().setActiveSlot(mover.slot);
@@ -344,6 +374,9 @@ function OutspeedPanel({
         }}
       >
         Optimise…
+      </Button>
+      <Button size="sm" aria-label={`Keep ${scenario.trickRoom ? 'moving before' : 'outspeeding'} ${row.name} as a benchmark of ${name}`} onClick={keep} title="Saves this goal on the Pokémon and checks it again whenever the meta or the regulation changes">
+        Keep as benchmark
       </Button>
       {plan.status === 'reachable' && (
         <Button variant="primary" size="sm" disabled={!can} onClick={onApply} aria-label={`Apply ${plan.sp} Spe ${plan.nature} to ${name}`}>

@@ -155,9 +155,7 @@ export function evaluateBenchmarks(dex: Dex, format: FormatRules, set: PokemonSe
   });
 }
 
-/** How many of a list of results have drifted from met to not met (what Team check counts). */
-export const brokenCount = (results: readonly BenchmarkResult[], benchmarks: readonly Benchmark[]): number =>
-  results.filter((r) => r.status === 'notmet' && benchmarks.find((b) => b.id === r.id)?.metAtSave).length;
+export { brokenCount } from './benchmarks';
 
 // ---- from a goal ----------------------------------------------------------------------------
 

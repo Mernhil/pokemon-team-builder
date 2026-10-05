@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CalendarClock, Copy, RadioTower } from 'lucide-react';
 import { create } from 'zustand';
+import type { Dex } from '@/data/dex';
 import { useRegulationChanges } from '@/data/regulationChanges';
 import { useDex } from '@/data/useDex';
 import { copyTeamToRegulation, daysUntil, teamImpact } from '@/domain/regulationImpact';
@@ -11,6 +12,7 @@ import { useTeamStore } from '@/store/teamStore';
 import { formatMechanics, gameInfo } from '@/domain/games';
 import { GEN_GAMES, genInfo } from '@/domain/generations';
 import { GenBadge } from '../ui/GenBadge';
+import { useBenchmarkResults } from '../editor/useBenchmarks';
 import { Button } from '../ui/primitives';
 import { ImpactList, impactSummary } from './ImpactList';
 
@@ -153,6 +155,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
           Moving to {live.shortName}: {impactSummary(impact.counts)}
         </p>
         <ImpactList impact={impact} dex={dexState.dex} format={liveFormat ?? format} />
+        <BenchmarkImpact team={team} dex={dexState.dex} from={format} to={liveFormat ?? format} regulation={live.shortName} />
         <p className="mt-2 text-xs text-muted">
           “Move team” switches this team to {live.shortName} as it is; “Copy to {live.shortName}” keeps this team and adds a variation with the illegal parts removed.
         </p>
@@ -174,5 +177,25 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
       </div>
     )}
     </div>
+  );
+}
+
+/** Benchmarks that hold in the team's regulation but would stop holding in the target one. Renders nothing otherwise. */
+function BenchmarkImpact({ team, dex, from, to, regulation }: { team: Team; dex: Dex; from: FormatRules; to: FormatRules; regulation: string }) {
+  const now = useBenchmarkResults(dex, from, team.slots);
+  const target = useBenchmarkResults(dex, to, team.slots);
+  const lost = useMemo(() => {
+    if (!now.ready || !target.ready) return [];
+    return team.slots.flatMap((s) => {
+      if (!s) return [];
+      const before = now.results.get(s.uid);
+      return (target.results.get(s.uid) ?? []).filter((r) => r.status === 'notmet' && before?.find((b) => b.id === r.id)?.status === 'met').map((r) => r.label);
+    });
+  }, [team.slots, now, target]);
+  if (lost.length === 0) return null;
+  return (
+    <p className="mt-2 text-xs font-medium text-bad">
+      {lost.length} {lost.length === 1 ? 'benchmark stops' : 'benchmarks stop'} holding in {regulation}: {lost.join('; ')}.
+    </p>
   );
 }

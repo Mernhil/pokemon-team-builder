@@ -7,6 +7,8 @@ import { calcSpeed } from '@/domain/battle/damage';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import { usageLabel } from '@/domain/meta';
 import { metaSets, type MetaSet } from '@/domain/metaSets';
+import { benchmarkFromGoal } from '@/domain/benchmarkEval';
+import type { Benchmark } from '@/domain/benchmarks';
 import { describeGoal, optimize, type Goal, type Leftover, type OptimizeResult } from '@/domain/optimizer';
 import { pickSpeedSnapshot } from '@/domain/speedTiers';
 import { createSet } from '@/domain/team';
@@ -85,6 +87,7 @@ export function OptimizerPanel({
   set,
   request,
   onApply,
+  onKeep,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -94,15 +97,17 @@ export function OptimizerPanel({
   /** Goals to start from (a hand-off from Speed tiers or the Threat report). */
   request?: OptimizerRequest | null;
   onApply: (spread: StatTable, nature: string) => void;
+  /** Goals kept as benchmarks of this Pokémon (the "Keep these as benchmarks" box, when ticked). */
+  onKeep?: (benchmarks: Benchmark[]) => void;
 }) {
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Optimise spread" description="Set goals; get the cheapest spread that meets them." wide>
-      {open && <Body key={request ? 'req' : 'new'} dex={dex} format={format} set={set} request={request ?? null} onApply={onApply} onClose={() => onOpenChange(false)} />}
+      {open && <Body key={request ? 'req' : 'new'} dex={dex} format={format} set={set} request={request ?? null} onApply={onApply} onKeep={onKeep} onClose={() => onOpenChange(false)} />}
     </Modal>
   );
 }
 
-function Body({ dex, format, set, request, onApply, onClose }: { dex: Dex; format: FormatRules; set: PokemonSet; request: OptimizerRequest | null; onApply: (s: StatTable, n: string) => void; onClose: () => void }) {
+function Body({ dex, format, set, request, onApply, onKeep, onClose }: { dex: Dex; format: FormatRules; set: PokemonSet; request: OptimizerRequest | null; onApply: (s: StatTable, n: string) => void; onKeep?: (b: Benchmark[]) => void; onClose: () => void }) {
   const key = spreadKey(format.statSystem);
   const unit = key === 'sp' ? 'SP' : 'EVs';
   const [goals, setGoals] = useState<Goal[]>(request?.goals ?? []);
@@ -112,6 +117,10 @@ function Body({ dex, format, set, request, onApply, onClose }: { dex: Dex; forma
   const [leftover, setLeftover] = useState<string>('none');
   const [adding, setAdding] = useState<GoalKind | null>(null);
   const clearRequest = useOptimizerStore((s) => s.clear);
+  const metaFor = useMetaFor();
+  // Benchmarks: goals that say who they are about can be kept on the set and checked again later.
+  const [keep, setKeep] = useState(true);
+  const keepable = goals.filter((g) => g.kind !== 'outspeed' || g.foe).length;
 
   const current = (key === 'sp' ? set.sp : set.evs) as StatTable;
   const hasMega = !!dex.megaFor(set.speciesId, set.itemId);
@@ -136,7 +145,16 @@ function Body({ dex, format, set, request, onApply, onClose }: { dex: Dex; forma
     if ('error' in result) return;
     const before = { spread: current, nature: set.nature };
     onApply(result.spread, result.nature);
-    toast(`Applied a spread of ${result.spent} ${unit}${result.natureChanged ? ` and ${result.nature}` : ''}.`, { label: 'Undo', run: () => onApply(before.spread, before.nature) });
+    let kept = 0;
+    if (keep && onKeep && keepable > 0) {
+      const picked = format.datasetId === 'champions' ? pickSpeedSnapshot(format.regulationId, champRegIds, (id) => metaFor?.(id)) : undefined;
+      const list = goals.flatMap((g, i) => benchmarkFromGoal(dex, format, g, { snapshot: picked?.snapshot, field, myCond: { ...defaultSide(hasMega), tailwind }, met: result.goals[i]?.met ?? false }) ?? []);
+      if (list.length) {
+        onKeep(list);
+        kept = list.length;
+      }
+    }
+    toast(`Applied a spread of ${result.spent} ${unit}${result.natureChanged ? ` and ${result.nature}` : ''}${kept ? `, and kept ${kept} ${kept === 1 ? 'goal' : 'goals'} as ${kept === 1 ? 'a benchmark' : 'benchmarks'}` : ''}.`, { label: 'Undo', run: () => onApply(before.spread, before.nature) });
     clearRequest();
     onClose();
   };
@@ -229,14 +247,14 @@ function Body({ dex, format, set, request, onApply, onClose }: { dex: Dex; forma
         {'error' in result ? (
           <p className="text-bad">{result.error}</p>
         ) : (
-          <ResultView result={result} current={current} unit={unit} currentNature={set.nature} onApply={apply} />
+          <ResultView result={result} current={current} unit={unit} currentNature={set.nature} onApply={apply} keep={onKeep && keepable > 0 ? { value: keep, onChange: setKeep, count: keepable } : undefined} />
         )}
       </section>
     </div>
   );
 }
 
-function ResultView({ result, current, unit, currentNature, onApply }: { result: OptimizeResult; current: StatTable; unit: string; currentNature: string; onApply: () => void }) {
+function ResultView({ result, current, unit, currentNature, onApply, keep }: { result: OptimizeResult; current: StatTable; unit: string; currentNature: string; onApply: () => void; keep?: { value: boolean; onChange: (v: boolean) => void; count: number } }) {
   const currentSpent = STAT_IDS.reduce((a, s) => a + current[s], 0);
   const diff = result.spent - currentSpent;
   return (
@@ -284,7 +302,13 @@ function ResultView({ result, current, unit, currentNature, onApply }: { result:
         <span>{diff === 0 ? `Same total as now (${currentSpent}).` : diff < 0 ? `${-diff} ${unit} fewer than now (${currentSpent}).` : `${diff} ${unit} more than now (${currentSpent}).`}</span>
         {result.natureChanged && <Chip tone="accent">Nature: {currentNature} → {result.nature}</Chip>}
       </p>
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {keep && (
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={keep.value} onChange={(e) => keep.onChange(e.target.checked)} className="size-4 pointer-coarse:size-5" />
+            Keep {keep.count === 1 ? 'this goal' : `these ${keep.count} goals`} as {keep.count === 1 ? 'a benchmark' : 'benchmarks'}
+          </label>
+        )}
         <Button variant="primary" onClick={onApply}>
           Apply
         </Button>
@@ -472,7 +496,14 @@ function GoalAdder({ kind, dex, format, mine, field, onAdd }: { kind: GoalKind; 
       const speeds = calcSpeed(dex, { set: them, cond: theirCond }, field).map((r) => r.speed);
       const name = dex.species(them.speciesId)?.name ?? them.speciesId;
       const mods = [theirTailwind && 'Tailwind', theirStage && `${theirStage > 0 ? '+' : ''}${theirStage}`].filter(Boolean).join(', ');
-      onAdd({ kind: 'outspeed', target: Math.max(...speeds), label: `${name}${mods ? ` (${mods})` : ''} at ${Math.max(...speeds)}` });
+      const isMetaSet = source === 'meta' && Object.keys(tweaks).length === 0;
+      onAdd({
+        kind: 'outspeed',
+        target: Math.max(...speeds),
+        label: `${name}${mods ? ` (${mods})` : ''} at ${Math.max(...speeds)}`,
+        foe: isMetaSet ? { speciesId: them.speciesId, source: 'meta' } : { speciesId: them.speciesId, source: 'custom', set: them },
+        scenario: { tailwind: theirTailwind || undefined, stage: theirStage || undefined },
+      });
     }
   };
 
