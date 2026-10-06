@@ -18,12 +18,20 @@ export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; for
   const fix = defensiveFixSuggestion(dex, suggestions);
 
   return (
-    <Panel title="Defensive type matrix">
+    <Panel
+      title="Defensive type matrix"
+      help={
+        <>
+          Members <span className="text-bad">weak</span> / <span className="text-good">resistant</span> / <span className="text-accent">immune (no effect)</span>{' '}
+          to each attacking type; red cells need cover. Hover or focus a cell for multipliers.
+        </>
+      }
+    >
       <div className="grid grid-cols-6 gap-1 sm:grid-cols-9">
         {rows.map(({ atkType, mults, weak, resist, immune, danger }) => (
           <div
             key={atkType}
-            className={cn('rounded-lg border p-1 text-center', danger ? 'border-bad/60 bg-bad/10' : 'border-border')}
+            className={cn('ui-cell rounded-lg border p-1 text-center', danger ? 'border-bad/60 bg-bad/10' : 'border-border')}
             title={mults.map((m) => `${m.name}: ${m.mult === 0 ? 'immune (×0)' : `×${m.mult}`}`).join('\n')}
           >
             <div className="truncate rounded text-[10px] font-bold uppercase" style={{ background: TYPE_BADGE[atkType].fill, color: TYPE_BADGE[atkType].text }}>
@@ -43,10 +51,6 @@ export function DefenseMatrix({ team, dex, format }: { team: Team; dex: Dex; for
           </div>
         ))}
       </div>
-      <p className="mt-2 text-xs text-muted">
-        Members <span className="text-bad">weak</span> / <span className="text-good">resistant</span> / <span className="text-accent">immune (no effect)</span>{' '}
-        to each attacking type; red cells need cover. Hover or focus a cell for multipliers.
-      </p>
       <SuggestionList suggestions={suggestions} fix={fix} />
     </Panel>
   );

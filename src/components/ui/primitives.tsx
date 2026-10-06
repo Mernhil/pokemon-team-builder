@@ -1,5 +1,5 @@
-import { useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
-import { ChevronDown, Loader2, type LucideIcon } from 'lucide-react';
+import { useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { ChevronDown, Info, Loader2, type LucideIcon } from 'lucide-react';
 import type { MoveType, TeraType } from '@/domain/types';
 import { TYPE_BADGE } from './color';
 import { buttonClass, cn, controlClass, typeGradient, type ButtonSize, type ButtonVariant } from './styles';
@@ -102,9 +102,57 @@ export function Field({ label, children, hint, className }: { label: string; chi
 }
 
 /** A section of a screen. No header rule and no inner borders: spacing separates, the card groups. */
+/**
+ * A round "i" that shows or hides an explanation. The text stays out of the way until asked for
+ * (how to read a matrix, what a number means); `HelpToggle` is the button, `Help` the button plus its text.
+ */
+export function HelpToggle({ open, onToggle, controls, label = 'About this' }: { open: boolean; onToggle: () => void; controls: string; label?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={controls}
+      aria-label={label}
+      title={label}
+      className={cn(
+        'ui-btn hit grid size-6 shrink-0 place-items-center rounded-full border transition-colors',
+        open ? 'border-accent bg-accent text-accent-fg' : 'border-border-strong text-muted hover:text-fg',
+      )}
+    >
+      <Info size={13} aria-hidden />
+    </button>
+  );
+}
+
+export function HelpText({ id, open, children }: { id: string; open: boolean; children: ReactNode }) {
+  return (
+    <div id={id} hidden={!open} className="mb-2 rounded-lg bg-surface-2 p-2.5 text-xs leading-relaxed text-muted">
+      {children}
+    </div>
+  );
+}
+
+/** Stand-alone explanation: a small "i" on the right that opens the text below it. */
+export function Help({ children, label, className }: { children: ReactNode; label?: string; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <div className={className}>
+      <div className="flex justify-end">
+        <HelpToggle open={open} onToggle={() => setOpen((o) => !o)} controls={id} label={label} />
+      </div>
+      <HelpText id={id} open={open}>
+        {children}
+      </HelpText>
+    </div>
+  );
+}
+
 export function Panel({
   title,
   actions,
+  help,
   children,
   className,
   bodyClassName,
@@ -112,20 +160,36 @@ export function Panel({
 }: {
   title?: ReactNode;
   actions?: ReactNode;
+  /** An explanation kept behind an info button in the header instead of printed under the content. */
+  help?: ReactNode;
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
   as?: 'section' | 'div' | 'aside';
 }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpId = useId();
   return (
-    <As className={cn('rounded-xl border border-border bg-surface', className)}>
-      {(title || actions) && (
+    <As className={cn('ui-panel rounded-xl border border-border bg-surface', className)}>
+      {(title || actions || help) && (
         <header className="flex min-h-11 items-center justify-between gap-2 px-4 pt-3">
           {title && <h2 className="min-w-0 text-sm font-semibold">{title}</h2>}
-          {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
+          {(actions || help) && (
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              {actions}
+              {help && <HelpToggle open={helpOpen} onToggle={() => setHelpOpen((o) => !o)} controls={helpId} label={`About ${typeof title === 'string' ? title.toLowerCase() : 'this panel'}`} />}
+            </div>
+          )}
         </header>
       )}
-      <div className={cn('p-4', (title || actions) && 'pt-2', bodyClassName)}>{children}</div>
+      <div className={cn('p-4', (title || actions || help) && 'pt-2', bodyClassName)}>
+        {help && (
+          <HelpText id={helpId} open={helpOpen}>
+            {help}
+          </HelpText>
+        )}
+        {children}
+      </div>
     </As>
   );
 }
@@ -163,7 +227,7 @@ export function Chip({ tone = 'neutral', icon: Icon, children, className }: { to
   return (
     <span
       className={cn(
-        'inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2 text-xs font-semibold whitespace-nowrap',
+        'ui-chip inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2 text-xs font-semibold whitespace-nowrap',
         tone === 'neutral' && 'text-muted',
         tone === 'good' && 'text-good',
         tone === 'warn' && 'text-warn',
@@ -208,7 +272,7 @@ export function Tabs<T extends string>({
     ref.current?.querySelector<HTMLElement>(`[data-tab="${t.id}"]`)?.focus();
   };
   return (
-    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn('flex gap-0.5 rounded-lg bg-surface-2 p-0.5', className)}>
+    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn('ui-tabs flex gap-0.5 rounded-lg bg-surface-2 p-0.5', className)}>
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -219,7 +283,7 @@ export function Tabs<T extends string>({
           tabIndex={value === t.id ? 0 : -1}
           onClick={() => onChange(t.id)}
           className={cn(
-            'flex flex-1 items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap transition-colors sm:flex-none',
+            'ui-tab flex flex-1 items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap transition-colors sm:flex-none',
             size === 'sm' ? 'h-7 px-2.5 text-xs pointer-coarse:h-10' : 'h-8 px-3 text-sm pointer-coarse:h-11',
             value === t.id ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg',
           )}
@@ -260,7 +324,7 @@ export function Notice({ tone = 'warn', icon: Icon, title, children, className }
     <div
       role={tone === 'bad' ? 'alert' : 'status'}
       className={cn(
-        'flex gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm',
+        'ui-panel flex gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm',
         tone === 'warn' && 'border-warn/35 bg-warn/8',
         tone === 'bad' && 'border-bad/35 bg-bad/8',
         tone === 'accent' && 'border-accent/35 bg-accent/8',

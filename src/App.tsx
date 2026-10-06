@@ -27,6 +27,7 @@ import { FORMATS, currentRegulation, getFormat } from '@/domain/formats';
 import { gameInfo } from '@/domain/games';
 import { GEN_GAMES } from '@/domain/generations';
 import type { FormatRules, Team } from '@/domain/types';
+import { PALETTE_TOKEN_NAMES, paletteTokens } from '@/domain/palette';
 import { validateTeam } from '@/domain/validation';
 import { compareVersions, releasesSince } from '@/domain/changelog';
 import { usePrefsStore } from '@/store/prefsStore';
@@ -202,12 +203,22 @@ export default function App() {
     window.scrollTo({ top: 0 });
   }, [view]);
 
+  const palette = usePrefsStore((s) => s.palette);
+  const look = usePrefsStore((s) => s.look);
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    document.documentElement.style.colorScheme = theme;
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    root.style.colorScheme = theme;
+    root.dataset.look = look;
+    // A chosen palette overrides the colour tokens inline; none means the hand-tuned defaults in index.css.
+    const tokens = palette ? paletteTokens(palette, theme) : null;
+    for (const name of PALETTE_TOKEN_NAMES) {
+      if (tokens) root.style.setProperty(`--color-${name}`, tokens[name]);
+      else root.style.removeProperty(`--color-${name}`);
+    }
     // Browser UI (Android address bar, iOS Safari tab bar) matches the header.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1c1f26' : '#fcfbf8');
-  }, [theme]);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tokens?.surface ?? (theme === 'dark' ? '#1c1f26' : '#fcfbf8'));
+  }, [theme, palette, look]);
 
   const dex = dexState.status === 'ready' ? dexState.dex : undefined;
   const loading = (label: string) => <LoadingState label={label} />;

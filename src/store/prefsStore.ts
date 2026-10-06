@@ -2,9 +2,12 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from './storage';
 import { sanitizeNav, type NavKind, type NavId, type NavPrefs } from '@/domain/navigation';
+import { sanitizePalette, type Palette } from '@/domain/palette';
 import { PICKER_ORDER, pushRecent, type PickerKey, type PickerPrefs } from '@/domain/pickerOrder';
 
 export type ListMode = 'grouped' | 'az';
+/** Sticker: thick outlines and hard shadows. Classic: the original soft style. */
+export type Look = 'sticker' | 'classic';
 
 interface PrefsState {
   /** Most recent first, per picker. Ids from every game; each list is filtered to the game shown. */
@@ -19,6 +22,9 @@ interface PrefsState {
 
   /** The main bar's destinations the player chose (absent: the defaults). */
   nav: NavPrefs;
+  /** Interface colours picked in Settings; null is the default look. */
+  palette: Palette | null;
+  look: Look;
 
   addRecent: (key: PickerKey, id: string) => void;
   toggleFavorite: (key: PickerKey, id: string) => void;
@@ -28,6 +34,8 @@ interface PrefsState {
   setNav: (kind: NavKind, ids: NavId[]) => void;
   /** Back to the defaults for one bar, or both. */
   resetNav: (kind?: NavKind) => void;
+  setPalette: (p: Palette | null) => void;
+  setLook: (l: Look) => void;
 }
 
 const KEYS: PickerKey[] = ['items', 'moves', 'species', 'natures'];
@@ -54,6 +62,8 @@ export const usePrefsStore = create<PrefsState>()(
       listMode: {},
       nav: {},
       showUnavailableSpecies: PICKER_ORDER.species.showUnavailableByDefault,
+      palette: null,
+      look: 'sticker',
 
       addRecent: (key, id) =>
         set((s) => ({
@@ -70,12 +80,14 @@ export const usePrefsStore = create<PrefsState>()(
       setLastSeenVersion: (lastSeenVersion) => set({ lastSeenVersion }),
       setNav: (kind, ids) => set((s) => ({ nav: sanitizeNav({ ...s.nav, [kind]: ids }) })),
       resetNav: (kind) => set((s) => ({ nav: kind ? sanitizeNav({ ...s.nav, [kind]: undefined }) : {} })),
+      setPalette: (palette) => set({ palette: sanitizePalette(palette) }),
+      setLook: (look) => set({ look }),
     }),
     {
       name: 'ptb:prefs:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies, nav: s.nav, lastSeenVersion: s.lastSeenVersion }),
+      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies, nav: s.nav, lastSeenVersion: s.lastSeenVersion, palette: s.palette, look: s.look }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PrefsState>;
         const mode = (v: unknown): ListMode | undefined => (v === 'az' || v === 'grouped' ? v : undefined);
@@ -85,6 +97,8 @@ export const usePrefsStore = create<PrefsState>()(
           recent: perKey(p.recent, PICKER_ORDER.recentsCap),
           favorites: perKey(p.favorites, MAX_FAVORITES),
           listMode: { items: mode(lm.items), moves: mode(lm.moves) },
+          palette: sanitizePalette(p.palette),
+          look: p.look === 'classic' ? 'classic' : 'sticker',
           showUnavailableSpecies: typeof p.showUnavailableSpecies === 'boolean' ? p.showUnavailableSpecies : current.showUnavailableSpecies,
           nav: sanitizeNav(p.nav),
           lastSeenVersion: typeof p.lastSeenVersion === 'string' && /^\d{1,5}\.\d{1,5}\.\d{1,5}$/.test(p.lastSeenVersion) ? p.lastSeenVersion : undefined,

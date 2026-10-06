@@ -18,7 +18,7 @@ export function Menu({ trigger, children, align = 'end', label }: { trigger: Rea
           align={align}
           sideOffset={6}
           collisionPadding={8}
-          className="z-50 min-w-52 rounded-xl border border-border bg-surface p-1 text-fg shadow-xl"
+          className="ui-panel z-50 min-w-52 rounded-xl border border-border bg-surface p-1 text-fg shadow-xl"
         >
           {children}
         </DM.Content>

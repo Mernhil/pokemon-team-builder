@@ -49,5 +49,7 @@ test('The defensive matrix says "immune" for a Pokémon that takes no damage (Ae
   // A real weakness still counts.
   const ground = page.locator('[title^="Aegislash: ×2"]').filter({ hasText: 'GROU' });
   await expect(ground.getByLabel('1 weak')).toBeVisible();
+  // The legend sits behind the panel's info button.
+  await page.getByRole('button', { name: 'About defensive type matrix' }).click();
   await expect(page.getByText('immune (no effect)').first()).toBeVisible();
 });
