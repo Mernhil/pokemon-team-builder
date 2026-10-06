@@ -82,8 +82,9 @@ function Panel({ team, dex, format }: { team: Team; dex: Dex; format: FormatRule
                   </div>
                   <ul className="flex flex-wrap gap-1.5" aria-label="Why">
                     {reasonChips(s).map((r) => (
-                      <li key={r}>
-                        <Chip tone="accent">{r}</Chip>
+                      <li key={r} className="max-w-full min-w-0">
+                        {/* Reasons can be long ("Resists 6 of your 6 weak types (Ice, …)"): wrap them, never widen the page. */}
+                        <Chip tone="accent" className="h-auto min-h-6 max-w-full py-0.5 whitespace-normal">{r}</Chip>
                       </li>
                     ))}
                     {reasonChips(s).length === 0 && <li className="text-xs text-muted">No standout reason: a safe, popular pick.</li>}
