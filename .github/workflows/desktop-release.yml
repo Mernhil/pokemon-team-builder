@@ -38,6 +38,11 @@ on:
     paths:
       - package.json
   workflow_dispatch:
+    inputs:
+      mirror_tag:
+        description: 'Only copy this existing release (e.g. v0.25.0) from the releases repository into this repository (transition); no build'
+        required: false
+        default: ''
 
 env:
   RELEASES_REPO: Mernhil/pokemon-team-builder-releases
@@ -240,9 +245,32 @@ jobs:
             gh release create "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --title "Pokémon Team Builder $TAG" --notes-file notes.md
           fi
 
+  # Manual "Run workflow" with mirror_tag: copies an already published release into this repository
+  # without building again (for a release whose `publish` job ran before the transition variable was set).
+  mirror:
+    if: github.event_name == 'workflow_dispatch' && inputs.mirror_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ inputs.mirror_tag }}
+    steps:
+      - name: Mirror the release into this repository
+        if: vars.MIRROR_RELEASES_TO_THIS_REPO == 'true' && startsWith(inputs.mirror_tag, 'v')
+        run: |
+          mkdir assets
+          gh release download "$TAG" --repo "$RELEASES_REPO" --dir assets
+          gh release view "$TAG" --repo "$RELEASES_REPO" --json body --jq .body > notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" assets/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --title "Pokémon Team Builder $TAG" --notes-file notes.md
+          fi
+
   # Manual "Run workflow": build only, no signing, no release — just proves the pipeline works.
   build-test:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.mirror_tag == ''
     strategy:
       fail-fast: false
       matrix:
