@@ -360,7 +360,7 @@ function Matchups({ dex, format, mine, opponents, matrix }: { dex: Dex; format: 
   return (
     <Panel title="Matchups">
       <p className="mb-2 text-xs text-muted">Each of yours against each of theirs, on their most-used sets (or what they showed). → is your best move, ← is theirs; the first line says who moves first.</p>
-      <div role="region" aria-label="Matchups table, scrolls sideways" tabIndex={0} className="scrollbar-thin overflow-x-auto rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+      <div role="region" aria-label="Matchups table, scrolls sideways" tabIndex={0} className="scrollbar-thin relative overflow-x-auto rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
         <table className="w-full min-w-[34rem] border-separate border-spacing-1 text-center text-2xs">
           <caption className="sr-only">Matchups: your Pokémon in rows, theirs in columns</caption>
           <thead>
