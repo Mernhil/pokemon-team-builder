@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Check, Plus, Search, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Check, Plus, Search, Shield, Swords, Trash2, X, Zap, type LucideIcon } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultField, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
-import { META_STALE_DAYS, isProvisional, provisionalNote } from '@/domain/meta';
+import { META_STALE_DAYS, byUsage, isProvisional, provisionalNote } from '@/domain/meta';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import {
   CONDITION_LABEL,
@@ -124,6 +124,44 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
       setShown(SHOWN);
     }
   };
+
+  // Starter ideas for the empty screen: the most-used Pokémon of the live meta, and the support moves players ask for.
+  const topIds = useMemo(
+    () =>
+      picked
+        ? [...picked.snapshot.entries]
+            .sort(byUsage)
+            .map((e) => e.speciesId)
+            .filter((id) => dex.species(id))
+            .slice(0, 3)
+        : [],
+    [picked, dex],
+  );
+  const ideas = useMemo(() => {
+    const out: { id: string; icon: LucideIcon; title: string; text: string; preview: ReactNode; run: () => void }[] = [];
+    const faces = (ids: string[]) =>
+      ids.map((id) => <Sprite key={id} speciesId={id} name={dex.species(id)?.name ?? id} types={dex.species(id)?.types} set={format.spriteSet} size={32} />);
+    const fromMeta = (kind: ConditionKind) => () => {
+      setConditions(topIds.map((id) => ({ id: nextId(), kind, target: targetFor(dex, format, id, picked?.snapshot), ...(kind === 'survive' ? { hits: 1 as const } : {}) })));
+      setShown(SHOWN);
+    };
+    if (topIds.length) {
+      out.push({ id: 'ohko-top', icon: Swords, title: 'Take down the top threats', text: 'Pokémon that one-shot all of the most-used Pokémon right now.', preview: faces(topIds), run: fromMeta('ohko') });
+      out.push({ id: 'survive-top', icon: Shield, title: 'Stand up to the top threats', text: 'Pokémon that survive the strongest hit from each of the most-used Pokémon.', preview: faces(topIds), run: fromMeta('survive') });
+    }
+    const MOVES: [id: string, text: string][] = [
+      ['fakeout', 'Pokémon that can flinch the opposing leads.'],
+      ['trickroom', 'Pokémon that can flip the speed order.'],
+      ['tailwind', 'Pokémon that can double your team’s speed.'],
+      ['wideguard', 'Pokémon that can block spread moves.'],
+    ];
+    for (const [id, text] of MOVES) {
+      const mv = dex.move(id);
+      if (!mv || (format.regulationId && !mv.legalIn.includes(format.regulationId))) continue;
+      out.push({ id, icon: Zap, title: `A ${mv.name} user`, text, preview: <TypeBadge type={mv.type} size="xs" />, run: () => { setKnows([id]); setShown(SHOWN); } });
+    }
+    return out;
+  }, [dex, format, picked, topIds]);
 
   const age = picked ? snapshotAge(picked.snapshot) : undefined;
   const regName = picked ? champRegs.find((r) => r.id === picked.regulationId)?.shortName ?? picked.regulationId : '';
@@ -248,9 +286,34 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
       {loading ? (
         <LoadingState label="Loading meta data…" />
       ) : conditions.length === 0 && knows.length === 0 ? (
-        <EmptyState icon={Search} title="Nothing to search for yet">
-          Try &quot;One-shots&quot; one Pokémon and &quot;Survives&quot; another to find a counter to both, or pick a move it has to know.
-        </EmptyState>
+        <section aria-labelledby="rs-ideas" className="space-y-3">
+          <div>
+            <h2 id="rs-ideas" className="text-sm font-semibold">
+              Start from an idea
+            </h2>
+            <p className="text-sm text-muted">One tap fills in the conditions above, then change anything you like.</p>
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {ideas.map((idea) => (
+              <li key={idea.id}>
+                <button
+                  type="button"
+                  onClick={idea.run}
+                  className="ui-panel hit flex h-full w-full flex-col items-start gap-1.5 rounded-xl border border-border bg-surface p-3.5 text-left transition-colors hover:border-accent focus-visible:border-accent"
+                >
+                  <span className="flex w-full items-center gap-2">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent">
+                      <idea.icon size={16} aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-bold">{idea.title}</span>
+                  </span>
+                  <span className="text-xs text-muted">{idea.text}</span>
+                  <span className="mt-auto flex min-h-9 items-center gap-1 pt-1">{idea.preview}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : (
         <section aria-labelledby="rs-results" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
