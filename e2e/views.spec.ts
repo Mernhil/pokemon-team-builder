@@ -147,7 +147,8 @@ for (const hash of ['#builder', '#calc', '#analyse/overview', '#analyse/speed', 
   test(`${hash} does not scroll sideways`, async ({ page }) => {
     await openApp(page, hash);
     await page.waitForTimeout(500);
-    const { scrollWidth, innerWidth } = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
-    expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+    // Against the device's width, not window.innerWidth: a phone widens its layout viewport to fit an overflowing page, which hides the overflow.
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
 }
