@@ -124,7 +124,8 @@ export default function App() {
     const seen = usePrefsStore.getState().lastSeenVersion;
     const current = __APP_VERSION__;
     if (seen === current) return;
-    const existing = Object.values(useTeamStore.getState().teams).some(isSavedTeam) || Object.values(usePrefsStore.getState().recent).some((l) => l?.length);
+    // The starter team ("My Champions Team") is not a saved one: only a team with a Pokémon in it, or picker recents, mean the app was used before.
+    const existing = Object.values(useTeamStore.getState().teams).some((t) => t.slots.some(Boolean)) || Object.values(usePrefsStore.getState().recent).some((l) => l?.length);
     if ((!seen && !existing) || (seen && compareVersions(seen, current) > 0)) {
       setLastSeen(current);
       return;

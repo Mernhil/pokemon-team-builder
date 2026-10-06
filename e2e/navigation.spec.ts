@@ -141,6 +141,8 @@ test.describe("What's new", () => {
     test.use({ storageState: { cookies: [], origins: [] } });
     test('shows nothing, but Settings keeps it reachable', async ({ page }) => {
       await openApp(page);
+      // A first install only notes the version (the starter team doesn't make it an update): wait for that, then there is no sheet.
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('ptb:prefs:v1') ?? '')).toContain('lastSeenVersion');
       await expect(page.getByRole('dialog')).toHaveCount(0);
       await nav(page).getByRole('button', { name: 'More' }).click();
       await page.getByRole('menuitem', { name: 'Settings & credits' }).click();

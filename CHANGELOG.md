@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.25.1 — 2026-10-06
+
+### Fixed
+- **Desktop releases publish again.** The release pipeline created the release in the separate releases repository without telling GitHub which branch to tag, so every release since the move there failed. 0.24.0 and 0.25.0 therefore never reached the desktop app: this is the first release that carries them (the new Analyse tab, Settings → Navigation, search, Game day, the pairing code and everything else listed below).
+- **A brand-new install no longer opens the What's new sheet.** The starter team was mistaken for a saved one, so a first launch looked like an update.
+
 ## 0.25.0 — 2026-10-06
 
 ### New
