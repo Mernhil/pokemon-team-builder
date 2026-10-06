@@ -183,6 +183,16 @@ jobs:
           notes=$(awk -v v="$v" 'index($0, "## " v) == 1 { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md)
           { echo 'body<<EOF_RELEASE_NOTES'; echo "${notes:-See CHANGELOG.md.}"; echo 'EOF_RELEASE_NOTES'; } >> "$GITHUB_OUTPUT"
 
+      # The release is created in RELEASES_REPO, so its tag has to be cut from a branch of THAT repository:
+      # left alone, tauri-action uses this repository's commit SHA, which RELEASES_REPO doesn't have, and
+      # GitHub answers "tag_name is not a valid tag / target_commitish invalid".
+      - name: Default branch of the releases repository
+        id: releases-branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+        run: echo "branch=$(gh api "repos/$RELEASES_REPO" --jq .default_branch)" >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # action-v0.6.2
         env:
           # Publishes to the releases repository, so the token is the one scoped to it.
@@ -195,6 +205,7 @@ jobs:
           tagName: ${{ needs.plan.outputs.tag }}
           releaseName: 'Pokémon Team Builder ${{ needs.plan.outputs.tag }}'
           releaseBody: ${{ steps.notes.outputs.body }}
+          commitish: ${{ steps.releases-branch.outputs.branch }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
