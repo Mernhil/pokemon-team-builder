@@ -107,7 +107,7 @@ export function AtlasView() {
             </div>
           ))}
         </div>
-        <Tabs label="Pokénav page" size="sm" value={page} onChange={setPage} tabs={(game.lite ? LITE_PAGES : PAGES).map((p) => ({ id: p.id, label: p.label, icon: p.icon }))} className="ml-auto" />
+        <Tabs label="Pokénav page" size="sm" value={page} onChange={setPage} tabs={(game.lite ? LITE_PAGES : PAGES).map((p) => ({ id: p.id, label: p.label, icon: p.icon }))} className="scrollbar-thin ml-auto w-full max-w-full overflow-x-auto sm:w-auto" />
       </div>
 
       {file === false || dexState.status === 'error' ? (

@@ -139,3 +139,13 @@ test('Champions Pokédex: Mega Evolutions filter, a Pokémon\'s Megas side by si
   await page.getByRole('button', { name: 'Pokémon', exact: true }).click();
   await expect(list.getByRole('option').filter({ hasText: '-Mega' })).toHaveCount(0);
 });
+
+// Nothing on a main screen may scroll the whole page sideways (wide tables scroll inside their own region).
+for (const hash of ['#builder', '#calc', '#analyse/overview', '#analyse/speed', '#analyse/threats', '#analyse/ohko/by', '#analyse/compare', '#dex', '#atlas', '#matches', '#gameday', '#meta', '#reverse', '#regdiff']) {
+  test(`${hash} does not scroll sideways`, async ({ page }) => {
+    await openApp(page, hash);
+    await page.waitForTimeout(500);
+    const { scrollWidth, innerWidth } = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
+    expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+  });
+}
