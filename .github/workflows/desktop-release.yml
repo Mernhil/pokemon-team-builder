@@ -183,7 +183,7 @@ jobs:
           notes=$(awk -v v="$v" 'index($0, "## " v) == 1 { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md)
           { echo 'body<<EOF_RELEASE_NOTES'; echo "${notes:-See CHANGELOG.md.}"; echo 'EOF_RELEASE_NOTES'; } >> "$GITHUB_OUTPUT"
 
-      # tauri-action defaults the release's target to this repository's commit (GITHUB_SHA), which
+      # tauri-action (input releaseCommitish) defaults the release's target to this repository's commit (GITHUB_SHA), which
       # doesn't exist in the separate releases repository: GitHub then rejects the release with
       # "tag_name is not a valid tag / invalid target_commitish". Target its default branch instead.
       - name: Releases repository default branch
@@ -203,7 +203,7 @@ jobs:
           owner: Mernhil
           repo: pokemon-team-builder-releases
           tagName: ${{ needs.plan.outputs.tag }}
-          commitish: ${{ steps.target.outputs.branch }}
+          releaseCommitish: ${{ steps.target.outputs.branch }}
           releaseName: 'Pokémon Team Builder ${{ needs.plan.outputs.tag }}'
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
