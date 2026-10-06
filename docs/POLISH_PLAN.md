@@ -157,6 +157,18 @@ One concern each. Tidy/refactor PRs that change no behaviour are marked **[no be
 24. **PR-24 Folder renames**: TIDY-05 (pure moves, no edits). Do after Phase 2 and 3 are merged so no open PR is rebased across the renames.
 25. **PR-25 Split oversized files**: TIDY-04, one file per PR (`App.tsx` first, then `OptimizerPanel`, `StatDistributor`, `teamStore`; atlas builders last, run `npm run atlas` and confirm the generated output is byte-identical).
 
+## Deferred feature request (not part of the polish phase)
+
+**Stat bars that show what a Mega Stone or a stat-changing item does.** Today the Stat Point calculator has a Base/Mega switch (`StatDistributor.tsx`, the `megaToggle` at about line 125): the switch decides which forme the main column follows, and the other forme appears as a small extra column of numbers. It has no "ghost" bar, and nothing in the builder looks at held items that change stats (Choice Scarf, Choice Band, Choice Specs, Assault Vest, Eviolite and similar).
+
+What is wanted:
+
+- Keep the switch button as it is for Megas, and offer the same button for items. It appears by itself when the Pokémon's held item changes a stat; there is nothing to configure.
+- The normal tab keeps the usual solid bars. A second, more transparent bar is drawn on top of each stat that changes, ending where the Mega or the item takes the stat to.
+- Pressing the button swaps which of the two is solid and which is transparent, so you always see where the stat *was* (Base / no item) next to where it *is* (Mega / item).
+
+Notes for whenever this is scheduled: it is new behaviour, so it waits until the polish phase is done. It needs a small table of which items change which stat and by how much (the data layer already knows items; check Showdown's item data before writing one by hand), a decision on how it behaves when a Mega Stone and a stat item are both possible (only one item can be held, so the two cases never combine), and it must keep the colour-independent cues (the transparent bar needs a pattern or outline, not opacity alone) and the 44 pt button size. Related polish items: BUG-01, UI-01, A11Y-06.
+
 ## Open questions (decisions needed from you)
 
 1. **Sync on the phone.** Do you want me to walk through the Cloudflare steps (create the D1 database, paste its id into `wrangler.jsonc`, apply migrations, set `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`) as a checklist, or have you already done some of them? If the database id is available I can make the `wrangler.jsonc` change in its own PR (a placeholder id would break the auto-deploy, so I have not touched it). Which of the three 501 causes applies to your deploy is not visible from the repo.
