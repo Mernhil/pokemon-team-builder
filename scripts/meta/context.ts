@@ -34,7 +34,7 @@ interface Dataset {
   moves: Record<string, { id: string; legalIn?: string[] }>;
 }
 
-export const toID = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+const toID = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 export class Context {
   readonly regulations: Regulation[];

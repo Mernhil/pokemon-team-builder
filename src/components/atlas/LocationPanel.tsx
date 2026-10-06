@@ -245,7 +245,7 @@ function Npcs({ loc }: { loc: AtlasLocation }) {
   );
 }
 
-export function WildList({ rows }: { rows: WildRow[] }) {
+function WildList({ rows }: { rows: WildRow[] }) {
   const { dex, format, speciesName, game } = useAtlasCtx();
   const setView = useTeamStore((s) => s.setView);
   const byMethod = useMemo(() => {
@@ -298,7 +298,7 @@ function Wild({ rows, loading }: { rows: WildRow[]; loading: boolean }) {
   return <WildList rows={rows} />;
 }
 
-export function TrainerList({ ids }: { ids: string[] }) {
+function TrainerList({ ids }: { ids: string[] }) {
   const { file, dex, format, openTrainer, game } = useAtlasCtx();
   const progress = useProgress(game.id);
   const toggle = useAtlasStore((s) => s.toggle);

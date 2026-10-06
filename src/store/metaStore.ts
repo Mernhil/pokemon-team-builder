@@ -4,7 +4,7 @@ import { safeStorage } from './storage';
 import { parseMetaFile, type MetaFile } from '@/domain/meta';
 
 /** Where the deployed app serves its copy of the meta data (vite.config.ts emits it). */
-export const META_URL = 'meta/latest.json';
+const META_URL = 'meta/latest.json';
 /** A hung request must not leave the Meta tab spinning. */
 const FETCH_TIMEOUT_MS = 15_000;
 

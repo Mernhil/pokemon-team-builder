@@ -7,7 +7,7 @@ import { PICKER_ORDER, pushRecent, type PickerKey, type PickerPrefs } from '@/do
 
 export type ListMode = 'grouped' | 'az';
 /** Sticker: thick outlines and hard shadows. Classic: the original soft style. */
-export type Look = 'sticker' | 'classic';
+type Look = 'sticker' | 'classic';
 
 interface PrefsState {
   /** Most recent first, per picker. Ids from every game; each list is filtered to the game shown. */

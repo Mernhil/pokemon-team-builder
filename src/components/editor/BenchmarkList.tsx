@@ -15,7 +15,7 @@ const STATUS = {
 } as const;
 
 /** The ✓ / ✗ rows of some benchmarks. The state is an icon and a word for screen readers, never colour alone. */
-export function BenchmarkRows({ results, onRemove }: { results: BenchmarkResult[]; onRemove?: (id: string) => void }) {
+function BenchmarkRows({ results, onRemove }: { results: BenchmarkResult[]; onRemove?: (id: string) => void }) {
   return (
     <ul className="space-y-1.5" aria-label="Benchmarks">
       {results.map((r) => {

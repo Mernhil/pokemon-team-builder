@@ -34,7 +34,7 @@ const httpApi: NonNullable<SharedDeps['api']> = {
 };
 
 /** A team the loser of a conflict becomes: my own, top level, named after where it came from. */
-export const keepAsMine = (loser: Team, _winner: Team, deviceName: string, now: number): Team => cloneTeam(loser, `${loser.name} (${conflictLabel(deviceName, now).replace(/^Conflict copy /, 'conflict copy ')})`);
+const keepAsMine = (loser: Team, _winner: Team, deviceName: string, now: number): Team => cloneTeam(loser, `${loser.name} (${conflictLabel(deviceName, now).replace(/^Conflict copy /, 'conflict copy ')})`);
 
 export async function syncShared(deps: SharedDeps): Promise<{ changes: SharedChange[] }> {
   const api = deps.api ?? httpApi;

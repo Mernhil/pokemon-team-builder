@@ -24,7 +24,7 @@ const isId = (s: string) => /^[a-z0-9]{1,64}$/.test(s);
 // Team records: one team as a source saw it
 // ---------------------------------------------------------------------------
 
-export interface TeamMember {
+interface TeamMember {
   speciesId: string;
   /** Replays: whether it was sent out (VGC brings 4 of 6). Team lists: always true. */
   brought: boolean;
@@ -293,7 +293,7 @@ export function ratingFromLog(log: string): number {
 }
 
 /** Rating cutoffs tried for replays, best first: the highest with enough games is used. */
-export const REPLAY_CUTOFFS = [1500, 1300, 1100, 0];
+const REPLAY_CUTOFFS = [1500, 1300, 1100, 0];
 
 /** Picks the highest rating cutoff with at least `minGames` games (else everything). */
 export function replayCutoff(games: Pick<ReplayGame, 'rating'>[], minGames: number): number {
@@ -422,7 +422,7 @@ export function fillSpreads(snap: MetaSnapshot, donors: MetaSnapshot[], baseStat
 
 /** One daily snapshot of the in-game ranked usage, as the community mirror publishes it. */
 const IngameShare = z.tuple([z.string(), z.number(), z.number()]).rest(z.unknown());
-export const IngameSnapshotSchema = z.object({
+const IngameSnapshotSchema = z.object({
   season: z.string().min(1).max(16),
   /** dd_mm_yyyy */
   date: z.string().regex(/^\d{2}_\d{2}_\d{4}$/),

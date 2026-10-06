@@ -4,12 +4,12 @@
  */
 import type { Pokemon } from './types';
 
-export interface PokedexGame {
+interface PokedexGame {
   id: string;
   name: string;
 }
 
-export interface PokedexEntry {
+interface PokedexEntry {
   /** Height of the default form, in metres. */
   heightm?: number;
   /** "Seed Pokémon" */
@@ -22,7 +22,7 @@ export interface PokedexEntry {
   dex?: Record<string, number>;
 }
 
-export interface PokedexArea {
+interface PokedexArea {
   /** PokeAPI location identifier (map layouts key on it). */
   loc: string;
   name: string;
@@ -32,7 +32,7 @@ export interface PokedexArea {
 }
 
 /** [game index, area index, method index, min level, max level, rate %, condition indices]. */
-export type PackedEncounter = [number, number, number, number, number, number, number[]];
+type PackedEncounter = [number, number, number, number, number, number, number[]];
 
 export interface PokedexData {
   generation: number;

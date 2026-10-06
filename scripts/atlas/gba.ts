@@ -109,13 +109,13 @@ const KANTO_ALIASES: Record<string, string> = {
   MAPSEC_VIAPOIS_CHAMBER: 'viapos-chamber',
 };
 
-export const EMERALD: GbaConfig = {
+const EMERALD: GbaConfig = {
   game: 'emerald', name: 'Pokémon Emerald', repo: 'pokeemerald', url: 'pret/pokeemerald', commit: 'c925b8482d05fb882d6b64e523653cae599e025f',
   prefix: 'hoenn', mapIds: ['hoenn-rse'], dexGame: 'emerald', badges: ['Stone', 'Knuckle', 'Dynamo', 'Heat', 'Balance', 'Feather', 'Mind', 'Rain'],
   aliases: HOENN_ALIASES,
   note: "Ruby and Sapphire share Hoenn's map and most of its data; their own differences (version exclusives, trainer teams) are not in this file.",
 };
-export const FIRERED: GbaConfig = {
+const FIRERED: GbaConfig = {
   game: 'firered', name: 'Pokémon FireRed', repo: 'pokefirered', url: 'pret/pokefirered', commit: '037335f4c725d7c9aecdac87066f2002b4bd7e14',
   prefix: 'kanto', mapIds: ['kanto-frlg', 'sevii-123', 'sevii-45', 'sevii-67'], dexGame: 'firered', badges: ['Boulder', 'Cascade', 'Thunder', 'Rainbow', 'Soul', 'Marsh', 'Volcano', 'Earth'],
   aliases: KANTO_ALIASES,
@@ -123,7 +123,7 @@ export const FIRERED: GbaConfig = {
 };
 
 export const buildEmerald = () => buildGba(EMERALD);
-export const RUBY: GbaConfig = {
+const RUBY: GbaConfig = {
   game: 'ruby', name: 'Pokémon Ruby', repo: 'pokeruby', url: 'pret/pokeruby', commit: '5784633ce4ef7ade1a7f2d2d0c288e3d5e6cdd7f',
   prefix: 'hoenn', mapIds: ['hoenn-rse'], dexGame: 'ruby', badges: ['Stone', 'Knuckle', 'Dynamo', 'Heat', 'Balance', 'Feather', 'Mind', 'Rain'],
   aliases: HOENN_ALIASES,

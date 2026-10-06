@@ -187,7 +187,7 @@ function MonCard({ mon, index, trainer }: { mon: AtlasMon; index: number; traine
 }
 
 /** Put a trainer's team into the builder through the Showdown importer, as a new team in the game's format. */
-export function loadIntoBuilder(trainer: AtlasTrainer, dex: Dex, format: Parameters<typeof importShowdown>[2], openBuilder: boolean) {
+function loadIntoBuilder(trainer: AtlasTrainer, dex: Dex, format: Parameters<typeof importShowdown>[2], openBuilder: boolean) {
   const { team, warnings } = importShowdown(trainerToShowdown(trainer, dex, format), dex, format, `${trainer.name} (${trainer.cls})`);
   const named = { ...team, category: `${format.shortName} · Pokénav` };
   const issues = validateTeam(named, format, dex).filter((i) => i.severity === 'error');

@@ -15,7 +15,7 @@ const toID = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g
  * form (Rillaboom's Fake Out is Grookey's) and level-up moves a pre-evolution learned stay with the evolution.
  * TMs/tutors don't carry over, and only Generation 9 sources count (older ones are moves Champions dropped).
  */
-export async function withPrevoMoves(dex: AnyDex, s: Species, own: string[]): Promise<string[]> {
+async function withPrevoMoves(dex: AnyDex, s: Species, own: string[]): Promise<string[]> {
   if (!own.length) return own;
   const moves = [...own];
   const have = new Set(moves);

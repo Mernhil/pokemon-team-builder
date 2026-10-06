@@ -46,7 +46,7 @@ export function classifyKill(koText: string, percent: [number, number]): Kill {
   return '3hko';
 }
 
-export interface MoveSummary {
+interface MoveSummary {
   move: string;
   moveId: string;
   /** Damage as % of the defender's max HP. */
@@ -131,7 +131,7 @@ export interface ThreatJob {
 
 /** What goes into a cell's result: everything that changes the numbers. */
 const setHash = (s: PokemonSet) => JSON.stringify([s.speciesId, s.abilityId, s.itemId, s.nature, s.level, s.sp, s.evs, s.ivs, s.moves]);
-export const fieldHash = (f: FieldConditions) => `${f.gameType}|${f.weather}|${f.terrain}|${f.trickRoom}|${f.gravity}`;
+const fieldHash = (f: FieldConditions) => `${f.gameType}|${f.weather}|${f.terrain}|${f.trickRoom}|${f.gravity}`;
 
 /** Memoised cells keyed by (my set, threat set, field). Lives as long as its owner (a worker, a hook). */
 export type ThreatCache = Map<string, ThreatCell>;

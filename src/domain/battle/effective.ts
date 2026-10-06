@@ -10,7 +10,7 @@ import { toID } from '@/data/dex';
 import type { Move, MoveType, Pokemon, StatTable, TypeName } from '../types';
 import type { BoostStat, FieldConditions, SideConditions } from './conditions';
 
-export interface Mod {
+interface Mod {
   label: string;
   /** Multiplier as a plain number (1.5, 2, 0.5 …). */
   factor: number;
@@ -26,7 +26,7 @@ export interface StatLine {
   mods: Mod[];
 }
 
-export interface MovePower {
+interface MovePower {
   moveId: string;
   name: string;
   type: MoveType;
@@ -66,10 +66,10 @@ export interface EffectiveResult {
 // Game arithmetic (mirrors @smogon/calc mechanics/util)
 // ---------------------------------------------------------------------------
 
-export const pokeRound = (n: number) => (n % 1 > 0.5 ? Math.ceil(n) : Math.floor(n));
+const pokeRound = (n: number) => (n % 1 > 0.5 ? Math.ceil(n) : Math.floor(n));
 const toMod = (f: number) => Math.round(f * 4096);
 
-export function chainMods(mods: number[], lower = 410, upper = 131072): number {
+function chainMods(mods: number[], lower = 410, upper = 131072): number {
   let M = 4096;
   for (const mod of mods) if (mod !== 4096) M = (M * mod + 2048) >> 12;
   return Math.max(Math.min(M, upper), lower);
@@ -289,7 +289,7 @@ interface PowerCtx {
   gen: number;
 }
 
-export function movePower(m: Move, c: PowerCtx): MovePower {
+function movePower(m: Move, c: PowerCtx): MovePower {
   const bpMods: Mod[] = [];
   const dmgMods: Mod[] = [];
   let bp = m.basePower;

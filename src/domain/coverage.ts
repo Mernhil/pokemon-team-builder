@@ -3,7 +3,7 @@ import { activeAbility, moveTypeFor, typeMultiplier } from './abilityTypes';
 import type { Move, Team, TypeName } from './types';
 
 /** One member's best damaging move against a defending type. */
-export interface MemberHit {
+interface MemberHit {
   name: string;
   /** Highest type multiplier among the member's damaging moves (0 = immune). */
   mult: number;

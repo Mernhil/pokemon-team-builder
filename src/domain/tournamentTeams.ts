@@ -15,7 +15,7 @@ export const TT_DAYS = 60;
 export const TT_CAP = 300;
 
 const id = z.string().regex(/^[a-z0-9]{0,64}$/);
-export const TournamentEventSchema = z.object({
+const TournamentEventSchema = z.object({
   id: z.string().min(1).max(64),
   name: z.string().min(1).max(120),
   /** YYYY-MM-DD */
@@ -27,9 +27,9 @@ export type TournamentEvent = z.infer<typeof TournamentEventSchema>;
 
 /** [species id, item id, ability id, moves] ('' where the sheet doesn't say). */
 const SetTuple = z.tuple([id.refine((s) => s.length > 0), id, id, z.array(id).max(4)]);
-export type TournamentSet = z.infer<typeof SetTuple>;
+type TournamentSet = z.infer<typeof SetTuple>;
 
-export const TournamentTeamSchema = z.object({
+const TournamentTeamSchema = z.object({
   /** Index into the regulation's events. */
   e: z.number().int().min(0),
   /** Placing in the event. */
@@ -40,7 +40,7 @@ export const TournamentTeamSchema = z.object({
 });
 export type TournamentTeam = z.infer<typeof TournamentTeamSchema>;
 
-export const TournamentTeamsSchema = z.object({
+const TournamentTeamsSchema = z.object({
   version: z.literal(1),
   generatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
   regulations: z.record(z.string(), z.object({ events: z.array(TournamentEventSchema), teams: z.array(TournamentTeamSchema) })),
@@ -91,7 +91,7 @@ export function parseStanding(raw: unknown, teamFromDecklist: (decklist: unknown
   return { placing: Math.floor(s.data.placing), player, team };
 }
 
-export const limitlessUrl = (eventId: string) => `https://play.limitlesstcg.com/tournament/${encodeURIComponent(eventId)}`;
+const limitlessUrl = (eventId: string) => `https://play.limitlesstcg.com/tournament/${encodeURIComponent(eventId)}`;
 const toId = (s: string | undefined) => (s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 export interface SelectOptions {

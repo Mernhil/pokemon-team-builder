@@ -37,7 +37,7 @@ export const MATCH_BACKUP_V1_KEY = 'ptb:matches:v1:backup-v1';
  * Purely additive, so a v2 log needs no rewrite beyond being run through the sanitiser (which
  * validates the new fields); no backup is made.
  */
-export function migrateMatchState(persisted: unknown, version: number): MatchState {
+function migrateMatchState(persisted: unknown, version: number): MatchState {
   let p = (persisted ?? {}) as Partial<MatchState>;
   if (version < 2 && p.matches && typeof p.matches === 'object') {
     if (safeStorage.getItem(MATCH_BACKUP_V1_KEY) === null) {

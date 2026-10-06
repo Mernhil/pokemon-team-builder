@@ -101,12 +101,11 @@ export function Field({ label, children, hint, className }: { label: string; chi
   );
 }
 
-/** A section of a screen. No header rule and no inner borders: spacing separates, the card groups. */
 /**
  * A round "i" that shows or hides an explanation. The text stays out of the way until asked for
  * (how to read a matrix, what a number means); `HelpToggle` is the button, `Help` the button plus its text.
  */
-export function HelpToggle({ open, onToggle, controls, label = 'About this' }: { open: boolean; onToggle: () => void; controls: string; label?: string }) {
+function HelpToggle({ open, onToggle, controls, label = 'About this' }: { open: boolean; onToggle: () => void; controls: string; label?: string }) {
   return (
     <button
       type="button"
@@ -125,7 +124,7 @@ export function HelpToggle({ open, onToggle, controls, label = 'About this' }: {
   );
 }
 
-export function HelpText({ id, open, children }: { id: string; open: boolean; children: ReactNode }) {
+function HelpText({ id, open, children }: { id: string; open: boolean; children: ReactNode }) {
   return (
     <div id={id} hidden={!open} className="mb-2 rounded-lg bg-surface-2 p-2.5 text-xs leading-relaxed text-muted">
       {children}
@@ -149,6 +148,7 @@ export function Help({ children, label, className }: { children: ReactNode; labe
   );
 }
 
+/** A section of a screen. No header rule and no inner borders: spacing separates, the card groups. */
 export function Panel({
   title,
   actions,

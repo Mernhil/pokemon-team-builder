@@ -78,7 +78,7 @@ const UNRELIABLE_TEXT = /cannot move next turn|faints|loses 50%|charges|hits tur
 const unreliable = (m: Move) => (m.accuracy !== true && m.accuracy < 80) || UNRELIABLE_TEXT.test(m.shortDesc);
 
 /** Four damaging moves for a species, best first, preferring a different type per slot. */
-export function defaultMoves(dex: Dex, species: Pokemon, regulationId: string | undefined, physical: boolean): string[] {
+function defaultMoves(dex: Dex, species: Pokemon, regulationId: string | undefined, physical: boolean): string[] {
   const want = physical ? 'Physical' : 'Special';
   const pool = dex
     .learnset(species.id, regulationId)
@@ -179,7 +179,7 @@ export function withRequiredMoves(dex: Dex, cand: Candidate, required: string[],
 // Checking conditions
 // ---------------------------------------------------------------------------
 
-export interface ConditionResult {
+interface ConditionResult {
   conditionId: string;
   pass: boolean;
   /** One line of evidence: "Close Combat 112–132%", "takes at most 38% from Flare Blitz". */

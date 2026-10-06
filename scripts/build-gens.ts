@@ -73,7 +73,7 @@ export async function buildGenerations(outDir: string) {
   }
 }
 
-export async function buildDataset(spec: DatasetSpec) {
+async function buildDataset(spec: DatasetSpec) {
   const { dex, generation: gen, id: regId } = spec;
   const learnGen = spec.learnGen ?? gen;
   const legal = (x: { exists: boolean; isNonstandard?: string | null }) => x.exists && !x.isNonstandard;

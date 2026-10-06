@@ -143,7 +143,7 @@ export function FieldControls({ field, onChange, compact, gen = 9, game }: { fie
 // ---------------------------------------------------------------------------
 
 /** Label for the "ability condition met" switch, or null when the ability has none. */
-export function abilityToggleLabel(ability?: string): string | null {
+function abilityToggleLabel(ability?: string): string | null {
   switch (toID(ability)) {
     case 'unburden':
       return 'Item used (Unburden)';
@@ -260,7 +260,7 @@ export function SideControls({
 
 const BOOST_STATS: BoostStat[] = ['atk', 'def', 'spa', 'spd', 'spe'];
 
-export function BoostControls({ boosts, onChange }: { boosts: SideConditions['boosts']; onChange: (b: SideConditions['boosts']) => void }) {
+function BoostControls({ boosts, onChange }: { boosts: SideConditions['boosts']; onChange: (b: SideConditions['boosts']) => void }) {
   const set = (s: BoostStat, v: number) => onChange({ ...boosts, [s]: Math.max(-6, Math.min(6, v)) });
   return (
     <div className="space-y-1.5">

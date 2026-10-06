@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
+const ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 export const OUT = resolve(ROOT, 'src/data/generated');
 export const GAPS = resolve(ROOT, 'docs/data-gaps');
 
@@ -18,7 +18,7 @@ export const cid = (c: string) => {
   return DECOMP_ALIASES[id] ?? id;
 };
 /** Decomp constants that are spelled differently from Showdown's ids. */
-export const DECOMP_ALIASES: Record<string, string> = { faintattack: 'feintattack', hijumpkick: 'highjumpkick', smellingsalt: 'smellingsalts', vicegrip: 'visegrip' };
+const DECOMP_ALIASES: Record<string, string> = { faintattack: 'feintattack', hijumpkick: 'highjumpkick', smellingsalt: 'smellingsalts', vicegrip: 'visegrip' };
 export const title = (s: string) => s.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 export const spaced = (s: string) => s.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/_/g, ' ');
 
@@ -42,7 +42,7 @@ export function cleanText(parts: string | string[]): string {
  * Why a trainer has no place on a map, in words ("Other trainers" in the Pokénav). `where` is what the
  * decompilation says about it, when it says anything (the script that fights it).
  */
-export function whyUnplaced(t: { id: string; name: string; cls?: string }, where?: string): string {
+function whyUnplaced(t: { id: string; name: string; cls?: string }, where?: string): string {
   if (/DUMMY/.test(t.id) || (/^(Mickey|Angelica|Tara & Tim)$/.test(t.name) && !where)) return 'Unused placeholder slot: it is in the game data but nothing ever fights it.';
   if (/UNUSED|DEBUG|TEST|PLACEHOLDER/.test(t.id)) return 'Unused in the game: its slot exists in the data but no map or script fights it.';
   if (where) return where;
@@ -76,7 +76,7 @@ export function linkSeaRoutes(locations: Record<string, { id: string; maps: stri
 }
 
 /** The Pokédex book and game id whose encounter tables belong to a builder's game. */
-export const ENCOUNTER_BOOKS: Record<string, { book: string; game: string }> = {
+const ENCOUNTER_BOOKS: Record<string, { book: string; game: string }> = {
   red: { book: 'gen1', game: 'red' }, yellow: { book: 'gen1', game: 'yellow' },
   gold: { book: 'gen2', game: 'gold' }, crystal: { book: 'gen2', game: 'crystal' },
   ruby: { book: 'gen3', game: 'ruby' }, emerald: { book: 'gen3', game: 'emerald' }, firered: { book: 'gen3', game: 'firered' },

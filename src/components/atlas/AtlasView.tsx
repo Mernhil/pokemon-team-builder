@@ -205,7 +205,7 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
   // A place opened from elsewhere (Pokédex, a connection link) switches to the region that holds it.
   useEffect(() => {
     if (holder) setPickedMap(holder.id);
-  }, [holder?.id, pinned]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [holder?.id, pinned]); // holder is derived from these two
   const map = gameMaps.find((m) => m.id === pickedMap) ?? holder ?? gameMaps[0];
   const regionCount = (m: { places: Record<string, unknown> }) => Object.keys(m.places).filter((l) => file.locations[l]).length;
   const locations = useMemo(() => new Set(Object.keys(file.locations)), [file]);

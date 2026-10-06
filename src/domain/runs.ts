@@ -17,7 +17,7 @@ export type EncounterStatus = 'caught' | 'fainted' | 'fled' | 'skipped' | 'gift'
 export const ENCOUNTER_LABEL: Record<EncounterStatus, string> = { caught: 'Caught', fainted: 'Fainted', fled: 'Fled', skipped: 'Skipped', gift: 'Gift' };
 const STATUSES = Object.keys(ENCOUNTER_LABEL) as EncounterStatus[];
 /** The statuses that use up an area's one wild encounter. A gift is not a wild encounter; "skipped" records "nothing usable here" (a dupe re-roll, no way to find one) and leaves the area open. */
-export const USES_AREA: readonly EncounterStatus[] = ['caught', 'fainted', 'fled'];
+const USES_AREA: readonly EncounterStatus[] = ['caught', 'fainted', 'fled'];
 
 export type LevelCapMode = 'off' | 'soft' | 'hard';
 
@@ -47,7 +47,7 @@ export interface RunEncounter {
   at: number;
 }
 
-export type MonState = 'party' | 'box' | 'dead';
+type MonState = 'party' | 'box' | 'dead';
 export interface RunMon {
   id: string;
   species: string;
@@ -74,7 +74,7 @@ export interface Run {
   updatedAt: number;
 }
 
-export const PARTY_SIZE = 6;
+const PARTY_SIZE = 6;
 
 let counter = 0;
 const newId = (prefix: string, now: number) => `${prefix}-${now.toString(36)}-${(counter++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -189,7 +189,7 @@ export function removeEncounter(run: Run, encounterId: string, now = Date.now())
   return touch(run, now, { encounters: run.encounters.filter((e) => e.id !== encounterId), mons: run.mons.filter((m) => m.encounterId !== encounterId) });
 }
 
-export const clampLevel = (n: number) => Math.max(1, Math.min(100, Math.round(Number.isFinite(n) ? n : 1)));
+const clampLevel = (n: number) => Math.max(1, Math.min(100, Math.round(Number.isFinite(n) ? n : 1)));
 
 export function setMonLevel(run: Run, monId: string, level: number, now = Date.now()): Run {
   return touch(run, now, { mons: run.mons.map((m) => (m.id === monId ? { ...m, level: clampLevel(level) } : m)) });
@@ -225,7 +225,7 @@ export const partyOf = (run: Run) => run.mons.filter((m) => m.state === 'party')
 // Milestones: gyms, Elite Four, Champion, and the level cap they set
 // ---------------------------------------------------------------------------
 
-export type MilestoneKind = 'gym' | 'elite-four' | 'champion';
+type MilestoneKind = 'gym' | 'elite-four' | 'champion';
 
 export interface Milestone {
   id: string;
@@ -430,7 +430,7 @@ const num = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite
 const ID = /^[A-Za-z0-9._:-]{1,80}$/;
 const idOf = (v: unknown, fallback: () => string) => (typeof v === 'string' && ID.test(v) ? v : fallback());
 
-export function sanitizeRules(v: unknown): RunRules {
+function sanitizeRules(v: unknown): RunRules {
   const r = isObj(v) ? v : {};
   const nuz = bool(r.nuzlocke, true);
   const d = defaultRules(nuz);

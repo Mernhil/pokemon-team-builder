@@ -79,7 +79,7 @@ export function useSpriteSheet(set: SpriteSetId | undefined): SpriteSheet | null
 }
 
 /** Item icon atlas built by scripts/build-items.ts (public/sprites/items.{webp,json}). */
-export function loadItemSheet(): Promise<SpriteSheet | null> {
+function loadItemSheet(): Promise<SpriteSheet | null> {
   return loadSheet('items');
 }
 

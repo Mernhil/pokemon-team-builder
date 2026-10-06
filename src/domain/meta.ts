@@ -23,7 +23,7 @@ const share = z.object({ id, pct });
 /** A teammate: % of this species' teams that also have it, or (in-game data) only its rank among them. */
 const mate = z.object({ id, pct: pct.optional(), rank: z.number().int().min(1).optional() });
 
-export const MetaEntrySchema = z.object({
+const MetaEntrySchema = z.object({
   speciesId: id,
   /** % of teams running this species, 0–100 (Smogon's weighted usage). Absent for in-game data, which only ranks. */
   usagePct: pct.optional(),
@@ -66,10 +66,10 @@ export { byUsage, usageLabel, usageText, type Usage } from './usage.ts';
  * - carryover: the previous regulation's numbers for the Pokémon still allowed.
  * - matches: the player's own logged matches.
  */
-export const META_SOURCE_KINDS = ['ingame', 'smogon', 'manual', 'tournaments', 'replays', 'carryover', 'matches'] as const;
+const META_SOURCE_KINDS = ['ingame', 'smogon', 'manual', 'tournaments', 'replays', 'carryover', 'matches'] as const;
 export type MetaSourceKind = (typeof META_SOURCE_KINDS)[number];
 
-export const MetaSourceSchema = z.object({
+const MetaSourceSchema = z.object({
   /** Absent in older files: Smogon if the url is a Smogon stats file, else manual (metaSourceKind). */
   kind: z.enum(META_SOURCE_KINDS).optional(),
   /** Shown in the UI, e.g. "Smogon usage statistics (Pokémon Showdown ladder)". */
@@ -101,7 +101,7 @@ export const MetaSnapshotSchema = z.object({
 });
 export type MetaSnapshot = z.infer<typeof MetaSnapshotSchema>;
 
-export const MetaFileSchema = z.object({
+const MetaFileSchema = z.object({
   version: z.literal(1),
   generatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
   /** Keyed by regulation id (champions-reg-mc, …). */
@@ -212,7 +212,7 @@ export function provisionalNote(snap: Pick<MetaSnapshot, 'source'>, regulationNa
 
 const weights = z.record(z.string(), z.number());
 /** The parts of Smogon's chaos format this app reads (it carries more; extra keys are ignored). */
-export const ChaosSchema = z.object({
+const ChaosSchema = z.object({
   info: z.object({
     metagame: z.string(),
     cutoff: z.number(),

@@ -18,10 +18,10 @@ import { metaDataDate, metaSourceKind, type MetaSnapshot } from './meta.ts';
 const id = z.string().regex(/^[a-z0-9]{1,64}$/);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-export const HISTORY_KINDS = ['ingame', 'smogon'] as const;
+const HISTORY_KINDS = ['ingame', 'smogon'] as const;
 export type HistoryKind = (typeof HISTORY_KINDS)[number];
 
-export const HistoryEntrySchema = z.object({
+const HistoryEntrySchema = z.object({
   /** The day the numbers describe (YYYY-MM-DD; the last day of the month for Smogon). */
   d: date,
   /** ingame: the number is a usage rank (1 = most used); smogon: a usage %. */
@@ -33,7 +33,7 @@ export const HistoryEntrySchema = z.object({
 });
 export type HistoryEntry = z.infer<typeof HistoryEntrySchema>;
 
-export const MetaHistorySchema = z.object({
+const MetaHistorySchema = z.object({
   version: z.literal(1),
   regulations: z.record(z.string(), z.object({ entries: z.array(HistoryEntrySchema) })),
 });
@@ -52,11 +52,11 @@ export function parseMetaHistory(json: unknown): MetaHistory {
 }
 
 /** Entries kept per regulation (see thinHistory). */
-export const HISTORY_MAX_ENTRIES = 120;
+const HISTORY_MAX_ENTRIES = 120;
 /** Entries newer than this many days (before the newest) are kept daily; older ones thin to weekly. */
-export const HISTORY_DAILY_DAYS = 60;
+const HISTORY_DAILY_DAYS = 60;
 /** Species kept per entry. */
-export const HISTORY_MAX_SPECIES = 60;
+const HISTORY_MAX_SPECIES = 60;
 
 const DAY = 86_400_000;
 const dayNumber = (d: string) => Math.floor(Date.parse(`${d}T00:00:00Z`) / DAY);
@@ -134,8 +134,8 @@ export const TREND_PERIOD_LABEL: Record<string, string> = { '7': '7 days', '30':
 /** A species counts as "new" / "dropped" relative to the top this many. */
 export const TREND_TOP_N = 20;
 /** Smallest move that counts as rising or falling: places for ranks, percentage points for %. */
-export const MIN_RANK_MOVE = 3;
-export const MIN_PCT_MOVE = 1;
+const MIN_RANK_MOVE = 3;
+const MIN_PCT_MOVE = 1;
 
 export type TrendStatus = 'rising' | 'falling' | 'new' | 'dropped' | 'steady';
 
@@ -171,7 +171,7 @@ const sourceLabel = (e: Pick<HistoryEntry, 'k' | 's'>) => (e.k === 'ingame' ? `i
  * it); `before` is what precedes the run: an earlier season of the same source, else an earlier
  * entry of the other source: the break the trends must not cross.
  */
-export function currentRun(entries: HistoryEntry[]): { run: HistoryEntry[]; before?: HistoryEntry } {
+function currentRun(entries: HistoryEntry[]): { run: HistoryEntry[]; before?: HistoryEntry } {
   const sorted = entries.slice().sort((a, b) => a.d.localeCompare(b.d));
   const last = sorted.at(-1);
   if (!last) return { run: [] };

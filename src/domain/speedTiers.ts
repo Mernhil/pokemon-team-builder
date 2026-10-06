@@ -17,10 +17,10 @@ import type { FormatRules, Nature, PokemonSet, StatTable } from './types';
 /** How many of the most-used species the ladder covers by default. */
 export const DEFAULT_TOP_N = 30;
 /** A species gets its own Choice Scarf row when at least this % of its sets hold one. */
-export const SCARF_MIN_PCT = 10;
+const SCARF_MIN_PCT = 10;
 /** Most distinct Speeds shown per species, and the smallest spread share (%) worth a row of its own. */
-export const MAX_SPEEDS_PER_SPECIES = 2;
-export const MIN_SPREAD_PCT = 10;
+const MAX_SPEEDS_PER_SPECIES = 2;
+const MIN_SPREAD_PCT = 10;
 
 export const SCARF_ID = 'choicescarf';
 
@@ -51,7 +51,7 @@ export interface SpeedScenario {
   trickRoom: boolean;
 }
 
-export const neutralSide = (): SideSpeedScenario => ({ tailwind: false, stage: 0, paralyzed: false });
+const neutralSide = (): SideSpeedScenario => ({ tailwind: false, stage: 0, paralyzed: false });
 export const neutralScenario = (): SpeedScenario => ({
   mine: { ...neutralSide(), scarf: false },
   theirs: neutralSide(),
@@ -98,7 +98,7 @@ export interface MetaVariant {
   label: string;
 }
 
-export const spLabel = (sp: number, nature: string) => `${sp} Spe ${nature}`;
+const spLabel = (sp: number, nature: string) => `${sp} Spe ${nature}`;
 
 const NEUTRAL_FIELD = defaultField();
 
@@ -113,7 +113,7 @@ function toStatTable(values: readonly number[]): StatTable {
 }
 
 /** The most common (ability, item, spread) sets of one meta entry as speed variants. */
-export function variantsFor(entry: MetaEntry, dex: Dex, format: FormatRules): MetaVariant[] {
+function variantsFor(entry: MetaEntry, dex: Dex, format: FormatRules): MetaVariant[] {
   const species = dex.species(entry.speciesId);
   if (!species || entry.spreads.length === 0) return [];
   const topAbility = entry.abilities.find((a) => dex.ability(a.id))?.id;

@@ -26,7 +26,7 @@ const linear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) 
 const toHex = (rgb: number[]) => '#' + rgb.map((c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0')).join('');
 
 /** WCAG 2 relative luminance of a #rrggbb colour. */
-export function luminance(hex: string): number {
+function luminance(hex: string): number {
   const [r, g, b] = channels(hex).map(linear);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
@@ -37,8 +37,8 @@ export function contrastRatio(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-export const LIGHT_TEXT = '#ffffff';
-export const DARK_TEXT = '#111111';
+const LIGHT_TEXT = '#ffffff';
+const DARK_TEXT = '#111111';
 
 /**
  * Fill and text colour for a label on `color`: white or near-black, whichever reads better. If

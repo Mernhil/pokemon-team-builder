@@ -50,7 +50,7 @@ export interface BenchSeen {
 }
 
 /** A Speed benchmark's scenario: modifiers on the other Pokémon, and whether Trick Room is up. */
-export interface BenchScenario {
+interface BenchScenario {
   tailwind?: boolean;
   stage?: number;
   paralyzed?: boolean;
@@ -69,21 +69,21 @@ interface Common {
   seen?: BenchSeen;
   cond?: BenchConditions;
 }
-export interface SurviveBenchmark extends Common {
+interface SurviveBenchmark extends Common {
   kind: 'survive';
   moveId: string;
   /** Survive at least this many of the 16 rolls. */
   rolls: number;
   crit?: boolean;
 }
-export interface KoBenchmark extends Common {
+interface KoBenchmark extends Common {
   kind: 'ko';
   moveId: string;
   hits: 1 | 2;
   rolls: number;
   crit?: boolean;
 }
-export interface OutspeedBenchmark extends Common {
+interface OutspeedBenchmark extends Common {
   kind: 'outspeed';
   scenario: BenchScenario;
 }

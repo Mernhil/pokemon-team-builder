@@ -8,7 +8,7 @@ import type { AtlasFile } from '@/domain/atlas';
 const atlasFiles = import.meta.glob('./generated/atlas-*.json');
 
 const cache = new Map<string, Promise<AtlasFile>>();
-export function loadAtlas(game: string): Promise<AtlasFile> {
+function loadAtlas(game: string): Promise<AtlasFile> {
   let p = cache.get(game);
   if (!p) {
     p = (atlasFiles[`./generated/atlas-${game}.json`]?.() ?? Promise.reject(new Error(`No atlas for ${game}`))).then((m) => (m as { default: AtlasFile }).default);
