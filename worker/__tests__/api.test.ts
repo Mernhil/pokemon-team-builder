@@ -35,6 +35,14 @@ describe('who may call', () => {
     expect((await call({ ...env, ACCESS_AUD: undefined }, 'GET', '/api/sync', 'a@b.c')).status).toBe(501);
   });
 
+  it('names what is missing in the 501', async () => {
+    const env = makeEnv();
+    const body = async (e: typeof env) => (await call(e, 'GET', '/api/sync', 'a@b.c')).body;
+    expect(await body({ ...env, DB: undefined })).toMatchObject({ missing: ['DB'] });
+    expect(await body({ ...env, ACCESS_AUD: undefined })).toMatchObject({ missing: ['ACCESS_AUD'] });
+    expect(await body({ ...env, DB: undefined, ACCESS_TEAM_DOMAIN: undefined, ACCESS_AUD: undefined })).toMatchObject({ missing: ['DB', 'ACCESS_TEAM_DOMAIN', 'ACCESS_AUD'] });
+  });
+
   it('needs a verified Access token: nothing, a forged one, an e-mail header alone', async () => {
     const env = makeEnv();
     expect((await call(env, 'GET', '/api/sync', null)).status).toBe(401);
