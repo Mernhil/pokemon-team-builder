@@ -10,7 +10,7 @@ import type { Issue } from '@/domain/validation';
 import { useTeamStore } from '@/store/teamStore';
 import { useBenchmarkResults } from '../editor/useBenchmarks';
 import { Sprite } from '../ui/Sprite';
-import { Label, Panel, TypeBadge } from '../ui/primitives';
+import { Label, Panel, Skeleton, TypeBadge } from '../ui/primitives';
 import { IssueCounts, IssueList } from './ValidationPanel';
 
 const SuggestTeammate = lazy(() => import('../team/SuggestTeammate').then((m) => ({ default: m.SuggestTeammate })));
@@ -105,12 +105,12 @@ export function TeamCheck({ team, dex, format, issues }: { team: Team; dex: Dex;
           </div>
         )}
         {format.datasetId === 'champions' && team.slots.some(Boolean) && team.slots.some((x) => x === null) && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<Skeleton className="h-24" />}>
             <SuggestTeammate team={team} dex={dex} format={format} />
           </Suspense>
         )}
         {format.datasetId === 'champions' && team.slots.some(Boolean) && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<Skeleton className="h-16" />}>
             <TopThreats team={team} dex={dex} format={format} />
           </Suspense>
         )}

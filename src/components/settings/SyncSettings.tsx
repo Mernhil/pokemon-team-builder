@@ -5,7 +5,7 @@ import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { syncNow } from '@/sync/runner';
 import { LinkDesktopFromHere, LinkThisDesktop } from './LinkDevices';
 import SharingSettings from './SharingSettings';
-import { Button, Input, Label } from './ui/primitives';
+import { Button, Checkbox, Input, Label } from '../ui/primitives';
 
 const when = (t?: number) => (t ? new Date(t).toLocaleString() : 'never');
 
@@ -39,7 +39,7 @@ export default function SyncSettings() {
   return (
     <div className="space-y-3 text-sm">
       <label className="flex min-h-9 items-center gap-2 pointer-coarse:min-h-11">
-        <input type="checkbox" checked={s.enabled} onChange={(e) => (e.target.checked ? toggle(true) : setConfirmOff(true))} className="size-4 accent-[var(--color-accent)] pointer-coarse:size-5" />
+        <Checkbox checked={s.enabled} onChange={(e) => (e.target.checked ? toggle(true) : setConfirmOff(true))} />
         <span className="font-semibold">Sync with my account</span>
       </label>
       <p className="text-muted">

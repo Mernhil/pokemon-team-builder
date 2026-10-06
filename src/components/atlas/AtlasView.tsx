@@ -16,7 +16,7 @@ import type { MapsFile } from '../pokedex/RegionMap';
 import { Modal } from '../ui/Modal';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
-import { Chip, Input, LoadingState, Notice, Tabs } from '../ui/primitives';
+import { Chip, Input, LoadingState, Notice, Skeleton, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useMedia } from '../ui/useMedia';
 import { AtlasMap } from './AtlasMap';
@@ -92,7 +92,7 @@ export function AtlasView() {
         <div className="flex w-full flex-col gap-1.5" role="radiogroup" aria-label="Game">
           {[...new Set(ATLAS_GAMES.map(atlasGameGen))].sort((a, b) => a - b).map((gen) => (
             <div key={gen} className="flex flex-wrap items-center gap-1">
-              <span className="w-10 shrink-0 text-[11px] font-semibold tracking-wide text-muted uppercase">Gen {gen}</span>
+              <span className="w-10 shrink-0 text-2xs font-semibold tracking-wide text-muted uppercase">Gen {gen}</span>
               {ATLAS_GAMES.filter((g) => atlasGameGen(g) === gen).map((g) => (
                 <button
                   key={g.id}
@@ -100,7 +100,7 @@ export function AtlasView() {
                   role="radio"
                   aria-checked={g.id === game.id}
                   onClick={() => { setGame(g.id); setPinned(undefined); }}
-                  className={cn('inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold transition-colors', g.id === game.id ? 'border-accent bg-accent/15 text-fg' : 'border-border text-muted hover:text-fg')}
+                  className={cn('inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold transition-colors pointer-coarse:h-11', g.id === game.id ? 'border-accent bg-accent/15 text-fg' : 'border-border text-muted hover:text-fg')}
                 >
                   <GameBadge color={g.color} />
                   {g.name}
@@ -224,7 +224,7 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
       <div className="min-w-0 space-y-2">
         {lite && <Notice tone="accent">{game.name} has encounters only: the places and every wild, static, gift and trade Pokémon in them. Its items, trainers and shops aren’t available.</Notice>}
         <FilterBar filter={filter} setFilter={setFilter} matchCount={matches?.size} lite={lite} />
-        {!map ? <div className="aspect-[216/168] w-full animate-pulse rounded-xl bg-surface-2" /> : (
+        {!map ? <Skeleton className="aspect-[216/168] w-full" /> : (
           <div className="relative">
             {gameMaps.length > 1 && (
               <div className="mb-2 flex gap-1" role="tablist" aria-label="Region">
@@ -285,7 +285,7 @@ function LocationList({ matches, pinned, setPinned }: { matches: Set<string> | n
         <li key={l.id}>
           <button type="button" onClick={() => setPinned(pinned === l.id ? undefined : l.id)} aria-current={pinned === l.id} className={cn('flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-surface-2', pinned === l.id && 'bg-surface-2 ring-2 ring-accent ring-inset')}>
             <span className="min-w-0 flex-1 truncate text-sm font-semibold">{locName(l.id)}</span>
-            {done.has(l.id) && <span className="text-[11px] font-semibold text-good">Visited</span>}
+            {done.has(l.id) && <span className="text-2xs font-semibold text-good">Visited</span>}
             <span className="shrink-0 font-mono text-xs text-muted">{speciesCount.get(l.id) ?? 0} Pokémon</span>
           </button>
         </li>

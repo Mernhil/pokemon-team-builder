@@ -69,7 +69,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
         <div className="absolute z-40 mt-1 rounded-lg border border-border bg-surface p-2.5 shadow-xl">
           {recent.length > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-1" role="group" aria-label="Recent natures">
-              <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-muted">Recent</span>
+              <span className="mr-1 text-3xs font-semibold uppercase tracking-wider text-muted">Recent</span>
               {recent.map((n) => (
                 <button
                   key={n.name}
@@ -77,7 +77,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                   onClick={() => pick(n.name)}
                   aria-current={current?.name === n.name}
                   className={cn(
-                    'rounded-md border px-1.5 py-0.5 text-[10px] font-semibold',
+                    'rounded-md border px-1.5 py-0.5 text-3xs font-semibold',
                     current?.name === n.name ? 'border-accent bg-accent/15' : 'border-border/60 hover:border-muted',
                   )}
                 >
@@ -97,7 +97,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                 {/* Two leading spacer cells, matching the body's "lowers" label column (rowSpan from row 0) and each row's own stat-label column. */}
                 <th className="w-4 p-0" />
                 <th className="w-10 p-0" />
-                <th colSpan={GRID_STATS.length} className="pb-1 text-center text-[10px] font-semibold uppercase tracking-wider text-good">
+                <th colSpan={GRID_STATS.length} className="pb-1 text-center text-3xs font-semibold uppercase tracking-wider text-good">
                   <span className="inline-flex items-center gap-0.5">
                     <ArrowUp size={10} aria-hidden /> raises
                   </span>
@@ -107,7 +107,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                 <th className="p-0" />
                 <th className="p-0" />
                 {GRID_STATS.map((s) => (
-                  <th key={s} className="px-1 pb-1 text-center text-[10px] font-bold" style={{ color: STAT_COLOR_VAR[s] }}>
+                  <th key={s} className="px-1 pb-1 text-center text-3xs font-bold" style={{ color: STAT_COLOR_VAR[s] }}>
                     {STAT_LABELS[s]}
                   </th>
                 ))}
@@ -120,13 +120,13 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                     <th rowSpan={GRID_STATS.length} className="w-4 p-0 align-middle text-bad">
                       <span className="flex flex-col items-center gap-0.5">
                         <ArrowDown size={10} aria-hidden />
-                        <span className="text-[10px] font-semibold uppercase tracking-wider [writing-mode:vertical-lr]">
+                        <span className="text-3xs font-semibold uppercase tracking-wider [writing-mode:vertical-lr]">
                           <span className="rotate-180">lowers</span>
                         </span>
                       </span>
                     </th>
                   )}
-                  <th className="px-1 text-right text-[10px] font-bold" style={{ color: STAT_COLOR_VAR[minus] }}>
+                  <th className="px-1 text-right text-3xs font-bold" style={{ color: STAT_COLOR_VAR[minus] }}>
                     {STAT_LABELS[minus]}
                   </th>
                   {GRID_STATS.map((plus) => {
@@ -140,7 +140,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                             title="Neutral: no stat is raised or lowered"
                             aria-current={isCurrent}
                             className={cn(
-                              'flex h-9 w-12 items-center justify-center rounded-md border text-[10px] text-muted',
+                              'flex h-9 w-12 items-center justify-center rounded-md border text-3xs text-muted',
                               isCurrent ? 'border-accent bg-accent/15 text-fg' : 'border-border/60 hover:border-muted',
                             )}
                           >
@@ -160,7 +160,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                           title={`${n.name}: +${STAT_LABELS[plus]} −${STAT_LABELS[minus]}`}
                           aria-current={isCurrent}
                           className={cn(
-                            'flex h-9 w-12 items-center justify-center rounded-md border text-[10px] font-semibold leading-tight',
+                            'flex h-9 w-12 items-center justify-center rounded-md border text-3xs font-semibold leading-tight',
                             isCurrent ? 'border-accent bg-accent/15 text-fg' : 'border-border/60 hover:border-muted',
                           )}
                         >
@@ -173,7 +173,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
               ))}
             </tbody>
           </table>
-          <p className="mt-2 max-w-56 text-center text-[10px] text-muted">Column = stat raised 10%, row = stat lowered 10%. Center dot = a neutral nature.</p>
+          <p className="mt-2 max-w-56 text-center text-3xs text-muted">Column = stat raised 10%, row = stat lowered 10%. Center dot = a neutral nature.</p>
         </div>
       )}
     </div>

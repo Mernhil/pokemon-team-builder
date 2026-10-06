@@ -40,7 +40,7 @@ export function IssueList({ issues, onSelectSlot }: { issues: Issue[]; onSelectS
               type="button"
               disabled={i.slot === undefined}
               onClick={() => i.slot !== undefined && setActiveSlot(i.slot)}
-              className="flex min-h-9 w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2 disabled:cursor-default disabled:hover:bg-transparent"
+              className="flex min-h-9 w-full items-start pointer-coarse:min-h-11 gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2 disabled:cursor-default disabled:hover:bg-transparent"
             >
               <SeverityIcon icon={Icon} tone={i.severity === 'error' ? 'bad' : 'warn'} />
               <span>{i.message}</span>

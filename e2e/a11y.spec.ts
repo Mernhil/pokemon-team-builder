@@ -133,3 +133,42 @@ for (const theme of ['light', 'dark'] as const) {
     });
   });
 }
+
+// The same checks under the other looks and colour palettes: Classic, the greyest palette (Graphite)
+// and the most vivid setting, in both themes. (The default look and palette are covered above.)
+const VARIANTS = [
+  { name: 'Classic look', prefs: { look: 'classic' } },
+  { name: 'Graphite palette', prefs: { palette: { hue: 260, chroma: 0.02 } } },
+  { name: 'most vivid palette', prefs: { palette: { hue: 40, chroma: 0.2 } } },
+] as const;
+for (const variant of VARIANTS) {
+  for (const theme of ['light', 'dark'] as const) {
+    test.describe(`axe, ${variant.name}, ${theme} theme`, () => {
+      test.beforeEach(async ({ page }) => {
+        await page.addInitScript((state) => localStorage.setItem('ptb:prefs:v1', JSON.stringify({ version: 1, state })), { lastSeenVersion: '99.0.0', ...variant.prefs });
+        await openApp(page);
+        await setTheme(page, theme);
+      });
+
+      test('Build', async ({ page }) => {
+        await importTeam(page, SAMPLE_TEAM);
+        await expectNoA11yViolations(page);
+      });
+
+      test('Calc', async ({ page }) => {
+        await importTeam(page, SAMPLE_TEAM);
+        await page.goto('/#calc');
+        await page.getByRole('button', { name: 'Garchomp sprite' }).first().click();
+        await page.getByRole('button', { name: 'Incineroar sprite' }).last().click();
+        await expectNoA11yViolations(page);
+      });
+
+      test('Settings', async ({ page }) => {
+        await page.getByRole('navigation', { name: 'Main' }).locator('visible=true').getByRole('button', { name: /^More/ }).click();
+        await page.getByRole('menuitem', { name: /Settings/ }).click();
+        await page.getByRole('dialog', { name: 'Settings & credits' }).waitFor();
+        await expectNoA11yViolations(page);
+      });
+    });
+  }
+}

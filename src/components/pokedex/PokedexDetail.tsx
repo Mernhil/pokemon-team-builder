@@ -95,7 +95,7 @@ export function PokedexDetail(props: Props) {
               )}
             >
               {t.label}
-              {t.id === 'area' && !data.encounters[species.id]?.length && <span className="ml-1 text-[10px] font-normal text-muted">—</span>}
+              {t.id === 'area' && !data.encounters[species.id]?.length && <span className="ml-1 text-3xs font-normal text-muted">—</span>}
             </button>
           ))}
         </nav>
@@ -111,7 +111,7 @@ export function PokedexDetail(props: Props) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</dt>
+      <dt className="text-3xs font-semibold uppercase tracking-wider text-muted">{label}</dt>
       <dd className="font-medium">{value}</dd>
     </div>
   );
@@ -168,7 +168,7 @@ function InfoTab({ species, dex, data, book, onSelect }: Props) {
               <li key={f.text} className="text-sm leading-relaxed">
                 <span className="mr-2 inline-flex flex-wrap gap-1 align-middle">
                   {f.games.map((g) => (
-                    <span key={g} className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                    <span key={g} className="rounded bg-surface-2 px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-muted">
                       {gameName(g)}
                     </span>
                   ))}
@@ -179,7 +179,7 @@ function InfoTab({ species, dex, data, book, onSelect }: Props) {
           </ul>
         ) : entry?.fallback ? (
           <p className="text-sm leading-relaxed">
-            <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">{entry.fallback.game}</span>
+            <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-3xs font-semibold uppercase tracking-wide text-muted">{entry.fallback.game}</span>
             {entry.fallback.text}
             <span className="mt-1 block text-xs text-muted">No {book.games.replace(/ \(.*\)$/, '')} entry in PokeAPI yet; showing the latest earlier game.</span>
           </p>
@@ -208,13 +208,13 @@ function InfoTab({ species, dex, data, book, onSelect }: Props) {
         </div>
         {mech.abilities && (
           <div className="mt-4 space-y-1.5">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Abilities</div>
+            <div className="text-2xs font-semibold uppercase tracking-wider text-muted">Abilities</div>
             {dex.abilitiesOf(species.id).map(({ slot, ability }) => (
               <p key={slot} className="text-xs">
                 <InfoTooltip title={ability.name} summary={ability.shortDesc} interactions={ABILITY_INTERACTIONS[ability.id]}>
                   <b className="text-fg underline decoration-dotted">{ability.name}</b>
                 </InfoTooltip>
-                {slot === 'H' && <span className="ml-1 text-[10px] font-semibold uppercase text-accent">Hidden</span>}
+                {slot === 'H' && <span className="ml-1 text-3xs font-semibold uppercase text-accent">Hidden</span>}
                 <span className="text-muted"> — {ability.shortDesc}</span>
               </p>
             ))}
@@ -234,7 +234,7 @@ function InfoTab({ species, dex, data, book, onSelect }: Props) {
         )}
         {forms.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Other forms</span>
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted">Other forms</span>
             {forms.map((f) => (
               <button
                 key={f.id}
@@ -393,7 +393,7 @@ function MoveTable({ rows, lead, book }: { rows: { move: Move; lead?: string }[]
     <div className="-mx-1 overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-[10px] font-semibold uppercase tracking-wider text-muted">
+          <tr className="text-left text-3xs font-semibold uppercase tracking-wider text-muted">
             {lead && <th className="w-14 px-1 pb-1">{lead}</th>}
             <th className="px-1 pb-1">Move</th>
             <th className="px-1 pb-1">Type</th>

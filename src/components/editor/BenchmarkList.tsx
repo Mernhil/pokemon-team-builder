@@ -51,7 +51,7 @@ export function BenchmarkList({ dex, format, set, onChange }: { dex: Dex; format
   const mine = results.get(set.uid);
   return (
     <section aria-label="Benchmarks" className="space-y-1.5">
-      <p className="text-[11px] font-semibold tracking-wider text-muted uppercase">
+      <p className="text-2xs font-semibold tracking-wider text-muted uppercase">
         Benchmarks <span className="font-normal tracking-normal normal-case">· goals this spread was built for{mine ? `, ${mine.filter((r) => r.status === 'met').length} of ${mine.length} hold` : ''}</span>
       </p>
       {!ready || !mine ? (

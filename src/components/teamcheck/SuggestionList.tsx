@@ -37,7 +37,7 @@ export function SuggestionList({ suggestions, fix }: { suggestions: Suggestion[]
             <Label>
               {suggestions.length} suggestion{suggestions.length === 1 ? '' : 's'}
             </Label>
-            <span className="text-[10px] text-muted group-open:hidden">(tap to show)</span>
+            <span className="text-3xs text-muted group-open:hidden">(tap to show)</span>
           </summary>
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {suggestions.map((s) => (
@@ -54,7 +54,7 @@ export function SuggestionList({ suggestions, fix }: { suggestions: Suggestion[]
                 >
                   <TypeBadge type={s.type} size="xs" />
                   {s.stats && (
-                    <span className="font-mono text-[11px] font-bold tabular-nums" aria-hidden>
+                    <span className="font-mono text-2xs font-bold tabular-nums" aria-hidden>
                       <span className={s.stats[0].tone === 'bad' ? 'text-bad' : 'text-good'}>{s.stats[0].value}</span>
                       <span className="text-muted">/</span>
                       <span className={s.stats[1].tone === 'bad' ? 'text-bad' : 'text-good'}>{s.stats[1].value}</span>

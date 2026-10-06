@@ -1,8 +1,8 @@
 import { Suspense, lazy, useState } from 'react';
-import { Minus, Plus, RotateCcw, Sparkles, Target } from 'lucide-react';
+import { Minus, Plus, RotateCcw, Sparkles } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
-import { calcStats, canOptimize, gbHpDV, investRange, investmentForTarget, lgpeFriendshipPercent, natureModifier, spendBudget, spreadKey, sumStats } from '@/domain/stats';
+import { calcStats, canOptimize, gbHpDV, investRange, lgpeFriendshipPercent, natureModifier, spendBudget, spreadKey, sumStats } from '@/domain/stats';
 import {
   STAT_IDS,
   STAT_LABELS,
@@ -10,12 +10,14 @@ import {
   type Pokemon,
   type PokemonSet,
   type StatId,
-  type StatSystem,
   type StatTable,
 } from '@/domain/types';
 import { useOptimizerStore } from '@/store/optimizerStore';
 import { Button } from '../ui/primitives';
 // The optimiser pulls in the damage calculator, so it loads when first opened.
+import { PRESETS } from './statPresets';
+import { SpeedBenchmark } from './SpeedBenchmark';
+
 const OptimizerPanel = lazy(() => import('./OptimizerPanel').then((m) => ({ default: m.OptimizerPanel })));
 import { cn } from '../ui/styles';
 import { STAT_COLOR_VAR } from '../ui/color';
@@ -47,30 +49,6 @@ interface Props {
   /** Optimiser goals kept as benchmarks on this Pokémon (merged into its list by the editor). */
   onKeepBenchmarks?: (benchmarks: import('@/domain/benchmarks').Benchmark[]) => void;
 }
-
-type Preset = { label: string; spread: Partial<StatTable> };
-
-const PRESETS: Record<StatSystem['kind'], Preset[]> = {
-  'champions-sp': [
-    { label: 'Physical sweeper', spread: { hp: 2, atk: 32, spe: 32 } },
-    { label: 'Special sweeper', spread: { hp: 2, spa: 32, spe: 32 } },
-    { label: 'Bulky physical', spread: { hp: 32, atk: 32, def: 2 } },
-    { label: 'Bulky special', spread: { hp: 32, spa: 32, spd: 2 } },
-    { label: 'Max bulk', spread: { hp: 32, def: 17, spd: 17 } },
-    { label: 'Trick Room', spread: { hp: 32, atk: 32, def: 2 } },
-  ],
-  'modern-ev': [
-    { label: 'Physical sweeper', spread: { hp: 4, atk: 252, spe: 252 } },
-    { label: 'Special sweeper', spread: { hp: 4, spa: 252, spe: 252 } },
-    { label: 'Bulky physical', spread: { hp: 252, atk: 252, def: 4 } },
-    { label: 'Bulky special', spread: { hp: 252, spa: 252, spd: 4 } },
-    { label: 'Physically defensive', spread: { hp: 252, def: 252, spd: 4 } },
-    { label: 'Specially defensive', spread: { hp: 252, def: 4, spd: 252 } },
-  ],
-  'gb-statexp': [{ label: 'Max all (trained)', spread: { hp: 65535, atk: 65535, def: 65535, spa: 65535, spd: 65535, spe: 65535 } }],
-  'lgpe-av': [{ label: 'Max all AVs (200)', spread: { hp: 200, atk: 200, def: 200, spa: 200, spd: 200, spe: 200 } }],
-  'pla-effort': [{ label: 'Max all Effort Levels (10)', spread: { hp: 10, atk: 10, def: 10, spa: 10, spd: 10, spe: 10 } }],
-};
 
 const BASE_BAR_MAX = 200;
 const zero = (): StatTable => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 });
@@ -227,7 +205,7 @@ export function StatDistributor({ set, species, mega, altLabel = 'Mega', format,
 
       {/* Rows — grid when wide, two-line cards in narrow containers (phones, calc columns) */}
       <div className="text-sm">
-        <div className={cn('hidden gap-x-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted @xl:grid', cols)} style={gridStyle}>
+        <div className={cn('hidden gap-x-3 pb-1 text-3xs font-semibold uppercase tracking-wider text-muted @xl:grid', cols)} style={gridStyle}>
           <span>Stat</span>
           <span>Base</span>
           <span>
@@ -341,7 +319,7 @@ export function StatDistributor({ set, species, mega, altLabel = 'Mega', format,
                 {/* IV / DV */}
                 {showIV && !locked ? (
                   <div className="flex items-center justify-end gap-1 @xl:justify-center">
-                    <span className="text-[10px] text-muted @xl:hidden">{ivUnit}</span>
+                    <span className="text-3xs text-muted @xl:hidden">{ivUnit}</span>
                     {gb && s === 'hp' ? (
                       <span className="h-7 w-10 rounded border border-dashed border-border text-center font-mono text-sm leading-7 tabular-nums text-muted" title="The HP DV follows from the Atk, Def, Spe and Special DVs">
                         {hpDV}
@@ -435,80 +413,6 @@ export function StatDistributor({ set, species, mega, altLabel = 'Mega', format,
         </Suspense>
       )}
       <SpeedBenchmark altLabel={showMega ? altLabel : undefined} set={set} species={shown} format={format} dex={dex} onSpread={onSpread} speed={stats.spe} unit={unit} />
-    </div>
-  );
-}
-
-function SpeedBenchmark({
-  altLabel,
-  set,
-  species,
-  format,
-  dex,
-  onSpread,
-  speed,
-  unit,
-}: {
-  altLabel?: string;
-  set: PokemonSet;
-  species: Pokemon;
-  format: FormatRules;
-  dex: Dex;
-  onSpread: (stat: StatId, value: number) => void;
-  speed: number;
-  unit: string;
-}) {
-  const [target, setTarget] = useState('');
-  const mech = formatMechanics(format);
-  const nature = mech.natures ? dex.nature(set.nature) : undefined;
-  const t = parseInt(target, 10);
-  const need = Number.isFinite(t) ? investmentForTarget('spe', species.baseStats, t, set, format, nature) : undefined;
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-surface-2 px-3 py-2 text-xs">
-      <span className="font-mono tabular-nums">
-        <span className="text-muted">{altLabel ? `${altLabel} Spe` : 'Spe'}</span> <b>{speed}</b>
-        {mech.tailwind && mech.battleSim && (
-          <>
-            <span className="text-muted"> · Tailwind </span>
-            <b>{speed * 2}</b>
-          </>
-        )}
-        {mech.gen >= 4 && mech.heldItems && (
-          <>
-            <span className="text-muted"> · Scarf </span>
-            <b>{Math.floor(speed * 1.5)}</b>
-          </>
-        )}
-        <span className="text-muted"> · −1 </span>
-        <b>{Math.floor((speed * 2) / 3)}</b>
-        {mech.gen < 7 && mech.battleSim && (
-          <>
-            <span className="text-muted"> · Paralyzed </span>
-            <b>{Math.floor(speed / 4)}</b>
-          </>
-        )}
-      </span>
-      <span className="ml-auto flex items-center gap-1.5">
-        <Target size={12} className="text-muted" />
-        <span className="text-muted">Hit Spe ≥</span>
-        <input
-          value={target}
-          onChange={(e) => setTarget(e.target.value.replace(/\D/g, ''))}
-          placeholder="e.g. 150"
-          aria-label="Target speed"
-          inputMode="numeric"
-          className="h-6 w-20 rounded border border-border bg-surface px-1.5 font-mono outline-none focus:border-accent pointer-coarse:h-10"
-        />
-        {need !== undefined &&
-          (need === null ? (
-            <span className="text-bad">unreachable</span>
-          ) : (
-            <Button size="sm" onClick={() => onSpread('spe', need)}>
-              Set {need.toLocaleString()} {unit}
-            </Button>
-          ))}
-      </span>
     </div>
   );
 }

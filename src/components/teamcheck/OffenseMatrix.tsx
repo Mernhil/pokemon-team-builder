@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Dex } from '@/data/dex';
 import { offensiveCoverage, offensiveFixSuggestion, offensiveSuggestions } from '@/domain/coverage';
 import type { Team } from '@/domain/types';
@@ -15,6 +15,7 @@ export function OffenseMatrix({ team, dex, mega = false }: { team: Team; dex: De
   const rows = useMemo(() => offensiveCoverage(team, dex, mega), [team, dex, mega]);
   const suggestions = useMemo(() => offensiveSuggestions(rows), [rows]);
   const fix = useMemo(() => offensiveFixSuggestion(dex, suggestions), [dex, suggestions]);
+  const [open, setOpen] = useState<string | null>(null);
   if (!rows[0]?.hits.length) return null;
 
   return (
@@ -23,8 +24,7 @@ export function OffenseMatrix({ team, dex, mega = false }: { team: Team; dex: De
       help={
         <>
         Count of members hitting each defending type <span className="text-good">super-effectively</span> /{' '}
-        <span className="text-bad">only resisted</span> / <span className="text-accent">no effect at all</span>, from their damaging moves and abilities (Pixilate, Scrappy, Tinted Lens). Hover a cell for each member's best
-        move.
+        <span className="text-bad">only resisted</span> / <span className="text-accent">no effect at all</span>, from their damaging moves and abilities (Pixilate, Scrappy, Tinted Lens). Tap or focus a cell (Enter or Space) to see each member's best move.
         </>
       }
     >
@@ -33,26 +33,40 @@ export function OffenseMatrix({ team, dex, mega = false }: { team: Team; dex: De
           // No super-effective hit on this type, and most of the team can't even hit it neutrally.
           const gap = superEffective === 0 && walled * 2 >= hits.length;
           return (
-            <div
+            <button
               key={defType}
+              type="button"
+              aria-pressed={open === defType}
+              aria-label={`${defType}: ${superEffective} hit it super-effectively, ${walled - noEffect} only resisted, ${noEffect} no effect${gap ? ', a gap in coverage' : ''}`}
+              onClick={() => setOpen(open === defType ? null : defType)}
               className={cn(
-                'ui-cell rounded-md border p-1 text-center',
+                'ui-cell rounded-md border p-1 text-center pointer-coarse:min-h-11',
                 gap ? 'border-bad/60 bg-bad/10' : superEffective === 0 ? 'border-warn/50 bg-warn/5' : 'border-border',
+                open === defType && 'ring-2 ring-accent',
               )}
               title={hits.map((h) => `${h.name}: ${h.mult === 0 ? 'no effect (×0)' : `×${h.mult}`} (${h.move})`).join('\n')}
             >
-              <div className="truncate rounded text-[10px] font-bold uppercase" style={{ background: TYPE_BADGE[defType].fill, color: TYPE_BADGE[defType].text }}>
+              <div aria-hidden className="truncate rounded text-3xs font-bold uppercase" style={{ background: TYPE_BADGE[defType].fill, color: TYPE_BADGE[defType].text }}>
                 {defType.slice(0, 4)}
               </div>
-              <div className="mt-0.5 flex justify-center gap-1.5 font-mono text-[11px]">
+              <div aria-hidden className="mt-0.5 flex justify-center gap-1.5 font-mono text-2xs">
                 <span className={superEffective ? 'font-bold text-good' : 'text-muted'}>{superEffective}</span>
-                <span className={walled - noEffect ? 'font-bold text-bad' : 'text-muted'} aria-label={`${walled - noEffect} resisted`}>{walled - noEffect}</span>
-                <span className={noEffect ? 'font-bold text-accent' : 'text-muted'} aria-label={`${noEffect} no effect`}>{noEffect}</span>
+                <span className={walled - noEffect ? 'font-bold text-bad' : 'text-muted'}>{walled - noEffect}</span>
+                <span className={noEffect ? 'font-bold text-accent' : 'text-muted'}>{noEffect}</span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
+      {open && (
+        <p role="status" className="mt-2 text-xs">
+          <b>{open}</b> is hit by:{' '}
+          {rows
+            .find((r) => r.defType === open)
+            ?.hits.map((h) => `${h.name} ${h.mult === 0 ? 'no effect (×0)' : `×${h.mult}`} (${h.move})`)
+            .join(', ')}
+        </p>
+      )}
       <SuggestionList suggestions={suggestions} fix={fix} />
     </Panel>
   );

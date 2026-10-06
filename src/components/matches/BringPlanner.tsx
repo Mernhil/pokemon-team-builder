@@ -120,7 +120,7 @@ export function BringPlanner({
               <li key={o.speciesId} className="flex items-center gap-1.5 rounded-full border border-border bg-surface-2 py-0.5 pr-1 pl-1">
                 <Sprite speciesId={o.speciesId} name={nameOf(o.speciesId)} types={dex.species(o.speciesId)?.types} set={format.spriteSet} size={26} />
                 <span className="text-xs font-semibold">{nameOf(o.speciesId)}</span>
-                <span className="text-[11px] text-muted">{o.known === 'full' ? 'full set' : o.known === 'partial' ? 'some known' : 'meta set'}</span>
+                <span className="text-2xs text-muted">{o.known === 'full' ? 'full set' : o.known === 'partial' ? 'some known' : 'meta set'}</span>
                 <button type="button" aria-label={`Remove ${nameOf(o.speciesId)}`} onClick={() => setOpps(opps.filter((x) => x.speciesId !== o.speciesId))} className="rounded-full p-1 text-muted hover:text-bad pointer-coarse:p-2.5">
                   <X size={13} aria-hidden />
                 </button>

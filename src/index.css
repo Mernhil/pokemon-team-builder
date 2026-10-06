@@ -29,6 +29,10 @@
   --color-stat-spd: #2c7838;
   --color-stat-spe: #b8356f;
 
+  /* Two small sizes for badges and labels (text-xs, 12px, is the smallest used for reading text). */
+  --text-2xs: 0.6875rem;
+  --text-3xs: 0.625rem;
+
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -235,6 +239,12 @@ input[type='number'].no-spin {
   scrollbar-color: var(--color-border) transparent;
 }
 
+/* Long lists (the Pokédex, Pokénav items): rows far off screen are not laid out or painted until they scroll near. */
+.cv-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 2.75rem;
+}
+
 /* Pokédex Area maps: blinking nest icons (Gen 1–2) and glowing areas (Gen 3+), like the games. */
 @keyframes nest-blink {
   0%, 55% { opacity: 1; }
@@ -327,6 +337,8 @@ input[type='range'].palette-range::-moz-range-thumb {
   box-shadow: 2px 2px 0 var(--color-bad);
 }
 [data-look='sticker'] .ui-btn:not(.ui-ghost):active:not(:disabled) {
+  /* Tailwind's 1px active nudge (the `translate` property) would add to this one. */
+  translate: none;
   transform: translate(2px, 2px);
   box-shadow: 0 0 0 var(--line);
 }

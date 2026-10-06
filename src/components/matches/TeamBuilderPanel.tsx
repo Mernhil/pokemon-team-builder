@@ -7,7 +7,7 @@ import { createTeam } from '@/domain/team';
 import type { FormatRules, Team } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { useTeamStore } from '@/store/teamStore';
-import { ValidationPanel } from '../analysis/ValidationPanel';
+import { ValidationPanel } from '../teamcheck/ValidationPanel';
 import { SetEditor } from '../editor/SetEditor';
 import { TeamSlots } from '../team/TeamSlots';
 import { Button, Panel, Select } from '../ui/primitives';

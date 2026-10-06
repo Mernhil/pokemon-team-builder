@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TextArea, Panel, Input, Select } from '../ui/primitives';
+import { Checkbox, Input, Panel, Select, TextArea } from '../ui/primitives';
 import { type LevelCapMode, type Run, type RunRules } from '@/domain/runs';
 import { useRunStore } from '@/store/runStore';
 
@@ -20,7 +20,7 @@ export function RunRules({ run }: { run: Run }) {
       <Panel title="Rules" bodyClassName="space-y-2 p-3">
         {CHECKS.map((c) => (
           <label key={c.key} className="flex min-h-9 items-start gap-2 text-sm pointer-coarse:min-h-11">
-            <input type="checkbox" className="mt-0.5 size-4 accent-[var(--color-accent)] pointer-coarse:size-5" checked={run.rules[c.key]} onChange={(e) => setRules(run.id, { [c.key]: e.target.checked })} />
+            <Checkbox className="mt-0.5" checked={run.rules[c.key]} onChange={(e) => setRules(run.id, { [c.key]: e.target.checked })} />
             <span>
               <b>{c.label}</b> <span className="text-muted">{c.hint}</span>
             </span>

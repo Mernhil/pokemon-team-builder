@@ -87,7 +87,7 @@ function MatchupTable({ title, rows }: { title: string; rows: MatchupRow[] }) {
   if (!rows.length) return null;
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">{title}</p>
+      <p className="mb-1.5 text-2xs font-semibold uppercase tracking-wider text-muted">{title}</p>
       <ul className="space-y-1">
         {rows.map((r) => (
           <li key={r.defender} className="flex items-center gap-2 rounded-md bg-surface-2 px-2 py-1 text-xs">

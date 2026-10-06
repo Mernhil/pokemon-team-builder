@@ -12,12 +12,12 @@ import { useShowcaseStore } from '@/store/showcaseStore';
 import { editingTeam, useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
-import { ImpactList } from '../analysis/ImpactList';
-import { impactSummary } from '../analysis/impactSummary';
+import { ImpactList } from '../teamcheck/ImpactList';
+import { impactSummary } from '../teamcheck/impactSummary';
 import { ShareDialog } from './ShareDialog';
 import { Modal } from '../ui/Modal';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip } from '../ui/primitives';
+import { Button, Chip, ConfirmInline } from '../ui/primitives';
 import { ArchetypeChips } from '../team/ArchetypeChips';
 import { cn, typeGradient } from '../ui/styles';
 
@@ -123,20 +123,14 @@ function DeleteButton({
 }) {
   if (confirmId === id) {
     return (
-      <span className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
-        <Button
-          size="sm"
-          variant="danger"
-          onClick={() => {
+      <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+        <ConfirmInline
+          onConfirm={() => {
             onDelete(id);
             setConfirmId(null);
           }}
-        >
-          Delete
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => setConfirmId(null)}>
-          Keep
-        </Button>
+          onKeep={() => setConfirmId(null)}
+        />
       </span>
     );
   }

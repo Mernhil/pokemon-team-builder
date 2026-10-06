@@ -6,7 +6,7 @@ import { useAtlasStore, useProgress, type LocationTab } from '@/store/atlasStore
 import { useTeamStore } from '@/store/teamStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, EmptyState, Tabs } from '../ui/primitives';
+import { Button, Checkbox, Chip, EmptyState, Skeleton, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useAtlasCtx } from './context';
 import { KIND_LABEL } from './labels';
@@ -153,7 +153,7 @@ function Shop({ shop }: { shop: AtlasShop }) {
     <div className="rounded-lg border border-border">
       <h4 className="flex items-center justify-between gap-2 px-2 pt-1.5 text-sm font-semibold">
         {shop.name}
-        {shop.badgeStock && <span className="text-[11px] font-normal text-muted">stock grows with badges</span>}
+        {shop.badgeStock && <span className="text-2xs font-normal text-muted">stock grows with badges</span>}
       </h4>
       <ul className="p-1">
         {shop.items.map((it) => (
@@ -162,7 +162,7 @@ function Shop({ shop }: { shop: AtlasShop }) {
             <button type="button" className="min-w-0 flex-1 truncate text-left hover:text-accent hover:underline" onClick={() => openItem(it.item)}>
               {file.items[it.item]?.name ?? it.item}
             </button>
-            {it.badges ? <span className="text-[11px] text-muted">{it.badges}+ badge{it.badges > 1 ? 's' : ''}</span> : null}
+            {it.badges ? <span className="text-2xs text-muted">{it.badges}+ badge{it.badges > 1 ? 's' : ''}</span> : null}
             <span className="inline-flex items-center gap-0.5 font-mono text-xs tabular-nums"><Coins size={11} aria-hidden /> {it.price.toLocaleString()}</span>
           </li>
         ))}
@@ -184,7 +184,7 @@ function Items({ loc }: { loc: AtlasLocation }) {
           const got = progress.items.includes(key);
           return (
             <li key={key} className={cn('flex items-start gap-2 rounded-lg border border-border p-2', got && 'opacity-60')}>
-              <input type="checkbox" checked={got} onChange={() => toggle(game.id, 'items', key)} aria-label={`Collected ${file.items[it.item]?.name ?? it.item}`} className="mt-1 size-4 accent-[var(--color-accent)]" />
+              <Checkbox checked={got} onChange={() => toggle(game.id, 'items', key)} aria-label={`Collected ${file.items[it.item]?.name ?? it.item}`} className="mt-1" />
               <ItemSprite itemId={it.item} size={28} />
               <div className="min-w-0 flex-1">
                 <button type="button" className="text-sm font-semibold hover:text-accent hover:underline" onClick={() => openItem(it.item)}>
@@ -276,8 +276,8 @@ function WildList({ rows }: { rows: WildRow[] }) {
                     {speciesName(r.species)}
                   </button>
                   <span className="flex flex-wrap justify-end gap-1">
-                    {r.sub && <span className="rounded bg-surface-2 px-1.5 text-[10px] text-muted">{r.sub}</span>}
-                    {r.conditions.map((c) => <span key={c} className="rounded bg-surface-2 px-1.5 text-[10px] text-muted">{c}</span>)}
+                    {r.sub && <span className="rounded bg-surface-2 px-1.5 text-3xs text-muted">{r.sub}</span>}
+                    {r.conditions.map((c) => <span key={c} className="rounded bg-surface-2 px-1.5 text-3xs text-muted">{c}</span>)}
                   </span>
                   <span className="w-16 text-right font-mono text-xs tabular-nums">Lv {r.min === r.max ? r.min : `${r.min}–${r.max}`}</span>
                   <span className="w-10 text-right font-mono text-xs tabular-nums">{r.rate ? `${r.rate}%` : ''}</span>
@@ -293,7 +293,7 @@ function WildList({ rows }: { rows: WildRow[] }) {
 
 function Wild({ rows, loading }: { rows: WildRow[]; loading: boolean }) {
   const { game } = useAtlasCtx();
-  if (loading) return <div className="h-24 animate-pulse rounded-lg bg-surface-2" />;
+  if (loading) return <Skeleton className="h-24 rounded-lg" />;
   if (!rows.length) return <EmptyState icon={CircleDot} title="No wild Pokémon">No wild encounter table lists this location in {game.shortName}.</EmptyState>;
   return <WildList rows={rows} />;
 }
@@ -314,13 +314,13 @@ function TrainerList({ ids }: { ids: string[] }) {
         const beaten = progress.trainers.includes(t.group);
         return (
           <li key={t.id} className={cn('flex items-center gap-2 rounded-lg border border-border p-1.5', beaten && 'opacity-60')}>
-            <input type="checkbox" checked={beaten} onChange={() => toggle(game.id, 'trainers', t.group)} aria-label={`Beaten ${t.name}`} className="size-4 accent-[var(--color-accent)]" />
+            <Checkbox checked={beaten} onChange={() => toggle(game.id, 'trainers', t.group)} aria-label={`Beaten ${t.name}`} />
             <button type="button" onClick={() => openTrainer(t.group)} className="flex min-w-0 flex-1 items-center gap-2 text-left hover:text-accent">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{t.cls === t.name ? t.name : `${t.cls} ${t.name}`}</span>
-                <span className="text-[11px] text-muted">{KIND_LABEL[t.kind]}{t.double ? ' · double' : ''} · {trainerVariantCount(file.trainers, t.group)} battle{trainerVariantCount(file.trainers, t.group) > 1 ? 's' : ''}</span>
+                <span className="text-2xs text-muted">{KIND_LABEL[t.kind]}{t.double ? ' · double' : ''} · {trainerVariantCount(file.trainers, t.group)} battle{trainerVariantCount(file.trainers, t.group) > 1 ? 's' : ''}</span>
               </span>
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-accent"><Users size={12} aria-hidden /> Team</span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-2xs font-semibold text-accent"><Users size={12} aria-hidden /> Team</span>
               <span className="flex shrink-0">
                 {t.party.map((m, i) => <Sprite key={i} speciesId={m.species} name={m.species} types={dex.species(m.species)?.types} set={format.spriteSet} size={28} className="-ml-2 first:ml-0" />)}
               </span>

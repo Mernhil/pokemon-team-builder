@@ -5,7 +5,7 @@ import { useDeviceStore } from '@/sync/deviceStore';
 import { linkThisDevice, loadDevices, pairingLink, requestPairCode, revokeLinkedDevice, unlinkThisDevice } from '@/sync/pairing';
 import { useSyncStore } from '@/sync/syncStore';
 import { syncNow } from '@/sync/runner';
-import { Button, Input, Label } from './ui/primitives';
+import { Button, Input, Label } from '../ui/primitives';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const when = (t: number) => new Date(t).toLocaleString();

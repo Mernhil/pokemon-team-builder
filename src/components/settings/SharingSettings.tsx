@@ -4,7 +4,7 @@ import { EMAIL_RE } from '@/domain/syncProtocol';
 import { useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
 import { addShare, loadShares, removeShare, saveDisplayName } from '@/sync/sharesApi';
-import { Button, Input, Label } from './ui/primitives';
+import { Button, Input, Label } from '../ui/primitives';
 
 /** Settings → Sync → Sharing: my display name, who sees my match log, and what others have shared with me. */
 export default function SharingSettings() {

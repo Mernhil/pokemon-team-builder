@@ -1,8 +1,8 @@
 import { RotateCcw } from 'lucide-react';
 import { CHROMA_RANGE, DEFAULT_PALETTE_ID, PALETTE_PRESETS, paletteTokens, presetOf, type Palette } from '@/domain/palette';
 import { usePrefsStore } from '@/store/prefsStore';
-import { Button, Label } from './ui/primitives';
-import { cn } from './ui/styles';
+import { Button, Label } from '../ui/primitives';
+import { cn } from '../ui/styles';
 
 const HUE_TRACK = `linear-gradient(to right, ${Array.from({ length: 13 }, (_, i) => `oklch(0.72 0.15 ${i * 30})`).join(', ')})`;
 const FALLBACK: Palette = { hue: 268, chroma: 0.15 };

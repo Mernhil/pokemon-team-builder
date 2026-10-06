@@ -59,7 +59,7 @@ export function Segmented<T extends string>({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1" role="radiogroup" aria-label={label}>
-      <span className="mr-1 w-16 text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</span>
+      <span className="mr-1 w-16 text-2xs font-semibold uppercase tracking-wider text-muted">{label}</span>
       {options.map((o) => {
         const info = describe?.(o.id);
         const btn = (
@@ -128,7 +128,7 @@ export function FieldControls({ field, onChange, compact, gen = 9, game }: { fie
       )}
       {mech.trickRoom && (
         <div className="flex flex-wrap items-center gap-1">
-          <span className="mr-1 w-16 text-[11px] font-semibold uppercase tracking-wider text-muted">Room</span>
+          <span className="mr-1 w-16 text-2xs font-semibold uppercase tracking-wider text-muted">Room</span>
           <Toggle on={field.trickRoom} onChange={(trickRoom) => onChange({ trickRoom })}>Trick Room</Toggle>
           <Toggle on={field.gravity} onChange={(gravity) => onChange({ gravity })}>Gravity</Toggle>
         </div>
@@ -192,7 +192,7 @@ export function SideControls({
     <div className="space-y-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Status</span>
+          <span className="text-2xs font-semibold uppercase tracking-wider text-muted">Status</span>
           <Select className="h-7 w-auto py-0 text-xs pointer-coarse:h-10" value={cond.status} onChange={(e) => onChange({ status: e.target.value as SideConditions['status'] })}>
             {STATUSES.map((s) => (
               <option key={s.id} value={s.id}>
@@ -202,7 +202,7 @@ export function SideControls({
           </Select>
         </label>
         <label className="flex min-w-40 flex-1 items-center gap-2 text-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">HP</span>
+          <span className="text-2xs font-semibold uppercase tracking-wider text-muted">HP</span>
           <input
             type="range"
             min={1}
@@ -240,7 +240,7 @@ export function SideControls({
             ]}
             onChange={(choice) => onChange({ statForm: choice })}
           />
-          <p className="text-[11px] text-muted">{statForm.auto}</p>
+          <p className="text-2xs text-muted">{statForm.auto}</p>
         </div>
       )}
       <div className="flex flex-wrap gap-1">
@@ -265,7 +265,7 @@ function BoostControls({ boosts, onChange }: { boosts: SideConditions['boosts'];
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Stat stages</span>
+        <span className="text-2xs font-semibold uppercase tracking-wider text-muted">Stat stages</span>
         <select
           aria-label="Stage presets"
           className="h-6 rounded border border-border bg-surface-2 px-1 text-xs text-muted outline-none pointer-coarse:h-10"
@@ -291,7 +291,7 @@ function BoostControls({ boosts, onChange }: { boosts: SideConditions['boosts'];
           const v = boosts[s];
           return (
             <div key={s} className="flex flex-col items-center rounded-md bg-surface-2 py-1">
-              <span className="text-[10px] font-semibold" style={{ color: STAT_COLOR_VAR[s] }}>
+              <span className="text-3xs font-semibold" style={{ color: STAT_COLOR_VAR[s] }}>
                 {STAT_LABELS[s]}
               </span>
               <div className="flex items-center">
@@ -319,7 +319,7 @@ export function ModChip({ label, factor }: { label: string; factor: number }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium',
+        'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-3xs font-medium',
         factor > 1 ? 'bg-good/15 text-good' : factor < 1 ? 'bg-bad/15 text-bad' : 'bg-surface-2 text-muted',
       )}
     >

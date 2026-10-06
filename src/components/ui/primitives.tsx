@@ -18,7 +18,7 @@ export function TypeBadge({ type, size = 'sm' }: { type: TeraType | MoveType; si
     <span
       className={cn(
         'inline-flex items-center justify-center rounded-md font-bold tracking-wide uppercase',
-        size === 'xs' ? 'h-4 min-w-12 px-1 text-[10px]' : 'h-5 min-w-16 px-1.5 text-[11px]',
+        size === 'xs' ? 'h-4 min-w-12 px-1 text-3xs' : 'h-5 min-w-16 px-1.5 text-2xs',
       )}
       style={{ background: fill, color: text }}
     >
@@ -80,7 +80,22 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
 
 /** Small uppercase label used above fields and for section eyebrows. */
 export function Label({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn('text-[11px] font-semibold tracking-wider text-muted uppercase', className)}>{children}</span>;
+  return <span className={cn('text-2xs font-semibold tracking-wider text-muted uppercase', className)}>{children}</span>;
+}
+
+/**
+ * The one checkbox: 16 px (20 px on touch screens) in the accent colour. With `label` it renders the
+ * whole row (44 pt tall on touch screens); without, just the box, for rows that supply their own label.
+ */
+export function Checkbox({ label, className, labelClassName, ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { label?: ReactNode; labelClassName?: string }) {
+  const box = <input type="checkbox" className={cn('size-4 shrink-0 accent-[var(--color-accent)] pointer-coarse:size-5', className)} {...props} />;
+  if (label === undefined) return box;
+  return (
+    <label className={cn('flex min-h-9 items-center gap-2 text-sm pointer-coarse:min-h-11', labelClassName)}>
+      {box}
+      {label}
+    </label>
+  );
 }
 
 export function Field({ label, children, hint, className }: { label: string; children: ReactNode; hint?: ReactNode; className?: string }) {
@@ -194,22 +209,45 @@ export function Panel({
   );
 }
 
+/**
+ * The inline "are you sure" for deleting something bigger than a toast's Undo should cover: the
+ * question, the destructive button first and the safe one second (focused, so Enter doesn't delete).
+ */
+export function ConfirmInline({ question, confirmLabel = 'Delete', keepLabel = 'Keep', onConfirm, onKeep, className }: { question?: ReactNode; confirmLabel?: string; keepLabel?: string; onConfirm: () => void; onKeep: () => void; className?: string }) {
+  return (
+    <span role="alert" className={cn('flex shrink-0 items-center gap-1.5', className)}>
+      {question && <span className="text-sm">{question}</span>}
+      <Button size="sm" variant="danger" onClick={onConfirm}>
+        {confirmLabel}
+      </Button>
+      <Button size="sm" variant="ghost" autoFocus onClick={onKeep}>
+        {keepLabel}
+      </Button>
+    </span>
+  );
+}
+
 /** Collapsible section (native <details>, so it works with keyboard and screen readers as is). */
 export function Disclosure({
   title,
   summary,
   children,
   defaultOpen,
+  open,
+  onOpenChange,
   className,
 }: {
   title: ReactNode;
   summary?: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
+  /** Controlled: the caller keeps the state (and can remember it). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }) {
   return (
-    <details className={cn('group rounded-xl border border-border bg-surface', className)} open={defaultOpen}>
+    <details className={cn('group rounded-xl border border-border bg-surface', className)} open={open ?? defaultOpen} onToggle={onOpenChange && ((e) => onOpenChange(e.currentTarget.open))}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl px-4 py-2 [&::-webkit-details-marker]:hidden">
         <h2 className="text-sm font-semibold">{title}</h2>
         {summary && <span className="min-w-0 truncate text-xs text-muted">{summary}</span>}
@@ -284,7 +322,7 @@ export function Tabs<T extends string>({
           onClick={() => onChange(t.id)}
           className={cn(
             'ui-tab flex flex-1 items-center justify-center gap-1.5 rounded-md font-semibold whitespace-nowrap transition-colors sm:flex-none',
-            size === 'sm' ? 'h-7 px-2.5 text-xs pointer-coarse:h-10' : 'h-8 px-3 text-sm pointer-coarse:h-11',
+            size === 'sm' ? 'h-7 px-2.5 text-xs pointer-coarse:h-11' : 'h-8 px-3 text-sm pointer-coarse:h-11',
             value === t.id ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg',
           )}
         >
@@ -316,6 +354,11 @@ export function LoadingState({ label, className }: { label: string; className?: 
       {label}
     </div>
   );
+}
+
+/** A pulsing placeholder that reserves the height of what is loading, so the page doesn't jump when it arrives. Give it a height (and radius) through `className`. */
+export function Skeleton({ className }: { className?: string }) {
+  return <div aria-hidden className={cn('animate-pulse rounded-xl bg-surface-2 motion-reduce:animate-none', className)} />;
 }
 
 /** Inline alert for errors and notices (role=alert for errors so they're read out). */

@@ -1,12 +1,12 @@
 import { Suspense, lazy } from 'react';
-import { Moon, Sparkles, Square, Sun } from 'lucide-react';
+import { Keyboard, Moon, Sparkles, Square, Sun } from 'lucide-react';
 import { DEFAULT_NAV, NAV_IDS, NAV_LABELS, NAV_LIMITS, resizeBar, setSlot, type NavKind } from '@/domain/navigation';
 import { usePrefsStore } from '@/store/prefsStore';
 import { useTeamStore } from '@/store/teamStore';
 import { PaletteSettings } from './PaletteSettings';
-import { UpdateCheckButton } from './DesktopUpdater';
-import { Modal } from './ui/Modal';
-import { Button, Label, Select, Tabs } from './ui/primitives';
+import { UpdateCheckButton } from '../DesktopUpdater';
+import { Modal } from '../ui/Modal';
+import { Button, Label, Select, Tabs } from '../ui/primitives';
 
 // Cloud sync loads when Settings opens (its engine loads only once sync is on).
 const SyncSettings = lazy(() => import('./SyncSettings'));
@@ -15,7 +15,7 @@ const SyncSettings = lazy(() => import('./SyncSettings'));
  * Settings & credits: appearance, where data lives, and who made the data and art the app uses.
  * The app claims no ownership of any Pokémon asset.
  */
-export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenWhatsNew: () => void }) {
+export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew, onOpenShortcuts }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenWhatsNew: () => void; onOpenShortcuts: () => void }) {
   const theme = useTeamStore((s) => s.theme);
   const setTheme = useTeamStore((s) => s.setTheme);
   const look = usePrefsStore((s) => s.look);
@@ -69,6 +69,17 @@ export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: b
           <Button onClick={onOpenWhatsNew}>
             <Sparkles size={15} aria-hidden />
             What’s new
+          </Button>
+        </section>
+
+        <section className="space-y-1.5" aria-labelledby="set-keys">
+          <h3 id="set-keys">
+            <Label>Keyboard shortcuts</Label>
+          </h3>
+          <p>Press <kbd className="rounded border border-border-strong/60 px-1 font-mono text-xs">?</kbd> anywhere, or see them here.</p>
+          <Button onClick={onOpenShortcuts}>
+            <Keyboard size={15} aria-hidden />
+            Keyboard shortcuts
           </Button>
         </section>
 

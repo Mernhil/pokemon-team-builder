@@ -189,7 +189,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">My team</span>
+              <span className="text-2xs font-semibold uppercase tracking-wider text-muted">My team</span>
               <div className="flex rounded-md bg-surface-2 p-0.5 text-xs">
                 <button type="button" onClick={() => { setMyMode('saved'); set({ myTeam: undefined, myBrought: undefined, myLeads: undefined }); }} className={cn('rounded px-2 py-0.5', myMode === 'saved' ? 'bg-surface shadow-sm' : 'text-muted')}>
                   Saved team
@@ -228,7 +228,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
           </div>
 
           <div className="space-y-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Opponent (Team Preview)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted">Opponent (Team Preview)</span>
             {knownCore && (
               <p className="rounded-md bg-accent/10 px-2 py-1 text-xs text-accent">
                 Overlaps a known popular core built around {dex.species(knownCore.speciesId)?.name ?? knownCore.speciesId} (see the Meta tab).

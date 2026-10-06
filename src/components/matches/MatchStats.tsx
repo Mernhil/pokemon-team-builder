@@ -87,7 +87,7 @@ export function MatchStats({ dex, format, matches: allMatches }: { dex: Dex; for
       <Panel title={`Overall: ${overall.wins}-${overall.losses} (${pct(overall)})`}>
         <div className="space-y-3">
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">By regulation</p>
+            <p className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">By regulation</p>
             <div className="space-y-1">
               {[...byReg.entries()].map(([id, r]) => (
                 <WinRateRow key={id} label={id === '—' ? 'No regulation' : (regulationInfo(id)?.shortName ?? id)} r={r} />
@@ -95,7 +95,7 @@ export function MatchStats({ dex, format, matches: allMatches }: { dex: Dex; for
             </div>
           </div>
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">By saved team</p>
+            <p className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">By saved team</p>
             <div className="space-y-1">
               {[...byTeam.entries()].map(([id, r]) => (
                 <WinRateRow key={id} label={teams[id]?.name ?? 'Deleted team'} r={r} />
@@ -104,7 +104,7 @@ export function MatchStats({ dex, format, matches: allMatches }: { dex: Dex; for
             </div>
           </div>
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">By my archetype</p>
+            <p className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">By my archetype</p>
             <div className="space-y-1">
               {[...byArch.entries()].map(([a, r]) => (
                 <WinRateRow key={a} label={a} r={r} />
@@ -118,7 +118,7 @@ export function MatchStats({ dex, format, matches: allMatches }: { dex: Dex; for
       <Panel title="Personal meta snapshot">
         <div className="space-y-3">
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Most-seen opponent species</p>
+            <p className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">Most-seen opponent species</p>
             <div className="space-y-1">
               {speciesFreq.map(([id, n]) => (
                 <div key={id} className="flex items-center justify-between text-xs">
@@ -129,7 +129,7 @@ export function MatchStats({ dex, format, matches: allMatches }: { dex: Dex; for
             </div>
           </div>
           <div>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Most-seen cores (species pairs)</p>
+            <p className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">Most-seen cores (species pairs)</p>
             <div className="space-y-1">
               {coreFreq.map(([key, n]) => {
                 const [a, b] = key.split('+');
@@ -273,7 +273,7 @@ function GroupTable({ title, rows, dex, empty, label }: { title: string; rows: G
   const name = (r: GroupRow) => label?.(r) ?? r.species.map((id) => dex.species(id)?.name ?? id).join(' + ');
   return (
     <div>
-      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">{title}</p>
+      <p className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">{title}</p>
       {rows.length === 0 ? (
         <p className="text-xs text-muted">{empty}</p>
       ) : (

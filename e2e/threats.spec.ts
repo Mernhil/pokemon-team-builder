@@ -80,3 +80,25 @@ test('OHKO reports: Team check links to both, each lists who can OHKO whom, a ro
     await expect(page).toHaveURL(/#calc$/);
   }
 });
+
+test('Threat report: the table is one Tab stop and arrow keys move between its cells', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the table is the wide-screen layout');
+  await openApp(page);
+  await importTeam(page, SAMPLE_TEAM);
+  await page.evaluate(() => { location.hash = '#analyse/threats'; });
+  await expect(page.getByRole('status').filter({ hasText: /threats calculated/ })).toBeVisible({ timeout: 30_000 });
+  const table = page.getByRole('table').first();
+  const cells = table.locator('[data-cell]');
+  // Only the active cell (and its two actions) are in the tab order.
+  const stops = await table.locator('button[tabindex="0"]').count();
+  expect(stops).toBeGreaterThanOrEqual(1);
+  expect(stops).toBeLessThanOrEqual(3);
+  await cells.first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(table.locator('[data-cell="0:1"]')).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(table.locator('[data-cell="1:1"]')).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(table.locator('[data-cell="1:0"]')).toBeFocused();
+  await expect(table.locator('[data-cell="1:0"]')).toHaveAttribute('tabindex', '0');
+});

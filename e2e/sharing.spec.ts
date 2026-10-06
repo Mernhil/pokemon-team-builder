@@ -146,6 +146,7 @@ test('Sharing a team needs sync: the share button is there once sync is on, and 
   });
   // sharing is only offered once sync is on
   const before = await openSavedTeams(page);
+  await expect(before).toBeVisible();
   await expect(before.getByRole('button', { name: /^Share / })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await enableSync(page);

@@ -11,8 +11,8 @@ import { useCalcStore, type SideKey } from '@/store/calcStore';
 import { toast } from '@/store/toastStore';
 import { useTeamStore } from '@/store/teamStore';
 import { SlotSummary } from '../team/TeamSlots';
-import { DefenseMatrix } from '../analysis/DefenseMatrix';
-import { OffenseMatrix } from '../analysis/OffenseMatrix';
+import { DefenseMatrix } from '../teamcheck/DefenseMatrix';
+import { OffenseMatrix } from '../teamcheck/OffenseMatrix';
 import { AdvancedDetails } from '../editor/AdvancedDetails';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
@@ -159,7 +159,7 @@ function MonCard({ mon, index, trainer }: { mon: AtlasMon; index: number; traine
           );
         })}
       </ul>
-      {mon.movesDerived && <p className="mt-1 text-[11px] text-muted">The game picks these moves: the last four it learns by level {mon.level}.</p>}
+      {mon.movesDerived && <p className="mt-1 text-2xs text-muted">The game picks these moves: the last four it learns by level {mon.level}.</p>}
       <div className="mt-2 flex flex-wrap gap-1.5">
         <Button size="sm" onClick={() => sendToCalc('defender', trainer, index, dex, format)}>
           <Shield size={13} aria-hidden /> Calc as defender

@@ -7,7 +7,7 @@ import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
 import { createSet } from '@/domain/team';
 import { STAT_LABELS, type FormatRules, type Team, type TeraType } from '@/domain/types';
 import { useCalcStore, type SideKey } from '@/store/calcStore';
-import { SideControls } from '../battle/Controls';
+import { SideControls } from '../conditions/Controls';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { StatDistributor } from '../editor/StatDistributor';
 import { comboProps, useItemPicker, useMovePicker } from '../editor/options';
@@ -75,7 +75,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
       <div className="space-y-4">
         {/* Quick load from the active team */}
         <div>
-          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Load from {team.name}</div>
+          <div className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">Load from {team.name}</div>
           <div className="flex flex-wrap gap-1">
             {team.slots.map((s, i) => {
               const sp = s && dex.species(s.speciesId);
@@ -87,7 +87,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                   onClick={() => loadFromTeam(i)}
                   title={sp ? `Load ${sp.name}` : 'Empty slot'}
                   className={cn(
-                    'rounded-lg border p-0.5 transition-colors disabled:opacity-30',
+                    'rounded-lg border p-0.5 transition-colors disabled:opacity-30 pointer-coarse:min-h-11 pointer-coarse:min-w-11',
                     s && set && s.uid === set.uid ? 'border-accent bg-accent/10' : 'border-border hover:border-muted/60',
                   )}
                 >
@@ -230,7 +230,7 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
 
             {/* Moves + crit toggles */}
             <div>
-              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">Moves</div>
+              <div className="mb-1.5 text-2xs font-semibold uppercase tracking-wider text-muted">Moves</div>
               <div className="grid grid-cols-1 gap-2">
                 {set.moves.map((m, i) => (
                   <div key={i} className="flex items-center gap-2">

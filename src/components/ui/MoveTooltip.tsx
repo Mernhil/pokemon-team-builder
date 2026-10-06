@@ -50,13 +50,13 @@ export function MoveTooltip({ move, children, className }: { move: Move | undefi
           >
             <div className="mb-1.5 flex items-center gap-1.5">
               <TypeBadge type={move.type} size="xs" />
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
+              <span className="inline-flex items-center gap-1 text-3xs font-semibold uppercase tracking-wide text-muted">
                 <CategoryIcon size={11} /> {move.category}
               </span>
               {move.priority !== 0 && (
                 <span
                   className={cn(
-                    'ml-auto rounded px-1.5 py-0.5 text-[10px] font-bold',
+                    'ml-auto rounded px-1.5 py-0.5 text-3xs font-bold',
                     move.priority > 0 ? 'bg-good/15 text-good' : 'bg-bad/15 text-bad',
                   )}
                 >
@@ -66,7 +66,7 @@ export function MoveTooltip({ move, children, className }: { move: Move | undefi
               )}
             </div>
             <div className="mb-1.5 text-sm font-semibold text-fg">{move.name}</div>
-            <div className="mb-1.5 flex items-center gap-3 font-mono text-[11px] text-muted">
+            <div className="mb-1.5 flex items-center gap-3 font-mono text-2xs text-muted">
               <span>
                 <b className="text-fg">{move.basePower || '—'}</b> BP
               </span>
@@ -81,7 +81,7 @@ export function MoveTooltip({ move, children, className }: { move: Move | undefi
             {tags.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {tags.map((label) => (
-                  <span key={label} className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-medium text-muted">
+                  <span key={label} className="rounded-full bg-surface-2 px-1.5 py-0.5 text-3xs font-medium text-muted">
                     {label}
                   </span>
                 ))}

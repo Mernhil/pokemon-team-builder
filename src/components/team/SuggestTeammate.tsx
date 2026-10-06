@@ -9,7 +9,7 @@ import { useReverseSeed } from '@/store/reverseSeedStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, EmptyState, LoadingState, Notice } from '../ui/primitives';
+import { Button, Checkbox, Chip, EmptyState, LoadingState, Notice } from '../ui/primitives';
 import { useTeamSuggestions } from './useTeamSuggestions';
 
 /**
@@ -57,8 +57,8 @@ function Panel({ team, dex, format }: { team: Team; dex: Dex; format: FormatRule
 
   return (
     <section aria-label="Teammate suggestions" className="space-y-2 rounded-lg border border-border p-3">
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={includeAll} onChange={(e) => setIncludeAll(e.target.checked)} className="size-4 accent-[var(--color-accent)]" />
+      <label className="flex items-center gap-2 text-sm pointer-coarse:min-h-11">
+        <Checkbox checked={includeAll} onChange={(e) => setIncludeAll(e.target.checked)} />
         Include every legal Pokémon <span className="text-xs text-muted">(not only those with usage data; generic build)</span>
       </label>
       {loading ? (

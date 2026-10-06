@@ -6,7 +6,7 @@ import { GEN_GAMES } from '@/domain/generations';
 import { calcMoves, calcSpeed, type FormResult, type MoveResult, type SpeedResult } from '@/domain/battle/damage';
 import type { FormatRules, Team } from '@/domain/types';
 import { useCalcStore, type CalcSide, type SideKey } from '@/store/calcStore';
-import { FieldControls } from '../battle/Controls';
+import { FieldControls } from '../conditions/Controls';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
 import { Button, EmptyState, Notice, Panel, TypeBadge } from '../ui/primitives';
@@ -208,7 +208,7 @@ function ResultList({
 }) {
   return (
     <div>
-      <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
+      <div className="mb-2 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-muted">
         <span className={cn('h-2 w-2 rounded-full', tone === 'bad' ? 'bg-bad' : 'bg-accent')} />
         {title}
       </div>
@@ -242,7 +242,7 @@ function ResultRow({ r, dex, onToggleCrit }: { r: MoveResult; dex: Dex; onToggle
             title={r.crit ? 'Critical hit on: click for a normal hit' : 'Calculate as a critical hit'}
             onClick={onToggleCrit}
             className={cn(
-              'flex h-6 shrink-0 items-center gap-1 rounded-md border px-1.5 text-[10px] font-bold transition-colors',
+              'flex h-6 shrink-0 items-center gap-1 rounded-md border px-1.5 text-3xs font-bold transition-colors pointer-coarse:h-11 pointer-coarse:px-2.5 pointer-coarse:text-xs',
               r.crit ? 'border-warn bg-warn/15 text-warn' : 'border-border text-muted hover:border-muted/60 hover:text-fg',
             )}
           >
@@ -280,7 +280,7 @@ function FormRow({ f }: { f: FormResult }) {
   return (
     <div>
       <div className="flex items-center gap-2">
-        {f.label && <span className="shrink-0 rounded bg-surface-2 px-1 py-0.5 text-[10px] font-semibold text-muted">{f.label}</span>}
+        {f.label && <span className="shrink-0 rounded bg-surface-2 px-1 py-0.5 text-3xs font-semibold text-muted">{f.label}</span>}
         <span className={cn('ml-auto font-mono text-sm font-bold tabular-nums', koColor)}>
           {lo}–{hi}%
         </span>
@@ -304,9 +304,9 @@ function FormRow({ f }: { f: FormResult }) {
         </button>
       </div>
       <details className="mt-0.5">
-        <summary className="cursor-pointer text-[10px] text-muted">Details & rolls</summary>
+        <summary className="cursor-pointer text-3xs text-muted">Details & rolls</summary>
         <p className="mt-1 text-xs leading-relaxed">{f.desc}</p>
-        <p className="mt-1 font-mono text-[10px] text-muted">{f.rolls.join(', ')}</p>
+        <p className="mt-1 font-mono text-3xs text-muted">{f.rolls.join(', ')}</p>
       </details>
     </div>
   );

@@ -12,10 +12,10 @@ import { editingTeam, useTeamStore } from '@/store/teamStore';
 import { ArchetypeChips } from '../team/ArchetypeChips';
 import { TeamNotes } from '../team/TeamNotes';
 import { TeamSheet } from '../team/TeamSheet';
-import { DefenseMatrix } from '../analysis/DefenseMatrix';
-import { OffenseMatrix } from '../analysis/OffenseMatrix';
+import { DefenseMatrix } from '../teamcheck/DefenseMatrix';
+import { OffenseMatrix } from '../teamcheck/OffenseMatrix';
 import { Sprite } from '../ui/Sprite';
-import { Chip, EmptyState, LoadingState, Panel, Select, Tabs } from '../ui/primitives';
+import { Checkbox, Chip, EmptyState, LoadingState, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { SetCard, type CardView } from './SetCard';
 
@@ -123,8 +123,8 @@ function SetsTab({ team, dex, format, members, view, mega, onMega }: { team: Tea
         <b className="text-fg max-sm:hidden">{team.name}{team.variationLabel ? ` · ${team.variationLabel}` : ''}</b>
         <Chip className="max-sm:hidden">{team.category || format.shortName}</Chip>
         {anyMega && (
-          <label className="ml-auto flex items-center gap-1.5 text-xs">
-            <input type="checkbox" checked={mega} onChange={(e) => onMega(e.target.checked)} className="size-4 pointer-coarse:size-5" /> Show Megas
+          <label className="ml-auto flex items-center gap-1.5 text-xs pointer-coarse:min-h-11">
+            <Checkbox checked={mega} onChange={(e) => onMega(e.target.checked)} /> Show Megas
           </label>
         )}
       </div>
