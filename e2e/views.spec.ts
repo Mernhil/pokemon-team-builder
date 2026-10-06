@@ -116,7 +116,8 @@ test('Champions Pokédex: Mega Evolutions filter, a Pokémon\'s Megas side by si
   expect(await list.getByRole('option').count()).toBe(82); // Reg M-C is live
   // textContent, not innerText: rows far below the fold are not rendered (content-visibility) and have no innerText.
   const texts = await list.getByRole('option').allTextContents();
-  const at = (name: string) => texts.findIndex((t) => new RegExp(`${name}(?![-\\w])`).test(t));
+  // The row starts with the dex number, then the name (the first match is the base Mega, which is listed before its -Z/-X/-Y siblings).
+  const at = (name: string) => texts.findIndex((t) => t.replace(/^\d+/, '').startsWith(name));
   expect(at('Charizard-Mega-Y')).toBe(at('Charizard-Mega-X') + 1);
   expect(at('Garchomp-Mega-Z')).toBe(at('Garchomp-Mega') + 1);
   await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toContainText('Charizardite X');
