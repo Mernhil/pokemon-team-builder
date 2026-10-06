@@ -65,14 +65,13 @@ export function MoveCoverage({ dex, attacker, defender, attackerMega = false, de
   const typesOf = (s?: PokemonSet) => (s ? dex.species(s.speciesId)?.types : undefined);
   const name = (s: PokemonSet) => dex.species(s.speciesId)?.name ?? s.speciesId;
   return (
-    <Panel title="Move coverage">
+    <Panel title="Move coverage" help={<>
+        Best multiplier of the selected damaging moves against each type; the outlined types are the opposing Pokémon's. Counts the Pokémon's own ability (Pixilate, Scrappy, Tinted Lens…); the opponent's ability isn't applied here.
+      </>}>
       <div className="space-y-3">
         {attacker && <Grid title={`${name(attacker)}'s moves`} set={attacker} dex={dex} against={typesOf(defender)} mega={attackerMega} />}
         {defender && <Grid title={`${name(defender)}'s moves`} set={defender} dex={dex} against={typesOf(attacker)} mega={defenderMega} />}
       </div>
-      <p className="mt-2 text-xs text-muted">
-        Best multiplier of the selected damaging moves against each type; the outlined types are the opposing Pokémon's. Counts the Pokémon's own ability (Pixilate, Scrappy, Tinted Lens…); the opponent's ability isn't applied here.
-      </p>
     </Panel>
   );
 }

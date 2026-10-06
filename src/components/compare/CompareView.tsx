@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo, useState, type ReactNode } from 'react';
-import { ArrowLeftRight, Columns2, Copy, Link2 } from 'lucide-react';
+import { ArrowLeftRight, Columns2, Link2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useDex } from '@/data/useDex';
 import { getFormat } from '@/domain/formats';
@@ -258,6 +258,7 @@ function DiffPanel({ diff, dexA, dexB, a, b }: { diff: ReturnType<typeof compare
   return (
     <Panel
       title="Set by set"
+      help="Pokémon are paired by species. Moves show what only one side has; spreads show Stat Points (or EVs outside Champions)."
       actions={
         <span role="status" className="text-xs text-muted">
           {diff.identical ? 'Identical sets' : `${counts.changed} changed · ${counts.onlyA} only on A · ${counts.onlyB} only on B · ${counts.same} the same`}
@@ -279,9 +280,6 @@ function DiffPanel({ diff, dexA, dexB, a, b }: { diff: ReturnType<typeof compare
         </ul>
         </>
       )}
-      <p className="mt-2 flex items-center gap-1 text-xs text-muted">
-        <Copy size={12} aria-hidden /> Pokémon are paired by species. Moves show what only one side has; spreads show Stat Points (or EVs outside Champions).
-      </p>
     </Panel>
   );
 }

@@ -15,7 +15,7 @@ import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
-import { Chip, EmptyState, LoadingState, Notice, Panel, Select } from '../ui/primitives';
+import { Chip, EmptyState, Help, LoadingState, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useThreatReport } from './useThreatReport';
 import { RisingThreats } from './RisingThreats';
@@ -298,10 +298,10 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
             })}
           </ul>
 
-          <p className="text-xs text-muted">
+          <Help label="How to read this table">
             Blue and ✓: good for you · orange and ✗: bad for you · ~ even. “You” is your best move, “It” the threat’s. Damage is % of the defender’s HP; Mega
             Stone holders are read at their worse forme for you and their better one for the threat. Tap a cell to open it in the Damage Calc.
-          </p>
+          </Help>
         </>
       )}
     </div>

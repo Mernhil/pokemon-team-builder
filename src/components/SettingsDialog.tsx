@@ -1,8 +1,9 @@
 import { Suspense, lazy } from 'react';
-import { Moon, Sparkles, Sun } from 'lucide-react';
+import { Moon, Sparkles, Square, Sun } from 'lucide-react';
 import { DEFAULT_NAV, NAV_IDS, NAV_LABELS, NAV_LIMITS, resizeBar, setSlot, type NavKind } from '@/domain/navigation';
 import { usePrefsStore } from '@/store/prefsStore';
 import { useTeamStore } from '@/store/teamStore';
+import { PaletteSettings } from './PaletteSettings';
 import { UpdateCheckButton } from './DesktopUpdater';
 import { Modal } from './ui/Modal';
 import { Button, Label, Select, Tabs } from './ui/primitives';
@@ -17,6 +18,8 @@ const SyncSettings = lazy(() => import('./SyncSettings'));
 export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenWhatsNew: () => void }) {
   const theme = useTeamStore((s) => s.theme);
   const setTheme = useTeamStore((s) => s.setTheme);
+  const look = usePrefsStore((s) => s.look);
+  const setLook = usePrefsStore((s) => s.setLook);
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Settings & credits" description={`Pokémon Team Builder v${__APP_VERSION__}`}>
@@ -34,6 +37,16 @@ export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: b
               { id: 'dark', label: 'Dark', icon: Moon },
             ]}
           />
+          <Tabs
+            label="Style"
+            value={look}
+            onChange={setLook}
+            tabs={[
+              { id: 'sticker', label: 'Sticker', icon: Sparkles },
+              { id: 'classic', label: 'Classic', icon: Square },
+            ]}
+          />
+          <PaletteSettings />
           <p className="text-xs text-muted">Motion follows your system’s “reduce motion” setting.</p>
         </section>
 
