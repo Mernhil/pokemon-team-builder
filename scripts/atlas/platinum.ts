@@ -13,7 +13,7 @@ import { resolve } from 'node:path';
 import { Dex } from '@pkmn/dex';
 import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasItemSpot, AtlasLocation, AtlasMon, AtlasNpc, AtlasShop, AtlasTrainer, LocationKind, TrainerKind } from '../../src/domain/atlasTypes.ts';
 import { ensure } from '../sources.ts';
-import { GENDER_RATIO, NATURES, OUT, cid, cleanText, lines, readJSON, spaced, title } from './common.ts';
+import { GENDER_RATIO, NATURES, OUT, cid, cleanText, lines, linkSeaRoutes, otherTrainersOf, readJSON, spaced, title } from './common.ts';
 
 const here = resolve(import.meta.dirname);
 
@@ -117,6 +117,7 @@ const PLACE_ALIASES: Record<string, string> = {
   hall_of_origin: 'sinnoh-hall-of-origin-1',
   distortion_world: 'distortion-world',
   battle_frontier: 'battle-frontier',
+  battle_frontier_gate_to_fight_area: 'battle-frontier-gateway',
   battle_tower: 'battle-frontier',
   battle_arcade: 'battle-frontier',
   battle_castle: 'battle-frontier',
@@ -327,6 +328,7 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
   const hiddenItems = [...readFileSync(resolve(dir, 'include/data/field/hidden_items.h'), 'utf8').matchAll(/HIDDEN_ITEM_ENTRY\((ITEM_\w+),\s*(\d+),\s*(\d+)/g)].map((m) => ({ item: m[1], qty: Number(m[2]), range: Number(m[3]) }));
   const tmIs = (id: string) => items[id]?.move !== undefined;
   const howOf = (id: string): AtlasItemSpot['how'] => (tmIs(id) ? (/^hm/.test(id) ? 'hm' : 'tm') : 'visible');
+  const hiddenPlaced = new Set<number>();
   const obstacleCount: Record<string, Record<string, number>> = {};
   const berrySoil: Record<string, number> = {};
   const badgeOf = new Map<string, string>(); // place → badge constant
@@ -364,6 +366,7 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
       if (b.script >= 8000 && b.script < 8800) {
         const h = hiddenItems[b.script - 8000];
         if (!h) continue;
+        hiddenPlaced.add(b.script - 8000);
         const id = item(h.item);
         loc.items.push({
           item: id, qty: h.qty, how: 'hidden', where: `${sub ? `${sub}: ` : ''}buried at tile (${b.x}, ${b.z}); the Dowsing Machine finds it within ${h.range === 0 ? 'the same tile' : `${h.range} tiles`}`,
@@ -605,6 +608,20 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
     for (const o of Object.values(trainers)) if (o.group === t.group && trainerPlace.get(o.id)) return trainerPlace.get(o.id)!.place;
     return undefined;
   };
+  // Scripts that are no map's own (a shared script, a map the Town Map has no place for): a trainer a script
+  // fights is placed where that script's name resolves, else described by the script.
+  const scriptWhere = new Map<string, string>();
+  for (const f of readdirSync(scriptDir).filter((f) => /^scripts_.*\.s$/.test(f))) {
+    const key = f.slice(8, -2);
+    const src = readFileSync(resolve(scriptDir, f), 'utf8');
+    const ids = [...new Set([...src.matchAll(/\bTRAINER_[A-Z0-9_]+\b/g)].map((m) => m[0]))].filter((i) => trainerIdSet.has(i) && !trainerPlace.has(i));
+    if (!ids.length) continue;
+    const place = resolvePlace(key);
+    for (const id of ids) {
+      if (place) markTrainer(id, place, true);
+      else scriptWhere.set(id, `Fought by the script “${title(key)}”, which belongs to no map on the Town Map (${/pokemon_center/.test(key) ? 'a shared script: these trainers can show up in any Pokémon Center' : 'a facility or event'}).`);
+    }
+  }
   const unplaced: string[] = [];
   for (const t of Object.values(trainers)) {
     const p = placeOfTrainer(t.id);
@@ -661,10 +678,11 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
 
   const file: AtlasFile = {
     version: 1, game: 'platinum', name: 'Pokémon Platinum', generation: 4, source: { repo: 'pret/pokeplatinum', commit },
-    locations: sorted, trainers, items, unplaced, badges, unverified,
+    locations: sorted, trainers, items, unplaced, otherTrainers: otherTrainersOf(trainers, unplaced, (id) => scriptWhere.get(id) ?? (trainers[id] && scriptWhere.get(trainers[id].group))), badges, unverified,
   };
 
   // --- coverage report -----------------------------------------------------------------------
+  linkSeaRoutes(sorted);
   const L = Object.values(sorted);
   const trainerFiles = readdirSync(resolve(dir, 'res/trainers/data')).length;
   const encounterLocs = new Set<string>();
@@ -680,10 +698,10 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
     '',
     '| What | Found | Expected | Notes |',
     '|---|---|---|---|',
-    `| Locations on the Town Map with data | ${L.filter((l) => l.maps.length).length} | ${L.length} | map places with no decomp map folded in: ${L.filter((l) => !l.maps.length).map((l) => l.id).join(', ') || '—'} |`,
+    `| Locations on the Town Map with data | ${L.filter((l) => l.maps.length || l.sameAs).length} | ${L.length} | map places with no decomp map folded in: ${L.filter((l) => !l.maps.length && !l.sameAs).map((l) => l.id).join(', ') || '—'} (sea routes 220, 223, 226 and 230 share their land route's map and point at it) |`,
     `| Wild-encounter locations that exist in the atlas | ${encounterLocs.size - missing.length} | ${encounterLocs.size} | missing: ${missing.join(', ') || '—'} |`,
     `| Trainers with full teams | ${Object.keys(trainers).length} | ${trainerFiles} | unplaced on a location: ${unplaced.length}; ids without a data file: ${missingTrainerFiles.length} |`,
-    `| Hidden items (Dowsing Machine) | ${hidden} | ${hiddenItems.length} | gHiddenItems entries found on a map |`,
+    `| Hidden items (Dowsing Machine) | ${hidden} | ${hiddenItems.length} | ${hiddenPlaced.size} of the ${hiddenItems.length} gHiddenItems entries are on a map (a few are on two maps); the other ${hiddenItems.length - hiddenPlaced.size} (${[...Array(hiddenItems.length).keys()].filter((i) => !hiddenPlaced.has(i)).slice(0, 8).join(', ')}…) are table slots no map's events use: unused, not missing |`,
     `| Visible items (balls on the ground, incl. TMs) | ${visibleN} | ${visible.entries.length} | VisibleItems_* scripts placed on a map |`,
     `| Gift / story items | ${gifts} | — | \`AddItem\` in scripts |`,
     `| NPCs with dialogue | ${npcWithText} | ${npcTotal} | NPCs whose reachable script shows text |`,
@@ -700,7 +718,7 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
     '',
     '## Trainers not placed on a location',
     '',
-    unplaced.length ? unplaced.map((t) => `- \`${t}\` (${trainers[t].name})`).join('\n') : '—',
+    unplaced.length ? unplaced.map((t) => `- \`${t}\` (${trainers[t].name}): ${file.otherTrainers![t]}`).join('\n') : '—',
     '',
     '## Unverified',
     '',
@@ -724,7 +742,7 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
 
 const speciesIdx = new Map<string, number>();
 (function initSpecies() {
-  const dir = ensure('pokeplatinum', ['generated/species.txt']);
+  const dir = ensure('pokeplatinum', DECOMP_PATHS);
   lines(resolve(dir, 'generated/species.txt')).forEach((c, i) => speciesIdx.set(c, i));
 })();
 

@@ -7,11 +7,12 @@ import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
 import { withSpreadValue } from '@/domain/stats';
 import { sanitizeTeam } from '@/domain/sanitize';
 import { cloneTeam, createTeam, DEFAULT_TEAM_NAME, emptySlots, enforceCapabilities, isSavedTeam } from '@/domain/team';
+import { DEFAULT_ANALYSE_TAB, DEFAULT_OHKO_MODE, routeFromSaved, type AnalyseTab, type OhkoMode, type Route, type View } from '@/domain/routes';
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
 export type Theme = 'dark' | 'light';
-export type View = 'builder' | 'calc' | 'dex' | 'atlas' | 'matches' | 'meta' | 'speed' | 'threats' | 'ohko' | 'ohkod' | 'showcase' | 'reverse' | 'regdiff' | 'compare';
+export type { View };
 
 /** Advanced-details state for one team member (keyed by set uid). */
 export interface SlotBattleState {
@@ -35,6 +36,9 @@ export interface TeamState {
   editingDraft: string | null;
   theme: Theme;
   view: View;
+  /** Analyse's tab, and which way round its OHKO tab reads. Not saved: a reload opens the first tab (or the one in the URL). */
+  analyseTab: AnalyseTab;
+  ohkoMode: OhkoMode;
   battle: Record<string, SlotBattleState>;
 
   // teams
@@ -46,7 +50,7 @@ export interface TeamState {
    * team is just shown. Returns the id of the team now open.
    */
   editTeam: (id: string) => string;
-  updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'replicaCode' | 'variationLabel'>>) => void;
+  updateTeam: (id: string, patch: Partial<Pick<Team, 'name' | 'category' | 'notes' | 'matchupNotes' | 'replicaCode' | 'variationLabel'>>) => void;
   /**
    * Switches a team to a different format, saving its current roster under its old formatId and
    * restoring whatever roster it last had under the new one (empty, the first time). Keeps a
@@ -89,6 +93,10 @@ export interface TeamState {
 
   setTheme: (t: Theme) => void;
   setView: (v: View) => void;
+  /** Go to a route: a view, or an Analyse tab. */
+  setRoute: (r: Route) => void;
+  /** Open Analyse on a tab (the OHKO tab on one of its two lists). */
+  openAnalyse: (tab: AnalyseTab, ohko?: OhkoMode) => void;
   setBattle: (uid: string, state: SlotBattleState) => void;
 }
 
@@ -135,8 +143,10 @@ export const TEAM_BACKUP_V2_KEY = 'ptb:v1:backup-v2';
  */
 export function migrateTeamState(persisted: unknown, version: number): TeamState {
   const p = (persisted ?? {}) as Partial<TeamState>;
-  if (version < 3 && p.teams && typeof p.teams === 'object') {
-    if (safeStorage.getItem(TEAM_BACKUP_V2_KEY) === null) {
+  // v4: sets may carry notes and benchmarks and teams matchup notes. Purely additive, so a v3 save only
+  // needs the sanitiser (which validates the new fields); no backup is made for it.
+  if (version < 4 && p.teams && typeof p.teams === 'object') {
+    if (version < 3 && safeStorage.getItem(TEAM_BACKUP_V2_KEY) === null) {
       safeStorage.setItem(TEAM_BACKUP_V2_KEY, JSON.stringify({ version, backedUpAt: new Date().toISOString(), state: persisted }));
     }
     const teams: Record<string, unknown> = {};
@@ -192,6 +202,7 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
     editingDraft = draft.id;
     activeTeamId = draft.id;
   }
+  const saved = routeFromSaved(p.view);
   return {
     ...current,
     teams,
@@ -200,7 +211,10 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
     editingDraft,
     activeTeamId,
     theme: p.theme === 'light' ? 'light' : 'dark',
-    view: p.view === 'calc' || p.view === 'dex' || p.view === 'atlas' || p.view === 'matches' || p.view === 'meta' || p.view === 'speed' || p.view === 'threats' || p.view === 'ohko' || p.view === 'ohkod' || p.view === 'showcase' || p.view === 'reverse' || p.view === 'regdiff' || p.view === 'compare' ? p.view : 'builder',
+    // A view saved by an older version may have moved into Analyse: it reopens on its tab.
+    view: saved.view,
+    analyseTab: saved.tab ?? DEFAULT_ANALYSE_TAB,
+    ohkoMode: saved.ohko ?? DEFAULT_OHKO_MODE,
     battle,
   };
 }
@@ -245,7 +259,7 @@ export const useTeamStore = create<TeamState>()(
         const copy = cloneTeam(src, DEFAULT_TEAM_NAME);
         let draft: Team = copy;
         if (reuse) {
-          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: Date.now() };
+          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, matchupNotes: copy.matchupNotes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: Date.now() };
           if (reuse.slots.some(Boolean)) {
             const prev = { team: reuse, editingFrom: s.editingFrom, editingDraft: s.editingDraft };
             toast(`Loaded “${src.name}${src.variationLabel ? ` · ${src.variationLabel}` : ''}” into the builder.`, {
@@ -274,6 +288,8 @@ export const useTeamStore = create<TeamState>()(
         editingDraft: null,
         theme: 'dark',
         view: 'builder',
+        analyseTab: DEFAULT_ANALYSE_TAB,
+        ohkoMode: DEFAULT_OHKO_MODE,
         battle: {},
 
         newTeam: (formatId = DEFAULT_FORMAT_ID) => {
@@ -332,6 +348,7 @@ export const useTeamStore = create<TeamState>()(
               formatId: copy.formatId,
               category: copy.category,
               notes: copy.notes,
+              matchupNotes: copy.matchupNotes,
               replicaCode: copy.replicaCode,
               slots: copy.slots,
               slotsByFormat: copy.slotsByFormat,
@@ -487,12 +504,14 @@ export const useTeamStore = create<TeamState>()(
 
         setTheme: (theme) => set({ theme }),
         setView: (view) => set({ view }),
+        setRoute: (r) => set({ view: r.view, ...(r.view === 'analyse' ? { analyseTab: r.tab ?? DEFAULT_ANALYSE_TAB, ...(r.tab === 'ohko' && r.ohko ? { ohkoMode: r.ohko } : {}) } : {}) }),
+        openAnalyse: (analyseTab, ohko) => set({ view: 'analyse', analyseTab, ...(ohko ? { ohkoMode: ohko } : {}) }),
         setBattle: (uid, state) => set((s) => ({ battle: { ...s.battle, [uid]: state } })),
       };
     },
     {
       name: 'ptb:v1',
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, editingFrom: s.editingFrom, theme: s.theme, view: s.view, battle: s.battle }),
       migrate: migrateTeamState,

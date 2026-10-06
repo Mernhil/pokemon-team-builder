@@ -70,7 +70,7 @@ export const useSyncStore = create<SyncStoreState>()(
 
 /**
  * Sync needs the hosted web app (signed in through Access) or the desktop app (linked with a pairing
- * code, src/sync/deviceStore.ts); not the single-file/artifact build.
+ * code, src/sync/deviceStore.ts).
  */
 export const syncAvailable = (): boolean =>
-  import.meta.env.MODE !== 'singlefile' && typeof window !== 'undefined' && (isDesktopApp() || /^https?:$/.test(location.protocol));
+  typeof window !== 'undefined' && (isDesktopApp() || /^https?:$/.test(location.protocol));

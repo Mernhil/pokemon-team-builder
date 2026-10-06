@@ -23,6 +23,9 @@ import { comboProps, optionCount, useItemPicker, useMovePicker } from './options
 import { SpeciesPicker } from './SpeciesPicker';
 import { SpriteHistory } from './SpriteHistory';
 import { StatDistributor } from './StatDistributor';
+import { BenchmarkList } from './BenchmarkList';
+import { SetNotes } from './SetNotes';
+import { mergeBenchmarks } from '@/domain/benchmarks';
 
 // The meta data behind the recommendations loads on first use, outside the first-load bundle.
 const RecommendedPanel = lazy(() => import('./RecommendedPanel').then((m) => ({ default: m.RecommendedPanel })));
@@ -337,6 +340,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
             onReplaceSpread={(spread) => updateSet(slot, { [spreadKey(format.statSystem)]: spread })}
             onIV={format.fixedIVs ? undefined : (stat, v) => setSpread(slot, 'ivs', stat, v)}
             onNature={(nature) => updateSet(slot, { nature })}
+            onKeepBenchmarks={(list) => updateSet(slot, { benchmarks: mergeBenchmarks(set.benchmarks, list) })}
             onFriendship={format.statSystem.kind === 'lgpe-av' ? (friendship) => updateSet(slot, { friendship }) : undefined}
           />
         );
@@ -351,6 +355,14 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
           </Panel>
         );
       })()}
+
+      {set.benchmarks?.length ? (
+        <div className="rounded-xl border border-border bg-surface p-3">
+          <BenchmarkList dex={dex} format={format} set={set} onChange={(benchmarks) => updateSet(slot, { benchmarks })} />
+        </div>
+      ) : null}
+
+      <SetNotes set={set} onChange={(notes) => updateSet(slot, { notes })} />
 
       <AdvancedDetails set={set} species={species} dex={dex} format={format} />
     </div>

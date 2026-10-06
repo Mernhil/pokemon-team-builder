@@ -13,7 +13,7 @@ import { resolve } from 'node:path';
 import { Dex } from '@pkmn/dex';
 import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasLocation, AtlasMon, AtlasNpc, AtlasShop, AtlasTrainer, LocationKind, TrainerKind } from '../../src/domain/atlasTypes.ts';
 import { ensure } from '../sources.ts';
-import { OUT, cid, cleanText, readJSON, title } from './common.ts';
+import { OUT, cid, cleanText, otherTrainersOf, readJSON, title } from './common.ts';
 
 const read = (dir: string, f: string) => readFileSync(resolve(dir, f), 'utf8');
 const code = (l: string) => l.replace(/;.*$/, '').trim();
@@ -414,6 +414,15 @@ function buildGen2(cfg: Gen2Config): { file: AtlasFile; gaps: string } {
     for (const bm of src.matchAll(/setflag ENGINE_(\w+)BADGE/g)) badgeOf.set(place, title(bm[1].toLowerCase()));
   }
 
+  // Every party of parties.asm that no map script fights: kept as an "other trainer" (unplaced) instead of dropped.
+  const usedByMaps = new Set(Object.keys(trainers));
+  for (const [cls, ids] of classIds) {
+    for (const id of ids) {
+      const t = makeTrainer(cls, id);
+      if (t && !trainers[t.id]) trainers[t.id] = t;
+    }
+  }
+  const neverFought = new Set(Object.keys(trainers).filter((id) => !usedByMaps.has(id)));
   // rematches: LEO1, LEO2 … share the first battle's group
   for (const t of Object.values(trainers)) {
     const n = Number(/(\d+)$/.exec(t.id)?.[1] ?? 1);
@@ -442,7 +451,9 @@ function buildGen2(cfg: Gen2Config): { file: AtlasFile; gaps: string } {
   const unplaced = Object.values(trainers).filter((t) => !t.loc).map((t) => t.id);
   const file: AtlasFile = {
     version: 1, game: cfg.game, name: cfg.name, generation: 2, source: { repo: cfg.url, commit: cfg.commit },
-    locations: sorted, trainers, items, unplaced, badges, unverified,
+    locations: sorted, trainers, items, unplaced,
+    otherTrainers: otherTrainersOf(trainers, unplaced, (id) => (neverFought.has(id) ? 'A party in parties.asm that no map or script of the game fights (unused, or fought through a path the data does not show): the game never loads it from a map.' : undefined)),
+    badges, unverified,
   };
   const L = Object.values(sorted);
   const encounterLocs = new Set<string>();

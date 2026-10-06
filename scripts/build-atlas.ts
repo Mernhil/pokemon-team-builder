@@ -10,7 +10,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { AtlasFile } from '../src/domain/atlasTypes.ts';
-import { GAPS, OUT } from './atlas/common.ts';
+import { GAPS, OUT, addOffMapEncounterPlaces, linkSeaRoutes } from './atlas/common.ts';
 import { buildEmerald, buildFireRed, buildRuby } from './atlas/gba.ts';
 import { buildRed, buildYellow } from './atlas/gen1.ts';
 import { buildCrystal, buildGold } from './atlas/gen2.ts';
@@ -40,8 +40,16 @@ function main() {
   for (const game of wanted) {
     if (!BUILDERS[game]) throw new Error(`No atlas builder for ${game} (have ${Object.keys(BUILDERS).join(', ')})`);
     const { file, gaps } = BUILDERS[game]();
+    const added = addOffMapEncounterPlaces(file, game);
+    if (added.length) console.log(`${game}: ${added.length} off-map encounter place(s) listed (${added.join(', ')})`);
+    const linked = linkSeaRoutes(file.locations);
+    if (linked.length) console.log(`${game}: ${linked.length} sea route(s) point at their land route (${linked.join(', ')})`);
     writeFileSync(resolve(OUT, `atlas-${game}.json`), JSON.stringify(file));
-    writeFileSync(resolve(GAPS, `${game}.md`), gaps);
+    const extra = [
+      added.length ? `## Off-map wild-encounter places\n\nListed in the Pokénav without a map pin (roaming Pokémon, event areas, region-wide tables): ${added.map((a) => `\`${a}\``).join(', ')}. The "Wild-encounter locations" row above counts them as missing because it is computed before they are added.\n` : '',
+      linked.length ? `## Sea routes that share a map\n\n${linked.map((a) => `\`${a}\``).join(', ')} are drawn apart from their land route on the Town Map but are one map in the game; each points at its land route (\`sameAs\`).\n` : '',
+    ].filter(Boolean).join('\n');
+    writeFileSync(resolve(GAPS, `${game}.md`), extra ? `${gaps.replace(/\n$/, '')}\n\n${extra}` : gaps);
     const L = Object.values(file.locations);
     if (LITE_GAMES.some((g) => g.id === game)) {
       console.log(`${game}: ${Object.keys(file.locations).length} locations (encounters only)`);

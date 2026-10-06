@@ -13,7 +13,7 @@ import { resolve } from 'node:path';
 import { Dex } from '@pkmn/dex';
 import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasLocation, AtlasMon, AtlasNpc, AtlasShopItem, AtlasTrainer, LocationKind, TrainerKind } from '../../src/domain/atlasTypes.ts';
 import { ensure } from '../sources.ts';
-import { NATURES, OUT, cid, cleanText, readJSON, title } from './common.ts';
+import { NATURES, OUT, cid, cleanText, otherTrainersOf, readJSON, title } from './common.ts';
 
 const COMMIT = '9d8b7591f09b65804da2fb2dfd56f320633e0d36';
 const read = (dir: string, f: string) => readFileSync(resolve(dir, f), 'utf8');
@@ -29,6 +29,18 @@ const SECTION_ALIASES: Record<string, string> = {
   MAPSEC_RADIO_TOWER: 'goldenrod-city',
   MAPSEC_LIGHTHOUSE: 'olivine-lighthouse',
   MAPSEC_BATTLE_TOWER: 'battle-frontier',
+  // The Elite Four rooms, Victory Road's floors, Mt. Silver's, the Goldenrod Underground and the Battle Frontier's facilities
+  // are zones of their own whose Pokégear square is the place that holds them.
+  MAPSEC_POKEMON_LEAGUE: 'indigo-plateau',
+  MAPSEC_VICTORY_ROAD_JK: 'kanto-victory-road-1',
+  MAPSEC_MT_SILVER_CAVE: 'mt-silver',
+  MAPSEC_GOLDENROD_TUNNEL: 'underground',
+  MAPSEC_PAL_PARK: 'fuchsia-pal-park',
+  MAPSEC_BATTLE_FACTORY: 'battle-frontier',
+  MAPSEC_BATTLE_HALL: 'battle-frontier',
+  MAPSEC_BATTLE_CASTLE: 'battle-frontier',
+  MAPSEC_BATTLE_ARCADE: 'battle-frontier',
+  MAPSEC_FRONTIER_ACCESS: 'battle-frontier',
 };
 
 /** All `#define NAME value` of a header with a plain integer value. */
@@ -433,7 +445,7 @@ export function buildHgss(): { file: AtlasFile; gaps: string } {
   for (const id of Object.keys(locations).sort()) sorted[id] = locations[id];
   const file: AtlasFile = {
     version: 1, game: 'heartgold', name: 'Pokémon HeartGold', generation: 4, source: { repo: 'pret/pokeheartgold', commit: COMMIT },
-    locations: sorted, trainers, items, unplaced, badges, unverified,
+    locations: sorted, trainers, items, unplaced, otherTrainers: otherTrainersOf(trainers, unplaced), badges, unverified,
   };
   const L = Object.values(sorted);
   const encounterLocs = new Set<string>();
@@ -441,6 +453,14 @@ export function buildHgss(): { file: AtlasFile; gaps: string } {
   const missing = [...encounterLocs].filter((l) => !sorted[l]);
   const hiddenN = L.flatMap((l) => l.items).filter((i) => i.how === 'hidden').length;
   const visibleN = L.flatMap((l) => l.items).filter((i) => i.how === 'visible' || i.how === 'tm' || i.how === 'hm').length;
+  const hiddenAll = new Map<number, string[]>();
+  for (const f of zoneFiles) {
+    const zz = readJSON<{ bgs?: { scriptId: string | number }[] }>(resolve(zoneDir, f));
+    for (const b of zz.bgs ?? []) {
+      const n = /^std_hiddenitem_/.test(String(b.scriptId)) ? stdDefs.get(String(b.scriptId)) : undefined;
+      if (n !== undefined) (hiddenAll.get(n - 8000) ?? hiddenAll.set(n - 8000, []).get(n - 8000)!).push(f.replace(/^\d+_|\.json$/g, ''));
+    }
+  }
   const gaps = [
     '# Atlas data gaps — Pokémon HeartGold',
     '',
@@ -451,7 +471,7 @@ export function buildHgss(): { file: AtlasFile; gaps: string } {
     `| Town-map places with data | ${L.filter((l) => l.maps.length).length} | ${L.length} | no zone folded in: ${L.filter((l) => !l.maps.length).map((l) => l.id).join(', ') || '—'} |`,
     `| Wild-encounter locations present | ${encounterLocs.size - missing.length} | ${encounterLocs.size} | missing: ${missing.join(', ') || '—'} |`,
     `| Trainers with full teams | ${Object.keys(trainers).length} | ${tj.filter((t) => t.party.length).length} | unplaced on a location: ${unplaced.length} |`,
-    `| Hidden items | ${hiddenN} | ${hiddenItemTable.length} | sHiddenItemParam entries |`,
+    `| Hidden items | ${hiddenN} | ${hiddenItemTable.length} | sHiddenItemParam entries: ${hiddenAll.size} are used by a zone's events (${[...hiddenAll].filter(([, z]) => z.every((n) => unmappedZones.some((u) => u.startsWith(`${n} `)))).length} only in zones without a Town Map place: ${[...new Set([...hiddenAll].flatMap(([, z]) => z).filter((n) => unmappedZones.some((u) => u.startsWith(`${n} `))))].slice(0, 6).join(', ')}…); the other ${hiddenItemTable.length - hiddenAll.size} are table slots no zone uses (unused, not missing) |`,
     `| Visible items (balls, TMs) | ${visibleN} | — | std item-ball objects |`,
     `| NPCs with dialogue | ${npcWithText} | ${npcTotal} | NPCs whose reachable script shows text |`,
     `| Shops | ${L.reduce((n, l) => n + l.shops.length, 0)} | — | Common and special mart stock from src/scrcmd_mart.c; the apricorn, Game Corner and other scripted counters are not read |`,

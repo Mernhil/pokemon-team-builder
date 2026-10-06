@@ -15,7 +15,7 @@ import { resolve } from 'node:path';
 import { Dex } from '@pkmn/dex';
 import type { AtlasFile, AtlasGym, AtlasItemInfo, AtlasLocation, AtlasMon, AtlasNpc, AtlasShop, AtlasTrainer, LocationKind, TrainerKind } from '../../src/domain/atlasTypes.ts';
 import { ensure } from '../sources.ts';
-import { NATURES, OUT, cid, cleanText, readJSON, spaced, title } from './common.ts';
+import { NATURES, OUT, cid, cleanText, otherTrainersOf, readJSON, spaced, title } from './common.ts';
 
 interface GbaConfig {
   game: string;
@@ -136,7 +136,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   const COMMIT = cfg.commit;
   const BADGES = cfg.badges;
   const SECTION_ALIASES = cfg.aliases;
-  const dir = ensure(cfg.repo, ['data', 'src', 'include', 'charmap.txt']);
+  const dir = ensure(cfg.repo, cfg.repo === 'pokeruby' ? ['data', 'src', 'include', 'charmap.txt', 'constants'] : ['data', 'src', 'include', 'charmap.txt']);
   const gen3 = Dex.forGen(3);
   const allMaps = readJSON<{ maps: Record<string, { places: Record<string, unknown> }> }>(resolve(OUT, 'maps.json')).maps;
   const placeIds = new Set(cfg.mapIds.flatMap((m) => Object.keys(allMaps[m].places)));
@@ -390,6 +390,20 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   const OBSTACLE_GFX: Record<string, string> = { OBJ_EVENT_GFX_CUTTABLE_TREE: 'Cut', OBJ_EVENT_GFX_CUT_TREE: 'Cut', OBJ_EVENT_GFX_BREAKABLE_ROCK: 'Rock Smash', OBJ_EVENT_GFX_ROCK_SMASH_ROCK: 'Rock Smash', OBJ_EVENT_GFX_PUSHABLE_BOULDER: 'Strength' };
   const SIGN_TYPES = new Set(['sign', 'secret_base']);
   const trainerPlace = new Map<string, { place: string; sub?: string }>();
+  // Ruby and Sapphire's scripts name a trainer by where it stands (TRAINER_HIDEOUT_1F_GRUNT); constants/version.inc
+  // says which entry of the trainer table that is (the Ruby side of each `.ifdef SAPPHIRE`).
+  const trainerAlias = new Map<string, string[]>();
+  if (cfg.repo === 'pokeruby' && existsSync(resolve(dir, 'constants/version.inc'))) {
+    for (const raw of read(dir, 'constants/version.inc').split('\n')) {
+      const m = /^\.set\s+(TRAINER_\w+),\s*(TRAINER_\w+)/.exec(raw.trim());
+      // both versions' entries: the file serves Ruby and Sapphire, and a trainer of either stands where its script is
+      if (m) trainerAlias.set(m[1], [...(trainerAlias.get(m[1]) ?? []), m[2]]);
+    }
+  }
+  const trainerRefs = (name: string): string[] => trainerAlias.get(name) ?? [name];
+  const place3 = (name: string, place: string, sub?: string) => {
+    for (const ref of trainerRefs(name)) if (trainers[ref] && !trainerPlace.has(ref)) trainerPlace.set(ref, { place, sub });
+  };
   const unmappedSections = new Map<string, string[]>();
   const connectionsRaw = new Map<string, Set<string>>();
   const mapPlace = new Map<string, string>();
@@ -399,7 +413,12 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
 
   const mapDirs = mapDirsAll;
   const mapJson = new Map(mapDirs.map((d) => [d, readJSON<{ id: string; region_map_section?: string; object_events?: { graphics_id: string; x: number; y: number; script: string; trainer_type: string; flag: string }[]; bg_events?: { type: string; x: number; y: number; item?: string; script?: string }[]; warp_events?: { dest_map: string }[] }>(resolve(dir, 'data/maps', d, 'map.json'))]));
-  for (const mj of mapJson.values()) if (mj.region_map_section) { const p = sectionPlace(mj.region_map_section); if (p) mapPlace.set(mj.id, p); }
+  for (const [d, mj] of mapJson) {
+    if (!mj.region_map_section) continue;
+    // Ruby and Sapphire share one section for both teams' hideouts; each team's maps belong to its own place.
+    const p = cfg.repo === 'pokeruby' && mj.region_map_section === 'MAPSEC_EVIL_TEAM_HIDEOUT' ? (/^Aqua/.test(d) ? 'team-aqua-hideout' : 'team-magma-hideout') : sectionPlace(mj.region_map_section);
+    if (p) mapPlace.set(mj.id, p);
+  }
 
   for (const [d, mj] of mapJson) {
     const sec = mj.region_map_section;
@@ -428,7 +447,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
         continue;
       }
       const body = reach(o.script).flatMap((l) => labels.get(l) ?? []);
-      for (const line of body) for (const t of line.matchAll(/\bTRAINER_\w+/g)) if (trainers[t[0]] && !trainerPlace.has(t[0])) trainerPlace.set(t[0], { place, sub });
+      for (const line of body) for (const t of line.matchAll(/\bTRAINER_\w+/g)) place3(t[0], place, sub);
       if (o.graphics_id === 'OBJ_EVENT_GFX_ITEM_BALL') {
         const fi = body.map((l) => /^finditem\s+(ITEM_\w+)(?:,\s*(\d+))?/.exec(l)).find(Boolean);
         if (fi && items[itemId(fi[1])]) {
@@ -479,7 +498,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
 
     // map-level scripts: trainers fought by script, badges, marts
     const src = existsSync(resolve(dir, 'data/maps', d, 'scripts.inc')) ? read(dir, `data/maps/${d}/scripts.inc`) : '';
-    for (const t of src.matchAll(/\bTRAINER_\w+/g)) if (trainers[t[0]] && !trainerPlace.has(t[0])) trainerPlace.set(t[0], { place, sub });
+    for (const t of src.matchAll(/\bTRAINER_\w+/g)) place3(t[0], place, sub);
     for (const bm of src.matchAll(/setflag FLAG_BADGE0(\d)_GET/g)) badgeOf.set(place, BADGES[Number(bm[1]) - 1]);
     for (const pm of src.matchAll(/^\s*pokemart\s+(\w+)/gm)) {
       const list = labels.get(pm[1]) ?? [];
@@ -540,7 +559,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
   // keep every item the game defines: the item database lists all of them
   const file: AtlasFile = {
     version: 1, game: cfg.game, name: cfg.name, generation: 3, source: { repo: cfg.url, commit: COMMIT },
-    locations: sorted, trainers, items, unplaced, badges, unverified,
+    locations: sorted, trainers, items, unplaced, otherTrainers: otherTrainersOf(trainers, unplaced), badges, unverified,
   };
   const L = Object.values(sorted);
   const encounterLocs = new Set<string>();
@@ -570,7 +589,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
     '',
     '## Trainers not placed on a location',
     '',
-    unplaced.length ? unplaced.map((t) => `- \`${t}\` (${trainers[t].name})`).join('\n') : '—',
+    unplaced.length ? unplaced.map((t) => `- \`${t}\` (${trainers[t].name}): ${file.otherTrainers![t]}`).join('\n') : '—',
     '',
     '## Unverified',
     '',

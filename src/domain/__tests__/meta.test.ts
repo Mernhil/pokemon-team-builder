@@ -186,7 +186,7 @@ describe('meta data loading', () => {
   it('is never imported statically, so it stays out of the first download', () => {
     const files = (readdirSync('src', { recursive: true }) as string[]).filter((f) => /\.tsx?$/.test(f) && !f.includes('__tests__'));
     const imports = (f: string) => [...readFileSync(join('src', f), 'utf8').matchAll(/^import [^;]*? from '([^']+)';/gm)].map((m) => m[1]);
-    const isMetaData = (f: string, spec: string) => spec === '@/data/meta' || (f.startsWith('data') && spec === './meta');
+    const isMetaData = (f: string, spec: string) => ['@/data/meta', '@/data/metaHistoryData', '@/data/tournamentTeamsData'].includes(spec) || (f.startsWith('data') && ['./meta', './metaHistoryData', './tournamentTeamsData'].includes(spec));
     const offenders = files.filter((f) => imports(f).some((spec) => isMetaData(f, spec)));
     expect(offenders).toEqual([]);
   });

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 
 // Smoke tests run against the production build served by `vite preview` (run `npm run build` first;
@@ -6,6 +7,11 @@ const PORT = 4173;
 // Where WebKit can't be installed, E2E_IPHONE_BROWSER=chromium runs the iPhone project (same screen,
 // touch and user agent) on Chromium instead. CI always uses the real WebKit.
 const iphoneBrowser = process.env.E2E_IPHONE_BROWSER === 'chromium' ? ('chromium' as const) : ('webkit' as const);
+
+// Every test starts as a user who has already seen this version's "What's new" (its sheet opens by
+// itself after an update, over whatever the test is doing); the test about the sheet overrides this.
+const version = (JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string }).version;
+const seenWhatsNew = { cookies: [], origins: [{ origin: `http://localhost:${PORT}`, localStorage: [{ name: 'ptb:prefs:v1', value: JSON.stringify({ state: { lastSeenVersion: version }, version: 1 }) }] }] };
 
 export default defineConfig({
   testDir: './e2e',
@@ -21,6 +27,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
     // The service worker would cache the app across tests and hide the page behind it.
     serviceWorkers: 'block',
+    storageState: seenWhatsNew,
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },

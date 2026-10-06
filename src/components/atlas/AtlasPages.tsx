@@ -5,6 +5,7 @@ import { toID } from '@/data/dex';
 import { useAtlasStore, useProgress } from '@/store/atlasStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
+import { Toggle } from '../ui/chips';
 import { Button, EmptyState, Input, Panel } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useAtlasCtx } from './context';
@@ -75,6 +76,9 @@ export function TrainersPage() {
   const [mon, setMon] = useState('');
   const [move, setMove] = useState('');
   const [limit, setLimit] = useState(60);
+  // "Other trainers": the ones with no map; slots the game never uses stay hidden unless asked for.
+  const [otherOnly, setOtherOnly] = useState(false);
+  const [showUnused, setShowUnused] = useState(false);
   const moveName = (id: string) => dex.move(id)?.name ?? id;
   const usedMoves = useMemo(() => [...new Set(Object.values(file.trainers).flatMap((t) => t.party.flatMap((m) => m.moves)))], [file]);
   const results = useMemo(() => {
@@ -83,9 +87,12 @@ export function TrainersPage() {
     const seen = new Set<string>();
     return searchTrainers(file, { text, speciesIn, moveIn }, { species: speciesName, loc: locName })
       .sort((a, b) => Number(!!b.loc) - Number(!!a.loc) || a.name.localeCompare(b.name))
+      .filter((t) => (!otherOnly || !t.loc) && (showUnused || !file.otherTrainers?.[t.id]?.startsWith('Unused')))
       .filter((t) => !seen.has(t.group) && seen.add(t.group));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, text, mon, move, usedMoves]);
+  }, [file, text, mon, move, usedMoves, otherOnly, showUnused]);
+  const otherCount = useMemo(() => Object.keys(file.otherTrainers ?? {}).length, [file]);
+  const unusedCount = useMemo(() => Object.values(file.otherTrainers ?? {}).filter((w) => w.startsWith('Unused')).length, [file]);
   return (
     <Panel title={`Trainers (${results.length})`}>
       <div className="mb-3 grid gap-2 sm:grid-cols-3">
@@ -93,6 +100,12 @@ export function TrainersPage() {
         <Input placeholder="Pokémon used" value={mon} onChange={(e) => { setMon(e.target.value); setLimit(60); }} aria-label="Pokémon the trainer uses" />
         <Input placeholder="Move used" value={move} onChange={(e) => { setMove(e.target.value); setLimit(60); }} aria-label="Move the trainer uses" />
       </div>
+      {otherCount > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Trainers without a map">
+          <Toggle pressed={otherOnly} onClick={() => { setOtherOnly(!otherOnly); setLimit(60); }} title="Trainers the game's map data doesn't place anywhere">Other trainers ({otherCount - unusedCount})</Toggle>
+          {unusedCount > 0 && <Toggle pressed={showUnused} onClick={() => { setShowUnused(!showUnused); setLimit(60); }} title="Placeholder slots in the game data that nothing ever fights">Show unused slots ({unusedCount})</Toggle>}
+        </div>
+      )}
       {!results.length && <EmptyState icon={Swords} title="No trainer matches" />}
       <ul className="divide-y divide-border/60">
         {results.slice(0, limit).map((t) => (
@@ -100,7 +113,7 @@ export function TrainersPage() {
             <button type="button" onClick={() => openTrainer(t.group)} className="flex w-full items-center gap-2 py-1.5 text-left hover:bg-surface-2">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{t.name} <span className="font-normal text-muted">{t.cls}</span></span>
-                <span className="block truncate text-xs text-muted">{KIND_LABEL[t.kind]} · {t.loc ? locName(t.loc) : 'location not in the game’s map data'}</span>
+                <span className="block truncate text-xs text-muted">{KIND_LABEL[t.kind]} · {t.loc ? locName(t.loc) : (file.otherTrainers?.[t.id] ?? 'location not in the game’s map data')}</span>
               </span>
               <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-accent"><Users size={12} aria-hidden /> Team</span>
               <span className="flex shrink-0">{t.party.map((m, i) => <Sprite key={i} speciesId={m.species} name={speciesName(m.species)} types={dex.species(m.species)?.types} set={format.spriteSet} size={28} className="-ml-2 first:ml-0" />)}</span>

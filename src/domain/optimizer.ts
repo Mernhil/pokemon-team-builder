@@ -21,9 +21,32 @@ import { STAT_IDS, STAT_LABELS, type FormatRules, type Nature, type PokemonSet, 
 // Goals and options
 // ---------------------------------------------------------------------------
 
+/**
+ * Who a goal is about, when that is known (a goal made from a species picked in the app, not a bare number):
+ * kept so the goal can be saved as a benchmark and checked again later (src/domain/benchmarks.ts).
+ */
+export interface GoalFoe {
+  speciesId: string;
+  /** 'meta': the species' most-used set (re-resolved later); 'custom': exactly `set`. */
+  source: 'meta' | 'custom';
+  set?: PokemonSet;
+}
+
+/** What the Speed scenario was when an Outspeed goal was made (the other side's modifiers, and the field). */
+export interface OutspeedScenario {
+  /** The target has Tailwind up / a Speed stage / is paralysed / holds a Choice Scarf. */
+  tailwind?: boolean;
+  stage?: number;
+  paralyzed?: boolean;
+  scarf?: boolean;
+  /** My side has Tailwind up. */
+  myTailwind?: boolean;
+}
+
 /** Survive an attacker's move. Solves HP and Def (physical move) or SpD (special move). */
 export interface SurviveGoal {
   kind: 'survive';
+  foe?: GoalFoe;
   attacker: PokemonSet;
   attackerCond?: SideConditions;
   moveId: string;
@@ -41,11 +64,14 @@ export interface OutspeedGoal {
   mode?: 'over' | 'under';
   /** Shown in the result, e.g. "Flutter Mane (Tailwind)". */
   label?: string;
+  foe?: GoalFoe;
+  scenario?: OutspeedScenario;
 }
 
 /** Knock out a defender with one of my moves in 1 or 2 hits. Solves Atk (physical) or SpA (special). */
 export interface KoGoal {
   kind: 'ko';
+  foe?: GoalFoe;
   defender: PokemonSet;
   defenderCond?: SideConditions;
   moveId: string;
@@ -369,6 +395,31 @@ function applyLeftover(ctx: Ctx, spread: StatTable, leftover: Leftover | undefin
 // ---------------------------------------------------------------------------
 
 export { canOptimize };
+
+/**
+ * Whether a goal holds for the set exactly as it is now (its current spread and nature), with the same
+ * numbers the optimiser uses. For benchmarks: an optimiser run solves goals, this only checks them.
+ */
+export function checkGoal(dex: Dex, format: FormatRules, set: PokemonSet, goal: Goal, opts: { field?: FieldConditions; myCond?: SideConditions } = {}): { pass: boolean; text: string } {
+  if (!canOptimize(format)) throw new Error('Goals are checked for Champions Stat Points and Gen 3–9 EVs only.');
+  const sys = format.statSystem as Extract<FormatRules['statSystem'], { kind: 'champions-sp' | 'modern-ev' }>;
+  const range = investRange(sys);
+  const key = spreadKey(sys) as 'sp' | 'evs';
+  const ctx: Ctx = {
+    dex,
+    format,
+    set,
+    key,
+    field: opts.field ?? defaultField(),
+    myCond: opts.myCond ?? defaultSide(!!dex.megaFor(set.speciesId, set.itemId)),
+    max: range.max,
+    step: range.step,
+    total: sys.totalCap,
+    cache: new Map(),
+  };
+  const { pass, text } = evaluate(ctx, goal, set[key] as StatTable, set.nature, 0);
+  return { pass, text };
+}
 
 /** A goal in words: "Survive Garchomp's Earthquake", "Outspeed Flutter Mane (Tailwind)". */
 export function describeGoal(dex: Dex, g: Goal): string {

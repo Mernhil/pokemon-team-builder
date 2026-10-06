@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Map as MapIcon, Maximize2, Minus, Plus } from 'lucide-react';
-import { SIDE_LOADED_DATA, fetchGenerated } from '@/data/generated-loader';
 import type { Encounter } from '@/domain/pokedex';
 import { IDENTITY_VIEW, MAX_ZOOM, centerOn, clampView, placeCenter, resolveLocations, zoomAt, type MapView, type Rect } from '@/domain/regionMaps';
 import { SchematicBase } from './SchematicMap';
@@ -31,7 +30,7 @@ export interface MapsFile {
 
 let mapsPromise: Promise<MapsFile> | undefined;
 export const loadMaps = () =>
-  (mapsPromise ??= SIDE_LOADED_DATA ? fetchGenerated<MapsFile>('maps') : import('@/data/generated/maps.json').then((m) => m.default as unknown as MapsFile));
+  (mapsPromise ??= import('@/data/generated/maps.json').then((m) => m.default as unknown as MapsFile));
 export const asset = (path: string) => `${import.meta.env.BASE_URL ?? './'}${path}`.replace(/^\/\//, '/');
 
 const SOURCE_LABEL: Record<string, string> = {

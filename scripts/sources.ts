@@ -3,15 +3,15 @@
  * Each is a blob-less shallow clone under .cache/; only the paths a script asks for are checked out.
  */
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 export const REPOS = {
-  /** Pokémon Showdown: game mods Let's Go / BDSP / Legends that @pkmn/mods doesn't ship. */
-  showdown: { url: 'https://github.com/smogon/pokemon-showdown', dir: '.cache/showdown', commit: 'a5df8274e85b0889bf2a9b3422a08b39732374fc' },
+  /** Pokémon Showdown: game mods Let's Go / BDSP / Legends that @pkmn/mods doesn't ship, and the current Champions mod (learnsets newer than @pkmn/mods'). */
+  showdown: { url: 'https://github.com/smogon/pokemon-showdown', dir: '.cache/showdown', commit: '68e5f9bc901b88477c8e9aff79b5a654fc3438a7' },
   /** PKHeX: every game's wild-encounter tables, location and item names. */
   pkhex: { url: 'https://github.com/kwsch/PKHeX', dir: '.cache/pkhex', commit: '09e7f18fbb33635e35cf9ffcbfd3322403780f8e' },
   /** pret disassemblies / decompilations: the in-game region maps (scripts/build-maps.ts). */
@@ -36,6 +36,11 @@ export const REPOS = {
 export function ensure(repo: keyof typeof REPOS, paths: string[]): string {
   const { url, dir, commit } = REPOS[repo];
   const abs = resolve(ROOT, dir);
+  // A cache from an older pin would keep serving its old files (only missing paths are checked out):
+  // when the pin has moved, start from scratch. A cache without a marker is taken as current.
+  const marker = resolve(abs, '.pinned-commit');
+  if (commit && existsSync(marker) && readFileSync(marker, 'utf8').trim() !== commit) rmSync(abs, { recursive: true, force: true });
+  const stamp = () => commit && writeFileSync(marker, `${commit}\n`);
   if ('full' in REPOS[repo]) {
     if (!existsSync(resolve(abs, '.git'))) {
       mkdirSync(abs, { recursive: true });
@@ -46,8 +51,10 @@ export function ensure(repo: keyof typeof REPOS, paths: string[]): string {
     } catch {
       execSync(`git fetch -q --depth 1 origin ${commit}`, { cwd: abs, stdio: 'inherit' });
     }
-    const missing = paths.filter((p) => !existsSync(resolve(abs, p)));
-    if (missing.length) execSync(`git checkout ${commit} -- ${missing.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
+    // Always ask git for the requested paths: a directory another script checked out in part (a single file of it)
+    // exists but isn't complete, so "exists" can't mean "present". Files already there are rewritten with the same content.
+    if (paths.length) execSync(`git checkout ${commit} -- ${paths.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
+    stamp();
     return abs;
   }
   if (!existsSync(resolve(abs, '.git'))) {
@@ -64,5 +71,6 @@ export function ensure(repo: keyof typeof REPOS, paths: string[]): string {
   }
   const missing = paths.filter((p) => !existsSync(resolve(abs, p)));
   if (missing.length) execSync(`git checkout ${ref} -- ${missing.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
+  stamp();
   return abs;
 }

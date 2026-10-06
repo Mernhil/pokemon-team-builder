@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CalendarClock, Copy, RadioTower } from 'lucide-react';
 import { create } from 'zustand';
+import type { Dex } from '@/data/dex';
 import { useRegulationChanges } from '@/data/regulationChanges';
 import { useDex } from '@/data/useDex';
 import { copyTeamToRegulation, daysUntil, teamImpact } from '@/domain/regulationImpact';
@@ -11,6 +12,7 @@ import { useTeamStore } from '@/store/teamStore';
 import { formatMechanics, gameInfo } from '@/domain/games';
 import { GEN_GAMES, genInfo } from '@/domain/generations';
 import { GenBadge } from '../ui/GenBadge';
+import { useBenchmarkResults } from '../editor/useBenchmarks';
 import { Button } from '../ui/primitives';
 import { ImpactList, impactSummary } from './ImpactList';
 
@@ -18,8 +20,8 @@ const fmtDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
 /**
- * Regulation status strip: which set is live, when it ends, what's announced next, and when the
- * data was last checked by the weekly updater. Offers a one-click move to the live regulation.
+ * Regulation status strip: which set is live, when it ends and what's announced next.
+ * Offers a one-click move to the live regulation.
  */
 export function RegulationBanner({ team, format }: { team: Team; format: FormatRules }) {
   if (format.datasetId !== 'champions') return <GenerationStrip format={format} />;
@@ -88,7 +90,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
   );
 
   if (!live) return null;
-  const daysLeft = live.end ? Math.ceil((new Date(live.end).getTime() - Date.now()) / 86_400_000) : undefined;
+  const daysLeft = live.end ? daysUntil(live.end) : undefined;
 
   const copyToLive = () => {
     if (dexState.status !== 'ready') return;
@@ -109,7 +111,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
         <b className="text-fg">{live.shortName} is live</b>
         <span className="text-muted">
           {fmtDate(live.start)} – {fmtDate(live.end)}
-          {daysLeft !== undefined && daysLeft >= 0 && ` · ${daysLeft} days left`}
+          {daysLeft !== undefined && ` · ${daysLeft} days left`}
         </span>
       </span>
       <span className="hidden text-muted sm:inline">
@@ -127,7 +129,6 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
         <span className="hidden text-muted sm:inline">Next regulation not announced yet</span>
       )}
       <span className="ml-auto flex items-center gap-2">
-        {REGULATION_MANIFEST.lastChecked && <span className="hidden text-muted sm:inline">Checked {fmtDate(REGULATION_MANIFEST.lastChecked)}</span>}
         <a href="#regdiff" className="font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center">
           Regulation diff
         </a>
@@ -154,6 +155,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
           Moving to {live.shortName}: {impactSummary(impact.counts)}
         </p>
         <ImpactList impact={impact} dex={dexState.dex} format={liveFormat ?? format} />
+        <BenchmarkImpact team={team} dex={dexState.dex} from={format} to={liveFormat ?? format} regulation={live.shortName} />
         <p className="mt-2 text-xs text-muted">
           “Move team” switches this team to {live.shortName} as it is; “Copy to {live.shortName}” keeps this team and adds a variation with the illegal parts removed.
         </p>
@@ -175,5 +177,25 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
       </div>
     )}
     </div>
+  );
+}
+
+/** Benchmarks that hold in the team's regulation but would stop holding in the target one. Renders nothing otherwise. */
+function BenchmarkImpact({ team, dex, from, to, regulation }: { team: Team; dex: Dex; from: FormatRules; to: FormatRules; regulation: string }) {
+  const now = useBenchmarkResults(dex, from, team.slots);
+  const target = useBenchmarkResults(dex, to, team.slots);
+  const lost = useMemo(() => {
+    if (!now.ready || !target.ready) return [];
+    return team.slots.flatMap((s) => {
+      if (!s) return [];
+      const before = now.results.get(s.uid);
+      return (target.results.get(s.uid) ?? []).filter((r) => r.status === 'notmet' && before?.find((b) => b.id === r.id)?.status === 'met').map((r) => r.label);
+    });
+  }, [team.slots, now, target]);
+  if (lost.length === 0) return null;
+  return (
+    <p className="mt-2 text-xs font-medium text-bad">
+      {lost.length} {lost.length === 1 ? 'benchmark stops' : 'benchmarks stop'} holding in {regulation}: {lost.join('; ')}.
+    </p>
   );
 }

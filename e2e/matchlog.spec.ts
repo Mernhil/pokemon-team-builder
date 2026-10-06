@@ -95,11 +95,11 @@ test('Nemesis links open the Damage Calc, Speed tiers and Threat report on that 
 
   await page.goto('/#matches');
   await page.getByRole('button', { name: 'Find Kingambit in Speed tiers' }).click();
-  await expect(page).toHaveURL(/#speed$/);
+  await expect(page).toHaveURL(/#analyse\/speed$/);
   await expect(page.getByRole('list', { name: 'Speed tiers' }).getByRole('button', { expanded: true })).toContainText('Kingambit');
 
   await page.goto('/#matches');
   await page.getByRole('button', { name: 'Find Kingambit in the Threat report' }).click();
-  await expect(page).toHaveURL(/#threats$/);
+  await expect(page).toHaveURL(/#analyse\/threats$/);
   await expect(page.locator('[data-threat="kingambit"]').locator('visible=true').first()).toBeVisible();
 });

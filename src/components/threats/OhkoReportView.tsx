@@ -23,7 +23,7 @@ const range = (p: [number, number]) => (p[0] === p[1] ? `${p[0]}%` : `${p[0]}–
  * OHKO each of yours ('by'), and which of them each of yours can OHKO ('to'). Guaranteed OHKOs come
  * first, then ones that only happen on some damage rolls; tap a row to open it in the Damage Calc.
  */
-export function OhkoReportView({ dex, format, team, mode }: { dex: Dex; format: FormatRules; team: Team; mode: OhkoMode }) {
+export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; format: FormatRules; team: Team; mode: OhkoMode; onMode: (m: OhkoMode) => void }) {
   const setView = useTeamStore((s) => s.setView);
   const [count, setCount] = useState<number>(30);
   const [possible, setPossible] = useState(true);
@@ -79,7 +79,7 @@ export function OhkoReportView({ dex, format, team, mode }: { dex: Dex; format: 
               { id: 'ohko', label: 'Can OHKO', icon: Crosshair },
             ]}
             value={by ? 'ohkod' : 'ohko'}
-            onChange={(v) => setView(v)}
+            onChange={(v) => onMode(v === 'ohkod' ? 'by' : 'to')}
           />
           <p className="min-w-0 text-sm text-muted">
             against the {count} most-used sets in <b className="text-fg">{reg?.name ?? picked.regulationId}</b>

@@ -44,6 +44,8 @@ interface Props {
   slotKey?: string;
   /** For a Pokémon that isn't mine (an opponent in a goal or search): no Optimise button. */
   noOptimise?: boolean;
+  /** Optimiser goals kept as benchmarks on this Pokémon (merged into its list by the editor). */
+  onKeepBenchmarks?: (benchmarks: import('@/domain/benchmarks').Benchmark[]) => void;
 }
 
 type Preset = { label: string; spread: Partial<StatTable> };
@@ -83,7 +85,7 @@ const zero = (): StatTable => ({ hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
  *  - Legends: Arceus Effort Levels (0–10 each; IVs are folded into them)
  * Inline +/− buttons on each stat set the nature Showdown-style (Gen 3+).
  */
-export function StatDistributor({ set, species, mega, altLabel = 'Mega', format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive, slotKey, noOptimise }: Props) {
+export function StatDistributor({ set, species, mega, altLabel = 'Mega', format, dex, onSpread, onReplaceSpread, onIV, onFriendship, onNature, megaActive, onMegaActive, slotKey, noOptimise, onKeepBenchmarks }: Props) {
   const [localMega, setLocalMega] = useState(altLabel === 'Mega');
   const [optimizerOpen, setOptimizerOpen] = useState(false);
   const request = useOptimizerStore((s) => s.request);
@@ -424,6 +426,7 @@ export function StatDistributor({ set, species, mega, altLabel = 'Mega', format,
           format={format}
           set={set}
           request={requested ? request : null}
+          onKeep={onKeepBenchmarks}
           onApply={(spread, nature) => {
             onReplaceSpread(spread);
             if (nature !== set.nature) onNature(nature);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, Plus, Search, Trash2, X } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultField, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
@@ -18,6 +18,7 @@ import { snapshotAge } from '@/domain/speedTiers';
 import { MAX_REQUIRED_MOVES } from '@/domain/reverseSearch';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
+import { useReverseSeed } from '@/store/reverseSeedStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
 import { FieldControls, Segmented, Toggle } from '../battle/Controls';
@@ -57,6 +58,14 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   const search = useReverseSearch({ dex, format, conditions, knows, field });
   const { picked, loading, candidates, matches, checked, done } = search;
   const setView = useTeamStore((s) => s.setView);
+
+  // Opened from a teammate suggestion: start with "one-shots <threat>" conditions (once the meta numbers are in).
+  const seed = useReverseSeed((x) => x.seed);
+  useEffect(() => {
+    if (!seed || loading) return;
+    useReverseSeed.getState().set(null);
+    setConditions(seed.speciesIds.slice(0, 3).map((id) => ({ id: nextId(), kind: seed.kind, target: targetFor(dex, format, id, picked?.snapshot) })));
+  }, [seed, loading, dex, format, picked]);
 
   const add = (speciesId: string) => {
     if (!speciesId) return;

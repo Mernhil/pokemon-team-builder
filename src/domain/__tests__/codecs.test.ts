@@ -90,3 +90,44 @@ describe('Validation', () => {
     expect(codes).toContain('move-illegal');
   });
 });
+
+describe('share codes carry notes, benchmarks and matchup notes (PTB1)', () => {
+  const bench = { id: 'k1', kind: 'survive' as const, savedAt: 5, metAtSave: true, foe: { speciesId: 'kingambit', source: 'meta' as const }, moveId: 'suckerpunch', rolls: 16 };
+  const team = () => {
+    const { team: t } = importShowdown(PASTE, dex, fmt);
+    t.slots[0] = { ...t.slots[0]!, uid: 'u-a', notes: 'Max Speed to outrun Scarf Flutter Mane', benchmarks: [bench] };
+    t.notes = 'Lead Garchomp + Incineroar';
+    t.matchupNotes = [{ id: 'm1', title: 'vs Rain', leads: ['u-a'], text: 'Keep Kingambit back.' }];
+    return t;
+  };
+
+  it('round-trips them, with a matchup note\'s leads following the Pokémon to its new id', () => {
+    const t = team();
+    const back = decodeShareString(encodeShareString(t), dex, fmt);
+    expect(back.slots[0]).toMatchObject({ notes: 'Max Speed to outrun Scarf Flutter Mane', benchmarks: [bench] });
+    expect(back.notes).toBe('Lead Garchomp + Incineroar');
+    expect(back.matchupNotes).toHaveLength(1);
+    expect(back.matchupNotes![0]).toMatchObject({ title: 'vs Rain', text: 'Keep Kingambit back.' });
+    expect(back.matchupNotes![0].leads).toEqual([back.slots[0]!.uid]);
+  });
+
+  it('a code without them (an older version\'s) still decodes', () => {
+    const { team: plain } = importShowdown(PASTE, dex, fmt);
+    const back = decodeShareString(encodeShareString(plain), dex, fmt);
+    expect(back.slots[0]!.notes).toBeUndefined();
+    expect(back.slots[0]!.benchmarks).toBeUndefined();
+    expect(back.matchupNotes).toBeUndefined();
+  });
+
+  it('a damaged benchmark in a code is dropped, not trusted', () => {
+    const t = team();
+    t.slots[0]!.benchmarks = [{ ...bench, rolls: 99, moveId: 'NOT AN ID' } as never, bench];
+    const back = decodeShareString(encodeShareString(t), dex, fmt);
+    expect(back.slots[0]!.benchmarks).toEqual([bench]);
+  });
+
+  it('the Showdown export ignores all of it', () => {
+    const text = exportTeamShowdown(team(), dex, fmt);
+    expect(text).not.toMatch(/Flutter|benchmark|Keep Kingambit|Lead Garchomp/i);
+  });
+});
