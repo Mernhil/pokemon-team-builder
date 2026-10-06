@@ -2,7 +2,14 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## 0.25.1 — 2026-10-06
+## 0.26.0 — 2026-10-06
+
+### New
+- **Sticker look.** Panels, buttons, fields, chips, tabs, menus, sheets and the type-matrix cells now have thick outlines and a hard offset shadow that presses flat when you tap. It is the new default; Settings → Appearance → *Style* switches back to **Classic**.
+- **Colour palette picker.** Settings → Appearance has six preset palettes and two sliders (hue and vividness). Every palette is adjusted to keep text readable (WCAG AA) in light and dark, and works with both styles.
+
+### Changed
+- **Explanations sit behind an info button.** The long help text on the type matrices, speed order, move coverage, Compare and the Threat and OHKO reports opens from a round info button in the panel header instead of always taking up space.
 
 ### Fixed
 - **Desktop releases publish again.** The release pipeline created the release in the separate releases repository without telling GitHub which branch to tag, so every release since the move there failed. 0.24.0 and 0.25.0 therefore never reached the desktop app: this is the first release that carries them (the new Analyse tab, Settings → Navigation, search, Game day, the pairing code and everything else listed below).
