@@ -31,3 +31,21 @@ describe('prefsStore', () => {
     expect(s.showUnavailableSpecies).toBe(PICKER_ORDER.species.showUnavailableByDefault);
   });
 });
+
+describe('statCalcOpen (the phone builder keeps the stat calculator open unless folded)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('is open by default, remembers a fold, and ignores junk in a save', async () => {
+    expect(usePrefsStore.getState().statCalcOpen).toBe(true);
+    usePrefsStore.getState().setStatCalcOpen(false);
+    expect(usePrefsStore.getState().statCalcOpen).toBe(false);
+    const rehydrate = async (state: unknown) => {
+      vi.stubGlobal('localStorage', { getItem: () => JSON.stringify({ version: 1, state }), setItem: () => {}, removeItem: () => {} });
+      await usePrefsStore.persist.rehydrate();
+      return usePrefsStore.getState().statCalcOpen;
+    };
+    expect(await rehydrate({ statCalcOpen: false })).toBe(false);
+    expect(await rehydrate({})).toBe(true);
+    expect(await rehydrate({ statCalcOpen: 'no' })).toBe(true);
+  });
+});

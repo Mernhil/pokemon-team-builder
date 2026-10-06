@@ -58,7 +58,7 @@ export function InfoTooltip({
             )}
             {interactions && interactions.length > 0 && (
               <div className="border-t border-border pt-1.5">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">Interactions</p>
+                <p className="mb-1 text-3xs font-semibold uppercase tracking-wider text-muted">Interactions</p>
                 <ul className="list-disc space-y-1 pl-3.5 text-xs leading-snug text-muted">
                   {interactions.map((e, i) => (
                     <li key={i}>{e}</li>

@@ -77,7 +77,7 @@ function RecommendedBody({
       <div className="space-y-3 pt-1 text-sm">
         {rec.items.length > 0 && (
           <section aria-label="Recommended items">
-            <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Items</h3>
+            <h3 className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">Items</h3>
             <ul className="flex flex-wrap gap-1.5">
               {rec.items.map((i) => (
                 <li key={i.id}>
@@ -103,13 +103,13 @@ function RecommendedBody({
         <div className="grid gap-3 sm:grid-cols-2">
           {rec.abilities.length > 0 && (
             <section aria-label="Recommended ability">
-              <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Ability</h3>
+              <h3 className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">Ability</h3>
               <p>{rec.abilities.map((a) => `${a.name} ${pct(a.pct)}`).join(' · ')}</p>
             </section>
           )}
           {top && (
             <section aria-label="Recommended spread">
-              <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Nature and spread{top.pct ? ` (${pct(top.pct)})` : ''}</h3>
+              <h3 className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">Nature and spread{top.pct ? ` (${pct(top.pct)})` : ''}</h3>
               <p>
                 <b>{top.nature}</b>
                 <span className="ml-2 font-mono text-xs text-muted">{STAT_IDS.map((s, i) => `${STAT_LABELS[s]} ${top.values[i]}`).join(' · ')}</span>
@@ -119,7 +119,7 @@ function RecommendedBody({
         </div>
         {rec.moves.length > 0 && (
           <section aria-label="Recommended moves">
-            <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">Moves</h3>
+            <h3 className="mb-1 text-2xs font-semibold uppercase tracking-wider text-muted">Moves</h3>
             <p>{rec.moves.map((m) => `${m.name} ${pct(m.pct)}`).join(' · ')}</p>
           </section>
         )}

@@ -33,7 +33,7 @@ export function SpriteHistory({ species }: { species: Pokemon }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex min-h-8 items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted hover:text-fg pointer-coarse:min-h-11"
+        className="flex min-h-8 items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-muted hover:text-fg pointer-coarse:min-h-11"
       >
         <ChevronRight size={12} className={cn('transition-transform', open && 'rotate-90')} />
         Across generations
@@ -46,7 +46,7 @@ export function SpriteHistory({ species }: { species: Pokemon }) {
             return (
               <figure key={id} className="flex w-20 shrink-0 flex-col items-center gap-1 rounded-lg bg-surface-2 p-1.5">
                 <Sprite speciesId={species.id} name={species.name} types={species.types} set={id} size={64} />
-                <figcaption className="flex flex-col items-center gap-0.5 text-center text-[10px] leading-tight text-muted">
+                <figcaption className="flex flex-col items-center gap-0.5 text-center text-3xs leading-tight text-muted">
                   {meta.gen ? <GenBadge gen={meta.gen} size="xs" /> : <span className="font-semibold text-accent">Champions</span>}
                   <span>{meta.label}</span>
                 </figcaption>

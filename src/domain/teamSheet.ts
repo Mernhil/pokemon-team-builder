@@ -18,7 +18,7 @@ export function speedOrder(team: Team, dex: Dex, format: FormatRules) {
 }
 
 /** "Lead Incineroar + Garchomp" for a matchup note, from the leads that are still on the team. */
-export function matchupLeads(team: Team, dex: Dex, leads: readonly string[] | undefined): string[] {
+function matchupLeads(team: Team, dex: Dex, leads: readonly string[] | undefined): string[] {
   return (leads ?? []).flatMap((uid) => {
     const s = team.slots.find((x): x is PokemonSet => !!x && x.uid === uid);
     return s ? [s.nickname || dex.species(s.speciesId)?.name || s.speciesId] : [];

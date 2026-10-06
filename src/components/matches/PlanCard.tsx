@@ -28,7 +28,7 @@ export function PlanCard({ plan, index, dex, format, sets, action }: { plan: Pla
             <li key={uid} className={cn('flex flex-col items-center gap-0.5 rounded-lg border p-1.5 text-center', lead ? 'border-accent bg-accent/15' : back ? 'border-dashed border-border' : 'border-border-strong bg-surface')}>
               <Sprite speciesId={set.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={34} />
               <span className="w-full truncate text-xs font-semibold">{sp?.name}</span>
-              <span className="text-[11px] font-semibold text-fg">
+              <span className="text-2xs font-semibold text-fg">
                 {lead ? '★ Lead' : back ? 'Back' : 'Brought'}
                 {plan.mega === uid ? ' · Mega' : ''}
               </span>

@@ -9,7 +9,7 @@ import {
 } from './types';
 
 /** Nature multiplier applied as floor(stat * 110 / 100) — matches the games' integer math. */
-export function applyNature(stat: number, statId: StatId, nature?: Nature): number {
+function applyNature(stat: number, statId: StatId, nature?: Nature): number {
   if (!nature || statId === 'hp') return stat;
   if (nature.plus === statId && nature.minus !== statId) return Math.floor((stat * 110) / 100);
   if (nature.minus === statId && nature.plus !== statId) return Math.floor((stat * 90) / 100);
@@ -87,7 +87,7 @@ export function lgpeFriendshipPercent(friendship: number): number {
   return Math.trunc(f(f(f(f(Math.max(0, Math.min(255, friendship)) / 255) / 10) + 1) * 100));
 }
 
-export function lgpeStat(statId: StatId, base: number, iv: number, av: number, level: number, friendship: number, nature?: Nature): number {
+function lgpeStat(statId: StatId, base: number, iv: number, av: number, level: number, friendship: number, nature?: Nature): number {
   const core = Math.floor(((2 * base + iv) * level) / 100);
   if (statId === 'hp') return av + core + 10 + level;
   return av + Math.floor((lgpeFriendshipPercent(friendship) * applyNature(core + 5, statId, nature)) / 100);

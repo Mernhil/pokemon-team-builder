@@ -28,7 +28,7 @@ export interface CalcSideInput {
   cond: SideConditions;
 }
 
-export type Forme = 'base' | 'mega';
+type Forme = 'base' | 'mega';
 
 /** One attacker-forme × defender-forme combination's damage. */
 export interface FormResult {
@@ -76,18 +76,18 @@ function calcSpeciesName(dex: Dex, gen: CalcGen, id: string): string {
 }
 
 /** Whether a side actually holds a usable Mega Stone (so "Mega" is a real option at all). */
-export function hasMega(dex: Dex, set: PokemonSet): boolean {
+function hasMega(dex: Dex, set: PokemonSet): boolean {
   return datasetCapabilities(dex.data.id).mega && !!dex.megaFor(set.speciesId, set.itemId);
 }
 
 /** The forme(s) to calculate for a side: one, unless its Mega mode is "Both" and a stone is held. */
-export function formsFor(dex: Dex, set: PokemonSet, cond: SideConditions): Forme[] {
+function formsFor(dex: Dex, set: PokemonSet, cond: SideConditions): Forme[] {
   if (!hasMega(dex, set)) return ['base'];
   return cond.megaMode === 'both' ? ['base', 'mega'] : [cond.megaMode];
 }
 
 /** The forme in battle: the Mega forme when requested and the stone is held, else the stat-changing one the role calls for. */
-export function battleForme(dex: Dex, set: PokemonSet, wantMega: boolean, cond?: Pick<SideConditions, 'statForm'>, role: CalcRole = 'neutral') {
+function battleForme(dex: Dex, set: PokemonSet, wantMega: boolean, cond?: Pick<SideConditions, 'statForm'>, role: CalcRole = 'neutral') {
   const base = dex.species(set.speciesId);
   const mega = wantMega && datasetCapabilities(dex.data.id).mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
   return mega ?? (cond ? statFormeFor(dex, set, cond, role) : undefined) ?? base;
@@ -170,7 +170,7 @@ function side(c: SideConditions): Side {
   });
 }
 
-export function toCalcField(field: FieldConditions, attacker: SideConditions, defender: SideConditions, gen = 9): Field {
+function toCalcField(field: FieldConditions, attacker: SideConditions, defender: SideConditions, gen = 9): Field {
   const mech = mechanics(gen);
   // "Snow" was Hail until Gen 9; terrain starts in Gen 6; Gen 1–2 battles were always singles.
   const weather = !mech.weather ? '' : field.weather === 'Snow' ? mech.snowName : field.weather;

@@ -42,6 +42,12 @@ const withCors = (res: Response, origin: string | null, env: Env): Response => {
 };
 const fail = (status: number, error: string) => reply(status, { error });
 
+/** 501, naming which of the three settings the deployment lacks (the app turns it into a hint; docs/SYNC.md has the steps). */
+const notSetUp = (env: Env, needAccess: boolean) => {
+  const missing = [!env.DB && 'DB', needAccess && !env.ACCESS_TEAM_DOMAIN && 'ACCESS_TEAM_DOMAIN', needAccess && !env.ACCESS_AUD && 'ACCESS_AUD'].filter(Boolean);
+  return reply(501, { error: 'sync is not set up on this deployment', missing });
+};
+
 /** A device whose clock is further ahead than this can't win every future conflict: its documents are refused. */
 export const MAX_FUTURE_MS = 10 * 60 * 1000;
 
@@ -77,7 +83,7 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
   const route = ROUTES[url.pathname];
   if (!route) return fail(404, 'not found');
   if (!route.includes(request.method)) return fail(405, 'method not allowed');
-  if (!env.DB || !env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return fail(501, 'sync is not set up on this deployment');
+  if (!env.DB || !env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return notSetUp(env, true);
 
   // Who is asking: only a verified Access token counts, never a header the client could have written.
   const token = request.headers.get('Cf-Access-Jwt-Assertion');
@@ -98,7 +104,7 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
  */
 async function handleDevice(request: Request, env: Env, url: URL, deps: ApiDeps): Promise<Response> {
   const now = (deps.now ?? Date.now)();
-  if (!env.DB) return fail(501, 'sync is not set up on this deployment');
+  if (!env.DB) return notSetUp(env, false);
   const sub = `/api/${url.pathname.slice('/api/device/'.length)}`;
 
   if (sub === '/api/redeem') {

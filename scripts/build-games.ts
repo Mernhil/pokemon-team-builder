@@ -19,8 +19,8 @@ import { Dex, type ModData } from '@pkmn/dex';
 import * as LetsGoMod from '@pkmn/mods/gen7letsgo';
 import { type AnyDex, writeDataset } from './build-gens.js';
 import { ensure } from './sources.js';
+import { toID } from '../src/domain/id.ts';
 
-const toID = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 const MOD_FILES: [string, keyof ModData | 'Species'][] = [
   ['formats-data', 'FormatsData'],
   ['learnsets', 'Learnsets'],

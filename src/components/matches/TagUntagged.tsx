@@ -9,7 +9,7 @@ import { useMatchStore } from '@/store/matchStore';
 import { toast } from '@/store/toastStore';
 import { useTeamStore } from '@/store/teamStore';
 import { Modal } from '../ui/Modal';
-import { Button, Chip } from '../ui/primitives';
+import { Button, Checkbox, Chip } from '../ui/primitives';
 
 /**
  * "Tag N untagged matches": the archetypes the app would give the matches that have an empty archetype
@@ -71,14 +71,11 @@ export function TagUntagged({ dex, format, matches }: { dex: Dex; format: Format
             const label = `${match.date}${opp.length ? ` vs ${opp.slice(0, 3).join(', ')}${opp.length > 3 ? '…' : ''}` : ''}`;
             return (
               <li key={match.id} className="rounded-lg border border-border p-2">
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1 size-4 pointer-coarse:size-5"
-                    checked={!skipped.has(match.id)}
-                    onChange={(e) => setSkipped((s) => { const n = new Set(s); if (e.target.checked) n.delete(match.id); else n.add(match.id); return n; })}
-                    aria-label={`Tag the match on ${label}`}
-                  />
+                <label className="flex items-start gap-2 text-sm pointer-coarse:min-h-11">
+                  <Checkbox className="mt-1"
+ checked={!skipped.has(match.id)}
+ onChange={(e) => setSkipped((s) => { const n = new Set(s); if (e.target.checked) n.delete(match.id); else n.add(match.id); return n; })}
+ aria-label={`Tag the match on ${label}`} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{label}</span>
                     <span className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">

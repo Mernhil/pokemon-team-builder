@@ -8,13 +8,14 @@ import { createSet } from '@/domain/team';
 import type { FormatRules, PokemonSet, TeraType } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
 import { useSlotBattle, useTeamStore } from '@/store/teamStore';
+import { usePrefsStore } from '@/store/prefsStore';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, Disclosure, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
+import { Button, Chip, Disclosure, Field, Input, Panel, Select, Skeleton, TypeBadge } from '../ui/primitives';
 import { useIsPhone } from '../ui/useMedia';
 import { typeGradient } from '../ui/styles';
 import { AdvancedDetails } from './AdvancedDetails';
@@ -50,6 +51,8 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
   const champions = format.statSystem.kind === 'champions-sp';
 
   const isPhone = useIsPhone();
+  const statCalcOpen = usePrefsStore((s) => s.statCalcOpen);
+  const setStatCalcOpen = usePrefsStore((s) => s.setStatCalcOpen);
   const itemPicker = useItemPicker(dex, format, set?.speciesId);
   const movePicker = useMovePicker(dex, format, set);
 
@@ -272,7 +275,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
       </Panel>
 
       {format.datasetId === 'champions' && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<Skeleton className="h-24" />}>
           <RecommendedPanel dex={dex} format={format} set={set} onApply={(patch) => updateSet(slot, patch)} />
         </Suspense>
       )}
@@ -345,7 +348,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
           />
         );
         return isPhone ? (
-          <Disclosure title={title} summary={summary}>
+          <Disclosure title={title} summary={summary} open={statCalcOpen} onOpenChange={setStatCalcOpen}>
             <p className="mb-2 text-xs text-muted">{note}</p>
             {body}
           </Disclosure>

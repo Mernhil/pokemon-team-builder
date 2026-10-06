@@ -114,8 +114,10 @@ test('Champions Pokédex: Mega Evolutions filter, a Pokémon\'s Megas side by si
 
   await page.getByRole('button', { name: 'Mega Evolutions' }).click();
   expect(await list.getByRole('option').count()).toBe(82); // Reg M-C is live
-  const texts = await list.getByRole('option').allInnerTexts();
-  const at = (name: string) => texts.findIndex((t) => t.includes(`${name}\n`));
+  // textContent, not innerText: rows far below the fold are not rendered (content-visibility) and have no innerText.
+  const texts = await list.getByRole('option').allTextContents();
+  // The row starts with the dex number, then the name (the first match is the base Mega, which is listed before its -Z/-X/-Y siblings).
+  const at = (name: string) => texts.findIndex((t) => t.replace(/^\d+/, '').startsWith(name));
   expect(at('Charizard-Mega-Y')).toBe(at('Charizard-Mega-X') + 1);
   expect(at('Garchomp-Mega-Z')).toBe(at('Garchomp-Mega') + 1);
   await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toContainText('Charizardite X');
@@ -139,3 +141,14 @@ test('Champions Pokédex: Mega Evolutions filter, a Pokémon\'s Megas side by si
   await page.getByRole('button', { name: 'Pokémon', exact: true }).click();
   await expect(list.getByRole('option').filter({ hasText: '-Mega' })).toHaveCount(0);
 });
+
+// Nothing on a main screen may scroll the whole page sideways (wide tables scroll inside their own region).
+for (const hash of ['#builder', '#calc', '#analyse/overview', '#analyse/speed', '#analyse/threats', '#analyse/ohko/by', '#analyse/compare', '#dex', '#atlas', '#matches', '#gameday', '#meta', '#reverse', '#regdiff']) {
+  test(`${hash} does not scroll sideways`, async ({ page }) => {
+    await openApp(page, hash);
+    await page.waitForTimeout(500);
+    // Against the device's width, not window.innerWidth: a phone widens its layout viewport to fit an overflowing page, which hides the overflow.
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
+}

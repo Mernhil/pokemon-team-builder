@@ -17,9 +17,9 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Dex, type Species } from '@pkmn/dex';
+import { toID } from '../src/domain/id.ts';
 
 const STAT_IDS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const;
-const toID = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 const SPREAD_TARGETS = new Set(['allAdjacent', 'allAdjacentFoes', 'all', 'foeSide', 'allySide']);
 /** Learn-method letters in Showdown learnset sources ("9L24", "3M", "4E", "2S0"…). V = transfer-only. */
 const METHODS = new Set(['L', 'M', 'T', 'E', 'S', 'D', 'R']);
@@ -73,7 +73,7 @@ export async function buildGenerations(outDir: string) {
   }
 }
 
-export async function buildDataset(spec: DatasetSpec) {
+async function buildDataset(spec: DatasetSpec) {
   const { dex, generation: gen, id: regId } = spec;
   const learnGen = spec.learnGen ?? gen;
   const legal = (x: { exists: boolean; isNonstandard?: string | null }) => x.exists && !x.isNonstandard;

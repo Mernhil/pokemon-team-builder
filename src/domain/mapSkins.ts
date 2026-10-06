@@ -31,7 +31,7 @@ export interface MapSkin {
   stylized?: boolean;
 }
 
-export const MAP_SKINS: Record<string, MapSkin> = {
+const MAP_SKINS: Record<string, MapSkin> = {
   dppt: {
     id: 'dppt',
     label: 'Sinnoh Town Map',
@@ -109,7 +109,7 @@ export const MAP_SKINS: Record<string, MapSkin> = {
   },
 };
 
-export const skinFor = (id: string): MapSkin => MAP_SKINS[id] ?? MAP_SKINS.dppt;
+const skinFor = (id: string): MapSkin => MAP_SKINS[id] ?? MAP_SKINS.dppt;
 
 /** Maps built from supplied artwork (src-assets/maps). */
 const PAINTED = /^(hoenn-oras|kanto-lgpe|sinnoh-bdsp|.*-art)$/;

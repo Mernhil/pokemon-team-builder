@@ -41,9 +41,9 @@ export const WEIGHTS = {
 
 /** How much an opponent counts in the score: the ones most dangerous to me (the "likely four") weigh fully. */
 export const LIKELY_WEIGHT = 1;
-export const UNLIKELY_WEIGHT = 0.4;
+const UNLIKELY_WEIGHT = 0.4;
 /** Each distinct support (Fake Out, Intimidate…) is worth this much of the 0–1 support score. */
-export const SUPPORT_STEP = 0.4;
+const SUPPORT_STEP = 0.4;
 
 // ---------------------------------------------------------------------------
 // The opponent's Pokémon
@@ -168,7 +168,7 @@ export interface MyMon {
   set: PokemonSet;
 }
 
-export interface Parts {
+interface Parts {
   pressure: number;
   risk: number;
   tempo: number;

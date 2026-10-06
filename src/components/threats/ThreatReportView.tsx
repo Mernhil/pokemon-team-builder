@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
@@ -6,6 +6,8 @@ import { META_STALE_DAYS, isProvisional, provisionalNote, usageLabel, usageText 
 import { TERRAINS, WEATHERS, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
 import type { MetaSet } from '@/domain/metaSets';
 import { snapshotAge } from '@/domain/speedTiers';
+import { useViewStore } from '@/store/viewStore';
+import { VERDICT_CELL } from './verdictStyle';
 import { THREAT_COUNTS, bucket, KILL_LABEL, KILL_SHORT, type ThreatCell } from '@/domain/threats';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
@@ -42,11 +44,17 @@ function cellSentence(dex: Dex, member: PokemonSet, threat: MetaSet, c: ThreatCe
  */
 export function ThreatReportView({ dex, format, team }: { dex: Dex; format: FormatRules; team: Team }) {
   const setView = useTeamStore((s) => s.setView);
-  const [count, setCount] = useState<number>(20);
-  const [field, setField] = useState<FieldConditions>({ gameType: 'Doubles', weather: '', terrain: '', trickRoom: false, gravity: false });
+  const count = useViewStore((s) => s.threatCount);
+  const field = useViewStore((s) => s.threatField);
+  // The table is one tab stop: arrow keys move between its cells, and the cell last used keeps the stop.
+  const [activeCell, setActiveCell] = useState('0:0');
   const report = useThreatReport({ dex, format, team, count, field });
   const { picked, loading, threats, members, rows, done, summaries, error } = report;
+  // The cell that holds the table's Tab stop; the first one if the last-used cell is gone (fewer threats or members now).
+  const [activeRow, activeCol] = activeCell.split(':').map(Number);
+  const activeKey = activeRow < threats.length && activeCol < members.length ? activeCell : '0:0';
 
+  const backToReport = { label: 'Back to the Threat report', run: () => useTeamStore.getState().openAnalyse('threats') };
   const openCalc = (member: PokemonSet, slot: number, threat: MetaSet) => {
     const calc = useCalcStore.getState();
     const hasMega = !!dex.megaFor(member.speciesId, member.itemId);
@@ -54,6 +62,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
     calc.setSide('defender', { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode }, crits: [false, false, false, false] });
     calc.setField(field);
     setView('calc');
+    toast('Opened in the Damage Calc.', backToReport);
   };
 
   const openOptimizer = (slot: number, threat: MetaSet, cell: ThreatCell) => {
@@ -65,6 +74,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
     });
     useTeamStore.getState().setActiveSlot(slot);
     setView('builder');
+    toast('Opened in the optimiser.', backToReport);
   };
 
   // Keep "survive this move" on the Pokémon as a benchmark, checked again when the meta changes.
@@ -88,6 +98,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   useEffect(() => {
     if (!focusId || threats.length === 0) return;
     if (!threats.some((t) => t.speciesId === focusId)) {
+      // oxlint-disable-next-line react/set-state-in-effect -- reacts to a one-shot hand-off or a changed input, which is what this effect is for
       if (count < 30) setCount(30);
       return;
     }
@@ -229,7 +240,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
               <caption className="sr-only">Threats against your team: each cell shows your best move and its best move, and who moves first.</caption>
               <thead>
                 <tr>
-                  <th scope="col" className="sticky left-0 z-10 bg-surface p-2 text-left text-[11px] font-bold tracking-wide text-muted uppercase">
+                  <th scope="col" className="sticky left-0 z-10 bg-surface p-2 text-left text-2xs font-bold tracking-wide text-muted uppercase">
                     Threat
                   </th>
                   {members.map((m) => (
@@ -242,7 +253,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody onFocus={(e) => { const id = (e.target as HTMLElement).closest<HTMLElement>('[data-cell]')?.dataset.cell ?? (e.target as HTMLElement).closest('td')?.querySelector<HTMLElement>('[data-cell]')?.dataset.cell; if (id) setActiveCell(id); }} onKeyDown={moveBetweenCells}>
                 {threats.map((t, i) => {
                   const sp = dex.species(t.speciesId);
                   return (
@@ -258,7 +269,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                       </th>
                       {members.map((m, j) => (
                         <td key={m.slot} className="p-1 align-top">
-                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} survive={rows[i]?.[j]?.theirs ? `Optimise ${dex.species(m.set.speciesId)?.name} to survive ${dex.species(t.speciesId)?.name}'s ${rows[i]![j].theirs!.move}` : ''} onOpen={() => openCalc(m.set, m.slot, t)} onSurvive={() => openOptimizer(m.slot, t, rows[i]![j])} keep={`Keep surviving ${dex.species(t.speciesId)?.name}'s ${rows[i]?.[j]?.theirs?.move ?? 'move'} as a benchmark of ${dex.species(m.set.speciesId)?.name}`} onKeep={() => void keepBenchmark(m.slot, t, rows[i]![j])} />
+                          <Cell cell={rows[i]?.[j]} sentence={rows[i]?.[j] ? cellSentence(dex, m.set, t, rows[i]![j]) : ''} survive={rows[i]?.[j]?.theirs ? `Optimise ${dex.species(m.set.speciesId)?.name} to survive ${dex.species(t.speciesId)?.name}'s ${rows[i]![j].theirs!.move}` : ''} onOpen={() => openCalc(m.set, m.slot, t)} onSurvive={() => openOptimizer(m.slot, t, rows[i]![j])} keep={`Keep surviving ${dex.species(t.speciesId)?.name}'s ${rows[i]?.[j]?.theirs?.move ?? 'move'} as a benchmark of ${dex.species(m.set.speciesId)?.name}`} onKeep={() => void keepBenchmark(m.slot, t, rows[i]![j])}  gridId={`${i}:${j}`} tabStop={activeKey === `${i}:${j}` ? 0 : -1} />
                         </td>
                       ))}
                     </tr>
@@ -300,7 +311,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
 
           <Help label="How to read this table">
             Blue and ✓: good for you · orange and ✗: bad for you · ~ even. “You” is your best move, “It” the threat’s. Damage is % of the defender’s HP; Mega
-            Stone holders are read at their worse forme for you and their better one for the threat. Tap a cell to open it in the Damage Calc.
+            Stone holders are read at their worse forme for you and their better one for the threat. Tap a cell to open it in the Damage Calc. On a keyboard the table is one Tab stop: arrow keys, Home and End move between cells.
           </Help>
         </>
       )}
@@ -308,7 +319,25 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   );
 }
 
-function Cell({ cell, sentence, survive, onOpen, onSurvive, keep, onKeep }: { cell: ThreatCell | undefined; sentence: string; survive: string; onOpen: () => void; onSurvive: () => void; keep: string; onKeep: () => void }) {
+const setCount = (n: number) => useViewStore.getState().set('threatCount', n);
+const setField = (f: (cur: FieldConditions) => FieldConditions) => useViewStore.getState().set('threatField', f(useViewStore.getState().threatField));
+
+/** Arrow keys, Home and End move between the report's cells (the cell buttons carry `data-cell="row:column"`). */
+function moveBetweenCells(e: KeyboardEvent<HTMLElement>) {
+  const here = (e.target as HTMLElement).closest<HTMLElement>('[data-cell]')?.dataset.cell;
+  if (!here || e.altKey || e.ctrlKey || e.metaKey) return;
+  const [row, col] = here.split(':').map(Number);
+  const body = e.currentTarget;
+  const rowCount = body.querySelectorAll('tr').length;
+  const colCount = body.querySelectorAll('tr:first-child [data-cell]').length;
+  const [r, c] =
+    e.key === 'ArrowRight' ? [row, col + 1] : e.key === 'ArrowLeft' ? [row, col - 1] : e.key === 'ArrowDown' ? [row + 1, col] : e.key === 'ArrowUp' ? [row - 1, col] : e.key === 'Home' ? [row, 0] : e.key === 'End' ? [row, colCount - 1] : [-1, -1];
+  if (r < 0 || c < 0 || r >= rowCount || c >= colCount) return;
+  e.preventDefault();
+  body.querySelector<HTMLElement>(`[data-cell="${r}:${c}"]`)?.focus();
+}
+
+function Cell({ cell, sentence, survive, onOpen, onSurvive, keep, onKeep, gridId, tabStop = 0 }: { cell: ThreatCell | undefined; sentence: string; survive: string; onOpen: () => void; onSurvive: () => void; keep: string; onKeep: () => void; /** Table cells only: `row:column`, for arrow-key movement. */ gridId?: string; /** 0 = in the tab order, -1 = reached by arrow keys only (the table keeps one stop). */ tabStop?: 0 | -1 }) {
   if (!cell) return <div className="min-h-16 rounded-lg border border-dashed border-border p-2 text-center text-muted">…</div>;
   const b = bucket(cell.verdict);
   const range = (m: NonNullable<ThreatCell['mine']>) => (m.percent[0] === m.percent[1] ? `${m.percent[0]}%` : `${m.percent[0]}–${m.percent[1]}%`);
@@ -316,14 +345,14 @@ function Cell({ cell, sentence, survive, onOpen, onSurvive, keep, onKeep }: { ce
     <div className="space-y-0.5">
       <button
         type="button"
+        data-cell={gridId}
+        tabIndex={tabStop}
         onClick={onOpen}
         aria-label={sentence}
         title={sentence}
         className={cn(
           'block min-h-16 w-full min-w-28 rounded-lg border p-1.5 text-left leading-tight hover:brightness-95 pointer-coarse:min-h-14',
-          b === 'good' && 'border-accent/50 bg-accent/12',
-          b === 'bad' && 'border-warn/60 bg-warn/15',
-          b === 'even' && 'border-border bg-surface-2',
+          VERDICT_CELL[b],
         )}
       >
         <span className="block font-semibold">
@@ -333,12 +362,12 @@ function Cell({ cell, sentence, survive, onOpen, onSurvive, keep, onKeep }: { ce
         <span className="block text-muted">{speedText(cell)}</span>
       </button>
       {cell.theirs && (
-        <button type="button" onClick={onSurvive} aria-label={survive} title={survive} className="block w-full rounded px-1 py-0.5 text-left text-[11px] font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
+        <button type="button" tabIndex={tabStop} onClick={onSurvive} aria-label={survive} title={survive} className="block w-full rounded px-1 py-0.5 text-left text-2xs font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
           Survive this…
         </button>
       )}
       {cell.theirs && (
-        <button type="button" onClick={onKeep} aria-label={keep} title={keep} className="block w-full rounded px-1 py-0.5 text-left text-[11px] font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
+        <button type="button" tabIndex={tabStop} onClick={onKeep} aria-label={keep} title={keep} className="block w-full rounded px-1 py-0.5 text-left text-2xs font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:min-h-11">
           Keep as benchmark
         </button>
       )}

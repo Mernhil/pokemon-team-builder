@@ -20,7 +20,7 @@ import { validateTeam, type Issue } from './validation';
 // The generated patch data
 // ---------------------------------------------------------------------------
 
-export interface PatchChange {
+interface PatchChange {
   name: string;
   types?: { before: string[]; after: string[] };
   /** By ability slot ('0', '1', 'H', 'S'). A missing `after` means the slot was removed. */
@@ -59,7 +59,7 @@ export interface Delta {
   added: Ref[];
   removed: Ref[];
 }
-export interface PatchRow {
+interface PatchRow {
   speciesId: string;
   name: string;
   regulationId: string;
@@ -153,16 +153,16 @@ export function regulationDiff(dex: Dex, fromId: string, toId: string, changes?:
 // ---------------------------------------------------------------------------
 
 export type Severity = 'breaks' | 'changes' | 'opportunity';
-export type ImpactKind = 'species' | 'item' | 'move' | 'ability' | 'stats' | 'typing' | 'mega';
+type ImpactKind = 'species' | 'item' | 'move' | 'ability' | 'stats' | 'typing' | 'mega';
 
-export interface ImpactItem {
+interface ImpactItem {
   severity: Severity;
   kind: ImpactKind;
   text: string;
   /** The thing itself (species, item, move or ability id), for "Copy to" to remove it. */
   subject?: string;
 }
-export interface SlotImpact {
+interface SlotImpact {
   slot: number;
   speciesId: string;
   items: ImpactItem[];

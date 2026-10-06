@@ -4,7 +4,7 @@ import { formatMechanics } from './games';
 import { sumStats } from './stats';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type Team } from './types';
 
-export type Severity = 'error' | 'warning' | 'info';
+type Severity = 'error' | 'warning' | 'info';
 
 export interface Issue {
   severity: Severity;

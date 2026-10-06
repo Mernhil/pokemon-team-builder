@@ -2,6 +2,26 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.27.0 — 2026-10-06
+
+### New
+- **Keyboard shortcuts.** Press `g` then `b`, `c`, `a`, `d`, `n`, `m`, `g`, `e`, `r` or `f` to go to Build, Calc, Analyse, Pokédex, Pokénav, Match log, Game day, Meta, Reverse search or Regulation diff; `/` opens the search and `?` lists them (also in Settings → Keyboard shortcuts). They stay out of the way while you type in a field or have a dialog open.
+- **Analyse → Threats.** The report remembers how many threats you chose and the field (weather, terrain, Trick Room) between visits, the table is a single Tab stop you move through with the arrow keys, and opening the calculator or optimiser from a cell offers a *Back to the Threat report* button. **Meta** remembers its tab and period too.
+- **Undo for small deletes.** Deleting a logged match, removing a benchmark or an optimiser goal, and resetting Pokénav progress now offer Undo in a toast instead of asking first (or, for a match, doing nothing). An Undo toast stays when other messages arrive.
+
+### Changed
+- **Build.** On a phone the stat calculator is open by default (it's half of building a set); fold it and it stays folded.
+- **Analyse.** The type matrices work from the keyboard and with a screen reader: every cell is a button with its full type name, and tapping it lists each member's multiplier. Game day's matchups use the same blue and orange as the Threat report and read out once in words.
+- **Pinch zoom is back.** The page can be zoomed again, which people with low vision need; form fields stay 16 px so iPhones don't zoom into them on their own.
+- **Colour palettes.** Every palette now darkens or lightens the green, amber, red and stat colours until they read on its surfaces; some palettes in the light theme were just under the contrast limit. A card inside a panel in the Sticker look no longer carries a second hard shadow.
+- **Dialogs and menus.** Closing a dialog gives focus back to where you were (it used to fall to the top of the page), and smooth scrolling is skipped when your device asks for reduced motion.
+- **Faster start.** The first load is about 13 KB smaller and the offline download about 0.6 MB smaller: the saved teams, import/export, save and settings dialogs load when first opened (and in the background when idle), and the Threat report no longer carries a second copy of the data.
+
+### Fixed
+- **Build.** The nature ＋/− buttons in the stat calculator were hard to read in the dark theme when active.
+- **Pokénav.** The page scrolled sideways on a phone; the game chips and tabs are now full-size touch targets, as are the Pokédex type filters, the Calc *Load* buttons and the CRIT chip.
+- **Settings → Sync.** When sync isn't set up on a deployment, the message now says which setting is missing (the database, or the Access settings) and which step in docs/SYNC.md fixes it.
+
 ## 0.26.0 — 2026-10-06
 
 ### New

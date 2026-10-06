@@ -43,7 +43,7 @@ export function BringPicker({
   };
   return (
     <div className="space-y-1.5">
-      <p className="flex flex-wrap items-baseline gap-x-2 text-[11px] font-semibold tracking-wider text-muted uppercase">
+      <p className="flex flex-wrap items-baseline gap-x-2 text-2xs font-semibold tracking-wider text-muted uppercase">
         {label}
         <span className="font-normal tracking-normal normal-case">
           Brought {value.brought.length}/{limits.bring} · Lead {value.leads.length}/{limits.lead} · tap to cycle
@@ -66,7 +66,7 @@ export function BringPicker({
               >
                 <Sprite speciesId={m.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={36} />
                 <span className="w-full truncate text-xs font-semibold">{sp?.name ?? m.speciesId}</span>
-                <span className={cn('text-[11px]', state === 'lead' ? 'font-bold text-fg' : 'text-muted')}>{state === 'lead' ? '★ Lead' : STATE_TEXT[state]}</span>
+                <span className={cn('text-2xs', state === 'lead' ? 'font-bold text-fg' : 'text-muted')}>{state === 'lead' ? '★ Lead' : STATE_TEXT[state]}</span>
               </button>
             </li>
           );

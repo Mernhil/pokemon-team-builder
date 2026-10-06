@@ -3,6 +3,7 @@ import type { Dex } from '@/data/dex';
 import type { BenchmarkResult } from '@/domain/benchmarkEval';
 import type { Benchmark } from '@/domain/benchmarks';
 import type { FormatRules, PokemonSet } from '@/domain/types';
+import { toast } from '@/store/toastStore';
 import { Button } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useBenchmarkResults } from './useBenchmarks';
@@ -14,7 +15,7 @@ const STATUS = {
 } as const;
 
 /** The ✓ / ✗ rows of some benchmarks. The state is an icon and a word for screen readers, never colour alone. */
-export function BenchmarkRows({ results, onRemove }: { results: BenchmarkResult[]; onRemove?: (id: string) => void }) {
+function BenchmarkRows({ results, onRemove }: { results: BenchmarkResult[]; onRemove?: (id: string) => void }) {
   return (
     <ul className="space-y-1.5" aria-label="Benchmarks">
       {results.map((r) => {
@@ -50,7 +51,7 @@ export function BenchmarkList({ dex, format, set, onChange }: { dex: Dex; format
   const mine = results.get(set.uid);
   return (
     <section aria-label="Benchmarks" className="space-y-1.5">
-      <p className="text-[11px] font-semibold tracking-wider text-muted uppercase">
+      <p className="text-2xs font-semibold tracking-wider text-muted uppercase">
         Benchmarks <span className="font-normal tracking-normal normal-case">· goals this spread was built for{mine ? `, ${mine.filter((r) => r.status === 'met').length} of ${mine.length} hold` : ''}</span>
       </p>
       {!ready || !mine ? (
@@ -58,7 +59,7 @@ export function BenchmarkList({ dex, format, set, onChange }: { dex: Dex; format
       ) : (
         <BenchmarkRows
           results={mine}
-          onRemove={onChange ? (id) => { const next = list.filter((b) => b.id !== id); onChange(next.length ? next : undefined); } : undefined}
+          onRemove={onChange ? (id) => { const next = list.filter((b) => b.id !== id); onChange(next.length ? next : undefined); toast('Removed the benchmark.', { label: 'Undo', run: () => onChange(list) }); } : undefined}
         />
       )}
     </section>

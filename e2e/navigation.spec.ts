@@ -174,3 +174,53 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoA11yViolations(page);
   });
 }
+
+test('closing a dialog gives focus back to where it was, not to the top of the page', async ({ page }) => {
+  await openApp(page);
+  // Let the first render settle (the nav is rebuilt once the data has loaded), so the button we focus is the one that stays.
+  await page.waitForLoadState('networkidle');
+  const bar = nav(page);
+  const activeName = () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.getAttribute('aria-label') ?? (document.activeElement as HTMLElement | null)?.textContent?.trim() ?? '');
+  // The command palette, opened from the keyboard.
+  const calc = bar.getByRole('button', { name: 'Calc', exact: true });
+  await calc.focus();
+  await page.keyboard.press('Control+k');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(calc).toBeFocused();
+  // Settings, opened from a menu whose item is gone by the time the dialog closes.
+  const more = bar.getByRole('button', { name: 'More' });
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Settings & credits' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(await activeName()).not.toBe('');
+  await expect(more).toBeFocused();
+});
+
+test('single-key shortcuts: g then a letter goes to a screen, / searches, ? lists them, typing is left alone', async ({ page }) => {
+  test.skip(isPhone(page), 'keyboard shortcuts');
+  await openApp(page);
+  await page.keyboard.press('g');
+  await page.keyboard.press('d');
+  await expect(page).toHaveURL(/#dex$/);
+  await page.keyboard.press('g');
+  await page.keyboard.press('c');
+  await expect(page).toHaveURL(/#calc$/);
+
+  await page.keyboard.press('?');
+  const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await expect(help).toBeVisible();
+  await expect(help.getByText('Go to Pokédex')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(help).toHaveCount(0);
+
+  await page.keyboard.press('/');
+  await expect(page.getByRole('combobox', { name: /Search screens/ })).toBeVisible();
+  // Typing "gd" into the search box must not navigate.
+  await page.keyboard.type('gd');
+  await expect(page).toHaveURL(/#calc$/);
+  await page.keyboard.press('Escape');
+});

@@ -6,7 +6,7 @@ import { cn } from './ui/styles';
 
 type Update = import('@tauri-apps/plugin-updater').Update;
 
-/** True only inside the Tauri desktop shell; false for the plain web/artifact build. */
+/** True only inside the Tauri desktop shell; false for the plain web build. */
 const isDesktop = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 /** Background re-check interval while the app stays open. */

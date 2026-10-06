@@ -8,7 +8,7 @@ import { teamChoices } from '@/domain/teamCompare';
 import type { Team } from '@/domain/types';
 import { useShowcaseStore } from '@/store/showcaseStore';
 import { useTeamStore } from '@/store/teamStore';
-import { Button, EmptyState, LoadingState, Panel, Select, Tabs } from '../ui/primitives';
+import { Button, EmptyState, LoadingState, Panel, Select, Skeleton, Tabs } from '../ui/primitives';
 
 // Each tab loads when first opened.
 const TeamShowcaseView = lazy(() => import('../showcase/TeamShowcaseView').then((m) => ({ default: m.TeamShowcaseView })));
@@ -91,7 +91,7 @@ function TabBody({ team, tab }: { team: Team; tab: AnalyseTab }) {
       <div className="space-y-3">
         <Suspense fallback={loading('Loading team overview…')}><TeamShowcaseView team={team} /></Suspense>
         {state.status === 'ready' && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<Skeleton className="h-32" />}>
             <SuggestTeammate team={team} dex={state.dex} format={format} />
           </Suspense>
         )}

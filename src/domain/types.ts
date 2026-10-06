@@ -38,7 +38,7 @@ export type MoveType = TypeName | '???';
 // Static data
 // ---------------------------------------------------------------------------
 
-export type AbilitySlot = '0' | '1' | 'H' | 'S';
+type AbilitySlot = '0' | '1' | 'H' | 'S';
 
 export interface Pokemon {
   id: string;
@@ -78,7 +78,7 @@ export interface Pokemon {
   genderRatio?: string | { M: number; F: number };
 }
 
-export type MoveCategory = 'Physical' | 'Special' | 'Status';
+type MoveCategory = 'Physical' | 'Special' | 'Status';
 
 /** Non-volatile status a move can inflict. */
 export type StatusId = 'brn' | 'par' | 'psn' | 'tox' | 'slp' | 'frz';
@@ -157,7 +157,7 @@ export interface Nature {
 }
 
 /** Defender type -> attacking type -> multiplier (0, 0.5, 1, 2). */
-export type TypeChart = Record<TypeName, Record<TypeName, number>>;
+type TypeChart = Record<TypeName, Record<TypeName, number>>;
 
 export interface RegulationInfo {
   id: string;
@@ -174,7 +174,7 @@ export interface RegulationInfo {
   updatedAt?: string;
 }
 
-export interface UpcomingRegulation {
+interface UpcomingRegulation {
   id: string;
   name: string;
   start: string;
@@ -212,11 +212,11 @@ export interface Dataset {
 // ---------------------------------------------------------------------------
 
 /** Champions Stat Points: 0–32 per stat, 66 total. 1 SP = +1 stat at Lv 50. */
-export type StatPoints = StatTable;
+type StatPoints = StatTable;
 /** Gen 3–9 Effort Values: 0–252 per stat, 510 total. */
-export type EVSpread = StatTable;
+type EVSpread = StatTable;
 /** Individual Values: 0–31. */
-export type IVSpread = StatTable;
+type IVSpread = StatTable;
 /** Gen 1–2 Determinant Values: 0–15 (HP DV is derived from the others). */
 export type DVSpread = Omit<StatTable, 'hp'> & { hp?: never };
 /** Gen 1–2 Stat Experience: 0–65535 per stat. */

@@ -81,8 +81,8 @@ const moveOption = (m: Move, taken: string[]): ComboOption => {
           <TypeBadge type={m.type} size="xs" />
           <span className="flex-1 truncate">{m.name}</span>
           <Icon size={12} className="shrink-0 text-muted" aria-label={m.category} />
-          <span className="w-8 text-right font-mono text-[11px] text-muted">{m.basePower || '—'}</span>
-          <span className="w-9 text-right font-mono text-[11px] text-muted">{m.accuracy === true ? '—' : `${m.accuracy}%`}</span>
+          <span className="w-8 text-right font-mono text-2xs text-muted">{m.basePower || '—'}</span>
+          <span className="w-9 text-right font-mono text-2xs text-muted">{m.accuracy === true ? '—' : `${m.accuracy}%`}</span>
         </span>
       </MoveTooltip>
     ),

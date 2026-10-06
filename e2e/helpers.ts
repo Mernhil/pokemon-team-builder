@@ -54,8 +54,7 @@ export async function goTo(page: Page, label: 'Build' | 'Calc' | 'Analyse' | 'Po
 export async function expectNoA11yViolations(page: Page) {
   const { violations } = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    // index.html disables pinch zoom on purpose (a fixed, native-feeling viewport), which axe reports as WCAG 1.4.4.
-    .disableRules(['meta-viewport']).analyze();
+    .analyze();
   expect(violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length}) ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
 }
 

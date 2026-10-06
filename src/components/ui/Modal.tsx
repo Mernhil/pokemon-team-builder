@@ -1,7 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { buttonClass, cn } from './styles';
+import { returnFocus } from './returnFocus';
+import { buttonClass, cn, overlayClass } from './styles';
 
 export function Modal({
   open,
@@ -21,9 +22,10 @@ export function Modal({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55" />
+        <Dialog.Overlay className={overlayClass} />
         {/* Phones: a sheet from the bottom edge (above the home indicator). Wider: a centred dialog. */}
         <Dialog.Content
+          onCloseAutoFocus={returnFocus}
           className={cn(
             'ui-sheet fixed z-50 flex flex-col border border-border bg-surface text-fg shadow-2xl',
             'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-2xl pb-[env(safe-area-inset-bottom)]',

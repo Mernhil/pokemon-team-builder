@@ -13,7 +13,7 @@ let loading: Promise<MetaModule> | undefined;
 const listeners = new Set<() => void>();
 
 /** Starts (or joins) loading the meta data. A failed load is retried by the next caller. */
-export function loadMeta(): Promise<MetaModule> {
+function loadMeta(): Promise<MetaModule> {
   loading ??= import('./meta').then(
     (m) => {
       loaded = m;

@@ -1,3 +1,5 @@
+import { useViewStore } from '@/store/viewStore';
+import type { MetaTab } from '@/domain/viewPrefs';
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AlertTriangle, BarChart3, CloudOff, ExternalLink, RefreshCw } from 'lucide-react';
 import type { Dex } from '@/data/dex';
@@ -57,8 +59,11 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const refresh = useMetaStore((s) => s.refresh);
   const matches = useMatchStore((s) => s.matches);
   const online = useOnline();
-  const [tab, setTab] = useState<'usage' | 'trends' | 'teams'>('usage');
-  const [period, setPeriod] = useState<TrendPeriod>(7);
+  const tab = useViewStore((s) => s.metaTab);
+  const period = useViewStore((s) => s.metaPeriod);
+  const setView = useViewStore((s) => s.set);
+  const setTab = (t: MetaTab) => setView('metaTab', t);
+  const setPeriod = (p: TrendPeriod) => setView('metaPeriod', p);
   const history = useMetaHistory(regId);
 
   const metaFor = useMetaFor();

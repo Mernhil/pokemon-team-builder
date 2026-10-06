@@ -42,7 +42,7 @@ export const LITE_GAMES: LiteGame[] = [
 ];
 
 /** A best guess from the name alone; the encounter tables don't say what kind of place it is. */
-export function kindOf(name: string): LocationKind {
+function kindOf(name: string): LocationKind {
   const n = name.toLowerCase();
   if (/\bsea\b|ocean|\bbay\b|\blake\b|\bsurf/.test(n) && /route|sea/.test(n)) return 'sea-route';
   if (/route|road|\bpath\b|trail|\bwild area\b|\bwild zone\b|\bfield\b/.test(n)) return 'route';

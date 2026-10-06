@@ -38,12 +38,12 @@ interface Gen1Config {
   note: string;
 }
 
-export const RED: Gen1Config = {
+const RED: Gen1Config = {
   game: 'red', name: 'Pokémon Red', repo: 'pokered', url: 'pret/pokered', commit: 'd2704a63c26f9ba046ade877445216b3de0519a4', dexGame: 'red', mapId: 'kanto-rby',
   note: 'Blue uses this file too: Red and Blue share all the data in the decompilation (only wild Pokémon and a few trades differ).',
 };
 
-export const YELLOW: Gen1Config = {
+const YELLOW: Gen1Config = {
   game: 'yellow', name: 'Pokémon Yellow', repo: 'pokeyellow', url: 'pret/pokeyellow', commit: 'e89ead154b9968aa50eed9328ff2b38b6c194382', dexGame: 'yellow', mapId: 'kanto-rby',
   note: "Yellow's own trainer parties, Pikachu and gift changes come from its decompilation.",
 };

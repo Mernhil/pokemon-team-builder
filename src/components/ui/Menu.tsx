@@ -68,5 +68,5 @@ export const MenuSeparator = () => <DM.Separator className="my-1 h-px bg-border"
 
 /** A small heading over a group of items ("Tools"). */
 export const MenuLabel = ({ children }: { children: ReactNode }) => (
-  <DM.Label className="px-2.5 pt-1.5 pb-0.5 text-[11px] font-semibold tracking-wider text-muted uppercase">{children}</DM.Label>
+  <DM.Label className="px-2.5 pt-1.5 pb-0.5 text-2xs font-semibold tracking-wider text-muted uppercase">{children}</DM.Label>
 );

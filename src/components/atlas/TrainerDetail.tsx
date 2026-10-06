@@ -4,14 +4,15 @@ import { cn } from '../ui/styles';
 import type { Dex } from '@/data/dex';
 import { importShowdown } from '@/domain/codecs';
 import { defaultSide } from '@/domain/battle/conditions';
-import { monToSet, trainerToShowdown, trainerToTeam, trainerVariants, type AtlasMon, type AtlasTrainer } from '@/domain/atlas';
+import { KIND_LABEL } from './labels';
+import { cap, monToSet, trainerToShowdown, trainerToTeam, trainerVariants, type AtlasMon, type AtlasTrainer } from '@/domain/atlas';
 import { validateTeam } from '@/domain/validation';
 import { useCalcStore, type SideKey } from '@/store/calcStore';
 import { toast } from '@/store/toastStore';
 import { useTeamStore } from '@/store/teamStore';
 import { SlotSummary } from '../team/TeamSlots';
-import { DefenseMatrix } from '../analysis/DefenseMatrix';
-import { OffenseMatrix } from '../analysis/OffenseMatrix';
+import { DefenseMatrix } from '../teamcheck/DefenseMatrix';
+import { OffenseMatrix } from '../teamcheck/OffenseMatrix';
 import { AdvancedDetails } from '../editor/AdvancedDetails';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
@@ -19,16 +20,6 @@ import { Sprite } from '../ui/Sprite';
 import { Button, Chip, Disclosure, Tabs, TypeBadge } from '../ui/primitives';
 import { useAtlasCtx } from './context';
 
-const cap = (s: string) => s.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
-export const KIND_LABEL: Record<AtlasTrainer['kind'], string> = {
-  trainer: 'Trainer',
-  leader: 'Gym Leader',
-  'elite-four': 'Elite Four',
-  champion: 'Champion',
-  rival: 'Rival',
-  boss: 'Team Galactic',
-  other: 'Other',
-};
 
 /**
  * One trainer's full battle: a version selector (first battle / rematches / the rival's starter), every
@@ -168,7 +159,7 @@ function MonCard({ mon, index, trainer }: { mon: AtlasMon; index: number; traine
           );
         })}
       </ul>
-      {mon.movesDerived && <p className="mt-1 text-[11px] text-muted">The game picks these moves: the last four it learns by level {mon.level}.</p>}
+      {mon.movesDerived && <p className="mt-1 text-2xs text-muted">The game picks these moves: the last four it learns by level {mon.level}.</p>}
       <div className="mt-2 flex flex-wrap gap-1.5">
         <Button size="sm" onClick={() => sendToCalc('defender', trainer, index, dex, format)}>
           <Shield size={13} aria-hidden /> Calc as defender
@@ -187,7 +178,7 @@ function MonCard({ mon, index, trainer }: { mon: AtlasMon; index: number; traine
 }
 
 /** Put a trainer's team into the builder through the Showdown importer, as a new team in the game's format. */
-export function loadIntoBuilder(trainer: AtlasTrainer, dex: Dex, format: Parameters<typeof importShowdown>[2], openBuilder: boolean) {
+function loadIntoBuilder(trainer: AtlasTrainer, dex: Dex, format: Parameters<typeof importShowdown>[2], openBuilder: boolean) {
   const { team, warnings } = importShowdown(trainerToShowdown(trainer, dex, format), dex, format, `${trainer.name} (${trainer.cls})`);
   const named = { ...team, category: `${format.shortName} · Pokénav` };
   const issues = validateTeam(named, format, dex).filter((i) => i.severity === 'error');

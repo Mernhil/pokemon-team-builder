@@ -9,6 +9,7 @@ import { REGULATION_MANIFEST, getFormat } from '@/domain/formats';
 import { MAX_OPPONENTS, MAX_PLANS, defaultTeam, opponentLog, playableTeams, recentOpponents, speedOrder, topOpponents, type Bring, type GameDayState } from '@/domain/gameday';
 import { bringLimits, createMatch, normalizeBring, type MatchResult } from '@/domain/matches';
 import { bucket, type Kill } from '@/domain/threats';
+import { VERDICT_CELL } from '../threats/verdictStyle';
 import { pickSpeedSnapshot } from '@/domain/speedTiers';
 import type { FormatRules, Team } from '@/domain/types';
 import { useGameDayStore } from '@/store/gamedayStore';
@@ -287,7 +288,7 @@ function TheirSix({ dex, format, g, top, recent }: { dex: Dex; format: FormatRul
                     disabled={!on && full}
                     onClick={() => tap(id)}
                     className={cn(
-                      'flex min-h-14 w-full flex-col items-center justify-center rounded-lg border p-0.5 text-[10px] leading-tight font-semibold pointer-coarse:min-h-16',
+                      'flex min-h-14 w-full flex-col items-center justify-center rounded-lg border p-0.5 text-3xs leading-tight font-semibold pointer-coarse:min-h-16',
                       on ? 'border-accent bg-accent/15' : 'border-border bg-surface-2 disabled:opacity-40',
                     )}
                   >
@@ -359,8 +360,8 @@ function Matchups({ dex, format, mine, opponents, matrix }: { dex: Dex; format: 
   return (
     <Panel title="Matchups">
       <p className="mb-2 text-xs text-muted">Each of yours against each of theirs, on their most-used sets (or what they showed). → is your best move, ← is theirs; the first line says who moves first.</p>
-      <div role="region" aria-label="Matchups table, scrolls sideways" tabIndex={0} className="scrollbar-thin overflow-x-auto rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-        <table className="w-full min-w-[34rem] border-separate border-spacing-1 text-center text-[11px]">
+      <div role="region" aria-label="Matchups table, scrolls sideways" tabIndex={0} className="scrollbar-thin relative overflow-x-auto rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        <table className="w-full min-w-[34rem] border-separate border-spacing-1 text-center text-2xs">
           <caption className="sr-only">Matchups: your Pokémon in rows, theirs in columns</caption>
           <thead>
             <tr>
@@ -392,13 +393,16 @@ function Matchups({ dex, format, mine, opponents, matrix }: { dex: Dex; format: 
                   return (
                     <td
                       key={o.speciesId}
-                      aria-label={`${dex.species(m.set.speciesId)?.name} against ${dex.species(o.speciesId)?.name}: you ${mineKill}, they ${theirKill}, ${first}`}
-                      className={cn('rounded-md border p-1 align-top', b === 'good' ? 'border-good/50 bg-good/10' : b === 'bad' ? 'border-bad/50 bg-bad/10' : 'border-border bg-surface-2')}
+                      className={cn('rounded-md border p-1 align-top', VERDICT_CELL[b])}
                     >
-                      <b className="block">{b === 'good' ? '▲ good' : b === 'bad' ? '▼ bad' : '◆ even'}</b>
-                      <span className="block text-muted">{first}</span>
-                      <span className="block">→ {mineKill}</span>
-                      <span className="block">← {theirKill}</span>
+                      {/* The row and column headers name the pair; the cell says the rest once, in words. */}
+                      <span className="sr-only">{`${b === 'good' ? 'Good for you' : b === 'bad' ? 'Bad for you' : 'Even'}: you ${mineKill}, they ${theirKill}, ${first}`}</span>
+                      <span aria-hidden>
+                        <b className="block">{b === 'good' ? '▲ good' : b === 'bad' ? '▼ bad' : '◆ even'}</b>
+                        <span className="block text-muted">{first}</span>
+                        <span className="block">→ {mineKill}</span>
+                        <span className="block">← {theirKill}</span>
+                      </span>
                     </td>
                   );
                 })}

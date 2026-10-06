@@ -18,7 +18,7 @@ The web app and the phone app sync through Cloudflare Access. The Tauri desktop 
 
 ## One-time setup (by hand)
 
-Until step 1 and 2 are done the app works exactly as before and `/api/sync` answers `501 sync is not set up`.
+Until the steps below are done the app works exactly as before and `/api/sync` answers `501 sync is not set up`. The answer lists what is missing (`{"missing": ["DB", "ACCESS_AUD"]}`) and Settings → Sync shows it in words, e.g. “the D1 database isn’t bound (steps 1–3)”.
 
 1. **Create the D1 database** (Cloudflare dashboard → Workers & Pages → D1 → Create database, or `npx wrangler d1 create pokemon-team-builder`). Copy its **database id**.
 2. **Bind it** in `wrangler.jsonc`: uncomment the `d1_databases` line at the bottom and paste the id (and add the comma shown on the line above it). Commit and push; Workers Builds redeploys.

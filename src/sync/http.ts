@@ -20,6 +20,23 @@ function target(path: string): { url: string; init: RequestInit } {
   return { url: `${server}${path.replace(/^\/api\//, '/api/device/')}`, init: { credentials: 'omit', headers: { authorization: `Bearer ${token}` } } };
 }
 
+/** What the 501 says is missing, in words (the Worker lists the settings it lacks). */
+export async function setupMessage(res: Response): Promise<string> {
+  const base = "Sync isn't set up on this deployment yet";
+  let missing: unknown;
+  try {
+    missing = ((await res.json()) as { missing?: unknown }).missing;
+  } catch {
+    return `${base} (see docs/SYNC.md).`;
+  }
+  const list = Array.isArray(missing) ? missing.filter((m): m is string => typeof m === 'string') : [];
+  const parts = [
+    list.includes('DB') && 'the D1 database isn’t bound (docs/SYNC.md steps 1–3)',
+    list.some((m) => m.startsWith('ACCESS_')) && `${list.filter((m) => m.startsWith('ACCESS_')).join(' and ')} ${list.filter((m) => m.startsWith('ACCESS_')).length > 1 ? 'aren’t' : 'isn’t'} set on the Worker (docs/SYNC.md steps 4–5)`,
+  ].filter(Boolean);
+  return parts.length ? `${base}: ${parts.join('; ')}.` : `${base} (see docs/SYNC.md).`;
+}
+
 export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const { url, init } = target(path);
   let res: Response;
@@ -32,7 +49,7 @@ export async function request<T>(method: string, path: string, body?: unknown): 
   if (res.type === 'opaqueredirect' || res.status === 401 || res.status === 403) {
     throw new SyncHttpError(isDesktopApp() ? 'This desktop app was unlinked from your account. Link it again in Settings → Sync.' : 'Your sign-in has expired. Reload the page to sign in again.', 'signin');
   }
-  if (res.status === 501) throw new SyncHttpError("Sync isn't set up on this deployment yet (see docs/SYNC.md).", 'setup');
+  if (res.status === 501) throw new SyncHttpError(await setupMessage(res), 'setup');
   const type = res.headers.get('content-type') ?? '';
   if (!type.includes('json')) throw new SyncHttpError(res.status === 404 ? 'This deployment has no sync service.' : `Unexpected response (HTTP ${res.status}).`, 'setup');
   const json = (await res.json()) as T & { error?: string };

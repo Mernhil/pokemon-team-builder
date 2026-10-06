@@ -13,7 +13,7 @@ import { createSet } from './team';
 import type { FormatRules, PokemonSet } from './types';
 
 /** How many of the most-used species `metaSets` returns by default. */
-export const DEFAULT_META_COUNT = 20;
+const DEFAULT_META_COUNT = 20;
 
 export interface MetaSet {
   speciesId: string;

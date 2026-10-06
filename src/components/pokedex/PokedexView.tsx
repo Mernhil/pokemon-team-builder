@@ -11,7 +11,7 @@ import { usePokedexStore } from '@/store/pokedexStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
-import { Button, EmptyState, LoadingState, Select } from '../ui/primitives';
+import { Button, Checkbox, EmptyState, LoadingState, Select } from '../ui/primitives';
 import { TypeFilter } from '../ui/TypeFilter';
 import { cn } from '../ui/styles';
 import { TYPE_COLORS } from '../ui/color';
@@ -135,10 +135,10 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
             </Select>
           </div>
           <TypeFilter types={dex.types} value={type || null} onChange={(t) => setType(t ?? '')} label="Filter by type" noun="Pokémon" wrap />
-          <label className="flex min-h-8 items-center gap-2 text-sm text-muted">
+          <label className="flex min-h-8 items-center gap-2 text-sm text-muted pointer-coarse:min-h-11">
             {data.areas.length > 0 && (
               <>
-                <input type="checkbox" checked={wildOnly} onChange={(e) => setWildOnly(e.target.checked)} className="size-4 accent-[var(--color-accent)]" />
+                <Checkbox checked={wildOnly} onChange={(e) => setWildOnly(e.target.checked)} />
                 Found in the wild in {book.games.split(' · ').length > 1 ? 'these games' : 'this game'}
               </>
             )}
@@ -171,7 +171,7 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
               aria-current={s.id === current?.id}
               onClick={() => select(book.id, s.id)}
               className={cn(
-                'flex min-h-10 w-full items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-sm pointer-coarse:min-h-12',
+                'cv-row flex min-h-10 w-full items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-sm pointer-coarse:min-h-12',
                 s.id === current?.id ? 'bg-accent/15 text-fg' : 'hover:bg-surface-2',
               )}
             >
@@ -180,7 +180,7 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{s.name}</span>
                 {s.isMega && (
-                  <span className="block truncate text-[11px] text-muted">
+                  <span className="block truncate text-2xs text-muted">
                     {megaStoneName(dex, s)} · since {regName(introducedIn(s, champRegsOldestFirst) ?? '')}
                   </span>
                 )}

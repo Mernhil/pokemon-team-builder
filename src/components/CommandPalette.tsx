@@ -30,7 +30,8 @@ import { useCalcStore } from '@/store/calcStore';
 import { usePokedexStore } from '@/store/pokedexStore';
 import { useShowcaseStore } from '@/store/showcaseStore';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
-import { cn } from './ui/styles';
+import { returnFocus } from './ui/returnFocus';
+import { cn, overlayClass } from './ui/styles';
 
 interface Command {
   id: string;
@@ -221,10 +222,11 @@ export default function CommandPalette({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55" />
+        <Dialog.Overlay className={overlayClass} />
         <Dialog.Content
+          onCloseAutoFocus={returnFocus}
           aria-describedby={undefined}
-          className="fixed inset-x-3 top-[max(1rem,env(safe-area-inset-top))] z-50 mx-auto flex max-h-[min(34rem,80dvh)] max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-surface text-fg shadow-2xl sm:top-[12dvh]"
+          className="ui-sheet fixed inset-x-3 top-[max(1rem,env(safe-area-inset-top))] z-50 mx-auto flex max-h-[min(34rem,80dvh)] max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-surface text-fg shadow-2xl sm:top-[12dvh]"
         >
           <Dialog.Title className="sr-only">Search</Dialog.Title>
           <div className="flex items-center gap-2 border-b border-border px-3">
@@ -249,13 +251,13 @@ export default function CommandPalette({
               enterKeyHint="go"
               className="h-12 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
             />
-            <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[11px] text-muted sm:block">Esc</kbd>
+            <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-2xs text-muted sm:block">Esc</kbd>
           </div>
           <div ref={listRef} id={listId} role="listbox" aria-label="Results" className="scrollbar-thin overflow-auto overscroll-contain p-1.5">
             {rows.map(({ cmd, index, heading }) => (
               <div key={cmd.id}>
                 {heading && (
-                  <div aria-hidden className="px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-muted uppercase">
+                  <div aria-hidden className="px-2.5 pt-2 pb-1 text-2xs font-semibold tracking-wider text-muted uppercase">
                     {heading}
                   </div>
                 )}

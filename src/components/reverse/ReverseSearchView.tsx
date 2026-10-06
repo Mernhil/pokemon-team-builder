@@ -21,7 +21,7 @@ import { useCalcStore } from '@/store/calcStore';
 import { useReverseSeed } from '@/store/reverseSeedStore';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
-import { FieldControls, Segmented, Toggle } from '../battle/Controls';
+import { FieldControls, Segmented, Toggle } from '../conditions/Controls';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { Combobox, type ComboOption } from '../ui/Combobox';
 import { Sprite } from '../ui/Sprite';
@@ -64,6 +64,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   useEffect(() => {
     if (!seed || loading) return;
     useReverseSeed.getState().set(null);
+    // oxlint-disable-next-line react/set-state-in-effect -- reacts to a one-shot hand-off or a changed input, which is what this effect is for
     setConditions(seed.speciesIds.slice(0, 3).map((id) => ({ id: nextId(), kind: seed.kind, target: targetFor(dex, format, id, picked?.snapshot) })));
   }, [seed, loading, dex, format, picked]);
 
@@ -112,7 +113,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
             <span className="flex items-center gap-2">
               <TypeBadge type={mv.type} size="xs" />
               <span className="flex-1 truncate">{mv.name}</span>
-              <span className="text-[11px] text-muted">{mv.category}</span>
+              <span className="text-2xs text-muted">{mv.category}</span>
             </span>
           ),
         })),
@@ -185,7 +186,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
           </ul>
 
           <div className="flex flex-wrap items-end gap-2">
-            <label className="flex flex-col gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
+            <label className="flex flex-col gap-1 text-2xs font-semibold uppercase tracking-wider text-muted">
               Condition
               <Select aria-label="Condition type" value={kind} onChange={(e) => setKind(e.target.value as ConditionKind)} title={KIND_HINT[kind]}>
                 {(Object.keys(CONDITION_LABEL) as ConditionKind[]).map((k) => (
@@ -202,7 +203,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
           <p className="text-xs text-muted">{KIND_HINT[kind]}</p>
 
           <div className="space-y-2 border-t border-border pt-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Has to know a move</div>
+            <div className="text-2xs font-semibold uppercase tracking-wider text-muted">Has to know a move</div>
             {knows.length > 0 && (
               <ul className="flex flex-wrap gap-1.5" aria-label="Required moves">
                 {knows.map((id) => {

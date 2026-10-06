@@ -45,7 +45,7 @@ function liveDays(reg: Regulation, month: string): number {
  * regulation's last stats month can hold just a few days of it (Reg M-B ended on 2 September, so
  * September has two days), and Showdown keeps the old format's ladder open after it ends.
  */
-export function monthsToTry(reg: Regulation, months: string[]): string[] {
+function monthsToTry(reg: Regulation, months: string[]): string[] {
   const full = months.filter((m) => liveDays(reg, m) >= 14);
   return [...full, ...months.filter((m) => !full.includes(m))];
 }

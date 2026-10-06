@@ -38,6 +38,8 @@ test('Banner: a team in an older regulation shows what moving to the live one do
   const regB = await page.getByRole('combobox', { name: 'Game and format' }).locator('option', { hasText: 'Reg M-B' }).getAttribute('value');
   await page.getByRole('combobox', { name: 'Game and format' }).selectOption(regB!);
   await importTeam(page, 'Garchomp @ Garchompite\nAbility: Rough Skin\nJolly Nature\n- Earthquake\n- Protect\n');
+  // The older-regulation banner is wide; it wraps and never widens the page (a phone would zoom out to fit it).
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   await expect(page.getByText('Not live').or(page.getByRole('button', { name: /Copy to Reg M-C/ }))).toBeVisible();
 
   await page.getByRole('button', { name: /What changes in Reg M-C/ }).click();

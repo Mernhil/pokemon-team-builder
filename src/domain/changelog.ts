@@ -5,13 +5,13 @@
  * A release is `## 0.24.0 — 2026-10-05`, then `### New` / `### Changed` / `### Fixed`, then bullets.
  * A bullet that starts with **a bold title** is a feature; the title can name where to find it.
  */
-export interface ChangeItem {
+interface ChangeItem {
   /** The bold title the bullet starts with, if any (without the **). */
   title?: string;
   /** The whole bullet, as Markdown (**bold**, *italic*, `code`). */
   text: string;
 }
-export interface ChangeSection {
+interface ChangeSection {
   /** "New", "Changed", "Fixed", or "" for bullets under no heading. */
   heading: string;
   items: ChangeItem[];

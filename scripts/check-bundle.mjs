@@ -53,7 +53,10 @@ let failed = false;
 for (const [label, size, limit, detail] of rows) {
   const ok = size <= limit;
   failed ||= !ok;
-  console.log(`${ok ? '✓' : '✗'} ${label}: ${fmt(size)} of ${fmt(limit)}  (${detail})`);
+  const used = Math.round((size / limit) * 100);
+  // Within 5% of the limit still passes, but say so: the next feature will not fit.
+  const mark = !ok ? '✗' : used >= 95 ? '!' : '✓';
+  console.log(`${mark} ${label}: ${fmt(size)} of ${fmt(limit)} (${used}%)  (${detail})`);
 }
 if (failed) {
   console.error('Bundle budget exceeded (scripts/check-bundle.mjs).');

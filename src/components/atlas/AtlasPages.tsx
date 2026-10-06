@@ -3,13 +3,14 @@ import { Coins, Package, RotateCcw, Search, Swords, Users } from 'lucide-react';
 import { completion, itemSources, searchTrainers } from '@/domain/atlas';
 import { toID } from '@/data/dex';
 import { useAtlasStore, useProgress } from '@/store/atlasStore';
+import { toast } from '@/store/toastStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
 import { Toggle } from '../ui/chips';
 import { Button, EmptyState, Input, Panel } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useAtlasCtx } from './context';
-import { KIND_LABEL } from './TrainerDetail';
+import { KIND_LABEL } from './labels';
 
 /** Item database: every item of the game, its price and effect, TM/HM move and every place to get it. */
 export function ItemsPage({ focus }: { focus?: string }) {
@@ -34,7 +35,7 @@ export function ItemsPage({ focus }: { focus?: string }) {
           const src = sources.get(id) ?? [];
           const isOpen = open === id;
           return (
-            <li key={id} id={`atlas-item-${id}`} className={cn('py-1.5', isOpen && 'bg-accent/5')}>
+            <li key={id} id={`atlas-item-${id}`} className={cn('cv-row py-1.5', isOpen && 'bg-accent/5')}>
               <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? undefined : id)} className="flex w-full items-center gap-2 text-left">
                 <ItemSprite itemId={id} size={28} />
                 <span className="min-w-0 flex-1">
@@ -115,7 +116,7 @@ export function TrainersPage() {
                 <span className="block truncate text-sm font-semibold">{t.name} <span className="font-normal text-muted">{t.cls}</span></span>
                 <span className="block truncate text-xs text-muted">{KIND_LABEL[t.kind]} · {t.loc ? locName(t.loc) : (file.otherTrainers?.[t.id] ?? 'location not in the game’s map data')}</span>
               </span>
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] font-semibold text-accent"><Users size={12} aria-hidden /> Team</span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-2xs font-semibold text-accent"><Users size={12} aria-hidden /> Team</span>
               <span className="flex shrink-0">{t.party.map((m, i) => <Sprite key={i} speciesId={m.species} name={speciesName(m.species)} types={dex.species(m.species)?.types} set={format.spriteSet} size={28} className="-ml-2 first:ml-0" />)}</span>
             </button>
           </li>
@@ -131,13 +132,18 @@ export function ProgressPage() {
   const { file, game } = useAtlasCtx();
   const progress = useProgress(game.id);
   const reset = useAtlasStore((s) => s.resetProgress);
+  const resetWithUndo = (id: string, name: string) => {
+    const before = useAtlasStore.getState().progress[id];
+    reset(id);
+    toast(`Cleared your ${name} progress.`, before ? { label: 'Undo', run: () => useAtlasStore.setState((s) => ({ progress: { ...s.progress, [id]: before } })) } : undefined);
+  };
   const c = completion(file, progress);
   const rows = [
     { label: 'Locations visited', v: c.locations },
     ...(game.lite ? [] : [{ label: 'Items collected', v: c.items }, { label: 'Trainers beaten', v: c.trainers }]),
   ];
   return (
-    <Panel title={`${game.name} progress`} actions={<Button size="sm" variant="danger" onClick={() => window.confirm('Clear all progress for this game?') && reset(game.id)}><RotateCcw size={13} aria-hidden /> Reset</Button>}>
+    <Panel title={`${game.name} progress`} actions={<Button size="sm" variant="danger" onClick={() => resetWithUndo(game.id, game.name)}><RotateCcw size={13} aria-hidden /> Reset</Button>}>
       <div className="space-y-3">
         {rows.map((r) => (
           <div key={r.label}>
