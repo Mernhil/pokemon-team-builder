@@ -5,7 +5,7 @@ server), once on desktop Chromium (1280×800) and once on an iPhone 14 WebKit de
 with empty localStorage and with the service worker blocked. They cover the builder (species, item,
 ability, nature, moves, the SP cap), save + reload, Showdown export/import, Team check, Damage Calc
 (including Base/Mega/Both), Meta, the match log, the Pokédex Area tab, Pokénav, the theme toggle, and
-axe-core (WCAG 2.0/2.1 A + AA) on every main view in light and dark.
+axe-core (WCAG 2.0/2.1 A + AA) on every main view in light and dark (in the default Sticker look and palette; other looks and palettes are covered by unit tests only), and a check that no main screen scrolls the page sideways.
 
 ## Run
 

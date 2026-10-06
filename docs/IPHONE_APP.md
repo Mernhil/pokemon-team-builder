@@ -5,7 +5,7 @@ to the home screen, and from then on it behaves like a native app — own icon, 
 offline — without the App Store or an Apple developer account.
 
 - `vite.config.ts` → `VitePWA(...)`: web manifest, and a service worker that precaches the whole
-  app including every sprite atlas (~17 MB, downloaded once, then only what changed).
+  app including every sprite atlas and every Atlas file (about 44 MB in all, of which the sprites are 16 MB; downloaded once, then only what changed). The limit is checked by `npm run size` (`scripts/check-bundle.mjs`).
 - `src/pwa.ts`: registers the service worker and checks for a new deploy on launch, every 30
   minutes, and whenever the app returns to the foreground. When one is found the page reloads
   itself onto the new version; teams are in localStorage, so nothing is lost.
