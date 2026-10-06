@@ -129,7 +129,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
       ) : (
         <span className="hidden text-muted sm:inline">Next regulation not announced yet</span>
       )}
-      <span className="ml-auto flex items-center gap-2">
+      <span className="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-2">
         <a href="#regdiff" className="font-semibold text-accent underline-offset-2 hover:underline pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center">
           Regulation diff
         </a>
