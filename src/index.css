@@ -303,7 +303,8 @@ input[type='range'].palette-range::-moz-range-thumb {
    hard offset shadows that press flat when tapped. Colours still come from the tokens, so every
    palette works with it; "Classic" removes data-look and leaves the original soft style. */
 :root[data-look='sticker'] {
-  --line: var(--color-fg);
+  /* --outline (Settings) fades the outlines from the background (low) to the full text colour (100%). */
+  --line: color-mix(in srgb, var(--color-fg) var(--outline, 65%), var(--color-bg));
 }
 [data-look='sticker'] .ui-panel,
 [data-look='sticker'] .rounded-xl.border.bg-surface {
