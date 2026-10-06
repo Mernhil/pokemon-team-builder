@@ -1,0 +1,111 @@
+name: Releases token expiry
+
+# Daily: the fine-grained token RELEASES_REPO_TOKEN (Contents read/write on the releases repository)
+# expires (90 days by default) and then every desktop release fails with "Bad credentials". GitHub
+# tells a token its own expiry in the `github-authentication-token-expiration` response header of any
+# API call made with it, so this reads it. With 14 days or fewer left (or an expired or revoked
+# token) it opens, or comments on, ONE issue, "Renew the releases token", a comment per day until it
+# is renewed, and closes the issue by itself once the token has more than 14 days left. With 7 days
+# or fewer left, or a dead token, the run also fails so GitHub e-mails you. It never changes anything.
+# Renewing: docs/DESKTOP_RELEASES.md → "One-time setup: the releases repository" (new token, replace the
+# secret RELEASES_REPO_TOKEN).
+on:
+  schedule:
+    - cron: '41 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: token-expiry
+  cancel-in-progress: true
+
+env:
+  RELEASES_REPO: Mernhil/pokemon-team-builder-releases
+  WARN_DAYS: '14'
+  FAIL_DAYS: '7'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Read the token's expiry
+        id: expiry
+        env:
+          TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::RELEASES_REPO_TOKEN is not set (desktop releases will fail until it is)."
+            echo "state=missing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          status=$(curl -sS -o /dev/null -D headers.txt -w '%{http_code}' \
+            -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$RELEASES_REPO")
+          if [ "$status" = "401" ]; then
+            echo "state=dead" >> "$GITHUB_OUTPUT"
+            echo "days=-1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$status" != "200" ]; then
+            echo "::error::GitHub answered HTTP $status for $RELEASES_REPO: cannot tell when the token expires."
+            exit 1
+          fi
+          raw=$(grep -i '^github-authentication-token-expiration:' headers.txt | cut -d' ' -f2- | tr -d '\r')
+          if [ -z "$raw" ]; then
+            echo "The token has no expiry date."
+            echo "state=none" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          days=$(( ( $(date -u -d "$raw" +%s) - $(date -u +%s) ) / 86400 ))
+          echo "The token expires $raw ($days days left)."
+          echo "state=ok" >> "$GITHUB_OUTPUT"
+          echo "days=$days" >> "$GITHUB_OUTPUT"
+          echo "expires=$raw" >> "$GITHUB_OUTPUT"
+
+      - name: Open, update or close the issue
+        if: steps.expiry.outputs.state != 'missing'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          STATE: ${{ steps.expiry.outputs.state }}
+          DAYS: ${{ steps.expiry.outputs.days }}
+          EXPIRES: ${{ steps.expiry.outputs.expires }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Renew the releases token"
+          number=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
+          if [ "$STATE" = "none" ] || { [ "$STATE" = "ok" ] && [ "$DAYS" -gt "$WARN_DAYS" ]; }; then
+            [ -n "$number" ] && gh issue close "$number" --comment "The token has more than $WARN_DAYS days left (or no expiry): $RUN_URL"
+            exit 0
+          fi
+          if [ "$STATE" = "dead" ]; then
+            msg="The secret RELEASES_REPO_TOKEN is expired or revoked: desktop releases fail with \"Bad credentials\" until it is replaced."
+          elif [ "$DAYS" -lt 0 ]; then
+            msg="The secret RELEASES_REPO_TOKEN expired on $EXPIRES: desktop releases fail until it is replaced."
+          else
+            msg="The secret RELEASES_REPO_TOKEN expires on $EXPIRES ($DAYS days left). After that every desktop release fails with \"Bad credentials\"."
+          fi
+          {
+            echo "$msg"
+            echo
+            echo "To renew: GitHub → Settings → Developer settings → Fine-grained tokens → a new token (resource owner Mernhil, only $RELEASES_REPO, Contents: Read and write, nothing else), then replace the secret RELEASES_REPO_TOKEN in this repository's Settings → Secrets and variables → Actions (docs/DESKTOP_RELEASES.md). This issue closes itself at the next daily check once the new token has more than $WARN_DAYS days left."
+            echo
+            echo "Checked by $RUN_URL"
+          } > body.md
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi
+
+      - name: Fail the run when it is nearly out
+        if: steps.expiry.outputs.state == 'dead' || (steps.expiry.outputs.state == 'ok' && fromJSON(steps.expiry.outputs.days) <= fromJSON(env.FAIL_DAYS))
+        run: |
+          echo "::error::RELEASES_REPO_TOKEN expires in ${{ steps.expiry.outputs.days }} days or is already dead: renew it (see the issue 'Renew the releases token')."
+          exit 1

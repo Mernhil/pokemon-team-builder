@@ -29,6 +29,13 @@ repository can be private (docs/PRIVATE_REPO.md). `src-tauri/tauri.conf.json`'s 
 
 The `verify` job refuses to build a release while `RELEASES_REPO_TOKEN` is missing.
 
+**The token expires** (90 days if you kept the default). `.github/workflows/token-expiry.yml` reads its
+expiry date daily (GitHub returns it in a response header) and, with 14 days or fewer left, opens one
+issue, "Renew the releases token", and comments on it every day; with 7 days or fewer left, or a dead
+token, the run also fails so GitHub e-mails you. To renew: make a new token as in step 2 and replace the
+secret `RELEASES_REPO_TOKEN`; the issue closes itself at the next check. Run it by hand from Actions →
+*Releases token expiry* → Run workflow.
+
 ## Switching to the new endpoint (transition)
 
 Installed apps look at the endpoint that was built into *them*, so the first release that carries
