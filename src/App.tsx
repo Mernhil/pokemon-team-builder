@@ -205,11 +205,16 @@ export default function App() {
 
   const palette = usePrefsStore((s) => s.palette);
   const look = usePrefsStore((s) => s.look);
+  const outline = usePrefsStore((s) => s.outline);
+  const brightness = usePrefsStore((s) => s.brightness);
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', theme === 'dark');
     root.style.colorScheme = theme;
     root.dataset.look = look;
+    root.style.setProperty('--outline', `${outline}%`);
+    // Left unset at 100% so the page never gets a compositing filter it doesn't need.
+    root.style.filter = brightness === 100 ? '' : `brightness(${brightness}%)`;
     // A chosen palette overrides the colour tokens inline; none means the hand-tuned defaults in index.css.
     const tokens = palette ? paletteTokens(palette, theme) : null;
     for (const name of PALETTE_TOKEN_NAMES) {
@@ -218,7 +223,7 @@ export default function App() {
     }
     // Browser UI (Android address bar, iOS Safari tab bar) matches the header.
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tokens?.surface ?? (theme === 'dark' ? '#1c1f26' : '#fcfbf8'));
-  }, [theme, palette, look]);
+  }, [theme, palette, look, outline, brightness]);
 
   const dex = dexState.status === 'ready' ? dexState.dex : undefined;
   const loading = (label: string) => <LoadingState label={label} />;

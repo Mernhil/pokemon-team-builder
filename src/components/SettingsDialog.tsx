@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Moon, Sparkles, Square, Sun } from 'lucide-react';
 import { DEFAULT_NAV, NAV_IDS, NAV_LABELS, NAV_LIMITS, resizeBar, setSlot, type NavKind } from '@/domain/navigation';
-import { usePrefsStore } from '@/store/prefsStore';
+import { BRIGHTNESS_RANGE, OUTLINE_RANGE, usePrefsStore } from '@/store/prefsStore';
 import { useTeamStore } from '@/store/teamStore';
 import { PaletteSettings } from './PaletteSettings';
 import { UpdateCheckButton } from './DesktopUpdater';
@@ -20,6 +20,10 @@ export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: b
   const setTheme = useTeamStore((s) => s.setTheme);
   const look = usePrefsStore((s) => s.look);
   const setLook = usePrefsStore((s) => s.setLook);
+  const outline = usePrefsStore((s) => s.outline);
+  const setOutline = usePrefsStore((s) => s.setOutline);
+  const brightness = usePrefsStore((s) => s.brightness);
+  const setBrightness = usePrefsStore((s) => s.setBrightness);
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Settings & credits" description={`Pokémon Team Builder v${__APP_VERSION__}`}>
@@ -46,6 +50,29 @@ export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew }: { open: b
               { id: 'classic', label: 'Classic', icon: Square },
             ]}
           />
+          <div className="space-y-2">
+            {look === 'sticker' && (
+              <label className="block space-y-1">
+                <span className="flex items-baseline justify-between text-xs text-muted">
+                  <Label>Outlines</Label>
+                  <span className="font-mono tabular-nums">{outline}%</span>
+                </span>
+                <input type="range" min={OUTLINE_RANGE.min} max={OUTLINE_RANGE.max} step={5} value={outline} aria-label="Outline strength" onChange={(e) => setOutline(Number(e.target.value))} className="palette-range w-full" style={{ background: 'linear-gradient(to right, var(--color-border), var(--color-fg))' }} />
+              </label>
+            )}
+            <label className="block space-y-1">
+              <span className="flex items-baseline justify-between text-xs text-muted">
+                <Label>Brightness</Label>
+                <span className="font-mono tabular-nums">{brightness}%</span>
+              </span>
+              <input type="range" min={BRIGHTNESS_RANGE.min} max={BRIGHTNESS_RANGE.max} step={5} value={brightness} aria-label="Brightness" onChange={(e) => setBrightness(Number(e.target.value))} className="palette-range w-full" style={{ background: 'linear-gradient(to right, #333, #eee)' }} />
+            </label>
+            {(outline !== OUTLINE_RANGE.default || brightness !== BRIGHTNESS_RANGE.default) && (
+              <Button size="sm" variant="ghost" onClick={() => { setOutline(OUTLINE_RANGE.default); setBrightness(BRIGHTNESS_RANGE.default); }}>
+                Reset outlines & brightness
+              </Button>
+            )}
+          </div>
           <PaletteSettings />
           <p className="text-xs text-muted">Motion follows your system’s “reduce motion” setting.</p>
         </section>
