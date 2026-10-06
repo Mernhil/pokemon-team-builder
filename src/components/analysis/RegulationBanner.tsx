@@ -14,7 +14,8 @@ import { GEN_GAMES, genInfo } from '@/domain/generations';
 import { GenBadge } from '../ui/GenBadge';
 import { useBenchmarkResults } from '../editor/useBenchmarks';
 import { Button } from '../ui/primitives';
-import { ImpactList, impactSummary } from './ImpactList';
+import { ImpactList } from './ImpactList';
+import { impactSummary } from './impactSummary';
 
 const fmtDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';

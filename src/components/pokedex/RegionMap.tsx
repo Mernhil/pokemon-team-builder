@@ -5,6 +5,7 @@ import { IDENTITY_VIEW, MAX_ZOOM, centerOn, clampView, placeCenter, resolveLocat
 import { SchematicBase } from './SchematicMap';
 import { Button, Notice } from '../ui/primitives';
 import { cn } from '../ui/styles';
+import { asset, loadMaps } from './mapAssets';
 
 export interface RegionMapData {
   id: string;
@@ -28,10 +29,6 @@ export interface MapsFile {
   games: Record<string, string[]>;
 }
 
-let mapsPromise: Promise<MapsFile> | undefined;
-export const loadMaps = () =>
-  (mapsPromise ??= import('@/data/generated/maps.json').then((m) => m.default as unknown as MapsFile));
-export const asset = (path: string) => `${import.meta.env.BASE_URL ?? './'}${path}`.replace(/^\/\//, '/');
 
 const SOURCE_LABEL: Record<string, string> = {
   'pret/pokered': 'Red / Blue town map',

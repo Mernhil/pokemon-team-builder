@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build && node scripts/check-bundle.mjs",
     "size": "node scripts/check-bundle.mjs",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
     "preview": "vite preview",
     "data": "tsx scripts/build-data.ts",
     "pokedex": "tsx scripts/build-pokedex.ts",

@@ -9,7 +9,7 @@ import { Sprite } from '../ui/Sprite';
 import { Button, Chip, EmptyState, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useAtlasCtx } from './context';
-import { KIND_LABEL } from './TrainerDetail';
+import { KIND_LABEL } from './labels';
 
 const HOW_LABEL: Record<AtlasItemSpot['how'], string> = { visible: 'On the ground', hidden: 'Hidden', gift: 'Gift', tm: 'TM', hm: 'HM', mart: 'Mart', berry: 'Berry' };
 const KIND_NAME: Record<AtlasLocation['kind'], string> = {

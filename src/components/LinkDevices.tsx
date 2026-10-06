@@ -16,7 +16,7 @@ export function LinkDesktopFromHere() {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     void loadDevices().then((r) => setDevices(r.devices), () => undefined);

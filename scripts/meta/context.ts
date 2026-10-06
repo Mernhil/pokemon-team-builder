@@ -81,7 +81,8 @@ export class Context {
   /** Showdown format ids for a Champions regulation id (champions-reg-mc → …vgc2026regmc, then …bo3). */
   formatIds(reg: Regulation): string[] {
     const letters = reg.id.replace(/^champions-reg-/, '');
-    const year = '2026'; // TODO: take the season from the regulation once a Champions regulation spans another VGC year.
+    // Showdown's format ids carry the VGC year: the year the regulation starts in.
+    const year = String(new Date(reg.start).getUTCFullYear());
     const base = `gen9championsvgc${year}reg${letters}`;
     return [base, `${base}bo3`];
   }

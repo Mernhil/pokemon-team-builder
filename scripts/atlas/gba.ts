@@ -330,7 +330,7 @@ function buildGba(cfg: GbaConfig): { file: AtlasFile; gaps: string } {
     if (tid === 'TRAINER_NONE' || tid === 'TRAINER_SECRET_BASE') continue;
     const body = block(trainersSrc, m.index! + m[0].length - 1);
     const f = fields(body);
-    const partyMacro = /(NO_ITEM_DEFAULT_MOVES|NO_ITEM_CUSTOM_MOVES|ITEM_DEFAULT_MOVES|ITEM_CUSTOM_MOVES)\(((?:sParty|gTrainerParty)_\w+)\)/.exec(body) ?? (/\.party\s*=\s*\{\s*\.\w+\s*=\s*(gTrainerParty_\w+)/.exec(body) ? [, '', /\.party\s*=\s*\{\s*\.\w+\s*=\s*(gTrainerParty_\w+)/.exec(body)![1]] : null);
+    const partyMacro = /(NO_ITEM_DEFAULT_MOVES|NO_ITEM_CUSTOM_MOVES|ITEM_DEFAULT_MOVES|ITEM_CUSTOM_MOVES)\(((?:sParty|gTrainerParty)_\w+)\)/.exec(body) ?? (/\.party\s*=\s*\{\s*\.\w+\s*=\s*(gTrainerParty_\w+)/.exec(body) ? [undefined, '', /\.party\s*=\s*\{\s*\.\w+\s*=\s*(gTrainerParty_\w+)/.exec(body)![1]] : null);
     if (!partyMacro) continue;
     const raw = parties.get(partyMacro[2]) ?? [];
     if (!raw.length) continue;

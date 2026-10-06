@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { neighbour, unionOutline, type Dir } from '@/domain/regionMaps';
 import type { MapSkin } from '@/domain/mapSkins';
-import { MapViewport, asset, type RegionMapData } from '../pokedex/RegionMap';
+import { asset } from '../pokedex/mapAssets';
+import { MapViewport, type RegionMapData } from '../pokedex/RegionMap';
 import { SchematicBase } from '../pokedex/SchematicMap';
 import { cn } from '../ui/styles';
 

@@ -64,6 +64,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   useEffect(() => {
     if (!seed || loading) return;
     useReverseSeed.getState().set(null);
+    // oxlint-disable-next-line react/set-state-in-effect -- reacts to a one-shot hand-off or a changed input, which is what this effect is for
     setConditions(seed.speciesIds.slice(0, 3).map((id) => ({ id: nextId(), kind: seed.kind, target: targetFor(dex, format, id, picked?.snapshot) })));
   }, [seed, loading, dex, format, picked]);
 

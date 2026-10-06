@@ -88,6 +88,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   useEffect(() => {
     if (!focusId || threats.length === 0) return;
     if (!threats.some((t) => t.speciesId === focusId)) {
+      // oxlint-disable-next-line react/set-state-in-effect -- reacts to a one-shot hand-off or a changed input, which is what this effect is for
       if (count < 30) setCount(30);
       return;
     }

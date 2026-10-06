@@ -66,16 +66,16 @@ export function loadSpriteSheet(set: SpriteSetId): Promise<SpriteSheet | null> {
 
 /** Subscribe to a sprite sheet; returns null while loading or if the set isn't available. */
 export function useSpriteSheet(set: SpriteSetId | undefined): SpriteSheet | null {
-  const [sheet, setSheet] = useState<SpriteSheet | null>(null);
+  // Stored with the set it belongs to, so switching sets reads as "loading" at once, without a reset in the effect.
+  const [loaded, setLoaded] = useState<{ set: SpriteSetId; sheet: SpriteSheet | null }>();
   useEffect(() => {
     let alive = true;
-    setSheet(null);
-    if (set) loadSpriteSheet(set).then((s) => alive && setSheet(s));
+    if (set) loadSpriteSheet(set).then((sheet) => alive && setLoaded({ set, sheet }));
     return () => {
       alive = false;
     };
   }, [set]);
-  return sheet;
+  return set && loaded?.set === set ? loaded.sheet : null;
 }
 
 /** Item icon atlas built by scripts/build-items.ts (public/sprites/items.{webp,json}). */

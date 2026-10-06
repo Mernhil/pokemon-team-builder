@@ -32,6 +32,9 @@ export interface TeamSuggestions {
  * shortlist, computed in the threat worker (never on the main thread's critical path), with the
  * list re-ranked as each threat's row arrives. Mount it only when the panel is open.
  */
+/** One shared empty list, so the memo below doesn't see a new array on every render. */
+const NO_ROWS: (ThreatCell[] | undefined)[] = [];
+
 export function useTeamSuggestions({ dex, format, team, includeAll }: { dex: Dex; format: FormatRules; team: Team; includeAll: boolean }): TeamSuggestions {
   const metaFor = useMetaFor();
   const picked = useMemo(
@@ -62,7 +65,7 @@ export function useTeamSuggestions({ dex, format, team, includeAll }: { dex: Dex
   }, [job]);
 
   const current = state.job === job;
-  const rows = current ? state.rows : [];
+  const rows = current ? state.rows : NO_ROWS;
   const suggestions = useMemo(
     () => (job && rows.length ? applyThreatAnswers(dex, cheap, list, problems, rows) : cheap).slice(0, TOP_N),
     [dex, cheap, list, problems, rows, job],

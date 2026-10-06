@@ -10,7 +10,7 @@ import { Toggle } from '../ui/chips';
 import { Button, EmptyState, Input, Panel } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useAtlasCtx } from './context';
-import { KIND_LABEL } from './TrainerDetail';
+import { KIND_LABEL } from './labels';
 
 /** Item database: every item of the game, its price and effect, TM/HM move and every place to get it. */
 export function ItemsPage({ focus }: { focus?: string }) {

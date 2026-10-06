@@ -11,7 +11,8 @@ import { getFormat } from '@/domain/formats';
 import { skinOfMap } from '@/domain/mapSkins';
 import { useAtlasStore, type AtlasPage } from '@/store/atlasStore';
 import { useProgress } from '@/store/atlasStore';
-import { loadMaps, type MapsFile } from '../pokedex/RegionMap';
+import { loadMaps } from '../pokedex/mapAssets';
+import type { MapsFile } from '../pokedex/RegionMap';
 import { Modal } from '../ui/Modal';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
@@ -58,6 +59,7 @@ export function AtlasView() {
   const focus = useAtlasStore((s) => s.focus);
   useEffect(() => {
     if (!focus) return;
+    // oxlint-disable-next-line react/set-state-in-effect -- reacts to a one-shot hand-off or a changed input, which is what this effect is for
     setPinned(focus.loc);
     setPage('map');
     useAtlasStore.getState().setFocus(undefined);
@@ -203,9 +205,11 @@ function MapPage({ pinned, setPinned }: { pinned?: string; setPinned: (l: string
   const gameMaps = game.mapIds.map((id) => maps?.maps[id]).filter((m): m is NonNullable<typeof m> => !!m);
   const holder = pinned ? gameMaps.find((m) => m.places[pinned]) : undefined;
   // A place opened from elsewhere (Pokédex, a connection link) switches to the region that holds it.
+  const holderId = holder?.id;
   useEffect(() => {
-    if (holder) setPickedMap(holder.id);
-  }, [holder?.id, pinned]); // holder is derived from these two
+    // oxlint-disable-next-line react/set-state-in-effect -- reacts to a changed input, which is what this effect is for
+    if (holderId) setPickedMap(holderId);
+  }, [holderId, pinned]);
   const map = gameMaps.find((m) => m.id === pickedMap) ?? holder ?? gameMaps[0];
   const regionCount = (m: { places: Record<string, unknown> }) => Object.keys(m.places).filter((l) => file.locations[l]).length;
   const locations = useMemo(() => new Set(Object.keys(file.locations)), [file]);

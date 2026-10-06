@@ -1,10 +1,9 @@
-/// <reference types="vitest/config" />
 import { fileURLToPath, URL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
-import { configDefaults } from 'vitest/config';
+import { configDefaults } from 'vitest/config'; // also types the `test` field below
 import { VitePWA } from 'vite-plugin-pwa';
 import { parseChangelog } from './src/domain/changelog.ts';
 

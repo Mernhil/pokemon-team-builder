@@ -4,6 +4,7 @@ import { cn } from '../ui/styles';
 import type { Dex } from '@/data/dex';
 import { importShowdown } from '@/domain/codecs';
 import { defaultSide } from '@/domain/battle/conditions';
+import { KIND_LABEL } from './labels';
 import { cap, monToSet, trainerToShowdown, trainerToTeam, trainerVariants, type AtlasMon, type AtlasTrainer } from '@/domain/atlas';
 import { validateTeam } from '@/domain/validation';
 import { useCalcStore, type SideKey } from '@/store/calcStore';
@@ -19,15 +20,6 @@ import { Sprite } from '../ui/Sprite';
 import { Button, Chip, Disclosure, Tabs, TypeBadge } from '../ui/primitives';
 import { useAtlasCtx } from './context';
 
-export const KIND_LABEL: Record<AtlasTrainer['kind'], string> = {
-  trainer: 'Trainer',
-  leader: 'Gym Leader',
-  'elite-four': 'Elite Four',
-  champion: 'Champion',
-  rival: 'Rival',
-  boss: 'Team Galactic',
-  other: 'Other',
-};
 
 /**
  * One trainer's full battle: a version selector (first battle / rematches / the rival's starter), every
