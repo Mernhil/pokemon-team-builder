@@ -4,7 +4,7 @@ import { cn } from '../ui/styles';
 import type { Dex } from '@/data/dex';
 import { importShowdown } from '@/domain/codecs';
 import { defaultSide } from '@/domain/battle/conditions';
-import { monToSet, trainerToShowdown, trainerToTeam, trainerVariants, type AtlasMon, type AtlasTrainer } from '@/domain/atlas';
+import { cap, monToSet, trainerToShowdown, trainerToTeam, trainerVariants, type AtlasMon, type AtlasTrainer } from '@/domain/atlas';
 import { validateTeam } from '@/domain/validation';
 import { useCalcStore, type SideKey } from '@/store/calcStore';
 import { toast } from '@/store/toastStore';
@@ -19,7 +19,6 @@ import { Sprite } from '../ui/Sprite';
 import { Button, Chip, Disclosure, Tabs, TypeBadge } from '../ui/primitives';
 import { useAtlasCtx } from './context';
 
-const cap = (s: string) => s.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 export const KIND_LABEL: Record<AtlasTrainer['kind'], string> = {
   trainer: 'Trainer',
   leader: 'Gym Leader',

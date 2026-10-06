@@ -26,6 +26,7 @@ import { ensure } from './sources.js';
 import * as RegMAMod from '@pkmn/mods/championsregma';
 import { buildGames } from './build-games.js';
 import { buildGenerations } from './build-gens.js';
+import { toID } from '../src/domain/id.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, '../src/data/generated');
@@ -35,7 +36,6 @@ const STAT_IDS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const;
 const STRICT = process.argv.includes('--strict');
 /** "Mega", "Mega-X", "Mega-Z", and Meowstic's "M-Mega" / "F-Mega". */
 export const isMegaForme = (forme?: string) => /(^|-)Mega(-|$)/.test(forme ?? '');
-const toID = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 const MODS: Record<string, AnyDex> = {
   champions: Dex.mod('champions' as never, ChampionsMod as unknown as ModData),

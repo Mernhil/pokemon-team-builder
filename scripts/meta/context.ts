@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Legality } from '../../src/domain/metaSources.ts';
+import { toID } from '../../src/domain/id.ts';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE = resolve(ROOT, '.cache/meta');
@@ -34,7 +35,6 @@ interface Dataset {
   moves: Record<string, { id: string; legalIn?: string[] }>;
 }
 
-const toID = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 export class Context {
   readonly regulations: Regulation[];

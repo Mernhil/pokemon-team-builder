@@ -8,6 +8,7 @@
  */
 import { z } from 'zod';
 import type { TeamRecord } from './metaSources.ts';
+import { toID } from './id.ts';
 
 export const TT_TOP_N = 8;
 export const TT_MIN_PLAYERS = 32;
@@ -92,7 +93,6 @@ export function parseStanding(raw: unknown, teamFromDecklist: (decklist: unknown
 }
 
 const limitlessUrl = (eventId: string) => `https://play.limitlesstcg.com/tournament/${encodeURIComponent(eventId)}`;
-const toId = (s: string | undefined) => (s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 export interface SelectOptions {
   today?: string;
@@ -134,7 +134,7 @@ export function selectTopCuts(events: RawEvent[], o: SelectOptions = {}): Tourna
         e: outEvents.length - 1,
         p: s.placing,
         n: s.player,
-        m: s.team.slice(0, 6).map((m) => [m.speciesId, toId(m.itemId), toId(m.abilityId), m.moves.map(toId).filter(Boolean).slice(0, 4)] as TournamentSet),
+        m: s.team.slice(0, 6).map((m) => [m.speciesId, toID(m.itemId), toID(m.abilityId), m.moves.map(toID).filter(Boolean).slice(0, 4)] as TournamentSet),
       });
     }
   }

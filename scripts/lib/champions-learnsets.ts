@@ -4,11 +4,11 @@
  * apply the same rules.
  */
 import type { Dex } from '@pkmn/dex';
+import { toID } from '../../src/domain/id.ts';
 
 export type AnyDex = ReturnType<typeof Dex.mod>;
 type Species = ReturnType<AnyDex['species']['get']>;
 
-const toID = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 /**
  * A species' own Showdown learnset plus what it inherits from its pre-evolutions: egg moves live on the base
