@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
+import { itemStatBoost } from '@/domain/itemStats';
 import { calcStats, spreadKey, sumStats } from '@/domain/stats';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type PokemonSet, type StatId } from '@/domain/types';
 import { STAT_COLOR_VAR, TYPE_BADGE } from '../ui/color';
@@ -48,6 +49,7 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
   const spread = set[key];
   const stats = calcStats(form.baseStats, set, format, nature);
   const item = dex.item(set.itemId);
+  const boost = mech.heldItems ? itemStatBoost(set.itemId, stats) : undefined;
   // A Mega's own ability while Megas are shown (the set's if the data has none).
   const ability = dex.ability((showMega && mega ? Object.values(mega.abilities)[0] : undefined) ?? set.abilityId);
   const unit = key === 'sp' ? 'SP' : 'EVs';
@@ -138,10 +140,20 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
                         </span>
                       )}
                     </th>
-                    <td className="w-8 py-px text-right font-mono font-bold tabular-nums">{stats[s]}</td>
+                    <td className="w-8 py-px text-right font-mono font-bold tabular-nums">
+                      {boost?.stat === s ? (
+                        <span className="text-good" title={`${stats[s]} base, ${boost.value} with ${boost.label}`}>
+                          {boost.value}
+                          <span className="sr-only"> with {boost.label}, {stats[s]} without</span>
+                        </span>
+                      ) : (
+                        stats[s]
+                      )}
+                    </td>
                     <td className="px-1.5 py-px">
-                      <span className="block h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden>
-                        <span className="block h-full rounded-full" style={{ width: `${Math.min(100, (stats[s] / BAR_MAX) * 100)}%`, background: STAT_COLOR_VAR[s] }} />
+                      <span className="relative block h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+                        {boost?.stat === s && <span className="absolute inset-y-0 left-0 rounded-full bg-good" style={{ width: `${Math.min(100, (boost.value / BAR_MAX) * 100)}%` }} />}
+                        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (stats[s] / BAR_MAX) * 100)}%`, background: STAT_COLOR_VAR[s] }} />
                       </span>
                     </td>
                     <td className="w-5 py-px text-right font-mono text-muted tabular-nums" title={`${spread[s]} ${unit}`}>
