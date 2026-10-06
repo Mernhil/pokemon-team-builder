@@ -261,11 +261,12 @@ export function Disclosure({
 type Tone = 'neutral' | 'good' | 'warn' | 'bad' | 'accent';
 
 /** Status chip. Always pairs its colour with an icon or words, never colour alone. */
-export function Chip({ tone = 'neutral', icon: Icon, children, className }: { tone?: Tone; icon?: LucideIcon; children: ReactNode; className?: string }) {
+export function Chip({ tone = 'neutral', icon: Icon, children, className, wrap }: { tone?: Tone; icon?: LucideIcon; children: ReactNode; className?: string; /** Long text: wrap onto lines instead of staying on one (and widening the page). */ wrap?: boolean }) {
   return (
     <span
       className={cn(
-        'ui-chip inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2 text-xs font-semibold whitespace-nowrap',
+        'ui-chip inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 text-xs font-semibold',
+        wrap ? 'h-auto min-h-6 max-w-full py-0.5' : 'h-6 shrink-0 whitespace-nowrap',
         tone === 'neutral' && 'text-muted',
         tone === 'good' && 'text-good',
         tone === 'warn' && 'text-warn',
