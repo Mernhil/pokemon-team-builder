@@ -14,6 +14,7 @@ Short rules for building screens that look and behave like the rest of the app. 
 
 Use the Tailwind theme utilities (`bg-surface`, `text-muted`, `border-border-strong`, `text-bad`…), never a hex value or a Tailwind palette colour (`text-white`, `bg-red-500`). The tokens live in `@theme` and `.dark` in `index.css`, and Settings → Appearance can replace the neutrals and the accent (`src/domain/palette.ts`), so a hard-coded colour breaks for some palettes.
 
+- A custom palette also darkens or lightens the status colours (`good`, `warn`, `bad`, the stat colours) until they read on its surfaces (`src/domain/palette.ts`); the values in `STATUS_BASE` mirror `index.css`, and a test keeps them in step.
 - Text on a filled colour uses the matching foreground: `text-accent-fg` on `bg-accent`, `text-bg` on `bg-bad`.
 - `src/components/ui/__tests__/contrast.test.ts` checks every token pair for WCAG AA in both themes; add a pair there when a new one is used.
 - Meaning is never colour alone: pair it with an icon, a symbol (▲ ▼ ✓ ✗) or words.
@@ -37,7 +38,8 @@ Sticker (default) and Classic are switched by `data-look` on `<html>`. Sticker i
 ## Accessibility checklist
 
 - Every control has an accessible name; icon-only buttons have an `aria-label`.
-- Dialogs use `Modal` (focus is trapped and returned to the opener by Radix); a new popup that isn't Radix needs the same, with Escape to close.
+- Dialogs use `Modal` (focus is trapped; on close `returnFocus` gives it back to the last control you used, which also covers dialogs opened from a menu or a shortcut); a new popup that isn't Radix needs the same, with Escape to close.
+- Keyboard shortcuts live in `src/domain/hotkeys.ts` (pure) and `ShortcutsDialog.tsx`; add new ones there so the list stays true.
 - Tables have a `<caption className="sr-only">` and `scope` on headers; a grid cell that is interactive is a real button.
 - Run `npm run e2e`: it runs axe (WCAG 2.0/2.1 A + AA) on every main view in both themes.
 

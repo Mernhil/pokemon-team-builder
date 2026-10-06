@@ -33,7 +33,7 @@ layout differences but not WebKit-only bugs; CI always uses real WebKit.
 
 Use roles and labels (`getByRole`, `getByLabel`); add an `aria-label` to the app when something has no
 accessible name, rather than reaching for a CSS selector. Phones differ from desktop in places: pickers
-are buttons that open a search sheet, the Stat Point calculator is collapsed, and the Pokénav location
+are buttons that open a search sheet, the Stat Point calculator is a section you can fold (open by default), and the Pokénav location
 panel is a sheet. `e2e/helpers.ts` (`pickOption`, `expectPicked`, `openStatCalculator`, `importTeam`,
 `setTheme`) hides those differences, so use it.
 

@@ -61,7 +61,7 @@ src/
     editor/StatDistributor   Champions SP calculator (sliders, numeric input, +/− alignment, presets, speed target)
     editor/SetEditor         Species / item / ability / nature / Tera / moves (learnset-filtered)
     team/TeamSlots           6-slot roster with drag-and-drop (dnd-kit)
-    analysis/                Validation panel, defensive type matrix
+    teamcheck/               Team check: validation panel, defensive and offensive type matrices
     io/                      Import/export dialog, saved-teams dialog
     atlas/                   Pokénav tab: interactive game maps, location panel, trainer detail, item database, trainer index, progress
     pokedex/                 Pokédex list + entry (Info / Moves / Area) and the region map renderer
