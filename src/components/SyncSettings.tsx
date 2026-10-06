@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { isDesktopApp, useDeviceStore } from '@/sync/deviceStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { syncNow } from '@/sync/runner';
+import { LinkDesktopFromHere, LinkThisDesktop } from './LinkDevices';
 import SharingSettings from './SharingSettings';
 import { Button, Input, Label } from './ui/primitives';
 
@@ -12,9 +14,20 @@ export default function SyncSettings() {
   const s = useSyncStore();
   const [confirmOff, setConfirmOff] = useState(false);
   const stats = s.lastStats;
+  const desktop = isDesktopApp();
+  const linked = useDeviceStore((d) => Boolean(d.token));
 
   if (!syncAvailable()) {
-    return <p className="text-sm text-muted">Sync is available in the web app (the installed phone app and the website), not in the desktop app.</p>;
+    return <p className="text-sm text-muted">Sync is available in the web app, the installed phone app and the desktop app, not in this build.</p>;
+  }
+  // The desktop app syncs once it is linked to an account with a pairing code.
+  if (desktop && !linked) {
+    return (
+      <div className="space-y-3 text-sm">
+        <p className="text-muted">Link this desktop app to your account to keep your teams and match log the same on your phone and here. Nothing is sent until you do.</p>
+        <LinkThisDesktop />
+      </div>
+    );
   }
 
   const toggle = (on: boolean) => {
@@ -49,6 +62,8 @@ export default function SyncSettings() {
         </div>
       )}
 
+      {desktop && <LinkThisDesktop />}
+
       {s.enabled && (
         <div className="space-y-3">
           <div className="space-y-1">
@@ -70,6 +85,7 @@ export default function SyncSettings() {
               {s.lastError}
             </p>
           )}
+          {!desktop && <LinkDesktopFromHere />}
           <SharingSettings />
         </div>
       )}

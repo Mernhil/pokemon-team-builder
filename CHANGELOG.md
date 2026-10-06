@@ -2,6 +2,14 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.25.0 — 2026-10-06
+
+### New
+- **Link the desktop app to your phone with a pairing code.** On the phone or website open Settings → Sync → *Make a pairing code*, then paste the copied link (or type the server address and code) into the desktop app's Settings → Sync. The desktop app then syncs your teams, match log and shared teams like the web app, and you can unlink any desktop app from the phone. Codes are single-use and expire after 10 minutes; the desktop's device token can be revoked at any time.
+
+### Setup (once, by hand: see docs/SYNC.md → *Linking the desktop app*)
+- Apply the new D1 migrations (`0003`, `0004`) before the deploy, and add a Cloudflare Access **Bypass** application for exactly `/api/device/*`. Until then the web and phone sync work as before and linking answers with an error.
+
 ## 0.24.0 — 2026-10-05
 
 ### New

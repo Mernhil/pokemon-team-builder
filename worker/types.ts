@@ -20,4 +20,6 @@ export interface Env {
   ACCESS_TEAM_DOMAIN?: string;
   /** The Access application's audience tag. */
   ACCESS_AUD?: string;
+  /** Extra webview origins the device routes answer, comma separated (local development only, e.g. http://localhost:1420 in .dev.vars; never set in production). */
+  DEVICE_EXTRA_ORIGINS?: string;
 }

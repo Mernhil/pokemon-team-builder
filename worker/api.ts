@@ -21,12 +21,25 @@ import {
 } from '../src/domain/syncProtocol';
 import { ALL_MATCHES, accessTo, canWrite, type Target } from './access';
 import { AuthError, jwksProvider, verifyAccessJwt, type KeyProvider } from './auth';
+import { RedeemSchema, type DevicesResponse, type PairResponse, type RedeemResponse, TOKEN_RE } from '../src/domain/pairing';
+import { createPairCode, deviceByToken, listDevices, redeemAttemptAllowed, redeemPairCode, revokeDevice } from './devices';
 import { deleteShare, groupOfTeam, isLiveRootTeam, namesFor, putShare, setDisplayName, sharedDocs, sharesBetween, sharesOf } from './shares';
 import { pullDocs, pushDoc, type StoredDoc } from './store';
 import type { Env } from './types';
 
 const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+
+/** The desktop app's webview origins. A linked device sends a bearer token (never cookies), so this only lets its page read the answers. */
+const DEVICE_ORIGINS = ['tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost'];
+const deviceOrigins = (env: Env) => new Set([...DEVICE_ORIGINS, ...(env.DEVICE_EXTRA_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean)]);
+const withCors = (res: Response, origin: string | null, env: Env): Response => {
+  if (!origin || !deviceOrigins(env).has(origin)) return res;
+  const r = new Response(res.body, res);
+  r.headers.set('access-control-allow-origin', origin);
+  r.headers.set('vary', 'origin');
+  return r;
+};
 const fail = (status: number, error: string) => reply(status, { error });
 
 /** A device whose clock is further ahead than this can't win every future conflict: its documents are refused. */
@@ -37,7 +50,13 @@ const ROUTES: Record<string, string[]> = {
   '/api/shared': ['GET', 'POST'],
   '/api/shares': ['GET', 'PUT', 'DELETE'],
   '/api/profile': ['PUT'],
+  // Signed in with Access (the phone or the website): make a pairing code, see and revoke linked devices.
+  '/api/pair': ['POST'],
+  '/api/devices': ['GET', 'DELETE'],
 };
+
+/** Routes a linked device may use under /api/device/ (bearer token instead of Access). Not pairing or the device list. */
+const DEVICE_ROUTES = new Set(['/api/sync', '/api/shared', '/api/shares', '/api/profile']);
 
 export interface ApiDeps {
   /** Signing keys, injected by tests; by default the Access team's published keys. */
@@ -47,6 +66,14 @@ export interface ApiDeps {
 
 export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}): Promise<Response> {
   const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/device/')) {
+    const origin = request.headers.get('origin');
+    if (request.method === 'OPTIONS') {
+      const preflight = new Response(null, { status: 204, headers: { 'access-control-allow-methods': 'GET, POST, PUT, DELETE', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '86400' } });
+      return withCors(preflight, origin, env);
+    }
+    return withCors(await handleDevice(request, env, url, deps), origin, env);
+  }
   const route = ROUTES[url.pathname];
   if (!route) return fail(404, 'not found');
   if (!route.includes(request.method)) return fail(405, 'method not allowed');
@@ -61,16 +88,75 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
   } catch (e) {
     return fail(401, e instanceof AuthError ? `not signed in (${e.message})` : 'not signed in');
   }
+  return handleAccount(request, env, url.pathname, owner, (deps.now ?? Date.now)());
+}
 
-  if (url.pathname === '/api/shared') return handleShared(request, env, owner, (deps.now ?? Date.now)());
-  if (url.pathname === '/api/shares') return handleShares(request, env, owner, (deps.now ?? Date.now)());
-  if (url.pathname === '/api/profile') return handleProfile(request, env, owner);
+/**
+ * /api/device/*: the desktop app, which can't pass Access. Access must let these paths through
+ * (a bypass policy, docs/SYNC.md), so everything here is checked by the Worker itself: a pairing
+ * code or a device token that was issued to a signed-in account and can be revoked.
+ */
+async function handleDevice(request: Request, env: Env, url: URL, deps: ApiDeps): Promise<Response> {
+  const now = (deps.now ?? Date.now)();
+  if (!env.DB) return fail(501, 'sync is not set up on this deployment');
+  const sub = `/api/${url.pathname.slice('/api/device/'.length)}`;
+
+  if (sub === '/api/redeem') {
+    if (request.method !== 'POST') return fail(405, 'method not allowed');
+    // Cloudflare sets this header at its edge; a request without it (local development) shares one bucket.
+    if (!(await redeemAttemptAllowed(env.DB, request.headers.get('cf-connecting-ip') ?? 'unknown', now))) {
+      return new Response(JSON.stringify({ error: 'too many attempts: wait a few minutes and try again' }), { status: 429, headers: { ...JSON_HEADERS, 'retry-after': '600' } });
+    }
+    const r = await readJson(request, 1024);
+    if ('response' in r) return r.response;
+    const parsed = RedeemSchema.safeParse(r.body);
+    if (!parsed.success) return fail(400, 'that is not a pairing code');
+    const out = await redeemPairCode(env.DB, parsed.data.code, parsed.data.name, now);
+    if ('error' in out) return out.error === 'invalid' ? fail(400, 'that code is wrong, already used or has expired') : fail(409, 'this account already has the most devices it can link: remove one on the phone first');
+    return reply(200, out satisfies RedeemResponse);
+  }
+
+  const isSelf = sub === '/api/self';
+  if (!isSelf && !DEVICE_ROUTES.has(sub)) return fail(404, 'not found');
+  const methods = isSelf ? ['DELETE'] : ROUTES[sub];
+  if (!methods.includes(request.method)) return fail(405, 'method not allowed');
+
+  const bearer = /^Bearer (\S+)$/.exec(request.headers.get('authorization') ?? '')?.[1];
+  const device = bearer && TOKEN_RE.test(bearer) ? await deviceByToken(env.DB, bearer, now) : null;
+  if (!device) return fail(401, 'this device is not linked (or was unlinked)');
+  if (isSelf) {
+    await revokeDevice(env.DB, device.owner, device.id);
+    return reply(200, { ok: true });
+  }
+  return handleAccount(request, env, sub, device.owner, now);
+}
+
+/** The routes that act for one account, however it was identified (Access JWT or device token). */
+async function handleAccount(request: Request, env: Env, path: string, owner: string, now: number): Promise<Response> {
+  const url = new URL(request.url);
+  if (path === '/api/pair') {
+    const live = await createPairCode(env.DB!, owner, now);
+    return reply(200, live satisfies PairResponse);
+  }
+  if (path === '/api/devices') {
+    if (request.method === 'GET') return reply(200, { devices: await listDevices(env.DB!, owner) } satisfies DevicesResponse);
+    const r = await readJson(request, 1024);
+    if ('response' in r) return r.response;
+    const id = (r.body as { id?: unknown } | null)?.id;
+    if (typeof id !== 'string' || id.length > 64) return fail(400, 'id is required');
+    await revokeDevice(env.DB!, owner, id);
+    return reply(200, { devices: await listDevices(env.DB!, owner) } satisfies DevicesResponse);
+  }
+
+  if (path === '/api/shared') return handleShared(request, env, owner, now);
+  if (path === '/api/shares') return handleShares(request, env, owner, now);
+  if (path === '/api/profile') return handleProfile(request, env, owner);
 
   if (request.method === 'GET') {
     const raw = url.searchParams.get('since') ?? '0';
     const since = /^\d{1,15}$/.test(raw) ? Number(raw) : NaN;
     if (!Number.isSafeInteger(since)) return fail(400, 'since must be a whole number');
-    const page = await pullDocs(env.DB, owner, since, LIMITS.pageSize);
+    const page = await pullDocs(env.DB!, owner, since, LIMITS.pageSize);
     return reply(200, page satisfies PullResponse);
   }
 
@@ -89,7 +175,6 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
     return fail(400, `invalid request at ${issue.path.join('.') || '(root)'}: ${issue.message}`);
   }
 
-  const now = (deps.now ?? Date.now)();
   const prepared: StoredDoc[] = [];
   for (const d of parsed.data.docs) {
     const r = prepareDoc(d, now);
@@ -99,7 +184,7 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
 
   const results: PushResult[] = [];
   for (const d of prepared) {
-    const r = await pushDoc(env.DB, owner, d);
+    const r = await pushDoc(env.DB!, owner, d);
     results.push(r.status === 'applied' ? { id: d.id, kind: d.kind, status: 'applied' } : { id: d.id, kind: d.kind, status: 'stale', doc: r.doc });
   }
   return reply(200, { results } satisfies PushResponse);
