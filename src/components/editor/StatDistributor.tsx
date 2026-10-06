@@ -265,7 +265,7 @@ export function StatDistributor({ set, species, mega, altLabel = 'Mega', format,
                         aria-label={`Boost ${STAT_LABELS[s]} (+10%)`}
                         aria-pressed={mod === 1.1}
                         onClick={() => toggleAlign(s, 'plus')}
-                        className={cn('h-5 w-5 rounded text-xs leading-none font-bold pointer-coarse:size-11 pointer-coarse:text-sm', mod === 1.1 ? 'bg-bad text-white' : 'text-muted hover:bg-surface-2')}
+                        className={cn('h-5 w-5 rounded text-xs leading-none font-bold pointer-coarse:size-11 pointer-coarse:text-sm', mod === 1.1 ? 'bg-bad text-bg' : 'text-muted hover:bg-surface-2')}
                       >
                         +
                       </button>
@@ -275,7 +275,7 @@ export function StatDistributor({ set, species, mega, altLabel = 'Mega', format,
                         aria-label={`Lower ${STAT_LABELS[s]} (−10%)`}
                         aria-pressed={mod === 0.9}
                         onClick={() => toggleAlign(s, 'minus')}
-                        className={cn('h-5 w-5 rounded text-xs leading-none font-bold pointer-coarse:size-11 pointer-coarse:text-sm', mod === 0.9 ? 'bg-accent text-white' : 'text-muted hover:bg-surface-2')}
+                        className={cn('h-5 w-5 rounded text-xs leading-none font-bold pointer-coarse:size-11 pointer-coarse:text-sm', mod === 0.9 ? 'bg-accent text-accent-fg' : 'text-muted hover:bg-surface-2')}
                       >
                         −
                       </button>
