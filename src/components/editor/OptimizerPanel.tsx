@@ -167,7 +167,7 @@ function Body({ dex, format, set, request, onApply, onKeep, onClose }: { dex: De
         <ol className="space-y-1.5">
           {goals.map((g, i) => (
             <li key={i} className="rounded-lg border border-border bg-surface-2 p-2.5">
-              <GoalRow dex={dex} format={format} goal={g} mine={set} onChange={(ng) => setGoals((cur) => cur.map((x, j) => (j === i ? ng : x)))} onRemove={() => setGoals((cur) => cur.filter((_, j) => j !== i))} />
+              <GoalRow dex={dex} format={format} goal={g} mine={set} onChange={(ng) => setGoals((cur) => cur.map((x, j) => (j === i ? ng : x)))} onRemove={() => { setGoals((cur) => cur.filter((_, j) => j !== i)); toast('Removed the goal.', { label: 'Undo', run: () => setGoals((cur) => [...cur.slice(0, i), g, ...cur.slice(i)]) }); }} />
             </li>
           ))}
         </ol>

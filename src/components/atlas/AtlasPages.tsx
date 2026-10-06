@@ -3,6 +3,7 @@ import { Coins, Package, RotateCcw, Search, Swords, Users } from 'lucide-react';
 import { completion, itemSources, searchTrainers } from '@/domain/atlas';
 import { toID } from '@/data/dex';
 import { useAtlasStore, useProgress } from '@/store/atlasStore';
+import { toast } from '@/store/toastStore';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
 import { Toggle } from '../ui/chips';
@@ -131,13 +132,18 @@ export function ProgressPage() {
   const { file, game } = useAtlasCtx();
   const progress = useProgress(game.id);
   const reset = useAtlasStore((s) => s.resetProgress);
+  const resetWithUndo = (id: string, name: string) => {
+    const before = useAtlasStore.getState().progress[id];
+    reset(id);
+    toast(`Cleared your ${name} progress.`, before ? { label: 'Undo', run: () => useAtlasStore.setState((s) => ({ progress: { ...s.progress, [id]: before } })) } : undefined);
+  };
   const c = completion(file, progress);
   const rows = [
     { label: 'Locations visited', v: c.locations },
     ...(game.lite ? [] : [{ label: 'Items collected', v: c.items }, { label: 'Trainers beaten', v: c.trainers }]),
   ];
   return (
-    <Panel title={`${game.name} progress`} actions={<Button size="sm" variant="danger" onClick={() => window.confirm('Clear all progress for this game?') && reset(game.id)}><RotateCcw size={13} aria-hidden /> Reset</Button>}>
+    <Panel title={`${game.name} progress`} actions={<Button size="sm" variant="danger" onClick={() => resetWithUndo(game.id, game.name)}><RotateCcw size={13} aria-hidden /> Reset</Button>}>
       <div className="space-y-3">
         {rows.map((r) => (
           <div key={r.label}>

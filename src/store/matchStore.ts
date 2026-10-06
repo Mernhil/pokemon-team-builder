@@ -16,6 +16,8 @@ interface MatchState {
   addMatch: (date?: string) => string;
   updateMatch: (id: string, patch: Partial<Omit<Match, 'id' | 'createdAt'>>) => void;
   deleteMatch: (id: string) => void;
+  /** The Undo of deleteMatch: puts the match back at its old place in the list (stamped now, so a sync that already saw the delete lets the restore win). */
+  restoreMatch: (match: Match, index: number) => void;
   duplicateAsTemplate: (id: string, date?: string) => string;
   importMatches: (matches: Match[]) => void;
   /** Cloud sync: write merged matches and remove deleted ones, keeping each match's own `updatedAt`. */
@@ -74,6 +76,13 @@ export const useMatchStore = create<MatchState>()(
           const matches = { ...s.matches };
           delete matches[id];
           return { matches, order: s.order.filter((x) => x !== id) };
+        }),
+      restoreMatch: (match, index) =>
+        set((s) => {
+          if (s.matches[match.id]) return s;
+          const order = s.order.filter((x) => x !== match.id);
+          order.splice(Math.min(Math.max(index, 0), order.length), 0, match.id);
+          return { matches: { ...s.matches, [match.id]: { ...match, updatedAt: Date.now() } }, order };
         }),
       /** "Clone last opponent" / "match against a previous entry": start a new match preloaded from `id`. */
       duplicateAsTemplate: (id, date = new Date().toISOString().slice(0, 10)) => {

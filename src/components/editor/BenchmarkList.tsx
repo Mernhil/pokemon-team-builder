@@ -3,6 +3,7 @@ import type { Dex } from '@/data/dex';
 import type { BenchmarkResult } from '@/domain/benchmarkEval';
 import type { Benchmark } from '@/domain/benchmarks';
 import type { FormatRules, PokemonSet } from '@/domain/types';
+import { toast } from '@/store/toastStore';
 import { Button } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useBenchmarkResults } from './useBenchmarks';
@@ -58,7 +59,7 @@ export function BenchmarkList({ dex, format, set, onChange }: { dex: Dex; format
       ) : (
         <BenchmarkRows
           results={mine}
-          onRemove={onChange ? (id) => { const next = list.filter((b) => b.id !== id); onChange(next.length ? next : undefined); } : undefined}
+          onRemove={onChange ? (id) => { const next = list.filter((b) => b.id !== id); onChange(next.length ? next : undefined); toast('Removed the benchmark.', { label: 'Undo', run: () => onChange(list) }); } : undefined}
         />
       )}
     </section>
