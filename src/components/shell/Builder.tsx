@@ -27,7 +27,7 @@ export function Builder({ team, format, dex }: { team: Team; format: FormatRules
   const firstEmpty = team.slots.findIndex((s) => s === null);
 
   return (
-    <div className="grid content-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_300px]">
       {team.shared && (
         <div className="lg:col-span-2 xl:col-span-3">
           <SharedTeamBanner team={team} />
