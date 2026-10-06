@@ -15,7 +15,6 @@ Hand-written guides (edit these):
 | [UPDATING_META.md](UPDATING_META.md) | How the usage data is built and updated |
 | [atlas-sources.md](atlas-sources.md) | Where the Atlas data comes from |
 | [POLISH_PLAN.md](POLISH_PLAN.md) | The polish-phase audit and plan |
-| [spikes/](spikes/) | Written-up experiments |
 
 Generated (never edit by hand; rebuilt by the command in the file's header):
 

@@ -320,6 +320,12 @@ input[type='range'].palette-range::-moz-range-thumb {
   border: 2px solid var(--line);
   box-shadow: 3px 3px 0 var(--line);
 }
+/* A card inside a panel keeps its outline but not a second hard shadow. */
+[data-look='sticker'] .ui-panel .ui-panel,
+[data-look='sticker'] .ui-panel .rounded-xl.border.bg-surface,
+[data-look='sticker'] .rounded-xl.border.bg-surface .rounded-xl.border.bg-surface {
+  box-shadow: none;
+}
 [data-look='sticker'] .ui-panel > header h2 {
   font-weight: 800;
 }

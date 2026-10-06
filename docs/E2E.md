@@ -37,4 +37,4 @@ are buttons that open a search sheet, the Stat Point calculator is a section you
 panel is a sheet. `e2e/helpers.ts` (`pickOption`, `expectPicked`, `openStatCalculator`, `importTeam`,
 `setTheme`) hides those differences, so use it.
 
-The axe check disables one rule: `meta-viewport`, because `index.html` turns pinch zoom off on purpose.
+The axe check runs every WCAG 2.0/2.1 A and AA rule; pinch zoom is allowed (`index.html` has no zoom lock, and fields are 16 px on phones so iOS doesn't zoom into them).

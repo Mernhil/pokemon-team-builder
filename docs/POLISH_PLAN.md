@@ -30,6 +30,7 @@ Work done on branch `claude/serene-einstein-guoto3`, as separate commits, nothin
 
 | Phase | IDs | What changed |
 |---|---|---|
+| Recommended items | A11Y-04, TIDY-08, UI-05 (nested cards), release | Pinch zoom is allowed again (the viewport lock and the axe exemption are gone); `docs/atlas-phase1/`, `docs/spikes/` and `scripts/spikes/` are deleted; nested Sticker cards are flat; version 0.27.0 with a CHANGELOG section. |
 | 0 | BUG-01, BUG-02, BUG-03, BUG-05, QOL-03 (partly), QOL-04 | Readable text on the active ＋/− nature buttons (new contrast test); the Pokénav page no longer scrolls sideways (+ an e2e that checks every main screen); deleting a match, a benchmark, an optimiser goal or Pokénav progress now offers **Undo** instead of nothing / a native confirm; an Undo toast is no longer pushed out by plain notices; the sync 501 says which setting is missing. Runs and saved teams keep their inline confirm (see UI-08). |
 | 1 | TIDY-01, TIDY-02, TIDY-03, TIDY-06, TIDY-07, TIDY-08 (comments), TIDY-09, TIDY-10, BUG-04, BUG-06, BUG-07 | Two unused dependencies removed, about 140 unused exports made file-local, one `toID` (`src/domain/id.ts`) for the app and all scripts, one `cap`; lint at zero warnings and CI fails on any; README, IPHONE_APP, E2E docs corrected; `docs/UI.md` and `docs/README.md` added; the hard-coded 2026 season year in the meta scripts now comes from the regulation. |
 | 2 | UI-01, UI-03, UI-04 (partly), UI-06, UI-07, UI-08, UI-09, UI-11, QOL-01 (Threat report and Meta), QOL-02, QOL-05 (Threat report), QOL-07, QOL-08, A11Y-01, A11Y-02, A11Y-03, A11Y-05, A11Y-07, A11Y-08, BUG-08 | `Checkbox`, `ConfirmInline`, `Skeleton` primitives; touch targets raised to 44 pt (tabs, game chips, type filters, Calc load buttons, CRIT chip, validation rows, target-speed field); one overlay/`ui-sheet` for the picker sheet and command palette; type matrices are real buttons with full names and a details line (keyboard, touch and screen reader); the Threat report table is one Tab stop with arrow-key movement; Game day matchups read once in words and use the same blue/orange verdict colours as the Threat report; focus returns to the opener after a dialog closes (it fell to the top of the page before); smooth scrolling honours reduced motion; Threat report count/field and the Meta tab/period are remembered (`ptb:view:v1`); single-key shortcuts (`g` + letter, `/`, `?`) with a list in Settings; the stat calculator is open by default on phones and remembers a fold; long Pokédex and item lists skip off-screen rows; a type scale (`text-2xs`, `text-3xs`) replaces 118 arbitrary sizes and the 8/9/13 px outliers. |
@@ -46,11 +47,9 @@ Work done on branch `claude/serene-einstein-guoto3`, as separate commits, nothin
 
 | ID | Why |
 |---|---|
-| A11Y-04 (pinch-zoom) | Needs your decision (Q2). |
-| PERF-03 (offline scope) | Needs your decision (Q5). |
-| TIDY-08 (delete `docs/atlas-phase1/`, `docs/spikes/`, `scripts/spikes/`) | Needs your decision (Q3). |
-| UI-05 (Sticker styling by class name, nested card shadows) | Visual change across about 26 cards that I can't judge without looking at both looks side by side; needs your decision (Q7). |
-| UI-10 (copy guide) | Needs your decision (Q4). |
+| PERF-03 (offline scope) | Needs your decision (Q5): the precache is at 96% of its limit. |
+| UI-05 (Sticker styling by class name) | Nested cards are now flat (outline, no second shadow, in CSS); the selector still works by Tailwind class names and the 26 hand-rolled cards were not converted to `Panel`, which needs a side-by-side look at both styles. |
+| UI-10 (copy guide) | Needs your decision (Q4); the defaults used so far are Delete (data) / Remove (from a list) and Keep as the safe button. |
 | UI-02, A11Y-10 | See above / low value. |
 | A11Y-06 (colour-only cues in matrices) | Position and the details line carry the meaning; adding glyphs to 18 small cells would crowd them. |
 | A11Y-09 | The Outlines/Brightness settings don't exist in this checkout (Q8). |
@@ -217,6 +216,8 @@ What is wanted:
 Notes for whenever this is scheduled: it is new behaviour, so it waits until the polish phase is done. It needs a small table of which items change which stat and by how much (the data layer already knows items; check Showdown's item data before writing one by hand), a decision on how it behaves when a Mega Stone and a stat item are both possible (only one item can be held, so the two cases never combine), and it must keep the colour-independent cues (the transparent bar needs a pattern or outline, not opacity alone) and the 44 pt button size. Related polish items: BUG-01, UI-01, A11Y-06.
 
 ## Open questions (decisions needed from you)
+
+*Status: Q2 (pinch zoom), Q3 (spike and screenshot folders) and Q7 (nested cards flat) were answered with the recommendation and are done. Q1 (sync setup on the deployment), Q4 (copy), Q5 (offline scope), Q6 (shortcuts: shipped as `g` + letter, `/`, `?`), Q8 (Outlines/Brightness) and Q9 (lint strictness: shipped, CI fails on warnings) are either on you or settled in the Progress section.*
 
 1. **Sync on the phone.** Do you want me to walk through the Cloudflare steps (create the D1 database, paste its id into `wrangler.jsonc`, apply migrations, set `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`) as a checklist, or have you already done some of them? If the database id is available I can make the `wrangler.jsonc` change in its own PR (a placeholder id would break the auto-deploy, so I have not touched it). Which of the three 501 causes applies to your deploy is not visible from the repo.
 2. **Pinch-zoom (A11Y-04).** Remove `user-scalable=no` / `maximum-scale=1`? It makes the installed app feel slightly less native-like (users can zoom the whole page) but fixes a WCAG 1.4.4 failure and lets people with low vision zoom. My recommendation: remove it.
