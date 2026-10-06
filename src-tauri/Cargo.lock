@@ -2478,7 +2478,7 @@ dependencies = [
 
 [[package]]
 name = "pokemon-team-builder"
-version = "0.26.0"
+version = "0.26.1"
 dependencies = [
  "log",
  "serde",

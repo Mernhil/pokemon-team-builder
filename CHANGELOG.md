@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.26.1 — 2026-10-06
+
+### New
+- **Item-boosted stats show as a green bar.** In Team overview, a Pokémon holding Choice Band, Choice Specs, Choice Scarf or Assault Vest shows the boosted stat in green, with a green bar running past the normal one in the Stats tab and in the Speed order (a Choice Scarf's Speed). Items that change no stat are unchanged.
+
 ## 0.26.0 — 2026-10-06
 
 ### New
