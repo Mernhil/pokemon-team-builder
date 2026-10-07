@@ -6,7 +6,7 @@ import { defaultField, defaultSide } from '@/domain/battle/conditions';
 import { hitsFor } from '@/domain/battle/multihit';
 import { getFormat } from '@/domain/formats';
 import { createSet } from '@/domain/team';
-import type { Dataset } from '@/domain/types';
+import type { Dataset, PokemonSet } from '@/domain/types';
 
 describe('hitsFor', () => {
   const popBomb = { accuracy: 90, multihit: 10, multiaccuracy: true } as const;
@@ -33,7 +33,7 @@ describe('calcMoves with multi-hit moves', () => {
   const dex = new Dex(data as unknown as Dataset);
   const fmt = getFormat('champions-vgc-reg-mc');
   const run = (item: string) => {
-    const atk = { ...createSet(dex, 'incineroar', fmt), itemId: item, moves: ['populationbomb', '', '', ''] };
+    const atk = { ...createSet(dex, 'incineroar', fmt), itemId: item, moves: ['populationbomb', '', '', ''] as PokemonSet['moves'] };
     const def = createSet(dex, 'garchomp', fmt);
     return calcMoves(dex, { set: atk, cond: defaultSide() }, { set: def, cond: defaultSide() }, defaultField())[0]?.forms[0]?.percent[1] ?? 0;
   };
