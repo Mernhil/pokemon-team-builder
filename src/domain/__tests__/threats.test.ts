@@ -130,13 +130,13 @@ describe('computeCell', () => {
     expect(computeCell(dex, garchomp, threat, { ...defaultField(), trickRoom: true }).first).toBe('them');
   });
 
-  it('reads a Mega holder pessimistically for me and optimistically for the threat', () => {
+  it('reads a Mega holder at its best forme, for me and for the threat', () => {
     const mega = mk('garchomp', { ...garchomp, itemId: 'garchompite' });
     const cell = computeCell(dex, mega, threat, defaultField());
     const direct = calcMoves(dex, { set: mega, cond: defaultSide(true) }, { set: incineroar, cond: defaultSide(false) }, defaultField());
     const eq = direct.find((m) => m.moveId === 'earthquake')!;
     expect(eq.forms).toHaveLength(2);
-    expect(cell.mine?.percent[1]).toBe(Math.min(...eq.forms.map((f) => f.percent[1])));
+    expect(cell.mine?.percent[1]).toBe(Math.max(...eq.forms.map((f) => f.percent[1])));
     // The Mega threat is read at its strongest forme, and its Speed is the faster one.
     const megaThreat = { set: mk('garchomp', { ...garchomp, itemId: 'garchompite' }), megaMode: 'both' as const };
     const c2 = computeCell(dex, incineroar, megaThreat, defaultField());

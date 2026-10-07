@@ -195,7 +195,7 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
             })}
           </ul>
           <Help label="How to read this list">
-            “OHKO” means every damage roll knocks out from full HP; “Possible” only some rolls. {by ? 'The Pokémon is read at its better forme and your Mega Stone holders at their worse one.' : 'Your Mega Stone holders are read at their worse forme, theirs at their better one.'} Calculated
+            “OHKO” means every damage roll knocks out from full HP; “Possible” only some rolls. Mega Stone holders, yours and theirs, are read at their best forme. Calculated
             with the Damage Calc on each Pokémon’s most-used set, under the conditions above. Tap a row to open it there.
           </Help>
         </>

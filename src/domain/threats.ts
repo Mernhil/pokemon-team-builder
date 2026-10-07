@@ -5,9 +5,10 @@
  * Worker (src/workers/threats.worker.ts) and on the main thread with identical results. Damage and
  * Speed come from calcMoves / calcSpeed, so they can never disagree with the Damage Calc.
  *
- * Mega Stone holders are calculated in both formes (MegaMode 'both') and then read pessimistically
- * for you and optimistically for the threat: your damage and Speed use your worse forme, theirs the
- * better one, so a threat is never understated.
+ * Mega Stone holders are calculated in both formes (MegaMode 'both') and then read at their best forme,
+ * for you and for the threat alike: a Mega holder can choose to Mega Evolve, so the report agrees with
+ * what the Damage Calc shows for the Mega forme. (Only one Pokémon can Mega per battle; the bring
+ * planner forces that through `mineMega`.)
  */
 import type { Dex } from '@/data/dex';
 import { calcMoves, calcSpeed, type FormResult, type MoveResult } from './battle/damage';
@@ -98,17 +99,17 @@ export function computeCell(
   mine: PokemonSet,
   threat: { set: PokemonSet; megaMode: MegaMode },
   field: FieldConditions,
-  /** Force my Mega holder to one forme (the bring planner: only one Pokémon can Mega per battle). Default: both, read pessimistically. */
+  /** Force my Mega holder to one forme (the bring planner: only one Pokémon can Mega per battle). Default: both, read at the best forme. */
   mineMega?: 'base' | 'mega',
 ): ThreatCell {
   const myHasMega = !!dex.megaFor(mine.speciesId, mine.itemId);
   const mySide = { set: mine, cond: { ...defaultSide(myHasMega), ...(mineMega ? { megaMode: mineMega } : {}) } };
   const theirSide = { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode } };
 
-  const myMoves = best(calcMoves(dex, mySide, theirSide, field), true);
+  const myMoves = best(calcMoves(dex, mySide, theirSide, field), false);
   const theirMoves = best(calcMoves(dex, theirSide, mySide, field), false);
 
-  const mySpeed = Math.min(...calcSpeed(dex, mySide, field).map((r) => r.speed));
+  const mySpeed = Math.max(...calcSpeed(dex, mySide, field).map((r) => r.speed));
   const theirSpeed = Math.max(...calcSpeed(dex, theirSide, field).map((r) => r.speed));
   let first: ThreatCell['first'] = mySpeed === theirSpeed ? 'tie' : mySpeed > theirSpeed ? 'me' : 'them';
   if (field.trickRoom && first !== 'tie') first = first === 'me' ? 'them' : 'me';

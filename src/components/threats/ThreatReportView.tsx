@@ -311,7 +311,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
 
           <Help label="How to read this table">
             Blue and ✓: good for you · orange and ✗: bad for you · ~ even. “You” is your best move, “It” the threat’s. Damage is % of the defender’s HP; Mega
-            Stone holders are read at their worse forme for you and their better one for the threat. Tap a cell to open it in the Damage Calc. On a keyboard the table is one Tab stop: arrow keys, Home and End move between cells.
+            Stone holders are read at their best forme, for you and for the threat. Tap a cell to open it in the Damage Calc. On a keyboard the table is one Tab stop: arrow keys, Home and End move between cells.
           </Help>
         </>
       )}
