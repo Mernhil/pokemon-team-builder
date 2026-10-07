@@ -130,6 +130,12 @@ describe('computeCell', () => {
     expect(computeCell(dex, garchomp, threat, { ...defaultField(), trickRoom: true }).first).toBe('them');
   });
 
+  it('Tailwind doubles the Speed of whichever side has it', () => {
+    const base = computeCell(dex, garchomp, threat, defaultField());
+    expect(computeCell(dex, garchomp, threat, { ...defaultField(), myTailwind: true }).mySpeed).toBe(base.mySpeed * 2);
+    expect(computeCell(dex, garchomp, threat, { ...defaultField(), theirTailwind: true }).theirSpeed).toBe(base.theirSpeed * 2);
+  });
+
   it('reads a Mega holder at its best forme, for me and for the threat', () => {
     const mega = mk('garchomp', { ...garchomp, itemId: 'garchompite' });
     const cell = computeCell(dex, mega, threat, defaultField());
