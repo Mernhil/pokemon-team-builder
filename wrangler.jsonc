@@ -19,8 +19,8 @@
   "preview_urls": false,
   // ACCESS_TEAM_DOMAIN and ACCESS_AUD are set in the dashboard (Worker → Settings → Variables and
   // Secrets); keep them across deploys instead of letting this file wipe them.
-  "keep_vars": true
+  "keep_vars": true,
 
   // Cloud sync needs a D1 database. After creating it (docs/SYNC.md step 1), uncomment this with its id:
-  // , "d1_databases": [{ "binding": "DB", "database_name": "pokemon-team-builder", "database_id": "<paste the id>", "migrations_dir": "migrations" }]
+  "d1_databases": [{ "binding": "DB", "database_name": "pokemon-team-builder", "database_id": "f2e8d10f-6d2b-4ef0-90a0-ba7eb8acd8c4", "migrations_dir": "migrations" }]
 }
