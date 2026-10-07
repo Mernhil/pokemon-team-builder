@@ -44,6 +44,8 @@ export interface FormResult {
   percent: [number, number];
   /** All 16 damage rolls (per hit for multi-hit moves: summed). */
   rolls: number[];
+  /** Hits the damage is summed over, for a multi-hit move (undefined for a single hit). */
+  hits?: number;
   koText: string;
   desc: string;
   defenderHP: number;
@@ -235,6 +237,7 @@ export function calcMoves(
           range: [min, max],
           percent: [pct(min, maxHP), pct(max, maxHP)],
           rolls: flatRolls(r.damage),
+          ...(move.hits > 1 ? { hits: move.hits } : {}),
           koText,
           desc,
           defenderHP: maxHP,

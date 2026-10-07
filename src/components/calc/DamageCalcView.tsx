@@ -297,6 +297,7 @@ function FormRow({ f }: { f: FormResult }) {
       <div className="mt-1 flex items-center justify-between gap-2 text-xs">
         <span className="text-muted">
           {f.range[0]}–{f.range[1]} HP of {f.defenderHP}
+          {f.hits && <span className="ml-1.5">· {f.hits} hits</span>}
           {f.koText && <b className="ml-1.5 text-fg">· {f.koText}</b>}
         </span>
         <button type="button" onClick={copy} className="flex shrink-0 items-center gap-1 text-muted hover:text-fg" title="Copy calc text">

@@ -37,6 +37,12 @@ describe('calcMoves with multi-hit moves', () => {
     const def = createSet(dex, 'garchomp', fmt);
     return calcMoves(dex, { set: atk, cond: defaultSide() }, { set: def, cond: defaultSide() }, defaultField())[0]?.forms[0]?.percent[1] ?? 0;
   };
+  it('reports the hit count it used', () => {
+    const atk = { ...createSet(dex, 'incineroar', fmt), moves: ['populationbomb', 'flareblitz', '', ''] as PokemonSet['moves'] };
+    const [pop, flare] = calcMoves(dex, { set: atk, cond: defaultSide() }, { set: createSet(dex, 'garchomp', fmt), cond: defaultSide() }, defaultField());
+    expect(pop.forms[0].hits).toBe(6);
+    expect(flare.forms[0].hits).toBeUndefined();
+  });
   it('Wide Lens raises Population Bomb damage', () => {
     const itemId = (n: string) => dex.item(n)?.id ?? '';
     if (!itemId('widelens')) return;
