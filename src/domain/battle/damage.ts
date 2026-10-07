@@ -16,6 +16,7 @@ import { FORMATS } from '../formats';
 import { calcStats, statExpToEV } from '../stats';
 import { STAT_IDS, type PokemonSet, type StatTable, type TypeName } from '../types';
 import type { FieldConditions, SideConditions } from './conditions';
+import { hitsFor } from './multihit';
 import { statFormeFor, type CalcRole } from './statForm';
 
 /** The calculator generation for a dataset: 0 (Champions) or the dataset's generation. */
@@ -203,12 +204,15 @@ export function calcMoves(
     const mv = dex.move(moveId);
     if (!mv) return;
     const crit = !!crits[i];
-    const move = new CalcMove(gen, mv.name, { isCrit: crit });
+    const multiaccuracy = !!(gen.moves.get(moveId as never) as { multiaccuracy?: boolean } | undefined)?.multiaccuracy;
+    let move = new CalcMove(gen, mv.name, { isCrit: crit });
     const forms: FormResult[] = [];
     for (const af of attackerForms) {
       for (const df of defenderForms) {
         const a = aPokemon.get(af)!;
         const d = dPokemon.get(df)!;
+        const hits = hitsFor({ accuracy: mv.accuracy, multihit: mv.multihit, multiaccuracy, ability: a.ability, item: a.item });
+        move = new CalcMove(gen, mv.name, { isCrit: crit, ...(hits ? { hits } : {}), ability: a.ability, item: a.item });
         const r = calculate(gen, a, d, move, f);
         const [min, max] = safeRange(r);
         const maxHP = d.maxHP();
