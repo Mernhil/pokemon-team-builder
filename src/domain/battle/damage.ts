@@ -187,6 +187,20 @@ function toCalcField(field: FieldConditions, attacker: SideConditions, defender:
   });
 }
 
+/** The hit counts a user may choose for a move: 2–5 hit moves and per-hit-accuracy moves (down to 1); null for the rest. */
+export function hitRangeOf(multihit: number | [number, number] | undefined, multiaccuracy: boolean): [number, number] | null {
+  if (Array.isArray(multihit)) return multihit;
+  return multihit && multiaccuracy ? [1, multihit] : null;
+}
+
+/** The same, for a move of a dex. */
+export function hitRange(dex: Dex, moveId: string): [number, number] | null {
+  const mv = dex.move(moveId);
+  if (!mv) return null;
+  const data = calcGen(dex).moves.get(moveId as never) as { multiaccuracy?: boolean } | undefined;
+  return hitRangeOf(mv.multihit, !!data?.multiaccuracy);
+}
+
 /** Damage of each of the attacker's moves against the defender, for every forme combo in play. */
 export function calcMoves(
   dex: Dex,
@@ -194,6 +208,8 @@ export function calcMoves(
   defender: CalcSideInput,
   field: FieldConditions,
   crits: boolean[] = [],
+  /** Hit counts chosen by the user, by move id (missing: the default for the attacker's ability and item). */
+  hitOverrides: Record<string, number> = {},
 ): MoveResult[] {
   const gen = calcGen(dex);
   const attackerForms = formsFor(dex, attacker.set, attacker.cond);
@@ -213,7 +229,9 @@ export function calcMoves(
       for (const df of defenderForms) {
         const a = aPokemon.get(af)!;
         const d = dPokemon.get(df)!;
-        const hits = hitsFor({ accuracy: mv.accuracy, multihit: mv.multihit, multiaccuracy, ability: a.ability, item: a.item });
+        const range = hitRangeOf(mv.multihit, multiaccuracy);
+        const chosen = hitOverrides[moveId];
+        const hits = range && chosen ? Math.max(range[0], Math.min(range[1], chosen)) : hitsFor({ accuracy: mv.accuracy, multihit: mv.multihit, multiaccuracy, ability: a.ability, item: a.item });
         move = new CalcMove(gen, mv.name, { isCrit: crit, ...(hits ? { hits } : {}), ability: a.ability, item: a.item });
         const r = calculate(gen, a, d, move, f);
         const [min, max] = safeRange(r);

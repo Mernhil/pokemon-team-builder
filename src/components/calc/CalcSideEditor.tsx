@@ -1,6 +1,7 @@
 import { Crosshair, Sparkles, Info } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultSide } from '@/domain/battle/conditions';
+import { hitRange } from '@/domain/battle/damage';
 import { statFormOptions } from '@/domain/battle/statForm';
 import { stripUnsupported } from '@/domain/capabilities';
 import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
@@ -252,6 +253,25 @@ export function CalcSideEditor({ role, dex, format, team }: Props) {
                       <MoveTooltip move={dex.move(m)}>
                         <TypeBadge type={dex.move(m)!.type} size="xs" />
                       </MoveTooltip>
+                    )}
+                    {m && hitRange(dex, m) && (
+                      <select
+                        aria-label={`${title} move ${i + 1} hits`}
+                        title="Number of hits"
+                        value={side.hits?.[m] ?? ''}
+                        onChange={(e) => {
+                          const { [m]: _old, ...rest } = side.hits ?? {};
+                          patchSide(role, { hits: e.target.value ? { ...rest, [m]: Number(e.target.value) } : rest });
+                        }}
+                        className="h-9 rounded-md border border-border bg-surface px-1 text-xs text-muted"
+                      >
+                        <option value="">Auto</option>
+                        {Array.from({ length: hitRange(dex, m)![1] - hitRange(dex, m)![0] + 1 }, (_, k) => hitRange(dex, m)![0] + k).map((n) => (
+                          <option key={n} value={n}>
+                            {n} {n === 1 ? 'hit' : 'hits'}
+                          </option>
+                        ))}
+                      </select>
                     )}
                     <button
                       type="button"

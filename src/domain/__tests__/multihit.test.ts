@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
-import { calcMoves } from '@/domain/battle/damage';
+import { calcMoves, hitRange } from '@/domain/battle/damage';
 import { defaultField, defaultSide } from '@/domain/battle/conditions';
 import { hitsFor } from '@/domain/battle/multihit';
 import { getFormat } from '@/domain/formats';
@@ -42,6 +42,18 @@ describe('calcMoves with multi-hit moves', () => {
     const [pop, flare] = calcMoves(dex, { set: atk, cond: defaultSide() }, { set: createSet(dex, 'garchomp', fmt), cond: defaultSide() }, defaultField());
     expect(pop.forms[0].hits).toBe(6);
     expect(flare.forms[0].hits).toBeUndefined();
+  });
+  it('a chosen hit count overrides the default and is clamped to the move\'s range', () => {
+    const atk = { ...createSet(dex, 'incineroar', fmt), moves: ['populationbomb', 'bulletseed', '', ''] as PokemonSet['moves'] };
+    const go = (hits: Record<string, number>) =>
+      calcMoves(dex, { set: atk, cond: defaultSide() }, { set: createSet(dex, 'garchomp', fmt), cond: defaultSide() }, defaultField(), [], hits);
+    expect(go({ populationbomb: 10 })[0].forms[0].hits).toBe(10);
+    expect(go({ populationbomb: 99 })[0].forms[0].hits).toBe(10);
+    expect(go({ bulletseed: 5 })[1].forms[0].hits).toBe(5);
+    expect(go({})[1].forms[0].hits).toBe(3);
+    expect(hitRange(dex, 'populationbomb')).toEqual([1, 10]);
+    expect(hitRange(dex, 'bulletseed')).toEqual([2, 5]);
+    expect(hitRange(dex, 'dualwingbeat')).toBeNull();
   });
   it('Wide Lens raises Population Bomb damage', () => {
     const itemId = (n: string) => dex.item(n)?.id ?? '';

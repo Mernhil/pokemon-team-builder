@@ -46,8 +46,8 @@ function DamageCalcBody({ dex, format, team }: { dex: Dex; format: FormatRules; 
     const d = { set: defender.set!, cond: defender.cond };
     try {
       return {
-        forward: calcMoves(dex, a, d, field, attacker.crits),
-        backward: calcMoves(dex, d, a, field, defender.crits),
+        forward: calcMoves(dex, a, d, field, attacker.crits, attacker.hits),
+        backward: calcMoves(dex, d, a, field, defender.crits, defender.hits),
         speedA: calcSpeed(dex, a, field),
         speedD: calcSpeed(dex, d, field),
         error: null as string | null,
