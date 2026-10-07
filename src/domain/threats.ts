@@ -11,7 +11,7 @@
  * planner forces that through `mineMega`.)
  */
 import type { Dex } from '@/data/dex';
-import { calcMoves, calcSpeed, type FormResult, type MoveResult } from './battle/damage';
+import { calcMoves, calcSpeed, hitRange, type FormResult, type MoveResult } from './battle/damage';
 import { defaultSide, type FieldConditions } from './battle/conditions';
 import type { MegaMode } from './battle/conditions';
 import type { PokemonSet } from './types';
@@ -94,11 +94,21 @@ function best(results: MoveResult[], pessimistic: boolean): MoveSummary | null {
 }
 
 /** The report's field: the shared conditions plus Tailwind on either side (a side condition in the calc, a toggle here). */
-export type ThreatField = FieldConditions & { myTailwind?: boolean; theirTailwind?: boolean };
+export type ThreatField = FieldConditions & { myTailwind?: boolean; theirTailwind?: boolean; /** Multi-hit moves land every hit (best case) instead of the usual expected count. */ maxHits?: boolean };
 
 /** The shared part of a ThreatField, as the Damage Calc takes it. */
 export function sharedField(f: ThreatField): FieldConditions {
   return { gameType: f.gameType, weather: f.weather, terrain: f.terrain, trickRoom: f.trickRoom, gravity: f.gravity };
+}
+
+/** Every multi-hit move of a set at its most hits, as the calculator's hit choices. */
+export function maxHitChoices(dex: Dex, set: PokemonSet): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const id of set.moves) {
+    const r = id ? hitRange(dex, id) : null;
+    if (r) out[id] = r[1];
+  }
+  return out;
 }
 
 /** One of my Pokémon against one threat, under a field. */
@@ -114,8 +124,10 @@ export function computeCell(
   const mySide = { set: mine, cond: { ...defaultSide(myHasMega), ...(mineMega ? { megaMode: mineMega } : {}), tailwind: !!field.myTailwind } };
   const theirSide = { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode, tailwind: !!field.theirTailwind } };
 
-  const myMoves = best(calcMoves(dex, mySide, theirSide, field), false);
-  const theirMoves = best(calcMoves(dex, theirSide, mySide, field), false);
+  const myHits = field.maxHits ? maxHitChoices(dex, mine) : {};
+  const theirHits = field.maxHits ? maxHitChoices(dex, threat.set) : {};
+  const myMoves = best(calcMoves(dex, mySide, theirSide, field, [], myHits), false);
+  const theirMoves = best(calcMoves(dex, theirSide, mySide, field, [], theirHits), false);
 
   const mySpeed = Math.max(...calcSpeed(dex, mySide, field).map((r) => r.speed));
   const theirSpeed = Math.max(...calcSpeed(dex, theirSide, field).map((r) => r.speed));
@@ -140,7 +152,7 @@ export interface ThreatJob {
 
 /** What goes into a cell's result: everything that changes the numbers. */
 const setHash = (s: PokemonSet) => JSON.stringify([s.speciesId, s.abilityId, s.itemId, s.nature, s.level, s.sp, s.evs, s.ivs, s.moves]);
-const fieldHash = (f: ThreatField) => `${f.gameType}|${f.weather}|${f.terrain}|${f.trickRoom}|${f.gravity}|${!!f.myTailwind}|${!!f.theirTailwind}`;
+const fieldHash = (f: ThreatField) => `${f.gameType}|${f.weather}|${f.terrain}|${f.trickRoom}|${f.gravity}|${!!f.myTailwind}|${!!f.theirTailwind}|${!!f.maxHits}`;
 
 /** Memoised cells keyed by (my set, threat set, field). Lives as long as its owner (a worker, a hook). */
 export type ThreatCache = Map<string, ThreatCell>;

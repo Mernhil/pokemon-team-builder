@@ -136,6 +136,13 @@ describe('computeCell', () => {
     expect(computeCell(dex, garchomp, threat, { ...defaultField(), theirTailwind: true }).theirSpeed).toBe(base.theirSpeed * 2);
   });
 
+  it('All hits makes a multi-hit move land every hit', () => {
+    const pop = mk('incineroar', { moves: ['populationbomb', '', '', ''] as PokemonSet['moves'] });
+    const auto = computeCell(dex, pop, { set: garchomp, megaMode: 'base' }, defaultField());
+    const all = computeCell(dex, pop, { set: garchomp, megaMode: 'base' }, { ...defaultField(), maxHits: true });
+    expect(all.mine!.percent[1]).toBeGreaterThan(auto.mine!.percent[1]);
+  });
+
   it('reads a Mega holder at its best forme, for me and for the threat', () => {
     const mega = mk('garchomp', { ...garchomp, itemId: 'garchompite' });
     const cell = computeCell(dex, mega, threat, defaultField());

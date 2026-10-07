@@ -8,7 +8,7 @@ import type { MetaSet } from '@/domain/metaSets';
 import { snapshotAge } from '@/domain/speedTiers';
 import { useViewStore } from '@/store/viewStore';
 import { VERDICT_CELL } from './verdictStyle';
-import { THREAT_COUNTS, bucket, sharedField, KILL_LABEL, KILL_SHORT, type ThreatCell, type ThreatField } from '@/domain/threats';
+import { THREAT_COUNTS, bucket, maxHitChoices, sharedField, KILL_LABEL, KILL_SHORT, type ThreatCell, type ThreatField } from '@/domain/threats';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
 import { useFocusStore } from '@/store/focusStore';
@@ -58,8 +58,8 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   const openCalc = (member: PokemonSet, slot: number, threat: MetaSet) => {
     const calc = useCalcStore.getState();
     const hasMega = !!dex.megaFor(member.speciesId, member.itemId);
-    calc.setSide('attacker', { set: member, cond: { ...defaultSide(hasMega), tailwind: !!field.myTailwind }, crits: [false, false, false, false], origin: { teamName: team.name, slot: slot + 1 } });
-    calc.setSide('defender', { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode, tailwind: !!field.theirTailwind }, crits: [false, false, false, false] });
+    calc.setSide('attacker', { set: member, cond: { ...defaultSide(hasMega), tailwind: !!field.myTailwind }, crits: [false, false, false, false], ...(field.maxHits ? { hits: maxHitChoices(dex, member) } : {}), origin: { teamName: team.name, slot: slot + 1 } });
+    calc.setSide('defender', { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode, tailwind: !!field.theirTailwind }, crits: [false, false, false, false], ...(field.maxHits ? { hits: maxHitChoices(dex, threat.set) } : {}) });
     calc.setField(sharedField(field));
     setView('calc');
     toast('Opened in the Damage Calc.', backToReport);
@@ -171,6 +171,9 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
           </Toggle>
           <Toggle pressed={!!field.theirTailwind} onClick={() => set('theirTailwind', !field.theirTailwind)}>
             Their Tailwind
+          </Toggle>
+          <Toggle pressed={!!field.maxHits} onClick={() => set('maxHits', !field.maxHits)}>
+            All hits
           </Toggle>
         </ChipRow>
         <ChipRow label="Weather">

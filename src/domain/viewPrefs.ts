@@ -42,6 +42,7 @@ export function sanitizeView(raw: unknown): ViewPrefs {
       gravity: f.gravity === true,
       ...(f.myTailwind === true ? { myTailwind: true } : {}),
       ...(f.theirTailwind === true ? { theirTailwind: true } : {}),
+      ...(f.maxHits === true ? { maxHits: true } : {}),
     },
     metaTab: (META_TABS as readonly unknown[]).includes(r.metaTab) ? (r.metaTab as MetaTab) : d.metaTab,
     metaPeriod: (TREND_PERIODS as readonly unknown[]).includes(r.metaPeriod) ? (r.metaPeriod as TrendPeriod) : d.metaPeriod,
