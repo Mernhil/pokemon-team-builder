@@ -10,6 +10,7 @@ import {
   candidateUsageLabel,
   describeCondition,
   targetFor,
+  targetMegaMode,
   type Condition,
   type ConditionKind,
   type Match,
@@ -76,7 +77,17 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   };
   const patch = (id: string, p: Partial<Condition>) => setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, ...p } : c)));
   const patchSet = (id: string, p: Partial<PokemonSet>) =>
-    setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, target: { ...c.target, set: { ...c.target.set, ...p } } } : c)));
+    setConditions((cs) =>
+      cs.map((c) => {
+        if (c.id !== id) return c;
+        const set = { ...c.target.set, ...p };
+        // A new item changes whether there is a Mega to be: back to the default form for it.
+        const megaMode = p.itemId !== undefined && p.itemId !== c.target.set.itemId ? targetMegaMode(dex, format, set) : c.target.megaMode;
+        return { ...c, target: { ...c.target, set, megaMode } };
+      }),
+    );
+  const setForm = (id: string, megaMode: 'base' | 'mega') =>
+    setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, target: { ...c.target, megaMode } } : c)));
   const remove = (id: string) => setConditions((cs) => cs.filter((c) => c.id !== id));
 
   const addToTeam = (m: Match) => {
@@ -153,6 +164,14 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
                   <div className="flex flex-wrap items-center gap-2">
                     <Sprite speciesId={c.target.speciesId} name={name} types={dex.species(c.target.speciesId)?.types} set={format.spriteSet} size={36} />
                     <span className="min-w-0 flex-1 basis-40 text-sm font-semibold">{describeCondition(dex, c)}</span>
+                    {dex.megaFor(c.target.speciesId, c.target.set.itemId) && (
+                      <Segmented<'mega' | 'base'>
+                        label="Form"
+                        value={c.target.megaMode === 'base' ? 'base' : 'mega'}
+                        options={[{ id: 'mega', label: 'Mega' }, { id: 'base', label: 'Base' }]}
+                        onChange={(v) => setForm(c.id, v)}
+                      />
+                    )}
                     {c.kind === 'survive' && (
                       <Segmented<'1' | '2'> label="Hits" value={String(c.hits ?? 1) as '1' | '2'} options={[{ id: '1', label: '1' }, { id: '2', label: '2' }]} onChange={(v) => patch(c.id, { hits: Number(v) as 1 | 2 })} />
                     )}

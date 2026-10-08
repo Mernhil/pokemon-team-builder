@@ -61,6 +61,21 @@ describe('candidates', () => {
   });
 });
 
+describe('target form', () => {
+  it('is the Mega when the meta set holds its stone, so Fire one-shots Golisopod', () => {
+    const t = targetFor(dex, fmt, 'golisopod', snap);
+    expect(dex.megaFor('golisopod', t.set.itemId)).toBeTruthy();
+    expect(t.megaMode).toBe('mega');
+    const m = evaluateCandidate(dex, { speciesId: 'typhlosion', set: defaultSet(dex, 'typhlosion', fmt), megaMode: 'base', build: 'default' }, [{ id: 'a', kind: 'ohko', target: t }], field);
+    expect(m).toBeDefined();
+    // Flipped to the base form (Bug/Water: Fire is only neutral) the same attacker no longer one-shots it.
+    expect(evaluateCandidate(dex, { speciesId: 'typhlosion', set: defaultSet(dex, 'typhlosion', fmt), megaMode: 'base', build: 'default' }, [{ id: 'a', kind: 'ohko', target: { ...t, megaMode: 'base' } }], field)).toBeUndefined();
+  });
+  it('is the base form without a stone', () => {
+    expect(targetFor(dex, fmt, 'garchomp', snap).megaMode).toBe(dex.megaFor('garchomp', targetFor(dex, fmt, 'garchomp', snap).set.itemId) ? 'mega' : 'base');
+  });
+});
+
 describe('resist', () => {
   const cand = (speciesId: string): Candidate => ({ speciesId, set: defaultSet(dex, speciesId, fmt), megaMode: 'base', build: 'default', usagePct: 0 });
   it('is a type check against the target\'s attacking types', () => {

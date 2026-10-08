@@ -110,13 +110,20 @@ export function defaultSet(dex: Dex, speciesId: string, format: FormatRules): Po
   };
 }
 
+/**
+ * The form a target is calculated in: the Mega when it holds its stone (it Megas as it moves, so
+ * "what beats this" means the Mega), else the base. The user can flip a target to its base form.
+ */
+export function targetMegaMode(dex: Dex, format: FormatRules, set: PokemonSet): MegaMode {
+  return format.capabilities.mega && dex.megaFor(set.speciesId, set.itemId) ? 'mega' : 'base';
+}
+
 /** A target (an opponent) for a species: its meta set when there is one, else the default build. */
 export function targetFor(dex: Dex, format: FormatRules, speciesId: string, snapshot?: MetaSnapshot): SearchTarget {
   const entry = snapshot?.entries.find((e) => e.speciesId === speciesId);
   const m = entry && metaSet(entry, dex, format);
-  if (m) return { speciesId, set: m.set, megaMode: m.megaMode };
-  const set = defaultSet(dex, speciesId, format);
-  return { speciesId, set, megaMode: format.capabilities.mega && dex.megaFor(speciesId, set.itemId) ? 'both' : 'base' };
+  const set = m ? m.set : defaultSet(dex, speciesId, format);
+  return { speciesId, set, megaMode: targetMegaMode(dex, format, set) };
 }
 
 /** Every species the format allows as a candidate, meta-backed ones first (by usage). */
