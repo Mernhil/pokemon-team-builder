@@ -9,6 +9,8 @@ export interface CalcSide {
   cond: SideConditions;
   /** Per-move critical-hit toggles. */
   crits: [boolean, boolean, boolean, boolean];
+  /** Chosen hit counts for multi-hit moves, by move id (missing: automatic, from the move's accuracy, ability and item). */
+  hits?: Record<string, number>;
   /** Where the set was loaded from, for the "from your team" label. */
   origin?: { teamName: string; slot: number };
 }

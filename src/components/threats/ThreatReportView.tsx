@@ -3,12 +3,12 @@ import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import { META_STALE_DAYS, isProvisional, provisionalNote, usageLabel, usageText } from '@/domain/meta';
-import { TERRAINS, WEATHERS, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
+import { TERRAINS, WEATHERS, defaultSide } from '@/domain/battle/conditions';
 import type { MetaSet } from '@/domain/metaSets';
 import { snapshotAge } from '@/domain/speedTiers';
 import { useViewStore } from '@/store/viewStore';
 import { VERDICT_CELL } from './verdictStyle';
-import { THREAT_COUNTS, bucket, KILL_LABEL, KILL_SHORT, type ThreatCell } from '@/domain/threats';
+import { THREAT_COUNTS, bucket, maxHitChoices, sharedField, KILL_LABEL, KILL_SHORT, type ThreatCell, type ThreatField } from '@/domain/threats';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
 import { useFocusStore } from '@/store/focusStore';
@@ -58,9 +58,9 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   const openCalc = (member: PokemonSet, slot: number, threat: MetaSet) => {
     const calc = useCalcStore.getState();
     const hasMega = !!dex.megaFor(member.speciesId, member.itemId);
-    calc.setSide('attacker', { set: member, cond: defaultSide(hasMega), crits: [false, false, false, false], origin: { teamName: team.name, slot: slot + 1 } });
-    calc.setSide('defender', { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode }, crits: [false, false, false, false] });
-    calc.setField(field);
+    calc.setSide('attacker', { set: member, cond: { ...defaultSide(hasMega), tailwind: !!field.myTailwind }, crits: [false, false, false, false], ...(field.maxHits ? { hits: maxHitChoices(dex, member) } : {}), origin: { teamName: team.name, slot: slot + 1 } });
+    calc.setSide('defender', { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode, tailwind: !!field.theirTailwind }, crits: [false, false, false, false], ...(field.maxHits ? { hits: maxHitChoices(dex, threat.set) } : {}) });
+    calc.setField(sharedField(field));
     setView('calc');
     toast('Opened in the Damage Calc.', backToReport);
   };
@@ -69,8 +69,8 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
     if (!cell.theirs) return;
     useOptimizerStore.getState().open({
       slotKey: `${team.id}:${slot}`,
-      goals: [{ kind: 'survive', attacker: threat.set, attackerCond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode }, moveId: cell.theirs.moveId, rolls: 16 }],
-      field,
+      goals: [{ kind: 'survive', attacker: threat.set, attackerCond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode, tailwind: !!field.theirTailwind }, moveId: cell.theirs.moveId, rolls: 16 }],
+      field: sharedField(field),
     });
     useTeamStore.getState().setActiveSlot(slot);
     setView('builder');
@@ -82,8 +82,8 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
     const member = team.slots[slot];
     if (!cell.theirs || !member) return;
     const [{ benchmarkFromGoal, evaluateBenchmarks }, { mergeBenchmarks }] = await Promise.all([import('@/domain/benchmarkEval'), import('@/domain/benchmarks')]);
-    const goal = { kind: 'survive' as const, attacker: threat.set, attackerCond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode }, moveId: cell.theirs.moveId, rolls: 16, foe: { speciesId: threat.speciesId, source: 'meta' as const } };
-    const draft = benchmarkFromGoal(dex, format, goal, { snapshot: picked?.snapshot, field, met: false });
+    const goal = { kind: 'survive' as const, attacker: threat.set, attackerCond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode, tailwind: !!field.theirTailwind }, moveId: cell.theirs.moveId, rolls: 16, foe: { speciesId: threat.speciesId, source: 'meta' as const } };
+    const draft = benchmarkFromGoal(dex, format, goal, { snapshot: picked?.snapshot, field: sharedField(field), met: false });
     if (!draft) return;
     const [now] = evaluateBenchmarks(dex, format, member, [draft], picked?.snapshot);
     const b = { ...draft, metAtSave: now?.status === 'met' };
@@ -131,7 +131,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   const reg = champRegs.find((r) => r.id === picked.regulationId);
   const wantedReg = champRegs.find((r) => r.id === picked.fellBackFrom);
   const s = picked.snapshot.source;
-  const set = <K extends keyof FieldConditions>(k: K, v: FieldConditions[K]) => setField((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof ThreatField>(k: K, v: ThreatField[K]) => setField((f) => ({ ...f, [k]: v }));
 
   return (
     <div className="space-y-3">
@@ -165,6 +165,15 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
           </Toggle>
           <Toggle pressed={field.trickRoom} onClick={() => set('trickRoom', !field.trickRoom)}>
             Trick Room
+          </Toggle>
+          <Toggle pressed={!!field.myTailwind} onClick={() => set('myTailwind', !field.myTailwind)}>
+            Your Tailwind
+          </Toggle>
+          <Toggle pressed={!!field.theirTailwind} onClick={() => set('theirTailwind', !field.theirTailwind)}>
+            Their Tailwind
+          </Toggle>
+          <Toggle pressed={!!field.maxHits} onClick={() => set('maxHits', !field.maxHits)}>
+            All hits
           </Toggle>
         </ChipRow>
         <ChipRow label="Weather">
@@ -311,7 +320,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
 
           <Help label="How to read this table">
             Blue and ✓: good for you · orange and ✗: bad for you · ~ even. “You” is your best move, “It” the threat’s. Damage is % of the defender’s HP; Mega
-            Stone holders are read at their worse forme for you and their better one for the threat. Tap a cell to open it in the Damage Calc. On a keyboard the table is one Tab stop: arrow keys, Home and End move between cells.
+            Stone holders are read at their best forme, for you and for the threat. Tap a cell to open it in the Damage Calc. On a keyboard the table is one Tab stop: arrow keys, Home and End move between cells.
           </Help>
         </>
       )}
@@ -320,7 +329,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
 }
 
 const setCount = (n: number) => useViewStore.getState().set('threatCount', n);
-const setField = (f: (cur: FieldConditions) => FieldConditions) => useViewStore.getState().set('threatField', f(useViewStore.getState().threatField));
+const setField = (f: (cur: ThreatField) => ThreatField) => useViewStore.getState().set('threatField', f(useViewStore.getState().threatField));
 
 /** Arrow keys, Home and End move between the report's cells (the cell buttons carry `data-cell="row:column"`). */
 function moveBetweenCells(e: KeyboardEvent<HTMLElement>) {
