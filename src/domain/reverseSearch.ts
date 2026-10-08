@@ -15,7 +15,7 @@ import { createSet } from './team';
 import { computeCell, type ThreatCell } from './threats';
 import type { FormatRules, Move, Pokemon, PokemonSet, TypeName } from './types';
 
-export type ConditionKind = 'ohko' | 'survive' | 'resist' | 'outspeed';
+export type ConditionKind = 'ohko' | 'survive' | 'safe' | 'resist' | 'outspeed';
 
 export interface SearchTarget {
   speciesId: string;
@@ -61,6 +61,7 @@ export interface Candidate extends CandidateUsage {
 export const CONDITION_LABEL: Record<ConditionKind, string> = {
   ohko: 'One-shots',
   survive: 'Survives',
+  safe: 'Isn\'t one-shot by',
   resist: 'Resists',
   outspeed: 'Outspeeds',
 };
@@ -252,6 +253,12 @@ function checkCell(cond: Condition, cell: ThreatCell): { pass: boolean; detail: 
       const dmg = t ? t.percent[1] : 0;
       return { pass, detail: t ? `takes up to ${Math.round(dmg * hits)}% from ${t.move}${hits === 2 ? ' ×2' : ''}` : 'takes nothing', margin: 100 - dmg * hits };
     }
+    case 'safe': {
+      // Whatever its best roll of its best move does stays under 100%: no move of theirs can one-shot it.
+      const t = cell.theirs;
+      const worst = t ? t.percent[1] : 0;
+      return { pass: worst < 100, detail: t ? `worst hit ${t.move} ${Math.round(worst)}%` : 'takes nothing', margin: 100 - worst };
+    }
     case 'outspeed':
       return { pass: cell.first === 'me', detail: `${cell.mySpeed} vs ${cell.theirSpeed}`, margin: cell.mySpeed - cell.theirSpeed };
     default:
@@ -317,6 +324,8 @@ export function describeCondition(dex: Dex, c: Condition): string {
       return `${c.allowPossible ? 'Can one-shot' : 'One-shots'} ${name}`;
     case 'survive':
       return `Survives ${(c.hits ?? 1) === 2 ? 'two hits from' : 'a hit from'} ${name}`;
+    case 'safe':
+      return `Takes under 100% from every move of ${name}`;
     case 'resist':
       return `Resists ${name}'s attacking types`;
     case 'outspeed':

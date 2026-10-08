@@ -37,6 +37,7 @@ const SHOWN = 48;
 const KIND_HINT: Record<ConditionKind, string> = {
   ohko: 'Has a move that knocks the target out in one hit.',
   survive: "Takes the target's strongest hit without fainting.",
+  safe: "No move of the target's can one-shot it: even the highest roll of its strongest move leaves it standing (under 100%).",
   resist: "Takes half or less from every type the target attacks with (type chart only).",
   outspeed: 'Moves before the target (reversed under Trick Room).',
 };

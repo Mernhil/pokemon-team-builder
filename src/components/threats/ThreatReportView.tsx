@@ -5,9 +5,10 @@ import { REGULATION_MANIFEST } from '@/domain/formats';
 import { META_STALE_DAYS, isProvisional, provisionalNote, usageLabel, usageText } from '@/domain/meta';
 import { TERRAINS, WEATHERS, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
 import type { MetaSet } from '@/domain/metaSets';
-import { snapshotAge } from '@/domain/speedTiers';
+import { metaVariants, snapshotAge } from '@/domain/speedTiers';
 import { useViewStore } from '@/store/viewStore';
 import { VERDICT_CELL } from './verdictStyle';
+import { speedDependence } from '@/domain/speedDependence';
 import { THREAT_COUNTS, bucket, KILL_LABEL, KILL_SHORT, type ThreatCell } from '@/domain/threats';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
@@ -20,6 +21,7 @@ import { Sprite } from '../ui/Sprite';
 import { Chip, EmptyState, Help, LoadingState, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { FormSwitch } from '../ui/FormSwitch';
+import { SpeedControlCard } from './SpeedControlCard';
 import { useThreatReport } from './useThreatReport';
 import { RisingThreats } from './RisingThreats';
 
@@ -54,6 +56,10 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
   const setForm = (id: string, base: boolean) => setBaseForms((s) => { const n = new Set(s); if (base) n.add(id); else n.delete(id); return n; });
   const report = useThreatReport({ dex, format, team, count, field, baseForms });
   const { picked, loading, threats, members, rows, done, summaries, error } = report;
+  const speed = useMemo(
+    () => (picked && members.length ? speedDependence(dex, metaVariants(picked.snapshot, dex, format, count), members.map((m) => ({ slot: m.slot, set: m.set }))) : undefined),
+    [picked, members, dex, format, count],
+  );
   // The cell that holds the table's Tab stop; the first one if the last-used cell is gone (fewer threats or members now).
   const [activeRow, activeCol] = activeCell.split(':').map(Number);
   const activeKey = activeRow < threats.length && activeCol < members.length ? activeCell : '0:0';
@@ -211,6 +217,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
 
           <RisingThreats dex={dex} format={format} regulationId={picked?.regulationId} threatIds={threats.map((t) => t.speciesId)} rows={rows} />
 
+          {speed && <SpeedControlCard result={speed} />}
           {summaries.length > 0 && (
             <Panel title="Biggest threats">
               <ol className="space-y-2">

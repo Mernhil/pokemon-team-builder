@@ -21,6 +21,8 @@ import { BringPicker } from '../matches/BringPicker';
 import { LoggedMonDetails } from '../matches/LoggedMonEditor';
 import { PlanCard } from '../matches/PlanCard';
 import { Toggle } from '../ui/chips';
+import { speedDependence, variantsFromSets } from '@/domain/speedDependence';
+import { SpeedControlCard } from '../threats/SpeedControlCard';
 import { FormSwitch } from '../ui/FormSwitch';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip, EmptyState, Label, LoadingState, Panel, Select, Tabs, TextArea } from '../ui/primitives';
@@ -103,6 +105,11 @@ function GameBody({ dex, format, team, playable }: { dex: Dex; format: FormatRul
   // The calculation can lag a tap or two behind on a slow phone; the tapping itself never waits for it.
   const deferred = useDeferredValue(resolved);
   const result = useMemo(() => (mine.length && deferred.length ? planBring({ dex, format, mine, opponents: deferred, limits }) : null), [dex, format, mine, deferred, limits]);
+  // Does my team lean on Tailwind / Trick Room against the six they showed? (A single setter is the warning.)
+  const speedCheck = useMemo(
+    () => (mine.length && deferred.length ? speedDependence(dex, variantsFromSets(dex, deferred), mine.map((m, slot) => ({ slot, set: m.set })), 'their six') : undefined),
+    [dex, mine, deferred],
+  );
   const plans = result?.plans ?? [];
   const plan: Plan | undefined = plans[Math.min(g.planIndex, Math.max(plans.length - 1, 0))];
   const planBringOf: Bring | undefined = plan ? { brought: plan.brought, leads: plan.leads } : undefined;
@@ -171,6 +178,7 @@ function GameBody({ dex, format, team, playable }: { dex: Dex; format: FormatRul
 
       {result && result.matrix.length > 0 && <Matchups dex={dex} format={format} mine={mine} opponents={deferred} matrix={result.matrix} />}
       {result && result.matrix.length > 0 && <SpeedOrder dex={dex} mine={mine} opponents={deferred} matrix={result.matrix} />}
+      {speedCheck && <SpeedControlCard result={speedCheck} />}
 
       {g.opponents.length > 0 && (
         <Panel title="During the game">

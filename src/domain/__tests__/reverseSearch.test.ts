@@ -185,3 +185,22 @@ describe('required moves', () => {
     }
   });
 });
+
+describe("'safe' (isn't one-shot by)", () => {
+  it('needs every move of the target under 100%, says the worst one, and agrees with surviving one hit', () => {
+    const t = targetFor(dex, fmt, 'kingambit', snap);
+    const cands = buildCandidates(dex, fmt, snap);
+    let safe = 0;
+    for (const c of cands) {
+      const a = evaluateCandidate(dex, c, [{ id: 's', kind: 'safe', target: t }], field);
+      const b = evaluateCandidate(dex, c, [{ id: 's', kind: 'survive', target: t }], field);
+      if (a) {
+        safe++;
+        expect(a.results[0].detail).toMatch(/^(worst hit .* \d+%|takes nothing)$/);
+      }
+      expect(!!a, c.speciesId).toBe(!!b);
+    }
+    expect(safe).toBeGreaterThan(0);
+    expect(safe).toBeLessThan(cands.length);
+  });
+});
