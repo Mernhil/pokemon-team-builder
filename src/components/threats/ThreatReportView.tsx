@@ -19,7 +19,7 @@ import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
 import { Chip, EmptyState, Help, LoadingState, Notice, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
-import { FormSwitch } from './FormSwitch';
+import { FormSwitch } from '../ui/FormSwitch';
 import { useThreatReport } from './useThreatReport';
 import { RisingThreats } from './RisingThreats';
 
@@ -268,7 +268,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                           <span>
                             <b className="block text-sm">{sp?.name ?? t.speciesId}</b>
                             <span className="text-muted">{usageLabel(t)}</span>
-                            <FormSwitch dex={dex} threat={t} base={baseForms.has(t.speciesId)} onChange={(b) => setForm(t.speciesId, b)} />
+                            <FormSwitch dex={dex} speciesId={t.speciesId} itemId={t.set.itemId} base={baseForms.has(t.speciesId)} onChange={(b) => setForm(t.speciesId, b)} />
                           </span>
                         </span>
                       </th>
@@ -297,7 +297,7 @@ export function ThreatReportView({ dex, format, team }: { dex: Dex; format: Form
                       <b className="block text-sm">{sp?.name ?? t.speciesId}</b>
                       <span className="text-xs text-muted">{usageText(t)}</span>
                     </div>
-                    <span className="ml-auto"><FormSwitch dex={dex} threat={t} base={baseForms.has(t.speciesId)} onChange={(b) => setForm(t.speciesId, b)} /></span>
+                    <span className="ml-auto"><FormSwitch dex={dex} speciesId={t.speciesId} itemId={t.set.itemId} base={baseForms.has(t.speciesId)} onChange={(b) => setForm(t.speciesId, b)} /></span>
                   </div>
                   {line && <p className="mb-2 text-xs text-muted">{line}</p>}
                   <div className="space-y-1.5">

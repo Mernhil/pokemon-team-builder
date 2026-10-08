@@ -99,7 +99,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   const openCalc = (m: Match) => {
     const against = conditions.find((c) => c.kind !== 'resist') ?? conditions[0];
     const calc = useCalcStore.getState();
-    calc.setSide('attacker', { set: m.candidate.set, cond: defaultSide(m.candidate.megaMode !== 'base'), crits: [false, false, false, false] });
+    calc.setSide('attacker', { set: m.candidate.set, cond: { ...defaultSide(m.candidate.megaMode !== 'base'), ...(m.form === 'mega' || m.form === 'base' ? { megaMode: m.form } : {}) }, crits: [false, false, false, false] });
     if (!against) {
       setView('calc');
       return;
@@ -302,6 +302,11 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
                       {m.candidate.build === 'meta' ? `Meta set · ${candidateUsageLabel(m.candidate)}` : 'Generic build'}
                     </Chip>
                   </div>
+                  {m.form && (
+                    <p className="text-xs text-muted">
+                      {m.form === 'either' ? 'Works as the Mega and as the base form.' : m.form === 'mega' ? 'Works as the Mega only; the base form does not.' : 'Works as the base form only; the Mega does not.'}
+                    </p>
+                  )}
                   <ul className="space-y-0.5 text-xs">
                     {knows.map((id) => {
                       const mv = dex.move(id);

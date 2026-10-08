@@ -134,7 +134,7 @@ export function buildCandidates(dex: Dex, format: FormatRules, snapshot?: MetaSn
     const m = entry && metaSet(entry, dex, format);
     if (m) {
       const usage: CandidateUsage = m;
-      out.push({ speciesId: species.id, set: m.set, megaMode: m.megaMode, build: 'meta', usagePct: usage.usagePct, usageRank: usage.usageRank });
+      out.push({ speciesId: species.id, set: m.set, megaMode: dex.megaFor(species.id, m.set.itemId) ? 'both' : 'base', build: 'meta', usagePct: usage.usagePct, usageRank: usage.usageRank });
       continue;
     }
     const set = defaultSet(dex, species.id, format);
@@ -195,6 +195,8 @@ interface ConditionResult {
 
 export interface Match {
   candidate: Candidate;
+  /** A Mega Stone holder: the form(s) that meet every condition ('either' when both do). Absent for the others. */
+  form?: 'mega' | 'base' | 'either';
   results: ConditionResult[];
   /** Sum of the margins (bigger = more comfortable); the tie-break after usage. */
   score: number;
@@ -213,11 +215,12 @@ export function attackingTypes(dex: Dex, t: SearchTarget): TypeName[] {
 }
 
 /** Does the candidate resist (take ≤ ½ from) every type the target attacks with? */
-export function resistCheck(dex: Dex, cand: Candidate, target: SearchTarget): { pass: boolean; detail: string } {
+export function resistCheck(dex: Dex, cand: Candidate, target: SearchTarget, only?: 'base' | 'mega'): { pass: boolean; detail: string } {
   const attacks = attackingTypes(dex, target);
   if (!attacks.length) return { pass: false, detail: 'target has no attacking types' };
-  const forms = [{ form: dex.species(cand.speciesId), mega: false }];
-  if (cand.megaMode !== 'base') {
+  const forms: { form: Pokemon | undefined; mega: boolean }[] = [];
+  if (only !== 'mega') forms.push({ form: dex.species(cand.speciesId), mega: false });
+  if (only === 'mega' || (!only && cand.megaMode !== 'base')) {
     const mega = dex.megaFor(cand.speciesId, cand.set.itemId);
     if (mega) forms.push({ form: mega, mega: true });
   }
@@ -256,21 +259,18 @@ function checkCell(cond: Condition, cell: ThreatCell): { pass: boolean; detail: 
   }
 }
 
-/**
- * All conditions for one candidate, or undefined as soon as one fails (a search only keeps full
- * matches). Calc cells are computed once per target and shared by the conditions on that target.
- */
-export function evaluateCandidate(dex: Dex, cand: Candidate, conditions: Condition[], field: FieldConditions): Match | undefined {
+/** All conditions for one candidate in one form (undefined: not a Mega Stone holder), or undefined as soon as one fails. */
+function evaluateForm(dex: Dex, cand: Candidate, conditions: Condition[], field: FieldConditions, form: 'base' | 'mega' | undefined): Match | undefined {
   const cells = new Map<string, ThreatCell>();
   const results: ConditionResult[] = [];
   let score = 0;
   for (const cond of conditions) {
     let r: { pass: boolean; detail: string; margin?: number };
-    if (cond.kind === 'resist') r = resistCheck(dex, cand, cond.target);
+    if (cond.kind === 'resist') r = resistCheck(dex, cand, cond.target, form);
     else {
       let cell = cells.get(cond.target.set.uid);
       if (!cell) {
-        cell = computeCell(dex, cand.set, cond.target, field);
+        cell = computeCell(dex, cand.set, cond.target, field, form);
         cells.set(cond.target.set.uid, cell);
       }
       r = checkCell(cond, cell);
@@ -280,6 +280,22 @@ export function evaluateCandidate(dex: Dex, cand: Candidate, conditions: Conditi
     score += Math.max(-100, Math.min(100, r.margin ?? 0));
   }
   return { candidate: cand, results, score };
+}
+
+/**
+ * All conditions for one candidate, or undefined when none of its forms meets them (a search only
+ * keeps full matches). A Mega Stone holder is tried as its Mega and as itself, each form on its own
+ * (one Pokémon is one form at a time); the match says which form(s) work. Calc cells are computed
+ * once per target and shared by the conditions on that target.
+ */
+export function evaluateCandidate(dex: Dex, cand: Candidate, conditions: Condition[], field: FieldConditions): Match | undefined {
+  if (cand.megaMode === 'base' || !dex.megaFor(cand.speciesId, cand.set.itemId)) return evaluateForm(dex, cand, conditions, field, undefined);
+  const asMega = evaluateForm(dex, cand, conditions, field, 'mega');
+  const asBase = cand.megaMode === 'both' ? evaluateForm(dex, cand, conditions, field, 'base') : undefined;
+  if (asMega && asBase) return { ...(asMega.score <= asBase.score ? asMega : asBase), form: 'either' };
+  if (asMega) return { ...asMega, form: 'mega' };
+  if (asBase) return { ...asBase, form: 'base' };
+  return undefined;
 }
 
 /** Meta-backed answers first (by usage), then default builds; ties by comfort, then name. */

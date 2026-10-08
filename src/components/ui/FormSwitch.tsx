@@ -1,11 +1,10 @@
 import type { Dex } from '@/data/dex';
-import type { MetaSet } from '@/domain/metaSets';
-import { cn } from '../ui/styles';
+import { cn } from './styles';
 
-/** Mega / Base switch for a threat holding its Mega Stone (nothing for the others). */
-export function FormSwitch({ dex, threat, base, onChange }: { dex: Dex; threat: MetaSet; base: boolean; onChange: (base: boolean) => void }) {
-  if (!dex.megaFor(threat.speciesId, threat.set.itemId)) return null;
-  const name = dex.species(threat.speciesId)?.name ?? threat.speciesId;
+/** Mega / Base switch for a Pokémon holding its Mega Stone (nothing for the others). */
+export function FormSwitch({ dex, speciesId, itemId, base, onChange }: { dex: Dex; speciesId: string; itemId?: string; base: boolean; onChange: (base: boolean) => void }) {
+  if (!dex.megaFor(speciesId, itemId ?? '')) return null;
+  const name = dex.species(speciesId)?.name ?? speciesId;
   return (
     <span role="radiogroup" aria-label={`${name} form`} className="inline-flex overflow-hidden rounded-md border border-border text-2xs font-semibold">
       {([false, true] as const).map((b) => (

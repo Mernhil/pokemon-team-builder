@@ -21,6 +21,7 @@ import { BringPicker } from '../matches/BringPicker';
 import { LoggedMonDetails } from '../matches/LoggedMonEditor';
 import { PlanCard } from '../matches/PlanCard';
 import { Toggle } from '../ui/chips';
+import { FormSwitch } from '../ui/FormSwitch';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip, EmptyState, Label, LoadingState, Panel, Select, Tabs, TextArea } from '../ui/primitives';
 import { cn } from '../ui/styles';
@@ -91,10 +92,14 @@ function GameBody({ dex, format, team, playable }: { dex: Dex; format: FormatRul
   // ---- the numbers ----
   const mine = useMemo(() => team.slots.flatMap((s) => (s ? [{ uid: s.uid, set: s }] : [])), [team.slots]);
   const log = useMemo(() => opponentLog(g), [g]);
+  // Their Pokémon switched to the base form (the default is the Mega when they hold the stone); this game only.
+  const [baseForms, setBaseForms] = useState<ReadonlySet<string>>(new Set());
+  const setForm = (id: string, base: boolean) => setBaseForms((s) => { const n = new Set(s); if (base) n.add(id); else n.delete(id); return n; });
   const resolved = useMemo(
-    () => sourcesFromLog(log).flatMap((o) => resolveOpponent(dex, format, o.speciesId, { known: o.known, snapshot: picked?.snapshot }) ?? []),
-    [log, dex, format, picked],
+    () => sourcesFromLog(log).flatMap((o) => resolveOpponent(dex, format, o.speciesId, { known: o.known, snapshot: picked?.snapshot, baseForm: baseForms.has(o.speciesId) }) ?? []),
+    [log, dex, format, picked, baseForms],
   );
+  const stoneOf = useMemo(() => new Map(resolved.map((o) => [o.speciesId, o.set.itemId] as const)), [resolved]);
   // The calculation can lag a tap or two behind on a slow phone; the tapping itself never waits for it.
   const deferred = useDeferredValue(resolved);
   const result = useMemo(() => (mine.length && deferred.length ? planBring({ dex, format, mine, opponents: deferred, limits }) : null), [dex, format, mine, deferred, limits]);
@@ -130,7 +135,7 @@ function GameBody({ dex, format, team, playable }: { dex: Dex; format: FormatRul
   return (
     <div className="space-y-3">
       <MyTeam team={team} playable={playable} dex={dex} format={format} />
-      <TheirSix dex={dex} format={format} g={g} top={topOpponents(picked?.snapshot, 30)} recent={recentOpponents(matchOrder.map((id) => matchesById[id]).filter(Boolean), g.opponents)} />
+      <TheirSix dex={dex} format={format} g={g} stoneOf={stoneOf} baseForms={baseForms} onForm={setForm} top={topOpponents(picked?.snapshot, 30)} recent={recentOpponents(matchOrder.map((id) => matchesById[id]).filter(Boolean), g.opponents)} />
 
       {g.opponents.length > 0 && !result && <LoadingState label="Working out the plan…" />}
       {result && plan && (
@@ -238,7 +243,7 @@ function MyTeam({ team, playable, dex, format }: { team: Team; playable: Team[];
   );
 }
 
-function TheirSix({ dex, format, g, top, recent }: { dex: Dex; format: FormatRules; g: GameDayState; top: string[]; recent: string[] }) {
+function TheirSix({ dex, format, g, top, recent, stoneOf, baseForms, onForm }: { dex: Dex; format: FormatRules; g: GameDayState; top: string[]; recent: string[]; stoneOf: Map<string, string | undefined>; baseForms: ReadonlySet<string>; onForm: (id: string, base: boolean) => void }) {
   const { add, remove, undo, nextGame } = useGameDayStore.getState();
   const [adding, setAdding] = useState<string | undefined>();
   const full = g.opponents.length >= MAX_OPPONENTS;
@@ -264,6 +269,7 @@ function TheirSix({ dex, format, g, top, recent }: { dex: Dex; format: FormatRul
           <li key={id} className="flex items-center gap-1 rounded-full border border-border bg-surface-2 py-0.5 pr-1 pl-1">
             <Sprite speciesId={id} name={dex.species(id)?.name} types={dex.species(id)?.types} set={format.spriteSet} size={28} />
             <span className="text-xs font-semibold">{dex.species(id)?.name ?? id}</span>
+            <FormSwitch dex={dex} speciesId={id} itemId={stoneOf.get(id) ?? ''} base={baseForms.has(id)} onChange={(b) => onForm(id, b)} />
             <button type="button" aria-label={`Remove ${dex.species(id)?.name ?? id}`} onClick={() => remove(id)} className="rounded-full p-1 text-muted hover:text-bad pointer-coarse:p-2.5">
               <X size={13} aria-hidden />
             </button>

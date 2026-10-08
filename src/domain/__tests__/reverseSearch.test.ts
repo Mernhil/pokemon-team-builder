@@ -76,6 +76,23 @@ describe('target form', () => {
   });
 });
 
+describe('Mega Stone holders as answers', () => {
+  it('are tried as the Mega and as the base form, and the match says which', () => {
+    const cands = buildCandidates(dex, fmt, snap).filter((c) => c.megaMode === 'both');
+    expect(cands.length).toBeGreaterThan(0);
+    const target = targetFor(dex, fmt, 'golisopod', snap);
+    const forms = new Set<string>();
+    for (const c of cands) {
+      const m = evaluateCandidate(dex, c, [{ id: 'a', kind: 'ohko', target, allowPossible: true }, { id: 'b', kind: 'survive', target }], field);
+      if (m) forms.add(m.form!);
+    }
+    for (const f of forms) expect(['mega', 'base', 'either']).toContain(f);
+    // Every holder reports a form, never undefined, when it matches.
+    const some = cands.map((c) => evaluateCandidate(dex, c, [], field)).filter(Boolean);
+    expect(some.every((m) => m!.form === 'either')).toBe(true);
+  });
+});
+
 describe('resist', () => {
   const cand = (speciesId: string): Candidate => ({ speciesId, set: defaultSet(dex, speciesId, fmt), megaMode: 'base', build: 'default', usagePct: 0 });
   it('is a type check against the target\'s attacking types', () => {

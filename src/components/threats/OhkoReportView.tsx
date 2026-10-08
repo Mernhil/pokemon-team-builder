@@ -13,7 +13,7 @@ import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
 import { Chip, EmptyState, Help, LoadingState, Notice, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
-import { FormSwitch } from './FormSwitch';
+import { FormSwitch } from '../ui/FormSwitch';
 import { useThreatReport } from './useThreatReport';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions');
@@ -142,7 +142,7 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
                   <li key={t.speciesId} className="flex items-center gap-2">
                     <Sprite speciesId={t.speciesId} name={dex.species(t.speciesId)?.name} types={dex.species(t.speciesId)?.types} set={format.spriteSet} size={24} />
                     <b>{dex.species(t.speciesId)?.name ?? t.speciesId}</b>
-                    <FormSwitch dex={dex} threat={t} base={baseForms.has(t.speciesId)} onChange={(b) => setForm(t.speciesId, b)} />
+                    <FormSwitch dex={dex} speciesId={t.speciesId} itemId={t.set.itemId} base={baseForms.has(t.speciesId)} onChange={(b) => setForm(t.speciesId, b)} />
                   </li>
                 ))}
               </ul>

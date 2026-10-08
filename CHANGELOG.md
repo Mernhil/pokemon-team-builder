@@ -20,6 +20,8 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 ### Fixed
 - **Reverse search.** A target holding its Mega Stone is now calculated as the Mega, not as "worst of base and Mega", so Fire attackers show up for Golisopod (Bug/Steel once Mega Evolved). Each such condition has a *Form* switch (Mega / Base) to calculate against the base form without changing the item.
 - **Analyse → Threats and OHKO.** The same fix: a most-used set holding its Mega Stone is calculated as the Mega (it was read as the worse of base and Mega, so Fire never counted against Golisopod). Each such threat has a Mega / Base switch; Teammate suggestions and benchmarks use the Mega too.
+- **Bring planner and Game day.** Their Pokémon holding a Mega Stone are planned against as the Mega (types included), each with a Mega / Base switch.
+- **Reverse search.** An answer holding its Mega Stone is tried as the Mega and as the base form separately, and the card says which form(s) meet the conditions (Open in Calc loads that form).
 - **Build.** The nature ＋/− buttons in the stat calculator were hard to read in the dark theme when active.
 - **Pokénav.** The page scrolled sideways on a phone; the game chips and tabs are now full-size touch targets, as are the Pokédex type filters, the Calc *Load* buttons and the CRIT chip.
 - **Settings → Sync.** When sync isn't set up on a deployment, the message now says which setting is missing (the database, or the Access settings) and which step in docs/SYNC.md fixes it.
