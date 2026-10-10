@@ -10,6 +10,7 @@ import {
   candidateUsageLabel,
   describeCondition,
   targetFor,
+  targetMegaMode,
   type Condition,
   type ConditionKind,
   type Match,
@@ -36,6 +37,7 @@ const SHOWN = 48;
 const KIND_HINT: Record<ConditionKind, string> = {
   ohko: 'Has a move that knocks the target out in one hit.',
   survive: "Takes the target's strongest hit without fainting.",
+  safe: "No move of the target's can one-shot it: even the highest roll of its strongest move leaves it standing (under 100%).",
   resist: "Takes half or less from every type the target attacks with (type chart only).",
   outspeed: 'Moves before the target (reversed under Trick Room).',
 };
@@ -76,7 +78,17 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   };
   const patch = (id: string, p: Partial<Condition>) => setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, ...p } : c)));
   const patchSet = (id: string, p: Partial<PokemonSet>) =>
-    setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, target: { ...c.target, set: { ...c.target.set, ...p } } } : c)));
+    setConditions((cs) =>
+      cs.map((c) => {
+        if (c.id !== id) return c;
+        const set = { ...c.target.set, ...p };
+        // A new item changes whether there is a Mega to be: back to the default form for it.
+        const megaMode = p.itemId !== undefined && p.itemId !== c.target.set.itemId ? targetMegaMode(dex, format, set) : c.target.megaMode;
+        return { ...c, target: { ...c.target, set, megaMode } };
+      }),
+    );
+  const setForm = (id: string, megaMode: 'base' | 'mega') =>
+    setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, target: { ...c.target, megaMode } } : c)));
   const remove = (id: string) => setConditions((cs) => cs.filter((c) => c.id !== id));
 
   const addToTeam = (m: Match) => {
@@ -88,7 +100,7 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   const openCalc = (m: Match) => {
     const against = conditions.find((c) => c.kind !== 'resist') ?? conditions[0];
     const calc = useCalcStore.getState();
-    calc.setSide('attacker', { set: m.candidate.set, cond: defaultSide(m.candidate.megaMode !== 'base'), crits: [false, false, false, false] });
+    calc.setSide('attacker', { set: m.candidate.set, cond: { ...defaultSide(m.candidate.megaMode !== 'base'), ...(m.form === 'mega' || m.form === 'base' ? { megaMode: m.form } : {}) }, crits: [false, false, false, false] });
     if (!against) {
       setView('calc');
       return;
@@ -153,6 +165,14 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
                   <div className="flex flex-wrap items-center gap-2">
                     <Sprite speciesId={c.target.speciesId} name={name} types={dex.species(c.target.speciesId)?.types} set={format.spriteSet} size={36} />
                     <span className="min-w-0 flex-1 basis-40 text-sm font-semibold">{describeCondition(dex, c)}</span>
+                    {dex.megaFor(c.target.speciesId, c.target.set.itemId) && (
+                      <Segmented<'mega' | 'base'>
+                        label="Form"
+                        value={c.target.megaMode === 'base' ? 'base' : 'mega'}
+                        options={[{ id: 'mega', label: 'Mega' }, { id: 'base', label: 'Base' }]}
+                        onChange={(v) => setForm(c.id, v)}
+                      />
+                    )}
                     {c.kind === 'survive' && (
                       <Segmented<'1' | '2'> label="Hits" value={String(c.hits ?? 1) as '1' | '2'} options={[{ id: '1', label: '1' }, { id: '2', label: '2' }]} onChange={(v) => patch(c.id, { hits: Number(v) as 1 | 2 })} />
                     )}
@@ -283,6 +303,11 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
                       {m.candidate.build === 'meta' ? `Meta set · ${candidateUsageLabel(m.candidate)}` : 'Generic build'}
                     </Chip>
                   </div>
+                  {m.form && (
+                    <p className="text-xs text-muted">
+                      {m.form === 'either' ? 'Works as the Mega and as the base form.' : m.form === 'mega' ? 'Works as the Mega only; the base form does not.' : 'Works as the base form only; the Mega does not.'}
+                    </p>
+                  )}
                   <ul className="space-y-0.5 text-xs">
                     {knows.map((id) => {
                       const mv = dex.move(id);

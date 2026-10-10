@@ -90,7 +90,8 @@ export function metaSet(entry: MetaEntry, dex: Dex, format: FormatRules): MetaSe
     sp: { hp, atk, def, spa, spd, spe },
     moves: [...moves.map((m) => m.id), '', '', '', ''].slice(0, 4) as PokemonSet['moves'],
   };
-  const megaMode: MegaMode = dex.megaFor(species.id, itemId) ? 'both' : 'base';
+  // A set holding its stone Megas as it moves, so it is calculated as the Mega (views offer a switch to the base form).
+  const megaMode: MegaMode = dex.megaFor(species.id, itemId) ? 'mega' : 'base';
   return { speciesId: species.id, usagePct: entry.usagePct, usageRank: entry.usageRank, set, megaMode, dropped };
 }
 
