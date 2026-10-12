@@ -1,6 +1,6 @@
 {
  "version": 1,
- "generatedAt": "2026-10-11",
+ "generatedAt": "2026-10-12",
  "regulations": {
   "champions-reg-ma": {
    "regulationId": "champions-reg-ma",
@@ -17842,7 +17842,7 @@
   },
   "champions-reg-mc": {
    "regulationId": "champions-reg-mc",
-   "updatedAt": "2026-10-11",
+   "updatedAt": "2026-10-12",
    "source": {
     "kind": "ingame",
     "name": "Pokémon Champions in-game Battle Data (ranked Doubles)",
@@ -17857,7 +17857,7 @@
      "abilities": [
       {
        "id": "grassysurge",
-       "pct": 100
+       "pct": 99.9
       }
      ],
      "items": [
@@ -17870,53 +17870,53 @@
        "pct": 10.4
       },
       {
-       "id": "ejectbutton",
-       "pct": 4.1
+       "id": "sitrusberry",
+       "pct": 4
       },
       {
-       "id": "sitrusberry",
-       "pct": 3.9
+       "id": "ejectbutton",
+       "pct": 3.8
       },
       {
        "id": "grassyseed",
-       "pct": 2.7
+       "pct": 2.9
       },
       {
        "id": "occaberry",
-       "pct": 2
+       "pct": 1.9
       }
      ],
      "moves": [
       {
        "id": "grassyglide",
-       "pct": 98.4
+       "pct": 98.2
       },
       {
        "id": "fakeout",
-       "pct": 97.3
+       "pct": 97
       },
       {
        "id": "woodhammer",
-       "pct": 86.7
+       "pct": 86.2
       },
       {
        "id": "highhorsepower",
-       "pct": 56.3
+       "pct": 56
       },
       {
        "id": "uturn",
-       "pct": 39.3
+       "pct": 39.7
       },
       {
        "id": "protect",
-       "pct": 11
+       "pct": 11.1
       },
       {
        "id": "knockoff",
-       "pct": 3.5
+       "pct": 3.8
       },
       {
-       "id": "superpower",
+       "id": "drumbeating",
        "pct": 1.7
       }
      ],
@@ -17957,7 +17957,7 @@
         0,
         2
        ],
-       "pct": 7.7
+       "pct": 8.3
       },
       {
        "nature": "Adamant",
@@ -17969,7 +17969,7 @@
         2,
         0
        ],
-       "pct": 7
+       "pct": 7.2
       },
       {
        "nature": "Adamant",
@@ -17981,7 +17981,7 @@
         4,
         5
        ],
-       "pct": 4.9
+       "pct": 4.8
       },
       {
        "nature": "Adamant",
@@ -18015,71 +18015,71 @@
      "abilities": [
       {
        "id": "roughskin",
-       "pct": 98.4
+       "pct": 98.3
       },
       {
        "id": "sandveil",
-       "pct": 1.6
+       "pct": 1.7
       }
      ],
      "items": [
       {
        "id": "garchompitez",
-       "pct": 42.8
+       "pct": 42.2
       },
       {
        "id": "choicescarf",
-       "pct": 34.6
+       "pct": 34.8
       },
       {
        "id": "lifeorb",
-       "pct": 13.5
+       "pct": 13.6
       },
       {
        "id": "habanberry",
-       "pct": 1.9
+       "pct": 1.8
       },
       {
        "id": "sitrusberry",
-       "pct": 1.6
+       "pct": 1.7
       },
       {
        "id": "garchompite",
-       "pct": 1.1
+       "pct": 1.2
       }
      ],
      "moves": [
       {
        "id": "protect",
-       "pct": 62.5
+       "pct": 62
       },
       {
        "id": "rockslide",
-       "pct": 48.9
+       "pct": 49.7
       },
       {
        "id": "earthquake",
-       "pct": 46.9
+       "pct": 47.5
       },
       {
        "id": "dragonclaw",
-       "pct": 45.3
+       "pct": 46
       },
       {
        "id": "stompingtantrum",
-       "pct": 42.9
+       "pct": 42.7
       },
       {
        "id": "powergem",
-       "pct": 38.9
+       "pct": 38.4
       },
       {
        "id": "earthpower",
-       "pct": 35
+       "pct": 34.6
       },
       {
        "id": "dragonpulse",
-       "pct": 29.6
+       "pct": 28.9
       }
      ],
      "teammates": [
@@ -18119,7 +18119,7 @@
         0,
         32
        ],
-       "pct": 25.4
+       "pct": 26
       },
       {
        "nature": "Adamant",
@@ -18131,7 +18131,7 @@
         0,
         32
        ],
-       "pct": 19.8
+       "pct": 19.5
       },
       {
        "nature": "Adamant",
@@ -18143,7 +18143,7 @@
         0,
         32
        ],
-       "pct": 5.2
+       "pct": 4.9
       },
       {
        "nature": "Adamant",
@@ -18155,7 +18155,7 @@
         1,
         32
        ],
-       "pct": 3
+       "pct": 2.9
       },
       {
        "nature": "Adamant",
@@ -18167,7 +18167,7 @@
         0,
         32
        ],
-       "pct": 2.2
+       "pct": 2.1
       }
      ]
     },
@@ -18177,17 +18177,17 @@
      "abilities": [
       {
        "id": "unburden",
-       "pct": 82.8
+       "pct": 83.1
       },
       {
        "id": "poisontouch",
-       "pct": 17.1
+       "pct": 16.8
       }
      ],
      "items": [
       {
        "id": "whiteherb",
-       "pct": 35.4
+       "pct": 35.7
       },
       {
        "id": "psychicseed",
@@ -18195,7 +18195,7 @@
       },
       {
        "id": "focussash",
-       "pct": 19.8
+       "pct": 19.4
       },
       {
        "id": "grassyseed",
@@ -18203,7 +18203,7 @@
       },
       {
        "id": "lifeorb",
-       "pct": 1.8
+       "pct": 1.7
       }
      ],
      "moves": [
@@ -18213,7 +18213,7 @@
       },
       {
        "id": "direclaw",
-       "pct": 89.2
+       "pct": 89.6
       },
       {
        "id": "protect",
@@ -18225,19 +18225,19 @@
       },
       {
        "id": "rockslide",
-       "pct": 34.3
+       "pct": 34.1
       },
       {
        "id": "throatchop",
-       "pct": 12.9
+       "pct": 13.1
       },
       {
        "id": "rocktomb",
-       "pct": 8.7
+       "pct": 8.5
       },
       {
        "id": "coaching",
-       "pct": 7.9
+       "pct": 8.1
       }
      ],
      "teammates": [
@@ -18277,7 +18277,7 @@
         0,
         32
        ],
-       "pct": 49.6
+       "pct": 49.4
       },
       {
        "nature": "Adamant",
@@ -18301,7 +18301,7 @@
         2,
         32
        ],
-       "pct": 4.2
+       "pct": 4.5
       },
       {
        "nature": "Adamant",
@@ -18313,7 +18313,7 @@
         1,
         30
        ],
-       "pct": 2.8
+       "pct": 2.7
       },
       {
        "nature": "Adamant",
@@ -18325,7 +18325,7 @@
         0,
         32
        ],
-       "pct": 2.6
+       "pct": 2.5
       }
      ]
     },
@@ -18341,57 +18341,57 @@
      "items": [
       {
        "id": "sitrusberry",
-       "pct": 70.5
+       "pct": 70
       },
       {
        "id": "chopleberry",
-       "pct": 11.1
+       "pct": 11.6
       },
       {
        "id": "passhoberry",
-       "pct": 5.4
+       "pct": 5.1
       },
       {
        "id": "lifeorb",
-       "pct": 2.7
-      },
-      {
-       "id": "rockyhelmet",
-       "pct": 2.3
+       "pct": 2.6
       },
       {
        "id": "leftovers",
-       "pct": 2.3
+       "pct": 2.5
+      },
+      {
+       "id": "rockyhelmet",
+       "pct": 2.4
       }
      ],
      "moves": [
       {
        "id": "fakeout",
-       "pct": 98.5
+       "pct": 98.3
       },
       {
        "id": "flareblitz",
-       "pct": 92.9
+       "pct": 92.8
       },
       {
        "id": "partingshot",
-       "pct": 92.2
+       "pct": 92
       },
       {
        "id": "darkestlariat",
-       "pct": 44.3
+       "pct": 45.2
       },
       {
        "id": "throatchop",
-       "pct": 33.3
+       "pct": 33.4
       },
       {
        "id": "protect",
-       "pct": 12
+       "pct": 11.9
       },
       {
        "id": "snarl",
-       "pct": 11.2
+       "pct": 10.7
       },
       {
        "id": "closecombat",
@@ -18435,7 +18435,7 @@
         14,
         2
        ],
-       "pct": 7
+       "pct": 6.9
       },
       {
        "nature": "Impish",
@@ -18459,19 +18459,7 @@
         20,
         0
        ],
-       "pct": 2.6
-      },
-      {
-       "nature": "Impish",
-       "values": [
-        32,
-        0,
-        20,
-        0,
-        14,
-        0
-       ],
-       "pct": 2
+       "pct": 2.5
       },
       {
        "nature": "Impish",
@@ -18484,6 +18472,18 @@
         0
        ],
        "pct": 2
+      },
+      {
+       "nature": "Impish",
+       "values": [
+        32,
+        0,
+        20,
+        0,
+        14,
+        0
+       ],
+       "pct": 2
       }
      ]
     },
@@ -18493,11 +18493,11 @@
      "abilities": [
       {
        "id": "blaze",
-       "pct": 85.9
+       "pct": 85.4
       },
       {
        "id": "solarpower",
-       "pct": 14.1
+       "pct": 14.6
       }
      ],
      "items": [
@@ -18507,21 +18507,21 @@
       },
       {
        "id": "charizarditex",
-       "pct": 3.8
+       "pct": 3.9
       }
      ],
      "moves": [
       {
        "id": "protect",
-       "pct": 97
+       "pct": 96.7
       },
       {
        "id": "heatwave",
-       "pct": 95.6
+       "pct": 95.4
       },
       {
        "id": "weatherball",
-       "pct": 86
+       "pct": 85.6
       },
       {
        "id": "solarbeam",
@@ -18529,19 +18529,19 @@
       },
       {
        "id": "ancientpower",
-       "pct": 27.7
+       "pct": 27.9
       },
       {
        "id": "hurricane",
-       "pct": 23.6
+       "pct": 23.8
       },
       {
        "id": "helpinghand",
-       "pct": 4.2
+       "pct": 3.9
       },
       {
        "id": "airslash",
-       "pct": 3.1
+       "pct": 3.3
       }
      ],
      "teammates": [
@@ -18581,7 +18581,7 @@
         0,
         32
        ],
-       "pct": 17.9
+       "pct": 18.2
       },
       {
        "nature": "Modest",
@@ -18593,7 +18593,7 @@
         1,
         24
        ],
-       "pct": 6.2
+       "pct": 5.9
       },
       {
        "nature": "Modest",
@@ -18605,7 +18605,7 @@
         0,
         21
        ],
-       "pct": 5
+       "pct": 4.7
       },
       {
        "nature": "Modest",
@@ -18617,19 +18617,19 @@
         0,
         32
        ],
-       "pct": 2.9
+       "pct": 3.2
       },
       {
        "nature": "Modest",
        "values": [
-        32,
+        16,
         0,
-        9,
-        1,
-        13,
-        11
+        18,
+        6,
+        0,
+        26
        ],
-       "pct": 2.8
+       "pct": 2.9
       }
      ]
     },
@@ -18639,39 +18639,43 @@
      "abilities": [
       {
        "id": "stamina",
-       "pct": 94.4
+       "pct": 94.7
       },
       {
        "id": "sturdy",
-       "pct": 4.6
+       "pct": 4.2
+      },
+      {
+       "id": "stalwart",
+       "pct": 1
       }
      ],
      "items": [
       {
        "id": "leftovers",
-       "pct": 90
+       "pct": 90.2
       },
       {
        "id": "choicescarf",
-       "pct": 2.5
+       "pct": 2.3
       },
       {
        "id": "chopleberry",
-       "pct": 2.1
+       "pct": 2
       },
       {
        "id": "sitrusberry",
-       "pct": 1.7
+       "pct": 1.8
       }
      ],
      "moves": [
       {
        "id": "electroshot",
-       "pct": 97.1
+       "pct": 96.9
       },
       {
        "id": "protect",
-       "pct": 95.4
+       "pct": 95.3
       },
       {
        "id": "dragonpulse",
@@ -18679,23 +18683,23 @@
       },
       {
        "id": "flashcannon",
-       "pct": 58.8
+       "pct": 59.6
       },
       {
        "id": "snarl",
-       "pct": 25.2
+       "pct": 24.9
       },
       {
        "id": "aurasphere",
-       "pct": 24.2
+       "pct": 24
       },
       {
        "id": "dracometeor",
-       "pct": 20.9
+       "pct": 20.6
       },
       {
        "id": "thunderbolt",
-       "pct": 1.4
+       "pct": 1.5
       }
      ],
      "teammates": [
@@ -18735,7 +18739,7 @@
         28,
         7
        ],
-       "pct": 5.6
+       "pct": 5.5
       },
       {
        "nature": "Modest",
@@ -18747,7 +18751,7 @@
         19,
         15
        ],
-       "pct": 4.9
+       "pct": 4.7
       },
       {
        "nature": "Modest",
@@ -18759,7 +18763,7 @@
         0,
         32
        ],
-       "pct": 3.9
+       "pct": 3.7
       },
       {
        "nature": "Modest",
@@ -18771,7 +18775,7 @@
         25,
         7
        ],
-       "pct": 3.3
+       "pct": 3
       },
       {
        "nature": "Modest",
@@ -18783,7 +18787,7 @@
         32,
         0
        ],
-       "pct": 2.6
+       "pct": 2.5
       }
      ]
     },
@@ -18793,59 +18797,59 @@
      "abilities": [
       {
        "id": "defiant",
-       "pct": 97.6
+       "pct": 97.3
       },
       {
        "id": "supremeoverlord",
-       "pct": 2.3
+       "pct": 2.6
       }
      ],
      "items": [
       {
        "id": "chopleberry",
-       "pct": 41.5
+       "pct": 42
       },
       {
        "id": "focussash",
-       "pct": 18.7
+       "pct": 17.7
       },
       {
        "id": "lifeorb",
-       "pct": 17.3
+       "pct": 17.5
       },
       {
        "id": "blackglasses",
-       "pct": 16.3
+       "pct": 16.4
       },
       {
        "id": "occaberry",
-       "pct": 4.3
+       "pct": 4.1
       }
      ],
      "moves": [
       {
-       "id": "suckerpunch",
-       "pct": 98.5
+       "id": "kowtowcleave",
+       "pct": 98.4
       },
       {
-       "id": "kowtowcleave",
-       "pct": 98.5
+       "id": "suckerpunch",
+       "pct": 98.4
       },
       {
        "id": "ironhead",
-       "pct": 76.7
+       "pct": 76.9
       },
       {
        "id": "protect",
-       "pct": 64.4
+       "pct": 65
       },
       {
        "id": "lowkick",
-       "pct": 39.1
+       "pct": 38.2
       },
       {
        "id": "swordsdance",
-       "pct": 18.9
+       "pct": 19
       },
       {
        "id": "brickbreak",
@@ -18889,7 +18893,7 @@
         2,
         0
        ],
-       "pct": 13.3
+       "pct": 13.7
       },
       {
        "nature": "Adamant",
@@ -18901,7 +18905,7 @@
         0,
         32
        ],
-       "pct": 9.4
+       "pct": 8.7
       },
       {
        "nature": "Adamant",
@@ -18913,7 +18917,7 @@
         0,
         0
        ],
-       "pct": 5.5
+       "pct": 5.8
       },
       {
        "nature": "Adamant",
@@ -18925,7 +18929,7 @@
         0,
         2
        ],
-       "pct": 3.9
+       "pct": 4.3
       },
       {
        "nature": "Adamant",
@@ -18942,16 +18946,174 @@
      ]
     },
     {
-     "speciesId": "raichu",
+     "speciesId": "indeedeef",
      "usageRank": 8,
      "abilities": [
       {
+       "id": "psychicsurge",
+       "pct": 99.7
+      }
+     ],
+     "items": [
+      {
+       "id": "rockyhelmet",
+       "pct": 47.2
+      },
+      {
+       "id": "colburberry",
+       "pct": 17.5
+      },
+      {
+       "id": "psychicseed",
+       "pct": 17.1
+      },
+      {
+       "id": "sitrusberry",
+       "pct": 10.8
+      },
+      {
+       "id": "focussash",
+       "pct": 2.7
+      },
+      {
+       "id": "ejectbutton",
+       "pct": 1.5
+      }
+     ],
+     "moves": [
+      {
+       "id": "followme",
+       "pct": 99.2
+      },
+      {
+       "id": "helpinghand",
+       "pct": 80.7
+      },
+      {
+       "id": "trickroom",
+       "pct": 75.6
+      },
+      {
+       "id": "psychic",
+       "pct": 73.9
+      },
+      {
+       "id": "protect",
+       "pct": 23.8
+      },
+      {
+       "id": "imprison",
+       "pct": 10.7
+      },
+      {
+       "id": "terrainpulse",
+       "pct": 9.3
+      },
+      {
+       "id": "mysticalfire",
+       "pct": 4.8
+      }
+     ],
+     "teammates": [
+      {
+       "id": "sneasler",
+       "rank": 1
+      },
+      {
+       "id": "gardevoir",
+       "rank": 2
+      },
+      {
+       "id": "armarouge",
+       "rank": 3
+      },
+      {
+       "id": "garchomp",
+       "rank": 4
+      },
+      {
+       "id": "kingambit",
+       "rank": 5
+      },
+      {
+       "id": "incineroar",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Relaxed",
+       "values": [
+        32,
+        0,
+        32,
+        0,
+        2,
+        0
+       ],
+       "pct": 56.6
+      },
+      {
+       "nature": "Relaxed",
+       "values": [
+        32,
+        0,
+        25,
+        0,
+        9,
+        0
+       ],
+       "pct": 5.9
+      },
+      {
+       "nature": "Relaxed",
+       "values": [
+        32,
+        0,
+        32,
+        2,
+        0,
+        0
+       ],
+       "pct": 4.1
+      },
+      {
+       "nature": "Relaxed",
+       "values": [
+        32,
+        0,
+        32,
+        0,
+        1,
+        1
+       ],
+       "pct": 3.7
+      },
+      {
+       "nature": "Relaxed",
+       "values": [
+        31,
+        0,
+        32,
+        0,
+        3,
+        0
+       ],
+       "pct": 2.5
+      }
+     ]
+    },
+    {
+     "speciesId": "raichu",
+     "usageRank": 9,
+     "abilities": [
+      {
        "id": "lightningrod",
-       "pct": 98.4
+       "pct": 98.3
       },
       {
        "id": "static",
-       "pct": 1.6
+       "pct": 1.7
       }
      ],
      "items": [
@@ -18971,11 +19133,11 @@
      "moves": [
       {
        "id": "protect",
-       "pct": 85.1
+       "pct": 85
       },
       {
        "id": "fakeout",
-       "pct": 82
+       "pct": 82.1
       },
       {
        "id": "zapcannon",
@@ -18987,19 +19149,19 @@
       },
       {
        "id": "encore",
-       "pct": 18
-      },
-      {
-       "id": "risingvoltage",
-       "pct": 8
+       "pct": 17.6
       },
       {
        "id": "volttackle",
-       "pct": 7.9
+       "pct": 8.4
+      },
+      {
+       "id": "risingvoltage",
+       "pct": 7.5
       },
       {
        "id": "lightscreen",
-       "pct": 7.8
+       "pct": 7.5
       }
      ],
      "teammates": [
@@ -19039,7 +19201,7 @@
         0,
         23
        ],
-       "pct": 15.3
+       "pct": 15.2
       },
       {
        "nature": "Timid",
@@ -19051,7 +19213,7 @@
         0,
         32
        ],
-       "pct": 13.4
+       "pct": 14.1
       },
       {
        "nature": "Timid",
@@ -19075,175 +19237,17 @@
         0,
         32
        ],
-       "pct": 2.6
+       "pct": 2.5
       },
       {
        "nature": "Timid",
        "values": [
-        29,
+        2,
+        32,
         0,
-        5,
         0,
         0,
         32
-       ],
-       "pct": 2.6
-      }
-     ]
-    },
-    {
-     "speciesId": "indeedeef",
-     "usageRank": 9,
-     "abilities": [
-      {
-       "id": "psychicsurge",
-       "pct": 99.8
-      }
-     ],
-     "items": [
-      {
-       "id": "rockyhelmet",
-       "pct": 48.4
-      },
-      {
-       "id": "colburberry",
-       "pct": 17.4
-      },
-      {
-       "id": "psychicseed",
-       "pct": 16.8
-      },
-      {
-       "id": "sitrusberry",
-       "pct": 10.5
-      },
-      {
-       "id": "focussash",
-       "pct": 2.7
-      },
-      {
-       "id": "ejectbutton",
-       "pct": 1.5
-      }
-     ],
-     "moves": [
-      {
-       "id": "followme",
-       "pct": 99.2
-      },
-      {
-       "id": "helpinghand",
-       "pct": 81.2
-      },
-      {
-       "id": "trickroom",
-       "pct": 76.3
-      },
-      {
-       "id": "psychic",
-       "pct": 73.7
-      },
-      {
-       "id": "protect",
-       "pct": 23.5
-      },
-      {
-       "id": "imprison",
-       "pct": 10.6
-      },
-      {
-       "id": "terrainpulse",
-       "pct": 9.4
-      },
-      {
-       "id": "mysticalfire",
-       "pct": 4.5
-      }
-     ],
-     "teammates": [
-      {
-       "id": "sneasler",
-       "rank": 1
-      },
-      {
-       "id": "gardevoir",
-       "rank": 2
-      },
-      {
-       "id": "armarouge",
-       "rank": 3
-      },
-      {
-       "id": "kingambit",
-       "rank": 4
-      },
-      {
-       "id": "garchomp",
-       "rank": 5
-      },
-      {
-       "id": "incineroar",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Relaxed",
-       "values": [
-        32,
-        0,
-        32,
-        0,
-        2,
-        0
-       ],
-       "pct": 57.7
-      },
-      {
-       "nature": "Relaxed",
-       "values": [
-        32,
-        0,
-        25,
-        0,
-        9,
-        0
-       ],
-       "pct": 6
-      },
-      {
-       "nature": "Relaxed",
-       "values": [
-        32,
-        0,
-        32,
-        2,
-        0,
-        0
-       ],
-       "pct": 4.1
-      },
-      {
-       "nature": "Relaxed",
-       "values": [
-        32,
-        0,
-        32,
-        0,
-        1,
-        1
-       ],
-       "pct": 3.8
-      },
-      {
-       "nature": "Relaxed",
-       "values": [
-        31,
-        0,
-        32,
-        0,
-        3,
-        0
        ],
        "pct": 2.5
       }
@@ -19261,29 +19265,29 @@
      "items": [
       {
        "id": "sitrusberry",
-       "pct": 38.2
+       "pct": 38
       },
       {
        "id": "focussash",
-       "pct": 33.1
+       "pct": 33.4
       },
       {
        "id": "damprock",
-       "pct": 18.2
+       "pct": 18.3
       },
       {
        "id": "choicescarf",
-       "pct": 4.9
+       "pct": 4.5
       },
       {
        "id": "lifeorb",
-       "pct": 2.1
+       "pct": 2
       }
      ],
      "moves": [
       {
        "id": "hurricane",
-       "pct": 98.5
+       "pct": 98.3
       },
       {
        "id": "weatherball",
@@ -19291,27 +19295,27 @@
       },
       {
        "id": "wideguard",
-       "pct": 72.8
+       "pct": 72.9
       },
       {
        "id": "tailwind",
-       "pct": 71.9
-      },
-      {
-       "id": "helpinghand",
-       "pct": 19.3
+       "pct": 72.1
       },
       {
        "id": "protect",
+       "pct": 19.5
+      },
+      {
+       "id": "helpinghand",
        "pct": 18.6
       },
       {
        "id": "muddywater",
-       "pct": 13.2
+       "pct": 12.8
       },
       {
        "id": "icebeam",
-       "pct": 7.6
+       "pct": 7.7
       }
      ],
      "teammates": [
@@ -19351,7 +19355,7 @@
         0,
         32
        ],
-       "pct": 22.8
+       "pct": 23
       },
       {
        "nature": "Modest",
@@ -19363,7 +19367,7 @@
         7,
         0
        ],
-       "pct": 7.6
+       "pct": 7.3
       },
       {
        "nature": "Modest",
@@ -19375,7 +19379,7 @@
         19,
         10
        ],
-       "pct": 6.8
+       "pct": 6.7
       },
       {
        "nature": "Modest",
@@ -19387,7 +19391,7 @@
         17,
         11
        ],
-       "pct": 3.6
+       "pct": 3.5
       },
       {
        "nature": "Modest",
@@ -19399,7 +19403,7 @@
         2,
         0
        ],
-       "pct": 2.8
+       "pct": 3.2
       }
      ]
     },
@@ -19415,33 +19419,33 @@
      "items": [
       {
        "id": "lifeorb",
-       "pct": 79.3
+       "pct": 79.4
       },
       {
        "id": "choicescarf",
-       "pct": 8.7
+       "pct": 8.6
       },
       {
        "id": "focussash",
-       "pct": 3.6
+       "pct": 3.4
       },
       {
        "id": "leftovers",
-       "pct": 1.8
-      },
-      {
-       "id": "grassyseed",
-       "pct": 1.3
+       "pct": 1.7
       },
       {
        "id": "whiteherb",
-       "pct": 1.3
+       "pct": 1.5
+      },
+      {
+       "id": "grassyseed",
+       "pct": 1.2
       }
      ],
      "moves": [
       {
        "id": "makeitrain",
-       "pct": 99.4
+       "pct": 99.5
       },
       {
        "id": "shadowball",
@@ -19449,7 +19453,7 @@
       },
       {
        "id": "protect",
-       "pct": 90
+       "pct": 89.9
       },
       {
        "id": "nastyplot",
@@ -19457,19 +19461,19 @@
       },
       {
        "id": "powergem",
-       "pct": 13.2
+       "pct": 12.8
       },
       {
        "id": "thunderbolt",
-       "pct": 4.6
+       "pct": 5
       },
       {
        "id": "trick",
-       "pct": 3.9
+       "pct": 3.6
       },
       {
        "id": "focusblast",
-       "pct": 1.7
+       "pct": 1.8
       }
      ],
      "teammates": [
@@ -19509,7 +19513,7 @@
         0,
         32
        ],
-       "pct": 18.4
+       "pct": 18.9
       },
       {
        "nature": "Modest",
@@ -19521,7 +19525,7 @@
         22,
         20
        ],
-       "pct": 10.7
+       "pct": 10.6
       },
       {
        "nature": "Modest",
@@ -19533,7 +19537,7 @@
         0,
         32
        ],
-       "pct": 5.3
+       "pct": 5.4
       },
       {
        "nature": "Modest",
@@ -19545,7 +19549,7 @@
         0,
         32
        ],
-       "pct": 5.3
+       "pct": 5.1
       },
       {
        "nature": "Modest",
@@ -19557,7 +19561,7 @@
         25,
         14
        ],
-       "pct": 3.4
+       "pct": 3.1
       }
      ]
     },
@@ -19567,37 +19571,37 @@
      "abilities": [
       {
        "id": "adaptability",
-       "pct": 94.7
+       "pct": 94.5
       },
       {
        "id": "swiftswim",
-       "pct": 5.3
+       "pct": 5.5
       }
      ],
      "items": [
       {
        "id": "choicescarf",
-       "pct": 44.2
+       "pct": 43.7
       },
       {
        "id": "lifeorb",
-       "pct": 16.6
+       "pct": 17.3
       },
       {
        "id": "focussash",
-       "pct": 13.7
-      },
-      {
-       "id": "colburberry",
-       "pct": 8.3
+       "pct": 13.2
       },
       {
        "id": "mysticwater",
+       "pct": 9
+      },
+      {
+       "id": "colburberry",
        "pct": 8.1
       },
       {
        "id": "sitrusberry",
-       "pct": 5
+       "pct": 4.9
       }
      ],
      "moves": [
@@ -19606,32 +19610,32 @@
        "pct": 99.9
       },
       {
-       "id": "aquajet",
-       "pct": 89.1
+       "id": "wavecrash",
+       "pct": 89
       },
       {
-       "id": "wavecrash",
-       "pct": 88.6
+       "id": "aquajet",
+       "pct": 88.5
       },
       {
        "id": "protect",
-       "pct": 53.8
+       "pct": 53.9
       },
       {
        "id": "flipturn",
-       "pct": 44.1
+       "pct": 43.6
       },
       {
        "id": "liquidation",
-       "pct": 11
+       "pct": 10.6
       },
       {
        "id": "soak",
-       "pct": 6
+       "pct": 5.9
       },
       {
        "id": "psychicfangs",
-       "pct": 2.3
+       "pct": 2.5
       }
      ],
      "teammates": [
@@ -19671,7 +19675,7 @@
         0,
         32
        ],
-       "pct": 27.5
+       "pct": 28.4
       },
       {
        "nature": "Adamant",
@@ -19683,7 +19687,7 @@
         0,
         32
        ],
-       "pct": 17.7
+       "pct": 17.4
       },
       {
        "nature": "Adamant",
@@ -19707,7 +19711,7 @@
         2,
         21
        ],
-       "pct": 2.7
+       "pct": 2.6
       },
       {
        "nature": "Adamant",
@@ -19719,7 +19723,7 @@
         0,
         32
        ],
-       "pct": 2.2
+       "pct": 2.1
       }
      ]
     },
@@ -19729,7 +19733,11 @@
      "abilities": [
       {
        "id": "armortail",
-       "pct": 99
+       "pct": 98.8
+      },
+      {
+       "id": "sapsipper",
+       "pct": 1
       }
      ],
      "items": [
@@ -19739,57 +19747,57 @@
       },
       {
        "id": "colburberry",
-       "pct": 16.4
+       "pct": 16.5
       },
       {
        "id": "grassyseed",
-       "pct": 2.8
+       "pct": 2.7
       },
       {
        "id": "leftovers",
-       "pct": 2.3
+       "pct": 2.4
       },
       {
        "id": "focussash",
-       "pct": 2
+       "pct": 1.9
       },
       {
        "id": "mentalherb",
-       "pct": 1.5
+       "pct": 1.4
       }
      ],
      "moves": [
       {
        "id": "trickroom",
-       "pct": 94.9
+       "pct": 94.5
       },
       {
        "id": "helpinghand",
-       "pct": 55.1
+       "pct": 55.8
       },
       {
        "id": "psychic",
-       "pct": 50.7
+       "pct": 51.4
       },
       {
        "id": "protect",
-       "pct": 43
+       "pct": 42.5
       },
       {
        "id": "thunderbolt",
-       "pct": 33.4
+       "pct": 34.4
       },
       {
        "id": "expandingforce",
-       "pct": 28.7
+       "pct": 27.5
       },
       {
        "id": "imprison",
-       "pct": 17.4
+       "pct": 16.4
       },
       {
        "id": "hypervoice",
-       "pct": 15.8
+       "pct": 16.1
       }
      ],
      "teammates": [
@@ -19802,19 +19810,19 @@
        "rank": 2
       },
       {
-       "id": "golisopod",
+       "id": "incineroar",
        "rank": 3
       },
       {
-       "id": "sylveon",
+       "id": "golisopod",
        "rank": 4
       },
       {
-       "id": "rillaboom",
+       "id": "sylveon",
        "rank": 5
       },
       {
-       "id": "incineroar",
+       "id": "rillaboom",
        "rank": 6
       }
      ],
@@ -19829,7 +19837,7 @@
         19,
         0
        ],
-       "pct": 6.3
+       "pct": 6.4
       },
       {
        "nature": "Bold",
@@ -19841,7 +19849,7 @@
         14,
         0
        ],
-       "pct": 3.8
+       "pct": 4
       },
       {
        "nature": "Bold",
@@ -19865,19 +19873,19 @@
         20,
         0
        ],
-       "pct": 3.2
+       "pct": 3.1
       },
       {
        "nature": "Bold",
        "values": [
-        29,
+        32,
         0,
-        21,
+        32,
         0,
-        16,
+        2,
         0
        ],
-       "pct": 2.8
+       "pct": 2.9
       }
      ]
     },
@@ -19887,47 +19895,43 @@
      "abilities": [
       {
        "id": "intimidate",
-       "pct": 99.3
+       "pct": 99.1
       }
      ],
      "items": [
       {
        "id": "salamencite",
        "pct": 96.8
-      },
-      {
-       "id": "habanberry",
-       "pct": 1
       }
      ],
      "moves": [
       {
        "id": "protect",
-       "pct": 93.8
+       "pct": 93.7
       },
       {
        "id": "hypervoice",
-       "pct": 91.4
+       "pct": 91.1
       },
       {
        "id": "tailwind",
-       "pct": 65.6
+       "pct": 64.4
       },
       {
        "id": "dracometeor",
-       "pct": 62.9
+       "pct": 62.6
       },
       {
        "id": "flamethrower",
-       "pct": 41
+       "pct": 41.5
       },
       {
        "id": "doubleedge",
-       "pct": 12.3
+       "pct": 12.2
       },
       {
        "id": "dragonpulse",
-       "pct": 8.4
+       "pct": 8.8
       },
       {
        "id": "heatwave",
@@ -19948,11 +19952,11 @@
        "rank": 3
       },
       {
-       "id": "basculegion",
+       "id": "tyranitar",
        "rank": 4
       },
       {
-       "id": "tyranitar",
+       "id": "basculegion",
        "rank": 5
       },
       {
@@ -19971,7 +19975,7 @@
         0,
         32
        ],
-       "pct": 43
+       "pct": 43.4
       },
       {
        "nature": "Timid",
@@ -19983,7 +19987,7 @@
         1,
         32
        ],
-       "pct": 6.5
+       "pct": 6.3
       },
       {
        "nature": "Timid",
@@ -19995,7 +19999,7 @@
         20,
         18
        ],
-       "pct": 3.7
+       "pct": 3.6
       },
       {
        "nature": "Timid",
@@ -20007,7 +20011,7 @@
         0,
         32
        ],
-       "pct": 3.1
+       "pct": 3.2
       },
       {
        "nature": "Timid",
@@ -20019,7 +20023,7 @@
         2,
         32
        ],
-       "pct": 2.6
+       "pct": 2.5
       }
      ]
     },
@@ -20029,67 +20033,67 @@
      "abilities": [
       {
        "id": "prankster",
-       "pct": 89.4
+       "pct": 90.1
       },
       {
        "id": "chlorophyll",
-       "pct": 10.4
+       "pct": 9.7
       }
      ],
      "items": [
       {
        "id": "focussash",
-       "pct": 58.3
+       "pct": 59.6
       },
       {
        "id": "babiriberry",
-       "pct": 14.7
+       "pct": 13.5
       },
       {
        "id": "lifeorb",
-       "pct": 11.2
+       "pct": 10.4
       },
       {
        "id": "fairyfeather",
-       "pct": 5.3
+       "pct": 5.4
       },
       {
        "id": "occaberry",
-       "pct": 2.5
+       "pct": 2.8
       },
       {
        "id": "cobaberry",
-       "pct": 2.1
+       "pct": 1.9
       }
      ],
      "moves": [
       {
        "id": "tailwind",
-       "pct": 91.8
+       "pct": 92.5
       },
       {
        "id": "moonblast",
-       "pct": 88.6
-      },
-      {
-       "id": "protect",
-       "pct": 55.2
+       "pct": 88.8
       },
       {
        "id": "encore",
-       "pct": 54.4
+       "pct": 55.1
+      },
+      {
+       "id": "protect",
+       "pct": 53.7
       },
       {
        "id": "charm",
-       "pct": 23
+       "pct": 23.1
       },
       {
        "id": "sunnyday",
-       "pct": 22.4
+       "pct": 22.2
       },
       {
        "id": "psychic",
-       "pct": 7.5
+       "pct": 6.9
       },
       {
        "id": "faketears",
@@ -20118,7 +20122,7 @@
        "rank": 5
       },
       {
-       "id": "glimmora",
+       "id": "sneasler",
        "rank": 6
       }
      ],
@@ -20133,7 +20137,7 @@
         0,
         32
        ],
-       "pct": 49.7
+       "pct": 49.8
       },
       {
        "nature": "Timid",
@@ -20145,7 +20149,7 @@
         17,
         7
        ],
-       "pct": 9.6
+       "pct": 9
       },
       {
        "nature": "Timid",
@@ -20169,7 +20173,7 @@
         21,
         19
        ],
-       "pct": 3.7
+       "pct": 3.3
       },
       {
        "nature": "Timid",
@@ -20181,7 +20185,7 @@
         2,
         32
        ],
-       "pct": 2.7
+       "pct": 2.8
       }
      ]
     },
@@ -20203,35 +20207,35 @@
      "moves": [
       {
        "id": "leechlife",
-       "pct": 96.7
+       "pct": 97
       },
       {
        "id": "ironhead",
-       "pct": 74.6
+       "pct": 75
       },
       {
        "id": "protect",
-       "pct": 71.1
+       "pct": 71.2
       },
       {
        "id": "suckerpunch",
-       "pct": 64
+       "pct": 63.3
       },
       {
        "id": "swordsdance",
-       "pct": 32
+       "pct": 31.7
       },
       {
        "id": "drillrun",
-       "pct": 19
+       "pct": 18.5
       },
       {
        "id": "firstimpression",
-       "pct": 12.2
+       "pct": 12.3
       },
       {
        "id": "liquidation",
-       "pct": 10.8
+       "pct": 11.3
       }
      ],
      "teammates": [
@@ -20271,7 +20275,7 @@
         2,
         0
        ],
-       "pct": 44.3
+       "pct": 43.9
       },
       {
        "nature": "Adamant",
@@ -20283,7 +20287,7 @@
         0,
         2
        ],
-       "pct": 5.3
+       "pct": 5.4
       },
       {
        "nature": "Adamant",
@@ -20295,7 +20299,7 @@
         0,
         0
        ],
-       "pct": 4.6
+       "pct": 4.9
       },
       {
        "nature": "Adamant",
@@ -20307,7 +20311,7 @@
         2,
         1
        ],
-       "pct": 4.4
+       "pct": 4
       },
       {
        "nature": "Adamant",
@@ -20319,7 +20323,7 @@
         1,
         1
        ],
-       "pct": 3.8
+       "pct": 4
       }
      ]
     },
@@ -20335,61 +20339,61 @@
      "items": [
       {
        "id": "focussash",
-       "pct": 49.9
+       "pct": 48.5
       },
       {
        "id": "choicescarf",
-       "pct": 39.4
+       "pct": 39.9
       },
       {
        "id": "psychicseed",
-       "pct": 2.9
+       "pct": 3
       },
       {
        "id": "twistedspoon",
-       "pct": 2.3
-      },
-      {
-       "id": "lifeorb",
-       "pct": 1.5
+       "pct": 2.4
       },
       {
        "id": "colburberry",
-       "pct": 1.5
+       "pct": 1.9
+      },
+      {
+       "id": "lifeorb",
+       "pct": 1.7
       }
      ],
      "moves": [
       {
        "id": "expandingforce",
-       "pct": 99.9
+       "pct": 99.8
       },
       {
        "id": "trickroom",
-       "pct": 62.6
+       "pct": 61.8
       },
       {
        "id": "imprison",
-       "pct": 56.7
+       "pct": 55.1
       },
       {
        "id": "mysticalfire",
-       "pct": 37.4
+       "pct": 38.1
       },
       {
        "id": "hypervoice",
-       "pct": 35.9
+       "pct": 34.6
       },
       {
        "id": "protect",
-       "pct": 30.5
+       "pct": 31.2
       },
       {
        "id": "trick",
-       "pct": 27.2
+       "pct": 27.7
       },
       {
        "id": "energyball",
-       "pct": 14.2
+       "pct": 13.7
       }
      ],
      "teammates": [
@@ -20429,7 +20433,7 @@
         0,
         32
        ],
-       "pct": 63.2
+       "pct": 62.6
       },
       {
        "nature": "Timid",
@@ -20453,7 +20457,7 @@
         2,
         32
        ],
-       "pct": 5.4
+       "pct": 5.2
       },
       {
        "nature": "Timid",
@@ -20465,19 +20469,7 @@
         0,
         32
        ],
-       "pct": 1.8
-      },
-      {
-       "nature": "Timid",
-       "values": [
-        32,
-        0,
-        2,
-        32,
-        0,
-        0
-       ],
-       "pct": 1
+       "pct": 1.9
       }
      ]
     },
@@ -20493,61 +20485,61 @@
      "items": [
       {
        "id": "rockyhelmet",
-       "pct": 44.1
+       "pct": 43.2
       },
       {
        "id": "grassyseed",
-       "pct": 28.3
+       "pct": 28.2
       },
       {
        "id": "sitrusberry",
-       "pct": 9.4
+       "pct": 9.2
       },
       {
        "id": "leftovers",
-       "pct": 5.7
+       "pct": 6.1
       },
       {
        "id": "chartiberry",
-       "pct": 3.6
+       "pct": 3.7
       },
       {
        "id": "focussash",
-       "pct": 2.4
+       "pct": 2.5
       }
      ],
      "moves": [
       {
        "id": "ragepowder",
-       "pct": 59.1
+       "pct": 58.3
       },
       {
        "id": "strugglebug",
-       "pct": 58.8
-      },
-      {
-       "id": "tailwind",
-       "pct": 49.5
+       "pct": 58.1
       },
       {
        "id": "protect",
+       "pct": 48.7
+      },
+      {
+       "id": "tailwind",
        "pct": 48.6
       },
       {
        "id": "quiverdance",
-       "pct": 42.3
+       "pct": 43
       },
       {
        "id": "overheat",
-       "pct": 41
+       "pct": 39.9
       },
       {
        "id": "heatwave",
-       "pct": 36.6
+       "pct": 37.2
       },
       {
        "id": "gigadrain",
-       "pct": 25.3
+       "pct": 25.2
       }
      ],
      "teammates": [
@@ -20587,7 +20579,7 @@
         0,
         23
        ],
-       "pct": 17.9
+       "pct": 17.4
       },
       {
        "nature": "Timid",
@@ -20616,14 +20608,14 @@
       {
        "nature": "Timid",
        "values": [
-        32,
+        16,
         0,
-        11,
+        15,
+        5,
         0,
-        0,
-        23
+        30
        ],
-       "pct": 2.4
+       "pct": 2.5
       },
       {
        "nature": "Timid",
@@ -20631,11 +20623,11 @@
         32,
         0,
         11,
-        5,
-        1,
-        17
+        0,
+        0,
+        23
        ],
-       "pct": 2.4
+       "pct": 2.5
       }
      ]
     },
@@ -20645,21 +20637,21 @@
      "abilities": [
       {
        "id": "pixilate",
-       "pct": 100
+       "pct": 99.9
       }
      ],
      "items": [
       {
        "id": "fairyfeather",
-       "pct": 88.4
+       "pct": 87.9
       },
       {
        "id": "lifeorb",
-       "pct": 6
+       "pct": 6.1
       },
       {
        "id": "leftovers",
-       "pct": 1.4
+       "pct": 1.5
       },
       {
        "id": "quickclaw",
@@ -20673,31 +20665,31 @@
       },
       {
        "id": "detect",
-       "pct": 73.6
+       "pct": 72.7
       },
       {
        "id": "hyperbeam",
-       "pct": 68.3
+       "pct": 67.1
       },
       {
        "id": "quickattack",
-       "pct": 68.3
+       "pct": 66.4
       },
       {
        "id": "protect",
-       "pct": 23.9
+       "pct": 24.4
       },
       {
        "id": "yawn",
-       "pct": 21.5
+       "pct": 22.7
       },
       {
        "id": "moonblast",
-       "pct": 10.5
+       "pct": 11.5
       },
       {
        "id": "mysticalfire",
-       "pct": 9
+       "pct": 9.4
       }
      ],
      "teammates": [
@@ -20737,7 +20729,7 @@
         0,
         0
        ],
-       "pct": 10.6
+       "pct": 10.8
       },
       {
        "nature": "Modest",
@@ -20754,18 +20746,6 @@
       {
        "nature": "Modest",
        "values": [
-        13,
-        0,
-        32,
-        20,
-        0,
-        1
-       ],
-       "pct": 3.6
-      },
-      {
-       "nature": "Modest",
-       "values": [
         32,
         0,
         0,
@@ -20773,7 +20753,19 @@
         0,
         2
        ],
-       "pct": 3.5
+       "pct": 3.8
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        13,
+        0,
+        32,
+        20,
+        0,
+        1
+       ],
+       "pct": 3.4
       },
       {
        "nature": "Modest",
@@ -20785,159 +20777,13 @@
         0,
         17
        ],
-       "pct": 2.9
-      }
-     ]
-    },
-    {
-     "speciesId": "metagross",
-     "usageRank": 20,
-     "abilities": [
-      {
-       "id": "clearbody",
-       "pct": 99.8
-      }
-     ],
-     "items": [
-      {
-       "id": "metagrossite",
-       "pct": 94
-      },
-      {
-       "id": "lifeorb",
-       "pct": 1.4
-      },
-      {
-       "id": "normalgem",
-       "pct": 1.1
-      }
-     ],
-     "moves": [
-      {
-       "id": "psychicfangs",
-       "pct": 95.8
-      },
-      {
-       "id": "steelroller",
-       "pct": 63.6
-      },
-      {
-       "id": "protect",
-       "pct": 58.9
-      },
-      {
-       "id": "stompingtantrum",
-       "pct": 49.6
-      },
-      {
-       "id": "bulletpunch",
-       "pct": 39.1
-      },
-      {
-       "id": "ironhead",
-       "pct": 31.3
-      },
-      {
-       "id": "bodypress",
-       "pct": 15.2
-      },
-      {
-       "id": "icepunch",
-       "pct": 13
-      }
-     ],
-     "teammates": [
-      {
-       "id": "garchomp",
-       "rank": 1
-      },
-      {
-       "id": "archaludon",
-       "rank": 2
-      },
-      {
-       "id": "pelipper",
-       "rank": 3
-      },
-      {
-       "id": "charizard",
-       "rank": 4
-      },
-      {
-       "id": "grimmsnarl",
-       "rank": 5
-      },
-      {
-       "id": "sneasler",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Adamant",
-       "values": [
-        2,
-        32,
-        0,
-        0,
-        0,
-        32
-       ],
-       "pct": 20.2
-      },
-      {
-       "nature": "Adamant",
-       "values": [
-        31,
-        25,
-        1,
-        0,
-        1,
-        8
-       ],
-       "pct": 13.9
-      },
-      {
-       "nature": "Adamant",
-       "values": [
-        22,
-        15,
-        0,
-        0,
-        1,
-        28
-       ],
-       "pct": 4.9
-      },
-      {
-       "nature": "Adamant",
-       "values": [
-        9,
-        32,
-        0,
-        0,
-        0,
-        25
-       ],
-       "pct": 2.7
-      },
-      {
-       "nature": "Adamant",
-       "values": [
-        24,
-        15,
-        0,
-        0,
-        0,
-        27
-       ],
        "pct": 2.5
       }
      ]
     },
     {
      "speciesId": "staraptor",
-     "usageRank": 21,
+     "usageRank": 20,
      "abilities": [
       {
        "id": "intimidate",
@@ -20951,25 +20797,25 @@
      "items": [
       {
        "id": "staraptite",
-       "pct": 88.3
+       "pct": 88.5
       },
       {
        "id": "choicescarf",
-       "pct": 10.9
+       "pct": 10.7
       }
      ],
      "moves": [
       {
        "id": "closecombat",
-       "pct": 98.3
+       "pct": 98.2
       },
       {
        "id": "bravebird",
-       "pct": 89.3
+       "pct": 88.8
       },
       {
        "id": "protect",
-       "pct": 86.1
+       "pct": 86
       },
       {
        "id": "roost",
@@ -20977,19 +20823,19 @@
       },
       {
        "id": "tailwind",
-       "pct": 31.8
+       "pct": 31.5
       },
       {
        "id": "finalgambit",
-       "pct": 11.7
+       "pct": 11.5
       },
       {
        "id": "dualwingbeat",
-       "pct": 9.8
+       "pct": 10.3
       },
       {
        "id": "uturn",
-       "pct": 9.2
+       "pct": 9.1
       }
      ],
      "teammates": [
@@ -21029,7 +20875,7 @@
         0,
         28
        ],
-       "pct": 12.2
+       "pct": 11.7
       },
       {
        "nature": "Jolly",
@@ -21041,7 +20887,7 @@
         0,
         32
        ],
-       "pct": 11.2
+       "pct": 11.6
       },
       {
        "nature": "Jolly",
@@ -21053,19 +20899,7 @@
         0,
         32
        ],
-       "pct": 9
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        29,
-        2,
-        1,
-        0,
-        2,
-        32
-       ],
-       "pct": 4.1
+       "pct": 8.7
       },
       {
        "nature": "Jolly",
@@ -21077,7 +20911,165 @@
         4,
         32
        ],
-       "pct": 4.1
+       "pct": 4.2
+      },
+      {
+       "nature": "Jolly",
+       "values": [
+        29,
+        2,
+        1,
+        0,
+        2,
+        32
+       ],
+       "pct": 3.8
+      }
+     ]
+    },
+    {
+     "speciesId": "metagross",
+     "usageRank": 21,
+     "abilities": [
+      {
+       "id": "clearbody",
+       "pct": 99.8
+      }
+     ],
+     "items": [
+      {
+       "id": "metagrossite",
+       "pct": 93.3
+      },
+      {
+       "id": "lifeorb",
+       "pct": 1.4
+      },
+      {
+       "id": "normalgem",
+       "pct": 1.1
+      }
+     ],
+     "moves": [
+      {
+       "id": "psychicfangs",
+       "pct": 95.5
+      },
+      {
+       "id": "steelroller",
+       "pct": 63.4
+      },
+      {
+       "id": "protect",
+       "pct": 58.8
+      },
+      {
+       "id": "stompingtantrum",
+       "pct": 48.7
+      },
+      {
+       "id": "bulletpunch",
+       "pct": 38.8
+      },
+      {
+       "id": "ironhead",
+       "pct": 31
+      },
+      {
+       "id": "bodypress",
+       "pct": 15.1
+      },
+      {
+       "id": "icepunch",
+       "pct": 13.3
+      }
+     ],
+     "teammates": [
+      {
+       "id": "garchomp",
+       "rank": 1
+      },
+      {
+       "id": "archaludon",
+       "rank": 2
+      },
+      {
+       "id": "pelipper",
+       "rank": 3
+      },
+      {
+       "id": "charizard",
+       "rank": 4
+      },
+      {
+       "id": "grimmsnarl",
+       "rank": 5
+      },
+      {
+       "id": "sneasler",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Adamant",
+       "values": [
+        2,
+        32,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 20.5
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        31,
+        25,
+        1,
+        0,
+        1,
+        8
+       ],
+       "pct": 13.5
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        22,
+        15,
+        0,
+        0,
+        1,
+        28
+       ],
+       "pct": 4.6
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        9,
+        32,
+        0,
+        0,
+        0,
+        25
+       ],
+       "pct": 2.7
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        0,
+        32,
+        2,
+        0,
+        0,
+        32
+       ],
+       "pct": 2.4
       }
      ]
     },
@@ -21087,55 +21079,55 @@
      "abilities": [
       {
        "id": "trace",
-       "pct": 73.3
+       "pct": 73
       },
       {
        "id": "synchronize",
-       "pct": 14.9
+       "pct": 14.2
       },
       {
        "id": "telepathy",
-       "pct": 11.8
+       "pct": 12.9
       }
      ],
      "items": [
       {
        "id": "gardevoirite",
-       "pct": 97.5
+       "pct": 97.3
       }
      ],
      "moves": [
       {
        "id": "hypervoice",
-       "pct": 96.6
+       "pct": 96.2
       },
       {
        "id": "protect",
-       "pct": 94.7
+       "pct": 94.4
       },
       {
        "id": "expandingforce",
-       "pct": 92.8
+       "pct": 92.9
       },
       {
        "id": "mysticalfire",
-       "pct": 22.5
+       "pct": 22.1
       },
       {
        "id": "calmmind",
-       "pct": 19
+       "pct": 18.4
       },
       {
        "id": "thunderbolt",
-       "pct": 17.3
+       "pct": 17.4
       },
       {
        "id": "trickroom",
-       "pct": 13.7
+       "pct": 14.1
       },
       {
        "id": "psychic",
-       "pct": 9.6
+       "pct": 9.2
       }
      ],
      "teammates": [
@@ -21152,11 +21144,11 @@
        "rank": 3
       },
       {
-       "id": "basculegion",
+       "id": "garchomp",
        "rank": 4
       },
       {
-       "id": "garchomp",
+       "id": "basculegion",
        "rank": 5
       },
       {
@@ -21175,7 +21167,7 @@
         0,
         32
        ],
-       "pct": 28.3
+       "pct": 28.6
       },
       {
        "nature": "Modest",
@@ -21199,7 +21191,7 @@
         0,
         32
        ],
-       "pct": 5.1
+       "pct": 4.9
       },
       {
        "nature": "Modest",
@@ -21211,7 +21203,7 @@
         1,
         24
        ],
-       "pct": 3.1
+       "pct": 2.8
       },
       {
        "nature": "Modest",
@@ -21223,177 +21215,35 @@
         1,
         32
        ],
-       "pct": 2.9
-      }
-     ]
-    },
-    {
-     "speciesId": "floetteeternal",
-     "usageRank": 23,
-     "abilities": [
-      {
-       "id": "flowerveil",
-       "pct": 99.6
-      }
-     ],
-     "items": [
-      {
-       "id": "floettite",
-       "pct": 97.6
-      },
-      {
-       "id": "choicescarf",
-       "pct": 1.5
-      }
-     ],
-     "moves": [
-      {
-       "id": "protect",
-       "pct": 97.6
-      },
-      {
-       "id": "dazzlinggleam",
-       "pct": 97.2
-      },
-      {
-       "id": "moonblast",
-       "pct": 72.9
-      },
-      {
-       "id": "calmmind",
-       "pct": 69.7
-      },
-      {
-       "id": "lightofruin",
-       "pct": 29.3
-      },
-      {
-       "id": "drainingkiss",
-       "pct": 26.7
-      },
-      {
-       "id": "psychic",
-       "pct": 2.7
-      },
-      {
-       "id": "energyball",
-       "pct": 1.3
-      }
-     ],
-     "teammates": [
-      {
-       "id": "rillaboom",
-       "rank": 1
-      },
-      {
-       "id": "sneasler",
-       "rank": 2
-      },
-      {
-       "id": "incineroar",
-       "rank": 3
-      },
-      {
-       "id": "kingambit",
-       "rank": 4
-      },
-      {
-       "id": "basculegion",
-       "rank": 5
-      },
-      {
-       "id": "garchomp",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Modest",
-       "values": [
-        2,
-        0,
-        0,
-        32,
-        0,
-        32
-       ],
-       "pct": 19.8
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        28,
-        0,
-        17,
-        5,
-        0,
-        16
-       ],
-       "pct": 4.9
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        27,
-        0,
-        15,
-        5,
-        0,
-        19
-       ],
-       "pct": 4.2
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        10,
-        0,
-        25,
-        16,
-        0,
-        15
-       ],
-       "pct": 2.1
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        32,
-        0,
-        14,
-        5,
-        0,
-        15
-       ],
-       "pct": 2.1
+       "pct": 2.6
       }
      ]
     },
     {
      "speciesId": "milotic",
-     "usageRank": 24,
+     "usageRank": 23,
      "abilities": [
       {
        "id": "competitive",
-       "pct": 99.9
+       "pct": 99.8
       }
      ],
      "items": [
       {
        "id": "leftovers",
-       "pct": 58.9
+       "pct": 59.1
       },
       {
        "id": "sitrusberry",
-       "pct": 22
+       "pct": 21.8
       },
       {
        "id": "psychicseed",
-       "pct": 7.3
+       "pct": 7
       },
       {
        "id": "grassyseed",
-       "pct": 3
+       "pct": 2.9
       },
       {
        "id": "choicescarf",
@@ -21407,7 +21257,7 @@
      "moves": [
       {
        "id": "protect",
-       "pct": 69.2
+       "pct": 68.5
       },
       {
        "id": "scald",
@@ -21415,27 +21265,27 @@
       },
       {
        "id": "icebeam",
-       "pct": 59.6
+       "pct": 59.7
       },
       {
        "id": "icywind",
-       "pct": 47.2
+       "pct": 45.9
       },
       {
        "id": "muddywater",
-       "pct": 38
+       "pct": 38.2
       },
       {
        "id": "coil",
-       "pct": 30.4
+       "pct": 30.3
       },
       {
        "id": "recover",
-       "pct": 28.5
+       "pct": 28.9
       },
       {
        "id": "hypnosis",
-       "pct": 27.8
+       "pct": 27.5
       }
      ],
      "teammates": [
@@ -21475,7 +21325,7 @@
         2,
         0
        ],
-       "pct": 5.8
+       "pct": 6.1
       },
       {
        "nature": "Modest",
@@ -21492,24 +21342,24 @@
       {
        "nature": "Modest",
        "values": [
-        31,
-        0,
-        15,
-        0,
-        12,
-        8
-       ],
-       "pct": 2.5
-      },
-      {
-       "nature": "Modest",
-       "values": [
         20,
         0,
         20,
         4,
         8,
         14
+       ],
+       "pct": 2.3
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        31,
+        0,
+        15,
+        0,
+        12,
+        8
        ],
        "pct": 2.3
       },
@@ -21523,43 +21373,489 @@
         5,
         0
        ],
-       "pct": 2.3
+       "pct": 2.2
+      }
+     ]
+    },
+    {
+     "speciesId": "tyranitar",
+     "usageRank": 24,
+     "abilities": [
+      {
+       "id": "sandstream",
+       "pct": 99.6
+      }
+     ],
+     "items": [
+      {
+       "id": "tyranitarite",
+       "pct": 75
+      },
+      {
+       "id": "chopleberry",
+       "pct": 6.6
+      },
+      {
+       "id": "choicescarf",
+       "pct": 4.9
+      },
+      {
+       "id": "focussash",
+       "pct": 2.8
+      },
+      {
+       "id": "lifeorb",
+       "pct": 2.2
+      },
+      {
+       "id": "passhoberry",
+       "pct": 1.5
+      }
+     ],
+     "moves": [
+      {
+       "id": "rockslide",
+       "pct": 96.9
+      },
+      {
+       "id": "knockoff",
+       "pct": 95.8
+      },
+      {
+       "id": "protect",
+       "pct": 92.2
+      },
+      {
+       "id": "lowkick",
+       "pct": 49.3
+      },
+      {
+       "id": "dragondance",
+       "pct": 18
+      },
+      {
+       "id": "icepunch",
+       "pct": 15.3
+      },
+      {
+       "id": "highhorsepower",
+       "pct": 5.8
+      },
+      {
+       "id": "brickbreak",
+       "pct": 4
+      }
+     ],
+     "teammates": [
+      {
+       "id": "excadrill",
+       "rank": 1
+      },
+      {
+       "id": "sneasler",
+       "rank": 2
+      },
+      {
+       "id": "salamence",
+       "rank": 3
+      },
+      {
+       "id": "rillaboom",
+       "rank": 4
+      },
+      {
+       "id": "gholdengo",
+       "rank": 5
+      },
+      {
+       "id": "indeedee",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Adamant",
+       "values": [
+        2,
+        32,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 19.8
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        17,
+        17,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 9.3
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        32,
+        32,
+        0,
+        0,
+        2,
+        0
+       ],
+       "pct": 5.3
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        32,
+        32,
+        2,
+        0,
+        0,
+        0
+       ],
+       "pct": 4
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        18,
+        16,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 3.6
+      }
+     ]
+    },
+    {
+     "speciesId": "floetteeternal",
+     "usageRank": 25,
+     "abilities": [
+      {
+       "id": "flowerveil",
+       "pct": 99.6
+      }
+     ],
+     "items": [
+      {
+       "id": "floettite",
+       "pct": 97.5
+      },
+      {
+       "id": "choicescarf",
+       "pct": 1.6
+      }
+     ],
+     "moves": [
+      {
+       "id": "protect",
+       "pct": 97.2
+      },
+      {
+       "id": "dazzlinggleam",
+       "pct": 97.1
+      },
+      {
+       "id": "moonblast",
+       "pct": 73.1
+      },
+      {
+       "id": "calmmind",
+       "pct": 69.8
+      },
+      {
+       "id": "lightofruin",
+       "pct": 29.3
+      },
+      {
+       "id": "drainingkiss",
+       "pct": 26.3
+      },
+      {
+       "id": "psychic",
+       "pct": 2.8
+      },
+      {
+       "id": "energyball",
+       "pct": 1.4
+      }
+     ],
+     "teammates": [
+      {
+       "id": "rillaboom",
+       "rank": 1
+      },
+      {
+       "id": "sneasler",
+       "rank": 2
+      },
+      {
+       "id": "incineroar",
+       "rank": 3
+      },
+      {
+       "id": "kingambit",
+       "rank": 4
+      },
+      {
+       "id": "basculegion",
+       "rank": 5
+      },
+      {
+       "id": "garchomp",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Modest",
+       "values": [
+        2,
+        0,
+        0,
+        32,
+        0,
+        32
+       ],
+       "pct": 20.4
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        28,
+        0,
+        17,
+        5,
+        0,
+        16
+       ],
+       "pct": 4.8
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        27,
+        0,
+        15,
+        5,
+        0,
+        19
+       ],
+       "pct": 4.2
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        32,
+        0,
+        14,
+        5,
+        0,
+        15
+       ],
+       "pct": 2.2
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        10,
+        0,
+        25,
+        16,
+        0,
+        15
+       ],
+       "pct": 2.1
+      }
+     ]
+    },
+    {
+     "speciesId": "grimmsnarl",
+     "usageRank": 26,
+     "abilities": [
+      {
+       "id": "prankster",
+       "pct": 99.6
+      }
+     ],
+     "items": [
+      {
+       "id": "lightclay",
+       "pct": 93.7
+      },
+      {
+       "id": "sitrusberry",
+       "pct": 1.6
+      },
+      {
+       "id": "roseliberry",
+       "pct": 1.2
+      }
+     ],
+     "moves": [
+      {
+       "id": "lightscreen",
+       "pct": 95.8
+      },
+      {
+       "id": "partingshot",
+       "pct": 94.9
+      },
+      {
+       "id": "reflect",
+       "pct": 94.6
+      },
+      {
+       "id": "spiritbreak",
+       "pct": 88.4
+      },
+      {
+       "id": "fakeout",
+       "pct": 8.5
+      },
+      {
+       "id": "foulplay",
+       "pct": 3.8
+      },
+      {
+       "id": "scaryface",
+       "pct": 2.4
+      },
+      {
+       "id": "suckerpunch",
+       "pct": 2.1
+      }
+     ],
+     "teammates": [
+      {
+       "id": "archaludon",
+       "rank": 1
+      },
+      {
+       "id": "pelipper",
+       "rank": 2
+      },
+      {
+       "id": "charizard",
+       "rank": 3
+      },
+      {
+       "id": "garchomp",
+       "rank": 4
+      },
+      {
+       "id": "metagross",
+       "rank": 5
+      },
+      {
+       "id": "venusaur",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Careful",
+       "values": [
+        32,
+        0,
+        19,
+        0,
+        15,
+        0
+       ],
+       "pct": 16.4
+      },
+      {
+       "nature": "Careful",
+       "values": [
+        30,
+        0,
+        25,
+        0,
+        10,
+        1
+       ],
+       "pct": 14.6
+      },
+      {
+       "nature": "Careful",
+       "values": [
+        29,
+        0,
+        22,
+        0,
+        15,
+        0
+       ],
+       "pct": 6.8
+      },
+      {
+       "nature": "Careful",
+       "values": [
+        31,
+        0,
+        20,
+        0,
+        15,
+        0
+       ],
+       "pct": 3.8
+      },
+      {
+       "nature": "Careful",
+       "values": [
+        31,
+        0,
+        20,
+        0,
+        14,
+        1
+       ],
+       "pct": 3.1
       }
      ]
     },
     {
      "speciesId": "armarouge",
-     "usageRank": 25,
+     "usageRank": 27,
      "abilities": [
       {
        "id": "flashfire",
-       "pct": 63.5
+       "pct": 64.7
       },
       {
        "id": "weakarmor",
-       "pct": 36.5
+       "pct": 35.3
       }
      ],
      "items": [
       {
        "id": "focussash",
-       "pct": 48
+       "pct": 47.2
       },
       {
        "id": "lifeorb",
-       "pct": 34.2
-      },
-      {
-       "id": "psychicseed",
-       "pct": 3.5
+       "pct": 34.7
       },
       {
        "id": "twistedspoon",
-       "pct": 3.5
+       "pct": 3.6
+      },
+      {
+       "id": "psychicseed",
+       "pct": 3.3
       },
       {
        "id": "sitrusberry",
-       "pct": 2.4
+       "pct": 2.8
       },
       {
        "id": "colburberry",
@@ -21569,26 +21865,26 @@
      "moves": [
       {
        "id": "expandingforce",
-       "pct": 96.8
+       "pct": 96.4
       },
       {
        "id": "armorcannon",
-       "pct": 80.3
+       "pct": 80.1
       },
       {
        "id": "protect",
-       "pct": 70.5
+       "pct": 69.2
       },
       {
        "id": "wideguard",
-       "pct": 57.9
-      },
-      {
-       "id": "aurasphere",
-       "pct": 25.7
+       "pct": 56.9
       },
       {
        "id": "trickroom",
+       "pct": 27
+      },
+      {
+       "id": "aurasphere",
        "pct": 25.5
       },
       {
@@ -21637,7 +21933,7 @@
         0,
         32
        ],
-       "pct": 24
+       "pct": 23.9
       },
       {
        "nature": "Modest",
@@ -21649,7 +21945,7 @@
         1,
         32
        ],
-       "pct": 12.6
+       "pct": 11.8
       },
       {
        "nature": "Modest",
@@ -21661,7 +21957,7 @@
         2,
         0
        ],
-       "pct": 11.2
+       "pct": 11.5
       },
       {
        "nature": "Modest",
@@ -21673,7 +21969,7 @@
         0,
         0
        ],
-       "pct": 5.7
+       "pct": 5.9
       },
       {
        "nature": "Modest",
@@ -21685,311 +21981,7 @@
         0,
         25
        ],
-       "pct": 2.7
-      }
-     ]
-    },
-    {
-     "speciesId": "tyranitar",
-     "usageRank": 26,
-     "abilities": [
-      {
-       "id": "sandstream",
-       "pct": 99.7
-      }
-     ],
-     "items": [
-      {
-       "id": "tyranitarite",
-       "pct": 74.3
-      },
-      {
-       "id": "chopleberry",
-       "pct": 6.8
-      },
-      {
-       "id": "choicescarf",
-       "pct": 5.3
-      },
-      {
-       "id": "focussash",
-       "pct": 2.8
-      },
-      {
-       "id": "lifeorb",
-       "pct": 2.2
-      },
-      {
-       "id": "passhoberry",
-       "pct": 1.6
-      }
-     ],
-     "moves": [
-      {
-       "id": "rockslide",
-       "pct": 97
-      },
-      {
-       "id": "knockoff",
-       "pct": 95.8
-      },
-      {
-       "id": "protect",
-       "pct": 91.9
-      },
-      {
-       "id": "lowkick",
-       "pct": 49.4
-      },
-      {
-       "id": "dragondance",
-       "pct": 17.7
-      },
-      {
-       "id": "icepunch",
-       "pct": 15.6
-      },
-      {
-       "id": "highhorsepower",
-       "pct": 5.6
-      },
-      {
-       "id": "brickbreak",
-       "pct": 4.6
-      }
-     ],
-     "teammates": [
-      {
-       "id": "excadrill",
-       "rank": 1
-      },
-      {
-       "id": "sneasler",
-       "rank": 2
-      },
-      {
-       "id": "salamence",
-       "rank": 3
-      },
-      {
-       "id": "rillaboom",
-       "rank": 4
-      },
-      {
-       "id": "indeedee",
-       "rank": 5
-      },
-      {
-       "id": "gholdengo",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Jolly",
-       "values": [
-        2,
-        32,
-        0,
-        0,
-        0,
-        32
-       ],
-       "pct": 19.8
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        17,
-        17,
-        0,
-        0,
-        0,
-        32
-       ],
-       "pct": 9.3
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        32,
-        32,
-        0,
-        0,
-        2,
-        0
-       ],
-       "pct": 5.4
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        18,
-        16,
-        0,
-        0,
-        0,
-        32
-       ],
-       "pct": 3.8
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        32,
-        32,
-        2,
-        0,
-        0,
-        0
-       ],
-       "pct": 3.6
-      }
-     ]
-    },
-    {
-     "speciesId": "grimmsnarl",
-     "usageRank": 27,
-     "abilities": [
-      {
-       "id": "prankster",
-       "pct": 99.6
-      }
-     ],
-     "items": [
-      {
-       "id": "lightclay",
-       "pct": 93.8
-      },
-      {
-       "id": "sitrusberry",
-       "pct": 1.4
-      },
-      {
-       "id": "roseliberry",
-       "pct": 1.1
-      }
-     ],
-     "moves": [
-      {
-       "id": "lightscreen",
-       "pct": 95.8
-      },
-      {
-       "id": "partingshot",
-       "pct": 95.1
-      },
-      {
-       "id": "reflect",
-       "pct": 94.5
-      },
-      {
-       "id": "spiritbreak",
-       "pct": 88.5
-      },
-      {
-       "id": "fakeout",
-       "pct": 8.1
-      },
-      {
-       "id": "foulplay",
-       "pct": 3.6
-      },
-      {
-       "id": "scaryface",
-       "pct": 2.3
-      },
-      {
-       "id": "suckerpunch",
-       "pct": 2.2
-      }
-     ],
-     "teammates": [
-      {
-       "id": "archaludon",
-       "rank": 1
-      },
-      {
-       "id": "pelipper",
-       "rank": 2
-      },
-      {
-       "id": "charizard",
-       "rank": 3
-      },
-      {
-       "id": "garchomp",
-       "rank": 4
-      },
-      {
-       "id": "metagross",
-       "rank": 5
-      },
-      {
-       "id": "golisopod",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Careful",
-       "values": [
-        32,
-        0,
-        19,
-        0,
-        15,
-        0
-       ],
-       "pct": 16.7
-      },
-      {
-       "nature": "Careful",
-       "values": [
-        30,
-        0,
-        25,
-        0,
-        10,
-        1
-       ],
-       "pct": 15.3
-      },
-      {
-       "nature": "Careful",
-       "values": [
-        29,
-        0,
-        22,
-        0,
-        15,
-        0
-       ],
-       "pct": 6.1
-      },
-      {
-       "nature": "Careful",
-       "values": [
-        31,
-        0,
-        20,
-        0,
-        15,
-        0
-       ],
-       "pct": 3.8
-      },
-      {
-       "nature": "Careful",
-       "values": [
-        31,
-        0,
-        20,
-        0,
-        14,
-        1
-       ],
-       "pct": 3.4
+       "pct": 2.6
       }
      ]
     },
@@ -22005,61 +21997,61 @@
      "items": [
       {
        "id": "sitrusberry",
-       "pct": 47.8
+       "pct": 47.5
       },
       {
        "id": "mysticwater",
-       "pct": 23.7
+       "pct": 24.1
       },
       {
        "id": "choicescarf",
-       "pct": 9
+       "pct": 8.2
       },
       {
        "id": "lifeorb",
-       "pct": 6.2
+       "pct": 6.6
       },
       {
        "id": "brightpowder",
-       "pct": 3
+       "pct": 2.8
       },
       {
        "id": "damprock",
-       "pct": 1.9
+       "pct": 2
       }
      ],
      "moves": [
       {
        "id": "protect",
-       "pct": 79
+       "pct": 79.6
       },
       {
        "id": "weatherball",
-       "pct": 71.7
+       "pct": 72.1
       },
       {
        "id": "muddywater",
-       "pct": 66
+       "pct": 66.2
       },
       {
        "id": "icebeam",
-       "pct": 55.8
+       "pct": 57.3
       },
       {
        "id": "perishsong",
-       "pct": 32
+       "pct": 31
       },
       {
        "id": "encore",
-       "pct": 23.3
+       "pct": 22.3
       },
       {
        "id": "psychup",
-       "pct": 20.5
+       "pct": 20
       },
       {
        "id": "raindance",
-       "pct": 16.2
+       "pct": 15.4
       }
      ],
      "teammates": [
@@ -22092,18 +22084,6 @@
       {
        "nature": "Modest",
        "values": [
-        2,
-        0,
-        0,
-        32,
-        0,
-        32
-       ],
-       "pct": 7.5
-      },
-      {
-       "nature": "Modest",
-       "values": [
         32,
         0,
         2,
@@ -22111,7 +22091,19 @@
         0,
         0
        ],
-       "pct": 6.7
+       "pct": 7
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        2,
+        0,
+        0,
+        32,
+        0,
+        32
+       ],
+       "pct": 6.9
       },
       {
        "nature": "Modest",
@@ -22123,7 +22115,7 @@
         12,
         0
        ],
-       "pct": 6.5
+       "pct": 6.2
       },
       {
        "nature": "Modest",
@@ -22147,7 +22139,7 @@
         0,
         4
        ],
-       "pct": 3.4
+       "pct": 3.5
       }
      ]
     },
@@ -22167,23 +22159,23 @@
      "items": [
       {
        "id": "focussash",
-       "pct": 38.1
+       "pct": 41
       },
       {
        "id": "lifeorb",
-       "pct": 28.9
+       "pct": 27.8
       },
       {
        "id": "widelens",
-       "pct": 17.4
+       "pct": 16.1
       },
       {
        "id": "venusaurite",
-       "pct": 9
+       "pct": 8.6
       },
       {
        "id": "leftovers",
-       "pct": 1
+       "pct": 1.2
       },
       {
        "id": "expertbelt",
@@ -22193,35 +22185,35 @@
      "moves": [
       {
        "id": "sludgebomb",
-       "pct": 94.7
+       "pct": 94.8
       },
       {
        "id": "protect",
-       "pct": 89.8
+       "pct": 89.6
       },
       {
        "id": "sleeppowder",
-       "pct": 65.2
+       "pct": 66.2
       },
       {
        "id": "leafstorm",
-       "pct": 57.9
+       "pct": 58.2
       },
       {
        "id": "earthpower",
-       "pct": 51.3
+       "pct": 50.5
       },
       {
        "id": "gigadrain",
-       "pct": 17.9
+       "pct": 17.6
       },
       {
        "id": "energyball",
-       "pct": 8
+       "pct": 7.8
       },
       {
        "id": "solarbeam",
-       "pct": 7
+       "pct": 6.5
       }
      ],
      "teammates": [
@@ -22273,7 +22265,7 @@
         1,
         32
        ],
-       "pct": 10.4
+       "pct": 10.7
       },
       {
        "nature": "Modest",
@@ -22285,7 +22277,7 @@
         0,
         30
        ],
-       "pct": 4.5
+       "pct": 3.9
       },
       {
        "nature": "Modest",
@@ -22309,183 +22301,21 @@
         0,
         32
        ],
-       "pct": 2.4
-      }
-     ]
-    },
-    {
-     "speciesId": "dragonite",
-     "usageRank": 30,
-     "abilities": [
-      {
-       "id": "innerfocus",
-       "pct": 53.5
-      },
-      {
-       "id": "multiscale",
-       "pct": 46.5
-      }
-     ],
-     "items": [
-      {
-       "id": "dragoninite",
-       "pct": 82.5
-      },
-      {
-       "id": "lifeorb",
-       "pct": 7.4
-      },
-      {
-       "id": "habanberry",
-       "pct": 1.6
-      },
-      {
-       "id": "whiteherb",
-       "pct": 1.3
-      },
-      {
-       "id": "expertbelt",
-       "pct": 1.1
-      },
-      {
-       "id": "leftovers",
-       "pct": 1
-      }
-     ],
-     "moves": [
-      {
-       "id": "protect",
-       "pct": 78.7
-      },
-      {
-       "id": "dragonpulse",
-       "pct": 73.4
-      },
-      {
-       "id": "tailwind",
-       "pct": 66
-      },
-      {
-       "id": "heatwave",
-       "pct": 62.2
-      },
-      {
-       "id": "extremespeed",
-       "pct": 17.9
-      },
-      {
-       "id": "hurricane",
-       "pct": 13.1
-      },
-      {
-       "id": "flamethrower",
-       "pct": 10.4
-      },
-      {
-       "id": "dracometeor",
-       "pct": 9.5
-      }
-     ],
-     "teammates": [
-      {
-       "id": "sneasler",
-       "rank": 1
-      },
-      {
-       "id": "rillaboom",
-       "rank": 2
-      },
-      {
-       "id": "garchomp",
-       "rank": 3
-      },
-      {
-       "id": "kingambit",
-       "rank": 4
-      },
-      {
-       "id": "basculegion",
-       "rank": 5
-      },
-      {
-       "id": "gholdengo",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Modest",
-       "values": [
-        2,
-        0,
-        0,
-        32,
-        0,
-        32
-       ],
-       "pct": 41.4
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        0,
-        0,
-        2,
-        32,
-        0,
-        32
-       ],
-       "pct": 5.9
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        1,
-        0,
-        1,
-        32,
-        0,
-        32
-       ],
-       "pct": 4.8
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        11,
-        0,
-        0,
-        32,
-        0,
-        23
-       ],
-       "pct": 3
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        2,
-        32,
-        0,
-        0,
-        0,
-        32
-       ],
-       "pct": 2.6
+       "pct": 2.2
       }
      ]
     },
     {
      "speciesId": "swampert",
-     "usageRank": 31,
+     "usageRank": 30,
      "abilities": [
       {
        "id": "torrent",
-       "pct": 56.5
+       "pct": 57.4
       },
       {
        "id": "damp",
-       "pct": 43.5
+       "pct": 42.6
       }
      ],
      "items": [
@@ -22495,53 +22325,53 @@
       },
       {
        "id": "leftovers",
-       "pct": 3.3
+       "pct": 3.2
       },
       {
        "id": "sitrusberry",
-       "pct": 2.6
+       "pct": 2.5
       },
       {
        "id": "lifeorb",
-       "pct": 1.3
+       "pct": 1.2
       },
       {
        "id": "rindoberry",
-       "pct": 1.1
+       "pct": 1
       }
      ],
      "moves": [
       {
        "id": "protect",
-       "pct": 91.8
+       "pct": 91.4
       },
       {
        "id": "wavecrash",
-       "pct": 88.5
+       "pct": 87.9
       },
       {
        "id": "icepunch",
-       "pct": 81.3
+       "pct": 80.8
       },
       {
        "id": "earthquake",
-       "pct": 64.1
+       "pct": 63.5
       },
       {
        "id": "highhorsepower",
-       "pct": 34.1
+       "pct": 34.6
       },
       {
        "id": "wideguard",
-       "pct": 6.6
+       "pct": 6.5
       },
       {
        "id": "liquidation",
-       "pct": 4.4
+       "pct": 4.6
       },
       {
        "id": "flipturn",
-       "pct": 4.4
+       "pct": 4.2
       }
      ],
      "teammates": [
@@ -22581,7 +22411,7 @@
         0,
         32
        ],
-       "pct": 40.1
+       "pct": 39.5
       },
       {
        "nature": "Adamant",
@@ -22593,7 +22423,7 @@
         0,
         22
        ],
-       "pct": 5
+       "pct": 4.9
       },
       {
        "nature": "Adamant",
@@ -22605,7 +22435,19 @@
         0,
         28
        ],
-       "pct": 2.6
+       "pct": 2.3
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        18,
+        30,
+        0,
+        0,
+        0,
+        18
+       ],
+       "pct": 1.9
       },
       {
        "nature": "Adamant",
@@ -22618,18 +22460,168 @@
         32
        ],
        "pct": 1.9
+      }
+     ]
+    },
+    {
+     "speciesId": "dragonite",
+     "usageRank": 31,
+     "abilities": [
+      {
+       "id": "innerfocus",
+       "pct": 51.8
       },
       {
-       "nature": "Adamant",
+       "id": "multiscale",
+       "pct": 48.2
+      }
+     ],
+     "items": [
+      {
+       "id": "dragoninite",
+       "pct": 81.9
+      },
+      {
+       "id": "lifeorb",
+       "pct": 7.5
+      },
+      {
+       "id": "habanberry",
+       "pct": 1.4
+      },
+      {
+       "id": "whiteherb",
+       "pct": 1.3
+      },
+      {
+       "id": "sitrusberry",
+       "pct": 1.1
+      },
+      {
+       "id": "leftovers",
+       "pct": 1.1
+      }
+     ],
+     "moves": [
+      {
+       "id": "protect",
+       "pct": 77.9
+      },
+      {
+       "id": "dragonpulse",
+       "pct": 72.6
+      },
+      {
+       "id": "tailwind",
+       "pct": 64.5
+      },
+      {
+       "id": "heatwave",
+       "pct": 60.7
+      },
+      {
+       "id": "extremespeed",
+       "pct": 18.1
+      },
+      {
+       "id": "hurricane",
+       "pct": 13.6
+      },
+      {
+       "id": "flamethrower",
+       "pct": 10.5
+      },
+      {
+       "id": "dracometeor",
+       "pct": 10.2
+      }
+     ],
+     "teammates": [
+      {
+       "id": "sneasler",
+       "rank": 1
+      },
+      {
+       "id": "rillaboom",
+       "rank": 2
+      },
+      {
+       "id": "garchomp",
+       "rank": 3
+      },
+      {
+       "id": "kingambit",
+       "rank": 4
+      },
+      {
+       "id": "basculegion",
+       "rank": 5
+      },
+      {
+       "id": "gholdengo",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Modest",
        "values": [
-        18,
-        30,
+        2,
         0,
         0,
+        32,
         0,
-        18
+        32
        ],
-       "pct": 1.7
+       "pct": 40.9
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        0,
+        0,
+        2,
+        32,
+        0,
+        32
+       ],
+       "pct": 5.9
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        1,
+        0,
+        1,
+        32,
+        0,
+        32
+       ],
+       "pct": 4.8
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        2,
+        32,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 2.7
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        11,
+        0,
+        0,
+        32,
+        0,
+        23
+       ],
+       "pct": 2.6
       }
      ]
     },
@@ -22649,57 +22641,57 @@
      "items": [
       {
        "id": "sitrusberry",
-       "pct": 23.7
+       "pct": 23.8
       },
       {
        "id": "colburberry",
-       "pct": 18.5
+       "pct": 18.6
       },
       {
        "id": "occaberry",
-       "pct": 12.5
+       "pct": 12.3
       },
       {
        "id": "kasibberry",
-       "pct": 8.8
+       "pct": 8.9
       },
       {
        "id": "leftovers",
-       "pct": 6.5
+       "pct": 6.9
       },
       {
-       "id": "rockyhelmet",
-       "pct": 5.9
+       "id": "focussash",
+       "pct": 5.5
       }
      ],
      "moves": [
       {
-       "id": "ragepowder",
-       "pct": 95.4
+       "id": "matchagotcha",
+       "pct": 95.6
       },
       {
-       "id": "matchagotcha",
-       "pct": 95.3
+       "id": "ragepowder",
+       "pct": 95.1
       },
       {
        "id": "trickroom",
-       "pct": 61
+       "pct": 60.9
       },
       {
        "id": "protect",
-       "pct": 59.6
+       "pct": 57.7
       },
       {
        "id": "lifedew",
-       "pct": 45.3
+       "pct": 46.1
       },
       {
        "id": "shadowball",
-       "pct": 23.9
+       "pct": 24.3
       },
       {
        "id": "strengthsap",
-       "pct": 7
+       "pct": 7.9
       },
       {
        "id": "imprison",
@@ -22743,7 +22735,7 @@
         20,
         0
        ],
-       "pct": 16.7
+       "pct": 16.5
       },
       {
        "nature": "Bold",
@@ -22755,7 +22747,7 @@
         30,
         0
        ],
-       "pct": 11.1
+       "pct": 11.4
       },
       {
        "nature": "Bold",
@@ -22767,7 +22759,7 @@
         19,
         1
        ],
-       "pct": 9.6
+       "pct": 8.9
       },
       {
        "nature": "Bold",
@@ -22779,33 +22771,199 @@
         32,
         0
        ],
-       "pct": 7.3
+       "pct": 6.9
       },
       {
        "nature": "Bold",
        "values": [
         32,
         0,
-        24,
+        32,
         0,
-        10,
+        2,
         0
        ],
-       "pct": 2.3
+       "pct": 2.5
+      }
+     ]
+    },
+    {
+     "speciesId": "excadrill",
+     "usageRank": 33,
+     "abilities": [
+      {
+       "id": "sandrush",
+       "pct": 96.8
+      },
+      {
+       "id": "moldbreaker",
+       "pct": 1.8
+      },
+      {
+       "id": "sandforce",
+       "pct": 1.4
+      }
+     ],
+     "items": [
+      {
+       "id": "focussash",
+       "pct": 87.4
+      },
+      {
+       "id": "lifeorb",
+       "pct": 5.6
+      },
+      {
+       "id": "chopleberry",
+       "pct": 1.8
+      },
+      {
+       "id": "excadrite",
+       "pct": 1.1
+      },
+      {
+       "id": "choicescarf",
+       "pct": 1.1
+      },
+      {
+       "id": "softsand",
+       "pct": 1.1
+      }
+     ],
+     "moves": [
+      {
+       "id": "protect",
+       "pct": 97.5
+      },
+      {
+       "id": "ironhead",
+       "pct": 96.4
+      },
+      {
+       "id": "highhorsepower",
+       "pct": 89.8
+      },
+      {
+       "id": "rockslide",
+       "pct": 82.5
+      },
+      {
+       "id": "earthquake",
+       "pct": 23
+      },
+      {
+       "id": "swordsdance",
+       "pct": 2.5
+      },
+      {
+       "id": "drillrun",
+       "pct": 1.6
+      },
+      {
+       "id": "stompingtantrum",
+       "pct": 1.4
+      }
+     ],
+     "teammates": [
+      {
+       "id": "tyranitar",
+       "rank": 1
+      },
+      {
+       "id": "sneasler",
+       "rank": 2
+      },
+      {
+       "id": "salamence",
+       "rank": 3
+      },
+      {
+       "id": "indeedee",
+       "rank": 4
+      },
+      {
+       "id": "rillaboom",
+       "rank": 5
+      },
+      {
+       "id": "gholdengo",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Adamant",
+       "values": [
+        2,
+        32,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 57.5
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        0,
+        32,
+        2,
+        0,
+        0,
+        32
+       ],
+       "pct": 18.7
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        0,
+        32,
+        0,
+        0,
+        2,
+        32
+       ],
+       "pct": 6
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        0,
+        32,
+        1,
+        0,
+        1,
+        32
+       ],
+       "pct": 3.3
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        0,
+        32,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 1.4
       }
      ]
     },
     {
      "speciesId": "kommoo",
-     "usageRank": 33,
+     "usageRank": 34,
      "abilities": [
       {
        "id": "soundproof",
-       "pct": 84.3
+       "pct": 83.9
       },
       {
        "id": "bulletproof",
-       "pct": 13
+       "pct": 13.4
       },
       {
        "id": "overcoat",
@@ -22815,19 +22973,19 @@
      "items": [
       {
        "id": "leftovers",
-       "pct": 48
+       "pct": 47.7
       },
       {
        "id": "lifeorb",
-       "pct": 41.2
+       "pct": 41
       },
       {
        "id": "sitrusberry",
-       "pct": 3.6
+       "pct": 3.8
       },
       {
        "id": "dragonfang",
-       "pct": 2.2
+       "pct": 2.4
       },
       {
        "id": "grassyseed",
@@ -22841,31 +22999,31 @@
       },
       {
        "id": "protect",
-       "pct": 95.4
+       "pct": 95
       },
       {
        "id": "aurasphere",
-       "pct": 93.8
+       "pct": 93.1
       },
       {
        "id": "clangoroussoul",
-       "pct": 56.3
+       "pct": 56.4
       },
       {
        "id": "flamethrower",
-       "pct": 25.5
+       "pct": 25.7
       },
       {
        "id": "vacuumwave",
-       "pct": 19.2
+       "pct": 18.5
       },
       {
        "id": "bodypress",
-       "pct": 2.5
+       "pct": 2.8
       },
       {
-       "id": "irondefense",
-       "pct": 1.9
+       "id": "flashcannon",
+       "pct": 2.1
       }
      ],
      "teammates": [
@@ -22905,7 +23063,7 @@
         0,
         32
        ],
-       "pct": 32.6
+       "pct": 32.2
       },
       {
        "nature": "Modest",
@@ -22917,7 +23075,7 @@
         2,
         32
        ],
-       "pct": 12.8
+       "pct": 12.4
       },
       {
        "nature": "Modest",
@@ -22929,7 +23087,7 @@
         1,
         32
        ],
-       "pct": 3.7
+       "pct": 3.5
       },
       {
        "nature": "Modest",
@@ -22946,164 +23104,14 @@
       {
        "nature": "Modest",
        "values": [
-        10,
+        3,
         0,
         0,
-        24,
+        31,
         0,
         32
        ],
-       "pct": 2.4
-      }
-     ]
-    },
-    {
-     "speciesId": "arcaninehisui",
-     "usageRank": 34,
-     "abilities": [
-      {
-       "id": "rockhead",
-       "pct": 97.3
-      },
-      {
-       "id": "intimidate",
-       "pct": 2.3
-      }
-     ],
-     "items": [
-      {
-       "id": "focussash",
-       "pct": 88.6
-      },
-      {
-       "id": "choicescarf",
-       "pct": 6.1
-      },
-      {
-       "id": "lifeorb",
-       "pct": 2.9
-      }
-     ],
-     "moves": [
-      {
-       "id": "flareblitz",
-       "pct": 99.9
-      },
-      {
-       "id": "headsmash",
-       "pct": 94.1
-      },
-      {
-       "id": "protect",
-       "pct": 91.2
-      },
-      {
-       "id": "extremespeed",
-       "pct": 82.6
-      },
-      {
-       "id": "rockslide",
-       "pct": 15.7
-      },
-      {
-       "id": "closecombat",
-       "pct": 6.1
-      },
-      {
-       "id": "wildcharge",
-       "pct": 4.6
-      },
-      {
-       "id": "psychicfangs",
        "pct": 2.5
-      }
-     ],
-     "teammates": [
-      {
-       "id": "rillaboom",
-       "rank": 1
-      },
-      {
-       "id": "raichu",
-       "rank": 2
-      },
-      {
-       "id": "gholdengo",
-       "rank": 3
-      },
-      {
-       "id": "sneasler",
-       "rank": 4
-      },
-      {
-       "id": "staraptor",
-       "rank": 5
-      },
-      {
-       "id": "salamence",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Jolly",
-       "values": [
-        2,
-        32,
-        0,
-        0,
-        0,
-        32
-       ],
-       "pct": 61.4
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        1,
-        32,
-        0,
-        0,
-        1,
-        32
-       ],
-       "pct": 13.9
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        1,
-        32,
-        1,
-        0,
-        0,
-        32
-       ],
-       "pct": 6.4
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        0,
-        32,
-        2,
-        0,
-        0,
-        32
-       ],
-       "pct": 5.8
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        0,
-        32,
-        1,
-        0,
-        1,
-        32
-       ],
-       "pct": 3.9
       }
      ]
     },
@@ -23123,53 +23131,53 @@
       },
       {
        "id": "sitrusberry",
-       "pct": 7.6
+       "pct": 7.4
       },
       {
        "id": "lifeorb",
-       "pct": 3.8
+       "pct": 3.7
       },
       {
        "id": "leftovers",
-       "pct": 2
+       "pct": 2.1
       },
       {
        "id": "quickclaw",
-       "pct": 1.1
+       "pct": 1.4
       }
      ],
      "moves": [
       {
        "id": "eruption",
-       "pct": 93.2
+       "pct": 93.1
       },
       {
        "id": "protect",
-       "pct": 84.2
+       "pct": 84.5
       },
       {
        "id": "weatherball",
-       "pct": 70
+       "pct": 68.3
       },
       {
        "id": "earthpower",
-       "pct": 49.1
+       "pct": 48.3
       },
       {
        "id": "heatwave",
-       "pct": 36
+       "pct": 36.4
       },
       {
        "id": "solarbeam",
-       "pct": 17.1
+       "pct": 18
       },
       {
        "id": "helpinghand",
-       "pct": 16.6
+       "pct": 16.8
       },
       {
        "id": "yawn",
-       "pct": 11.3
+       "pct": 10.5
       }
      ],
      "teammates": [
@@ -23209,7 +23217,7 @@
         2,
         0
        ],
-       "pct": 47.3
+       "pct": 46.3
       },
       {
        "nature": "Quiet",
@@ -23221,7 +23229,7 @@
         0,
         0
        ],
-       "pct": 12.6
+       "pct": 12.7
       },
       {
        "nature": "Quiet",
@@ -23233,7 +23241,7 @@
         1,
         0
        ],
-       "pct": 8
+       "pct": 8.2
       },
       {
        "nature": "Quiet",
@@ -23245,7 +23253,7 @@
         4,
         0
        ],
-       "pct": 4.5
+       "pct": 4.3
       },
       {
        "nature": "Quiet",
@@ -23257,112 +23265,100 @@
         4,
         0
        ],
-       "pct": 3
+       "pct": 2.6
       }
      ]
     },
     {
-     "speciesId": "excadrill",
+     "speciesId": "arcaninehisui",
      "usageRank": 36,
      "abilities": [
       {
-       "id": "sandrush",
+       "id": "rockhead",
        "pct": 97.1
       },
       {
-       "id": "moldbreaker",
-       "pct": 1.5
-      },
-      {
-       "id": "sandforce",
-       "pct": 1.4
+       "id": "intimidate",
+       "pct": 2.5
       }
      ],
      "items": [
       {
        "id": "focussash",
-       "pct": 87.8
+       "pct": 88.3
+      },
+      {
+       "id": "choicescarf",
+       "pct": 6
       },
       {
        "id": "lifeorb",
-       "pct": 5.3
-      },
-      {
-       "id": "chopleberry",
-       "pct": 2.1
-      },
-      {
-       "id": "softsand",
-       "pct": 1.1
-      },
-      {
-       "id": "excadrite",
-       "pct": 1.1
+       "pct": 2.7
       }
      ],
      "moves": [
       {
+       "id": "flareblitz",
+       "pct": 99.7
+      },
+      {
+       "id": "headsmash",
+       "pct": 93.7
+      },
+      {
        "id": "protect",
-       "pct": 98.1
+       "pct": 91
       },
       {
-       "id": "ironhead",
-       "pct": 96.2
-      },
-      {
-       "id": "highhorsepower",
-       "pct": 90.8
+       "id": "extremespeed",
+       "pct": 82.6
       },
       {
        "id": "rockslide",
-       "pct": 84.4
+       "pct": 15.8
       },
       {
-       "id": "earthquake",
-       "pct": 21.2
+       "id": "closecombat",
+       "pct": 6
       },
       {
-       "id": "swordsdance",
-       "pct": 2
+       "id": "wildcharge",
+       "pct": 4.7
       },
       {
-       "id": "drillrun",
-       "pct": 1.5
-      },
-      {
-       "id": "stompingtantrum",
-       "pct": 1.3
+       "id": "psychicfangs",
+       "pct": 2.4
       }
      ],
      "teammates": [
       {
-       "id": "tyranitar",
+       "id": "rillaboom",
        "rank": 1
       },
       {
-       "id": "salamence",
+       "id": "raichu",
        "rank": 2
       },
       {
-       "id": "sneasler",
+       "id": "gholdengo",
        "rank": 3
       },
       {
-       "id": "indeedee",
+       "id": "sneasler",
        "rank": 4
       },
       {
-       "id": "gholdengo",
+       "id": "staraptor",
        "rank": 5
       },
       {
-       "id": "milotic",
+       "id": "salamence",
        "rank": 6
       }
      ],
      "spreads": [
       {
-       "nature": "Adamant",
+       "nature": "Jolly",
        "values": [
         2,
         32,
@@ -23371,10 +23367,34 @@
         0,
         32
        ],
-       "pct": 56.8
+       "pct": 61
       },
       {
-       "nature": "Adamant",
+       "nature": "Jolly",
+       "values": [
+        1,
+        32,
+        0,
+        0,
+        1,
+        32
+       ],
+       "pct": 13.2
+      },
+      {
+       "nature": "Jolly",
+       "values": [
+        1,
+        32,
+        1,
+        0,
+        0,
+        32
+       ],
+       "pct": 6.6
+      },
+      {
+       "nature": "Jolly",
        "values": [
         0,
         32,
@@ -23383,22 +23403,10 @@
         0,
         32
        ],
-       "pct": 19.5
+       "pct": 5.9
       },
       {
-       "nature": "Adamant",
-       "values": [
-        0,
-        32,
-        0,
-        0,
-        2,
-        32
-       ],
-       "pct": 6
-      },
-      {
-       "nature": "Adamant",
+       "nature": "Jolly",
        "values": [
         0,
         32,
@@ -23407,19 +23415,7 @@
         1,
         32
        ],
-       "pct": 3.6
-      },
-      {
-       "nature": "Adamant",
-       "values": [
-        1,
-        32,
-        1,
-        0,
-        0,
-        32
-       ],
-       "pct": 1.3
+       "pct": 3.8
       }
      ]
     },
@@ -23439,19 +23435,19 @@
      "items": [
       {
        "id": "lifeorb",
-       "pct": 48.7
+       "pct": 46
       },
       {
        "id": "glimmoranite",
-       "pct": 27.5
+       "pct": 28.7
       },
       {
        "id": "focussash",
-       "pct": 19.7
+       "pct": 21.3
       },
       {
        "id": "airballoon",
-       "pct": 1.4
+       "pct": 1.3
       }
      ],
      "moves": [
@@ -23460,31 +23456,31 @@
        "pct": 99.1
       },
       {
-       "id": "spikyshield",
-       "pct": 97.2
-      },
-      {
        "id": "earthpower",
        "pct": 96.7
       },
       {
+       "id": "spikyshield",
+       "pct": 96.5
+      },
+      {
        "id": "sludgebomb",
-       "pct": 90.7
+       "pct": 90.4
       },
       {
        "id": "sludgewave",
-       "pct": 7.2
+       "pct": 7.5
       },
       {
        "id": "energyball",
-       "pct": 2.3
+       "pct": 2.9
       },
       {
        "id": "mortalspin",
        "pct": 1.4
       },
       {
-       "id": "stealthrock",
+       "id": "protect",
        "pct": 1
       }
      ],
@@ -23525,7 +23521,7 @@
         0,
         32
        ],
-       "pct": 32.7
+       "pct": 32
       },
       {
        "nature": "Modest",
@@ -23537,7 +23533,7 @@
         0,
         32
        ],
-       "pct": 29
+       "pct": 29.8
       },
       {
        "nature": "Modest",
@@ -23549,7 +23545,7 @@
         1,
         32
        ],
-       "pct": 20.8
+       "pct": 19.7
       },
       {
        "nature": "Modest",
@@ -23561,7 +23557,7 @@
         2,
         32
        ],
-       "pct": 4.1
+       "pct": 4.2
       },
       {
        "nature": "Modest",
@@ -23573,7 +23569,7 @@
         1,
         32
        ],
-       "pct": 2
+       "pct": 1.8
       }
      ]
     },
@@ -23583,51 +23579,51 @@
      "abilities": [
       {
        "id": "swiftswim",
-       "pct": 80.3
+       "pct": 80.7
       },
       {
        "id": "adaptability",
-       "pct": 19.7
+       "pct": 19.2
       }
      ],
      "items": [
       {
        "id": "focussash",
-       "pct": 53
+       "pct": 54.3
       },
       {
        "id": "lifeorb",
-       "pct": 29.1
+       "pct": 27.9
       },
       {
        "id": "choicescarf",
-       "pct": 14.8
+       "pct": 14.4
       }
      ],
      "moves": [
       {
        "id": "shadowball",
-       "pct": 98.2
+       "pct": 97.7
       },
       {
        "id": "muddywater",
-       "pct": 96.8
+       "pct": 96.3
       },
       {
        "id": "icebeam",
-       "pct": 89.8
+       "pct": 89.5
       },
       {
        "id": "protect",
-       "pct": 87.2
+       "pct": 87
       },
       {
        "id": "hydropump",
-       "pct": 10.4
+       "pct": 9.6
       },
       {
        "id": "aquajet",
-       "pct": 6.1
+       "pct": 5.9
       },
       {
        "id": "icywind",
@@ -23635,7 +23631,7 @@
       },
       {
        "id": "flipturn",
-       "pct": 1.8
+       "pct": 2.1
       }
      ],
      "teammates": [
@@ -23668,18 +23664,6 @@
       {
        "nature": "Modest",
        "values": [
-        0,
-        0,
-        1,
-        32,
-        1,
-        32
-       ],
-       "pct": 27.7
-      },
-      {
-       "nature": "Modest",
-       "values": [
         2,
         0,
         0,
@@ -23687,7 +23671,19 @@
         0,
         32
        ],
-       "pct": 27.6
+       "pct": 29
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        0,
+        0,
+        1,
+        32,
+        1,
+        32
+       ],
+       "pct": 27.5
       },
       {
        "nature": "Modest",
@@ -23699,7 +23695,7 @@
         0,
         32
        ],
-       "pct": 14.7
+       "pct": 13.8
       },
       {
        "nature": "Modest",
@@ -23711,7 +23707,7 @@
         1,
         19
        ],
-       "pct": 4.3
+       "pct": 3.9
       },
       {
        "nature": "Modest",
@@ -23723,7 +23719,7 @@
         0,
         19
        ],
-       "pct": 2.7
+       "pct": 3
       }
      ]
     },
@@ -23739,7 +23735,7 @@
      "items": [
       {
        "id": "gengarite",
-       "pct": 90.8
+       "pct": 90.7
       },
       {
        "id": "focussash",
@@ -23749,35 +23745,35 @@
      "moves": [
       {
        "id": "shadowball",
-       "pct": 98.6
+       "pct": 98.3
       },
       {
        "id": "protect",
-       "pct": 94.4
+       "pct": 94.1
       },
       {
        "id": "sludgebomb",
-       "pct": 83.4
+       "pct": 81.6
       },
       {
        "id": "perishsong",
-       "pct": 57.4
+       "pct": 56.2
       },
       {
        "id": "icywind",
-       "pct": 17.4
+       "pct": 18.2
       },
       {
        "id": "substitute",
-       "pct": 12.3
+       "pct": 12.1
       },
       {
        "id": "disable",
-       "pct": 10.8
+       "pct": 11.6
       },
       {
        "id": "sludgewave",
-       "pct": 4.2
+       "pct": 4.9
       }
      ],
      "teammates": [
@@ -23802,7 +23798,7 @@
        "rank": 5
       },
       {
-       "id": "kingambit",
+       "id": "kommoo",
        "rank": 6
       }
      ],
@@ -23817,7 +23813,7 @@
         0,
         32
        ],
-       "pct": 18.7
+       "pct": 19.4
       },
       {
        "nature": "Timid",
@@ -23829,7 +23825,7 @@
         0,
         32
        ],
-       "pct": 4.9
+       "pct": 5
       },
       {
        "nature": "Timid",
@@ -23841,7 +23837,7 @@
         28,
         6
        ],
-       "pct": 3.7
+       "pct": 3.6
       },
       {
        "nature": "Timid",
@@ -23853,17 +23849,17 @@
         0,
         24
        ],
-       "pct": 3
+       "pct": 2.8
       },
       {
        "nature": "Timid",
        "values": [
         32,
         0,
-        6,
-        0,
+        4,
+        10,
         8,
-        20
+        12
        ],
        "pct": 2
       }
@@ -23875,51 +23871,55 @@
      "abilities": [
       {
        "id": "blaze",
-       "pct": 89.9
+       "pct": 88.9
       },
       {
        "id": "magician",
-       "pct": 10.1
+       "pct": 11.1
       }
      ],
      "items": [
       {
        "id": "delphoxite",
-       "pct": 93.6
+       "pct": 93.2
+      },
+      {
+       "id": "psychicseed",
+       "pct": 2.1
       },
       {
        "id": "lifeorb",
        "pct": 2
       },
       {
-       "id": "psychicseed",
-       "pct": 1.9
+       "id": "focussash",
+       "pct": 1.1
       }
      ],
      "moves": [
       {
        "id": "heatwave",
-       "pct": 96.6
+       "pct": 96.5
       },
       {
        "id": "protect",
-       "pct": 95.5
+       "pct": 95.1
       },
       {
        "id": "psychic",
-       "pct": 71.5
+       "pct": 69.7
       },
       {
        "id": "nastyplot",
-       "pct": 69.2
+       "pct": 68.2
       },
       {
        "id": "expandingforce",
-       "pct": 14.1
+       "pct": 15.5
       },
       {
        "id": "psyshock",
-       "pct": 12.4
+       "pct": 13.2
       },
       {
        "id": "encore",
@@ -23927,7 +23927,7 @@
       },
       {
        "id": "dazzlinggleam",
-       "pct": 4.7
+       "pct": 5.1
       }
      ],
      "teammates": [
@@ -23967,7 +23967,7 @@
         0,
         32
        ],
-       "pct": 20.6
+       "pct": 21.4
       },
       {
        "nature": "Timid",
@@ -23979,7 +23979,7 @@
         0,
         32
        ],
-       "pct": 11.6
+       "pct": 10.5
       },
       {
        "nature": "Timid",
@@ -23991,7 +23991,19 @@
         0,
         32
        ],
-       "pct": 8.1
+       "pct": 7.8
+      },
+      {
+       "nature": "Timid",
+       "values": [
+        0,
+        0,
+        2,
+        32,
+        0,
+        32
+       ],
+       "pct": 4.3
       },
       {
        "nature": "Timid",
@@ -24003,19 +24015,7 @@
         0,
         32
        ],
-       "pct": 4.5
-      },
-      {
-       "nature": "Timid",
-       "values": [
-        1,
-        0,
-        1,
-        32,
-        0,
-        32
-       ],
-       "pct": 4.2
+       "pct": 4.1
       }
      ]
     },
@@ -24025,67 +24025,67 @@
      "abilities": [
       {
        "id": "defiant",
-       "pct": 99.6
+       "pct": 99.5
       }
      ],
      "items": [
       {
        "id": "choicescarf",
-       "pct": 52.1
+       "pct": 50.3
       },
       {
        "id": "leftovers",
-       "pct": 14.8
+       "pct": 15.1
       },
       {
        "id": "focussash",
-       "pct": 12.1
+       "pct": 12.3
       },
       {
        "id": "sitrusberry",
-       "pct": 6.8
+       "pct": 7.7
       },
       {
        "id": "lifeorb",
-       "pct": 4.6
+       "pct": 4.7
       },
       {
        "id": "psychicseed",
-       "pct": 2.7
+       "pct": 2.8
       }
      ],
      "moves": [
       {
        "id": "closecombat",
-       "pct": 64.5
+       "pct": 62.5
       },
       {
        "id": "icepunch",
-       "pct": 49.3
-      },
-      {
-       "id": "rockslide",
-       "pct": 42.4
+       "pct": 47.5
       },
       {
        "id": "ragefist",
-       "pct": 41.6
+       "pct": 43.5
+      },
+      {
+       "id": "rockslide",
+       "pct": 40.5
       },
       {
        "id": "protect",
-       "pct": 36.4
+       "pct": 38.5
       },
       {
        "id": "phantomforce",
-       "pct": 35.3
+       "pct": 34.9
       },
       {
        "id": "drainpunch",
-       "pct": 28.6
+       "pct": 30.5
       },
       {
-       "id": "shadowclaw",
-       "pct": 21.2
+       "id": "bulkup",
+       "pct": 20.8
       }
      ],
      "teammates": [
@@ -24098,11 +24098,11 @@
        "rank": 2
       },
       {
-       "id": "kingambit",
+       "id": "indeedeef",
        "rank": 3
       },
       {
-       "id": "indeedeef",
+       "id": "kingambit",
        "rank": 4
       },
       {
@@ -24110,7 +24110,7 @@
        "rank": 5
       },
       {
-       "id": "indeedee",
+       "id": "salamence",
        "rank": 6
       }
      ],
@@ -24125,7 +24125,7 @@
         0,
         32
        ],
-       "pct": 32.6
+       "pct": 31.9
       },
       {
        "nature": "Adamant",
@@ -24137,7 +24137,7 @@
         0,
         32
        ],
-       "pct": 16.3
+       "pct": 15.3
       },
       {
        "nature": "Adamant",
@@ -24149,7 +24149,7 @@
         2,
         32
        ],
-       "pct": 2.4
+       "pct": 2.3
       },
       {
        "nature": "Adamant",
@@ -24161,19 +24161,19 @@
         0,
         27
        ],
-       "pct": 2.4
+       "pct": 2.2
       },
       {
        "nature": "Adamant",
        "values": [
-        0,
+        32,
         32,
         0,
         0,
-        0,
-        32
+        2,
+        0
        ],
-       "pct": 1.4
+       "pct": 1.5
       }
      ]
     },
@@ -24183,51 +24183,51 @@
      "abilities": [
       {
        "id": "cursedbody",
-       "pct": 81.9
+       "pct": 80.7
       },
       {
        "id": "snowcloak",
-       "pct": 18.1
+       "pct": 19.3
       }
      ],
      "items": [
       {
        "id": "froslassite",
-       "pct": 98.6
+       "pct": 98.7
       }
      ],
      "moves": [
       {
        "id": "blizzard",
-       "pct": 98.9
+       "pct": 99
       },
       {
        "id": "protect",
-       "pct": 93.6
+       "pct": 93.3
       },
       {
        "id": "shadowball",
-       "pct": 90.8
+       "pct": 91.2
       },
       {
        "id": "auroraveil",
-       "pct": 75.4
+       "pct": 75
       },
       {
        "id": "thunderbolt",
-       "pct": 8.5
+       "pct": 8.4
       },
       {
        "id": "raindance",
-       "pct": 7.5
+       "pct": 6.8
       },
       {
        "id": "taunt",
-       "pct": 6.3
+       "pct": 5.9
       },
       {
        "id": "destinybond",
-       "pct": 6
+       "pct": 5.8
       }
      ],
      "teammates": [
@@ -24244,11 +24244,11 @@
        "rank": 3
       },
       {
-       "id": "incineroar",
+       "id": "garchomp",
        "rank": 4
       },
       {
-       "id": "garchomp",
+       "id": "incineroar",
        "rank": 5
       },
       {
@@ -24267,7 +24267,7 @@
         0,
         32
        ],
-       "pct": 24
+       "pct": 25.3
       },
       {
        "nature": "Timid",
@@ -24284,26 +24284,26 @@
       {
        "nature": "Timid",
        "values": [
+        0,
+        0,
+        0,
         32,
-        0,
         2,
-        0,
-        0,
         32
        ],
-       "pct": 3.8
+       "pct": 3.5
       },
       {
        "nature": "Timid",
        "values": [
-        0,
-        0,
-        0,
         32,
+        0,
         2,
+        0,
+        0,
         32
        ],
-       "pct": 3.4
+       "pct": 3.3
       },
       {
        "nature": "Timid",
@@ -24315,7 +24315,7 @@
         0,
         32
        ],
-       "pct": 2.7
+       "pct": 2.8
       }
      ]
     },
@@ -24335,53 +24335,53 @@
      "items": [
       {
        "id": "leftovers",
-       "pct": 40
+       "pct": 39.1
       },
       {
        "id": "lifeorb",
-       "pct": 23.8
+       "pct": 24.8
       },
       {
        "id": "mysticwater",
-       "pct": 10.9
+       "pct": 10.8
       },
       {
        "id": "sitrusberry",
-       "pct": 9.1
+       "pct": 9.6
       },
       {
        "id": "grassyseed",
-       "pct": 7.7
+       "pct": 7.6
       },
       {
        "id": "fairyfeather",
-       "pct": 2.8
+       "pct": 2.4
       }
      ],
      "moves": [
       {
        "id": "hypervoice",
-       "pct": 95.7
+       "pct": 96
       },
       {
        "id": "protect",
-       "pct": 95.2
+       "pct": 94.9
       },
       {
        "id": "moonblast",
-       "pct": 93.9
+       "pct": 93
       },
       {
        "id": "calmmind",
-       "pct": 50.5
+       "pct": 49.9
       },
       {
        "id": "dazzlinggleam",
-       "pct": 11.9
+       "pct": 12.9
       },
       {
        "id": "icebeam",
-       "pct": 9
+       "pct": 10
       },
       {
        "id": "aquajet",
@@ -24389,7 +24389,7 @@
       },
       {
        "id": "energyball",
-       "pct": 6.3
+       "pct": 5.9
       }
      ],
      "teammates": [
@@ -24429,7 +24429,7 @@
         0,
         0
        ],
-       "pct": 11
+       "pct": 11.9
       },
       {
        "nature": "Modest",
@@ -24441,7 +24441,7 @@
         0,
         16
        ],
-       "pct": 9.1
+       "pct": 8.3
       },
       {
        "nature": "Modest",
@@ -24453,7 +24453,19 @@
         0,
         0
        ],
-       "pct": 3.5
+       "pct": 3.6
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        32,
+        0,
+        0,
+        32,
+        2,
+        0
+       ],
+       "pct": 2.2
       },
       {
        "nature": "Modest",
@@ -24466,18 +24478,6 @@
         2
        ],
        "pct": 1.9
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        21,
-        0,
-        24,
-        5,
-        0,
-        16
-       ],
-       "pct": 1.8
       }
      ]
     },
@@ -24487,51 +24487,55 @@
      "abilities": [
       {
        "id": "raindish",
-       "pct": 70.7
+       "pct": 70.4
       },
       {
        "id": "torrent",
-       "pct": 29.3
+       "pct": 29.6
       }
      ],
      "items": [
       {
        "id": "blastoisinite",
-       "pct": 95.9
+       "pct": 94.5
+      },
+      {
+       "id": "whiteherb",
+       "pct": 1
       }
      ],
      "moves": [
       {
        "id": "waterspout",
-       "pct": 89.6
+       "pct": 88.6
       },
       {
        "id": "protect",
-       "pct": 69
+       "pct": 67.3
       },
       {
        "id": "shellsmash",
-       "pct": 66.5
+       "pct": 64.5
       },
       {
        "id": "darkpulse",
-       "pct": 55.3
+       "pct": 54.8
       },
       {
        "id": "aurasphere",
-       "pct": 37.1
+       "pct": 38.5
       },
       {
        "id": "terrainpulse",
-       "pct": 28.3
+       "pct": 27.6
       },
       {
        "id": "fakeout",
-       "pct": 17
+       "pct": 17.4
       },
       {
        "id": "icebeam",
-       "pct": 14.2
+       "pct": 14.7
       }
      ],
      "teammates": [
@@ -24571,7 +24575,7 @@
         0,
         32
        ],
-       "pct": 26.2
+       "pct": 25.2
       },
       {
        "nature": "Modest",
@@ -24583,19 +24587,19 @@
         0,
         0
        ],
-       "pct": 10.2
+       "pct": 10.7
       },
       {
        "nature": "Modest",
        "values": [
-        9,
+        1,
         0,
-        0,
+        1,
         32,
         0,
-        25
+        32
        ],
-       "pct": 3.5
+       "pct": 3.3
       },
       {
        "nature": "Modest",
@@ -24612,12 +24616,12 @@
       {
        "nature": "Modest",
        "values": [
-        1,
+        9,
         0,
-        1,
+        0,
         32,
         0,
-        32
+        25
        ],
        "pct": 2.9
       }
@@ -24629,7 +24633,7 @@
      "abilities": [
       {
        "id": "unnerve",
-       "pct": 95.8
+       "pct": 95.5
       },
       {
        "id": "rockhead",
@@ -24637,33 +24641,33 @@
       },
       {
        "id": "pressure",
-       "pct": 1.1
+       "pct": 1.4
       }
      ],
      "items": [
       {
        "id": "aerodactylite",
-       "pct": 47.3
+       "pct": 44.4
       },
       {
        "id": "focussash",
-       "pct": 42.3
+       "pct": 42.6
       },
       {
        "id": "hardstone",
-       "pct": 2.4
+       "pct": 3.2
       },
       {
        "id": "kingsrock",
-       "pct": 2.1
+       "pct": 2.5
       },
       {
        "id": "lifeorb",
-       "pct": 1.3
+       "pct": 1.6
       },
       {
        "id": "widelens",
-       "pct": 1.1
+       "pct": 1.5
       }
      ],
      "moves": [
@@ -24673,31 +24677,31 @@
       },
       {
        "id": "tailwind",
-       "pct": 81.1
+       "pct": 80.7
       },
       {
        "id": "dualwingbeat",
-       "pct": 74.7
+       "pct": 73.6
       },
       {
        "id": "wideguard",
-       "pct": 48.6
+       "pct": 48.1
       },
       {
        "id": "protect",
-       "pct": 36.2
+       "pct": 36.8
       },
       {
        "id": "icefang",
-       "pct": 16.3
+       "pct": 15
       },
       {
        "id": "taunt",
-       "pct": 6.8
+       "pct": 6.7
       },
       {
        "id": "earthpower",
-       "pct": 5.8
+       "pct": 5.6
       }
      ],
      "teammates": [
@@ -24737,7 +24741,7 @@
         0,
         32
        ],
-       "pct": 50.9
+       "pct": 50.6
       },
       {
        "nature": "Jolly",
@@ -24749,7 +24753,7 @@
         2,
         32
        ],
-       "pct": 4.9
+       "pct": 5.6
       },
       {
        "nature": "Jolly",
@@ -24761,7 +24765,7 @@
         0,
         32
        ],
-       "pct": 4.8
+       "pct": 5.5
       },
       {
        "nature": "Jolly",
@@ -24773,7 +24777,7 @@
         5,
         32
        ],
-       "pct": 3.7
+       "pct": 3.3
       },
       {
        "nature": "Jolly",
@@ -24790,222 +24794,64 @@
      ]
     },
     {
-     "speciesId": "ninetalesalola",
+     "speciesId": "sableye",
      "usageRank": 46,
      "abilities": [
       {
-       "id": "snowwarning",
-       "pct": 99.7
-      }
-     ],
-     "items": [
-      {
-       "id": "lightclay",
-       "pct": 27.1
-      },
-      {
-       "id": "focussash",
-       "pct": 23.2
-      },
-      {
-       "id": "choicescarf",
-       "pct": 21.6
-      },
-      {
-       "id": "nevermeltice",
-       "pct": 18.7
-      },
-      {
-       "id": "lifeorb",
-       "pct": 2.2
-      },
-      {
-       "id": "wiseglasses",
-       "pct": 1.5
-      }
-     ],
-     "moves": [
-      {
-       "id": "blizzard",
-       "pct": 93.3
-      },
-      {
-       "id": "freezedry",
-       "pct": 62.4
-      },
-      {
-       "id": "protect",
-       "pct": 61.5
-      },
-      {
-       "id": "auroraveil",
-       "pct": 56.7
-      },
-      {
-       "id": "moonblast",
-       "pct": 37.1
-      },
-      {
-       "id": "icywind",
-       "pct": 24.2
-      },
-      {
-       "id": "encore",
-       "pct": 20.9
-      },
-      {
-       "id": "dazzlinggleam",
-       "pct": 9.8
-      }
-     ],
-     "teammates": [
-      {
-       "id": "rillaboom",
-       "rank": 1
-      },
-      {
-       "id": "garchomp",
-       "rank": 2
-      },
-      {
-       "id": "sneasler",
-       "rank": 3
-      },
-      {
-       "id": "raichu",
-       "rank": 4
-      },
-      {
-       "id": "incineroar",
-       "rank": 5
-      },
-      {
-       "id": "indeedeef",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Timid",
-       "values": [
-        2,
-        0,
-        0,
-        32,
-        0,
-        32
-       ],
-       "pct": 32.1
-      },
-      {
-       "nature": "Timid",
-       "values": [
-        1,
-        0,
-        1,
-        32,
-        0,
-        32
-       ],
-       "pct": 10.4
-      },
-      {
-       "nature": "Timid",
-       "values": [
-        0,
-        0,
-        2,
-        32,
-        0,
-        32
-       ],
-       "pct": 5.6
-      },
-      {
-       "nature": "Timid",
-       "values": [
-        13,
-        0,
-        21,
-        0,
-        0,
-        32
-       ],
-       "pct": 5.5
-      },
-      {
-       "nature": "Timid",
-       "values": [
-        8,
-        0,
-        0,
-        32,
-        0,
-        26
-       ],
-       "pct": 4.4
-      }
-     ]
-    },
-    {
-     "speciesId": "sableye",
-     "usageRank": 47,
-     "abilities": [
-      {
        "id": "prankster",
-       "pct": 99.9
+       "pct": 99.8
       }
      ],
      "items": [
       {
        "id": "lightclay",
-       "pct": 42.6
+       "pct": 44.2
       },
       {
        "id": "roseliberry",
-       "pct": 28.2
+       "pct": 26.2
       },
       {
        "id": "sitrusberry",
-       "pct": 8.5
+       "pct": 8.1
       },
       {
        "id": "focussash",
-       "pct": 5
+       "pct": 5.3
       },
       {
        "id": "widelens",
        "pct": 3.1
       },
       {
-       "id": "sablenite",
-       "pct": 2.3
+       "id": "leftovers",
+       "pct": 2.4
       }
      ],
      "moves": [
       {
        "id": "lightscreen",
-       "pct": 60.3
+       "pct": 60.8
       },
       {
        "id": "raindance",
-       "pct": 55.2
+       "pct": 53.6
       },
       {
        "id": "encore",
-       "pct": 53
+       "pct": 52.3
       },
       {
        "id": "reflect",
-       "pct": 45.8
+       "pct": 47.2
       },
       {
        "id": "willowisp",
-       "pct": 31.3
+       "pct": 31.1
       },
       {
        "id": "disable",
-       "pct": 29.6
+       "pct": 29.4
       },
       {
        "id": "fakeout",
@@ -25013,7 +24859,7 @@
       },
       {
        "id": "foulplay",
-       "pct": 22.5
+       "pct": 23
       }
      ],
      "teammates": [
@@ -25026,11 +24872,11 @@
        "rank": 2
       },
       {
-       "id": "golisopod",
+       "id": "rillaboom",
        "rank": 3
       },
       {
-       "id": "rillaboom",
+       "id": "golisopod",
        "rank": 4
       },
       {
@@ -25053,7 +24899,7 @@
         25,
         0
        ],
-       "pct": 24.1
+       "pct": 22.7
       },
       {
        "nature": "Careful",
@@ -25065,7 +24911,7 @@
         32,
         0
        ],
-       "pct": 12.8
+       "pct": 13.3
       },
       {
        "nature": "Careful",
@@ -25077,7 +24923,7 @@
         17,
         0
        ],
-       "pct": 7.2
+       "pct": 7.4
       },
       {
        "nature": "Careful",
@@ -25089,7 +24935,7 @@
         2,
         0
        ],
-       "pct": 6.2
+       "pct": 6.5
       },
       {
        "nature": "Careful",
@@ -25106,8 +24952,328 @@
      ]
     },
     {
-     "speciesId": "absol",
+     "speciesId": "ninetalesalola",
+     "usageRank": 47,
+     "abilities": [
+      {
+       "id": "snowwarning",
+       "pct": 99.7
+      }
+     ],
+     "items": [
+      {
+       "id": "lightclay",
+       "pct": 28.3
+      },
+      {
+       "id": "focussash",
+       "pct": 23.4
+      },
+      {
+       "id": "choicescarf",
+       "pct": 21
+      },
+      {
+       "id": "nevermeltice",
+       "pct": 17.1
+      },
+      {
+       "id": "lifeorb",
+       "pct": 2.4
+      },
+      {
+       "id": "wiseglasses",
+       "pct": 1.3
+      }
+     ],
+     "moves": [
+      {
+       "id": "blizzard",
+       "pct": 93.1
+      },
+      {
+       "id": "protect",
+       "pct": 61.1
+      },
+      {
+       "id": "freezedry",
+       "pct": 60.4
+      },
+      {
+       "id": "auroraveil",
+       "pct": 58.4
+      },
+      {
+       "id": "moonblast",
+       "pct": 38
+      },
+      {
+       "id": "icywind",
+       "pct": 23.4
+      },
+      {
+       "id": "encore",
+       "pct": 22
+      },
+      {
+       "id": "dazzlinggleam",
+       "pct": 9.5
+      }
+     ],
+     "teammates": [
+      {
+       "id": "rillaboom",
+       "rank": 1
+      },
+      {
+       "id": "garchomp",
+       "rank": 2
+      },
+      {
+       "id": "sneasler",
+       "rank": 3
+      },
+      {
+       "id": "incineroar",
+       "rank": 4
+      },
+      {
+       "id": "raichu",
+       "rank": 5
+      },
+      {
+       "id": "indeedeef",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Timid",
+       "values": [
+        2,
+        0,
+        0,
+        32,
+        0,
+        32
+       ],
+       "pct": 31.8
+      },
+      {
+       "nature": "Timid",
+       "values": [
+        1,
+        0,
+        1,
+        32,
+        0,
+        32
+       ],
+       "pct": 9.2
+      },
+      {
+       "nature": "Timid",
+       "values": [
+        0,
+        0,
+        2,
+        32,
+        0,
+        32
+       ],
+       "pct": 6
+      },
+      {
+       "nature": "Timid",
+       "values": [
+        13,
+        0,
+        21,
+        0,
+        0,
+        32
+       ],
+       "pct": 5
+      },
+      {
+       "nature": "Timid",
+       "values": [
+        8,
+        0,
+        0,
+        32,
+        0,
+        26
+       ],
+       "pct": 3.8
+      }
+     ]
+    },
+    {
+     "speciesId": "lucario",
      "usageRank": 48,
+     "abilities": [
+      {
+       "id": "innerfocus",
+       "pct": 91.5
+      },
+      {
+       "id": "steadfast",
+       "pct": 5.4
+      },
+      {
+       "id": "justified",
+       "pct": 3.1
+      }
+     ],
+     "items": [
+      {
+       "id": "lucarionitez",
+       "pct": 87.7
+      },
+      {
+       "id": "lucarionite",
+       "pct": 5.8
+      },
+      {
+       "id": "focussash",
+       "pct": 2.4
+      },
+      {
+       "id": "lifeorb",
+       "pct": 2
+      },
+      {
+       "id": "choicescarf",
+       "pct": 1.6
+      }
+     ],
+     "moves": [
+      {
+       "id": "aurasphere",
+       "pct": 88
+      },
+      {
+       "id": "flashcannon",
+       "pct": 72.3
+      },
+      {
+       "id": "detect",
+       "pct": 60
+      },
+      {
+       "id": "darkpulse",
+       "pct": 30
+      },
+      {
+       "id": "protect",
+       "pct": 29.3
+      },
+      {
+       "id": "calmmind",
+       "pct": 25
+      },
+      {
+       "id": "nastyplot",
+       "pct": 16
+      },
+      {
+       "id": "steelbeam",
+       "pct": 10.2
+      }
+     ],
+     "teammates": [
+      {
+       "id": "rillaboom",
+       "rank": 1
+      },
+      {
+       "id": "incineroar",
+       "rank": 2
+      },
+      {
+       "id": "sneasler",
+       "rank": 3
+      },
+      {
+       "id": "indeedeef",
+       "rank": 4
+      },
+      {
+       "id": "garchomp",
+       "rank": 5
+      },
+      {
+       "id": "basculegion",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Modest",
+       "values": [
+        2,
+        0,
+        0,
+        32,
+        0,
+        32
+       ],
+       "pct": 28.9
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        2,
+        32,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 6.3
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        0,
+        0,
+        2,
+        32,
+        0,
+        32
+       ],
+       "pct": 5.5
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        4,
+        0,
+        0,
+        32,
+        0,
+        30
+       ],
+       "pct": 2.5
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        19,
+        0,
+        0,
+        15,
+        0,
+        32
+       ],
+       "pct": 2
+      }
+     ]
+    },
+    {
+     "speciesId": "absol",
+     "usageRank": 49,
      "abilities": [
       {
        "id": "justified",
@@ -25115,39 +25281,39 @@
       },
       {
        "id": "superluck",
-       "pct": 28.1
+       "pct": 27
       },
       {
        "id": "pressure",
-       "pct": 7.2
+       "pct": 8.4
       }
      ],
      "items": [
       {
        "id": "absolitez",
-       "pct": 99.1
+       "pct": 98.9
       }
      ],
      "moves": [
       {
        "id": "nightslash",
-       "pct": 91.4
+       "pct": 90.8
       },
       {
        "id": "shadowclaw",
-       "pct": 76.5
+       "pct": 76.7
       },
       {
        "id": "detect",
-       "pct": 66.6
+       "pct": 65.9
       },
       {
        "id": "closecombat",
-       "pct": 41.7
+       "pct": 41.4
       },
       {
        "id": "icywind",
-       "pct": 34.9
+       "pct": 33.8
       },
       {
        "id": "protect",
@@ -25155,11 +25321,11 @@
       },
       {
        "id": "psychocut",
-       "pct": 13.8
+       "pct": 14.9
       },
       {
        "id": "rockslide",
-       "pct": 9.8
+       "pct": 9.6
       }
      ],
      "teammates": [
@@ -25199,7 +25365,7 @@
         0,
         32
        ],
-       "pct": 40
+       "pct": 40.5
       },
       {
        "nature": "Jolly",
@@ -25211,7 +25377,7 @@
         0,
         32
        ],
-       "pct": 25.5
+       "pct": 24.6
       },
       {
        "nature": "Jolly",
@@ -25223,7 +25389,19 @@
         0,
         32
        ],
-       "pct": 2.8
+       "pct": 2.9
+      },
+      {
+       "nature": "Jolly",
+       "values": [
+        0,
+        32,
+        0,
+        0,
+        2,
+        32
+       ],
+       "pct": 2.4
       },
       {
        "nature": "Jolly",
@@ -25235,181 +25413,7 @@
         0,
         32
        ],
-       "pct": 2.2
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        0,
-        32,
-        0,
-        0,
-        2,
-        32
-       ],
-       "pct": 2
-      }
-     ]
-    },
-    {
-     "speciesId": "lucario",
-     "usageRank": 49,
-     "abilities": [
-      {
-       "id": "innerfocus",
-       "pct": 92.3
-      },
-      {
-       "id": "steadfast",
-       "pct": 5.1
-      },
-      {
-       "id": "justified",
-       "pct": 2.6
-      }
-     ],
-     "items": [
-      {
-       "id": "lucarionitez",
-       "pct": 87.9
-      },
-      {
-       "id": "lucarionite",
-       "pct": 6
-      },
-      {
-       "id": "focussash",
-       "pct": 2.1
-      },
-      {
-       "id": "lifeorb",
-       "pct": 2.1
-      },
-      {
-       "id": "choicescarf",
-       "pct": 1.7
-      }
-     ],
-     "moves": [
-      {
-       "id": "aurasphere",
-       "pct": 88.2
-      },
-      {
-       "id": "flashcannon",
-       "pct": 71
-      },
-      {
-       "id": "detect",
-       "pct": 61.2
-      },
-      {
-       "id": "darkpulse",
-       "pct": 31.3
-      },
-      {
-       "id": "protect",
-       "pct": 27.9
-      },
-      {
-       "id": "calmmind",
-       "pct": 24.6
-      },
-      {
-       "id": "nastyplot",
-       "pct": 16.4
-      },
-      {
-       "id": "terrainpulse",
-       "pct": 10.6
-      }
-     ],
-     "teammates": [
-      {
-       "id": "rillaboom",
-       "rank": 1
-      },
-      {
-       "id": "incineroar",
-       "rank": 2
-      },
-      {
-       "id": "indeedeef",
-       "rank": 3
-      },
-      {
-       "id": "sneasler",
-       "rank": 4
-      },
-      {
-       "id": "basculegion",
-       "rank": 5
-      },
-      {
-       "id": "garchomp",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Modest",
-       "values": [
-        2,
-        0,
-        0,
-        32,
-        0,
-        32
-       ],
-       "pct": 27.3
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        2,
-        32,
-        0,
-        0,
-        0,
-        32
-       ],
-       "pct": 6.8
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        0,
-        0,
-        2,
-        32,
-        0,
-        32
-       ],
-       "pct": 5.8
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        4,
-        0,
-        0,
-        32,
-        0,
-        30
-       ],
-       "pct": 2.4
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        19,
-        0,
-        0,
-        15,
-        0,
-        32
-       ],
-       "pct": 2.3
+       "pct": 1.9
       }
      ]
     },
@@ -25418,34 +25422,34 @@
      "usageRank": 50,
      "abilities": [
       {
-       "id": "infiltrator",
-       "pct": 41.7
+       "id": "clearbody",
+       "pct": 41.6
       },
       {
-       "id": "clearbody",
-       "pct": 41
+       "id": "infiltrator",
+       "pct": 41.3
       },
       {
        "id": "cursedbody",
-       "pct": 17.3
+       "pct": 17.1
       }
      ],
      "items": [
       {
        "id": "lifeorb",
-       "pct": 58.5
+       "pct": 56.7
       },
       {
        "id": "focussash",
-       "pct": 25.8
+       "pct": 26.5
       },
       {
        "id": "choicescarf",
-       "pct": 3
+       "pct": 3.1
       },
       {
        "id": "widelens",
-       "pct": 2.3
+       "pct": 2.9
       },
       {
        "id": "lightclay",
@@ -25453,41 +25457,41 @@
       },
       {
        "id": "habanberry",
-       "pct": 1.4
+       "pct": 1.2
       }
      ],
      "moves": [
       {
        "id": "dracometeor",
-       "pct": 66.6
+       "pct": 64.8
       },
       {
        "id": "protect",
-       "pct": 65
+       "pct": 64.1
       },
       {
        "id": "shadowball",
-       "pct": 62.4
+       "pct": 60.6
       },
       {
        "id": "willowisp",
-       "pct": 57.8
+       "pct": 56
       },
       {
        "id": "dragondarts",
-       "pct": 22.2
+       "pct": 22.9
       },
       {
        "id": "phantomforce",
-       "pct": 20.2
+       "pct": 21.5
       },
       {
        "id": "psychicfangs",
-       "pct": 13.6
+       "pct": 12.8
       },
       {
-       "id": "dragoncheer",
-       "pct": 9.9
+       "id": "uturn",
+       "pct": 10.6
       }
      ],
      "teammates": [
@@ -25527,7 +25531,7 @@
         0,
         32
        ],
-       "pct": 43.4
+       "pct": 42.3
       },
       {
        "nature": "Timid",
@@ -25539,7 +25543,7 @@
         0,
         32
        ],
-       "pct": 11.2
+       "pct": 11.8
       },
       {
        "nature": "Timid",
@@ -25551,7 +25555,7 @@
         1,
         32
        ],
-       "pct": 3.8
+       "pct": 3.6
       },
       {
        "nature": "Timid",
@@ -25563,19 +25567,19 @@
         0,
         28
        ],
-       "pct": 2.4
+       "pct": 2.5
       },
       {
        "nature": "Timid",
        "values": [
+        0,
         32,
-        0,
-        0,
-        0,
         2,
+        0,
+        0,
         32
        ],
-       "pct": 1.8
+       "pct": 1.9
       }
      ]
     },
@@ -25585,51 +25589,51 @@
      "abilities": [
       {
        "id": "solidrock",
-       "pct": 93.2
+       "pct": 92.2
       },
       {
        "id": "magmaarmor",
-       "pct": 4.6
+       "pct": 4.3
       },
       {
        "id": "angerpoint",
-       "pct": 2.2
+       "pct": 3.4
       }
      ],
      "items": [
       {
        "id": "cameruptite",
-       "pct": 99.3
+       "pct": 99.1
       }
      ],
      "moves": [
       {
        "id": "earthpower",
-       "pct": 98.7
+       "pct": 98.8
       },
       {
        "id": "protect",
-       "pct": 89
+       "pct": 88.9
       },
       {
        "id": "heatwave",
-       "pct": 73.1
+       "pct": 72.8
       },
       {
        "id": "ancientpower",
-       "pct": 70
+       "pct": 70.7
       },
       {
        "id": "eruption",
-       "pct": 44
+       "pct": 44.3
       },
       {
        "id": "flamethrower",
-       "pct": 9.6
+       "pct": 9.4
       },
       {
        "id": "overheat",
-       "pct": 6.6
+       "pct": 6.2
       },
       {
        "id": "flashcannon",
@@ -25673,7 +25677,7 @@
         0,
         0
        ],
-       "pct": 56.6
+       "pct": 57
       },
       {
        "nature": "Quiet",
@@ -25685,7 +25689,7 @@
         2,
         0
        ],
-       "pct": 15.2
+       "pct": 15.5
       },
       {
        "nature": "Quiet",
@@ -25702,11 +25706,11 @@
       {
        "nature": "Quiet",
        "values": [
-        0,
-        0,
-        13,
         32,
-        21,
+        0,
+        4,
+        30,
+        0,
         0
        ],
        "pct": 1.7
@@ -25714,14 +25718,14 @@
       {
        "nature": "Quiet",
        "values": [
-        19,
-        0,
-        10,
         32,
-        5,
+        0,
+        0,
+        32,
+        0,
         0
        ],
-       "pct": 1.7
+       "pct": 1.5
       }
      ]
     },
@@ -25737,15 +25741,15 @@
      "items": [
       {
        "id": "electricseed",
-       "pct": 69.9
+       "pct": 68.7
       },
       {
        "id": "grassyseed",
-       "pct": 12.4
+       "pct": 12.3
       },
       {
        "id": "focussash",
-       "pct": 6.8
+       "pct": 7.4
       },
       {
        "id": "psychicseed",
@@ -25753,11 +25757,11 @@
       },
       {
        "id": "colburberry",
-       "pct": 1.9
+       "pct": 1.8
       },
       {
-       "id": "sitrusberry",
-       "pct": 1.4
+       "id": "mentalherb",
+       "pct": 1.7
       }
      ],
      "moves": [
@@ -25767,15 +25771,15 @@
       },
       {
        "id": "calmmind",
-       "pct": 94
+       "pct": 93.4
       },
       {
        "id": "batonpass",
-       "pct": 93.7
+       "pct": 93.1
       },
       {
        "id": "luminacrash",
-       "pct": 90.8
+       "pct": 90.9
       },
       {
        "id": "storedpower",
@@ -25783,15 +25787,15 @@
       },
       {
        "id": "expandingforce",
-       "pct": 4.2
+       "pct": 4.4
       },
       {
        "id": "dazzlinggleam",
-       "pct": 2.4
+       "pct": 2.7
       },
       {
        "id": "raindance",
-       "pct": 1.9
+       "pct": 1.8
       }
      ],
      "teammates": [
@@ -25816,7 +25820,7 @@
        "rank": 5
       },
       {
-       "id": "rillaboom",
+       "id": "incineroar",
        "rank": 6
       }
      ],
@@ -25831,7 +25835,7 @@
         14,
         13
        ],
-       "pct": 12
+       "pct": 12.4
       },
       {
        "nature": "Timid",
@@ -25843,7 +25847,7 @@
         14,
         18
        ],
-       "pct": 9.2
+       "pct": 10.3
       },
       {
        "nature": "Timid",
@@ -25855,7 +25859,19 @@
         14,
         13
        ],
-       "pct": 9
+       "pct": 8.8
+      },
+      {
+       "nature": "Timid",
+       "values": [
+        31,
+        0,
+        12,
+        1,
+        4,
+        18
+       ],
+       "pct": 3.8
       },
       {
        "nature": "Timid",
@@ -25867,19 +25883,7 @@
         2,
         18
        ],
-       "pct": 4.3
-      },
-      {
-       "nature": "Timid",
-       "values": [
-        23,
-        0,
-        17,
-        0,
-        12,
-        14
-       ],
-       "pct": 4
+       "pct": 3.6
       }
      ]
     },
@@ -25889,71 +25893,67 @@
      "abilities": [
       {
        "id": "mirrorarmor",
-       "pct": 98.4
+       "pct": 98
       },
       {
        "id": "pressure",
-       "pct": 1.3
+       "pct": 1.4
       }
      ],
      "items": [
       {
        "id": "psychicseed",
-       "pct": 50.4
+       "pct": 47.6
       },
       {
        "id": "leftovers",
-       "pct": 25
+       "pct": 27.4
       },
       {
        "id": "sitrusberry",
-       "pct": 8.9
+       "pct": 8.6
       },
       {
        "id": "rockyhelmet",
-       "pct": 5.9
+       "pct": 6.1
       },
       {
        "id": "occaberry",
-       "pct": 3.9
-      },
-      {
-       "id": "lifeorb",
-       "pct": 1
+       "pct": 4.1
       }
      ],
      "moves": [
       {
        "id": "bravebird",
-       "pct": 82.4
+       "pct": 81.7
       },
       {
        "id": "roost",
-       "pct": 76
+       "pct": 76.6
       },
       {
        "id": "bulkup",
-       "pct": 70.1
+       "pct": 68.7
       },
       {
        "id": "powertrip",
-       "pct": 49.3
+       "pct": 47.5
       },
       {
        "id": "tailwind",
-       "pct": 30.3
+       "pct": 31.2
       },
       {
        "id": "bodypress",
-       "pct": 27.1
+       "pct": 28.4
       },
       {
        "id": "ironhead",
-       "pct": 26.7
+       "pct": 27.2
       },
       {
-       "id": "protect",
-       "pct": 12
+       "id": "irondefense",
+       "pct": 12.6
       }
      ],
      "teammates": [
@@ -25993,7 +25993,7 @@
         15,
         17
        ],
-       "pct": 16.6
+       "pct": 15.7
       },
       {
        "nature": "Careful",
@@ -26005,7 +26005,7 @@
         32,
         0
        ],
-       "pct": 8.6
+       "pct": 8.7
       },
       {
        "nature": "Careful",
@@ -26017,7 +26017,7 @@
         2,
         0
        ],
-       "pct": 4.3
+       "pct": 4.7
       },
       {
        "nature": "Careful",
@@ -26029,7 +26029,7 @@
         0,
         2
        ],
-       "pct": 2.7
+       "pct": 3.6
       },
       {
        "nature": "Careful",
@@ -26041,7 +26041,7 @@
         25,
         0
        ],
-       "pct": 2.4
+       "pct": 2
       }
      ]
     },
@@ -26051,59 +26051,59 @@
      "abilities": [
       {
        "id": "galewings",
-       "pct": 98.2
+       "pct": 98.3
       },
       {
        "id": "flamebody",
-       "pct": 1.8
+       "pct": 1.7
       }
      ],
      "items": [
       {
        "id": "sharpbeak",
-       "pct": 30.1
+       "pct": 29.8
       },
       {
        "id": "focussash",
-       "pct": 18
+       "pct": 19.6
       },
       {
        "id": "expertbelt",
-       "pct": 16.1
+       "pct": 15.6
       },
       {
        "id": "lifeorb",
-       "pct": 9.1
+       "pct": 10
       },
       {
        "id": "charcoal",
-       "pct": 6
+       "pct": 5.5
       },
       {
        "id": "leftovers",
-       "pct": 1.5
+       "pct": 1.2
       }
      ],
      "moves": [
       {
        "id": "tailwind",
-       "pct": 99.1
+       "pct": 98.9
       },
       {
        "id": "flareblitz",
-       "pct": 70
+       "pct": 70.2
       },
       {
        "id": "protect",
-       "pct": 60.5
+       "pct": 60.2
       },
       {
        "id": "bravebird",
-       "pct": 54.6
+       "pct": 55.2
       },
       {
        "id": "quickguard",
-       "pct": 24.7
+       "pct": 24.6
       },
       {
        "id": "dualwingbeat",
@@ -26111,11 +26111,11 @@
       },
       {
        "id": "taunt",
-       "pct": 16.1
+       "pct": 14.9
       },
       {
        "id": "acrobatics",
-       "pct": 10.8
+       "pct": 10
       }
      ],
      "teammates": [
@@ -26160,11 +26160,11 @@
       {
        "nature": "Jolly",
        "values": [
-        2,
-        0,
         0,
         32,
         0,
+        0,
+        2,
         32
        ],
        "pct": 5.7
@@ -26172,14 +26172,14 @@
       {
        "nature": "Jolly",
        "values": [
+        2,
+        0,
         0,
         32,
         0,
-        0,
-        2,
         32
        ],
-       "pct": 4.5
+       "pct": 5.5
       },
       {
        "nature": "Jolly",
@@ -26191,7 +26191,7 @@
         0,
         32
        ],
-       "pct": 3.8
+       "pct": 4.1
       },
       {
        "nature": "Jolly",
@@ -26208,518 +26208,60 @@
      ]
     },
     {
-     "speciesId": "mawile",
+     "speciesId": "blaziken",
      "usageRank": 55,
      "abilities": [
       {
-       "id": "hypercutter",
-       "pct": 56.5
-      },
-      {
-       "id": "intimidate",
-       "pct": 43.3
-      }
-     ],
-     "items": [
-      {
-       "id": "mawilite",
-       "pct": 99.8
-      }
-     ],
-     "moves": [
-      {
-       "id": "playrough",
-       "pct": 99.3
-      },
-      {
-       "id": "suckerpunch",
-       "pct": 92.7
-      },
-      {
-       "id": "protect",
-       "pct": 70.1
-      },
-      {
-       "id": "ironhead",
-       "pct": 51.8
-      },
-      {
-       "id": "rockslide",
-       "pct": 51.8
-      },
-      {
-       "id": "swordsdance",
-       "pct": 19.5
-      },
-      {
-       "id": "knockoff",
-       "pct": 4.5
-      },
-      {
-       "id": "firefang",
-       "pct": 3.7
-      }
-     ],
-     "teammates": [
-      {
-       "id": "farigiraf",
-       "rank": 1
-      },
-      {
-       "id": "torkoal",
-       "rank": 2
-      },
-      {
-       "id": "indeedeef",
-       "rank": 3
-      },
-      {
-       "id": "incineroar",
-       "rank": 4
-      },
-      {
-       "id": "pelipper",
-       "rank": 5
-      },
-      {
-       "id": "archaludon",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Brave",
-       "values": [
-        32,
-        32,
-        0,
-        0,
-        2,
-        0
-       ],
-       "pct": 46.7
-      },
-      {
-       "nature": "Brave",
-       "values": [
-        32,
-        32,
-        2,
-        0,
-        0,
-        0
-       ],
-       "pct": 19.2
-      },
-      {
-       "nature": "Brave",
-       "values": [
-        32,
-        32,
-        0,
-        0,
-        0,
-        2
-       ],
-       "pct": 4.3
-      },
-      {
-       "nature": "Brave",
-       "values": [
-        32,
-        32,
-        1,
-        0,
-        1,
-        0
-       ],
-       "pct": 4
-      },
-      {
-       "nature": "Brave",
-       "values": [
-        32,
-        31,
-        3,
-        0,
-        0,
-        0
-       ],
-       "pct": 2.7
-      }
-     ]
-    },
-    {
-     "speciesId": "hydreigon",
-     "usageRank": 56,
-     "abilities": [
-      {
-       "id": "levitate",
-       "pct": 100
-      }
-     ],
-     "items": [
-      {
-       "id": "choicescarf",
-       "pct": 57.7
-      },
-      {
-       "id": "focussash",
-       "pct": 18.4
-      },
-      {
-       "id": "lifeorb",
-       "pct": 11.6
-      },
-      {
-       "id": "habanberry",
-       "pct": 4.1
-      },
-      {
-       "id": "chopleberry",
-       "pct": 2
-      },
-      {
-       "id": "expertbelt",
-       "pct": 1.2
-      }
-     ],
-     "moves": [
-      {
-       "id": "darkpulse",
-       "pct": 86.2
-      },
-      {
-       "id": "dracometeor",
-       "pct": 80.1
-      },
-      {
-       "id": "snarl",
-       "pct": 57
-      },
-      {
-       "id": "earthpower",
-       "pct": 56.6
-      },
-      {
-       "id": "protect",
-       "pct": 29.8
-      },
-      {
-       "id": "flamethrower",
-       "pct": 19.7
-      },
-      {
-       "id": "tailwind",
-       "pct": 17.5
-      },
-      {
-       "id": "heatwave",
-       "pct": 17.4
-      }
-     ],
-     "teammates": [
-      {
-       "id": "sneasler",
-       "rank": 1
-      },
-      {
-       "id": "indeedeef",
-       "rank": 2
-      },
-      {
-       "id": "rillaboom",
-       "rank": 3
-      },
-      {
-       "id": "charizard",
-       "rank": 4
-      },
-      {
-       "id": "gardevoir",
-       "rank": 5
-      },
-      {
-       "id": "metagross",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Modest",
-       "values": [
-        2,
-        0,
-        0,
-        32,
-        0,
-        32
-       ],
-       "pct": 67.9
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        0,
-        0,
-        0,
-        32,
-        2,
-        32
-       ],
-       "pct": 4.1
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        0,
-        0,
-        2,
-        32,
-        0,
-        32
-       ],
-       "pct": 2.8
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        10,
-        0,
-        0,
-        32,
-        0,
-        24
-       ],
-       "pct": 2.2
-      },
-      {
-       "nature": "Modest",
-       "values": [
-        8,
-        0,
-        1,
-        25,
-        0,
-        32
-       ],
-       "pct": 1.4
-      }
-     ]
-    },
-    {
-     "speciesId": "mausholdfour",
-     "usageRank": 57,
-     "abilities": [
-      {
-       "id": "friendguard",
-       "pct": 54.5
-      },
-      {
-       "id": "technician",
-       "pct": 44.7
-      }
-     ],
-     "items": [
-      {
-       "id": "widelens",
-       "pct": 45.3
-      },
-      {
-       "id": "chopleberry",
-       "pct": 31
-      },
-      {
-       "id": "focussash",
-       "pct": 11.6
-      },
-      {
-       "id": "rockyhelmet",
-       "pct": 3
-      },
-      {
-       "id": "sitrusberry",
-       "pct": 2.9
-      },
-      {
-       "id": "kingsrock",
-       "pct": 1.2
-      }
-     ],
-     "moves": [
-      {
-       "id": "followme",
-       "pct": 88
-      },
-      {
-       "id": "protect",
-       "pct": 77
-      },
-      {
-       "id": "populationbomb",
-       "pct": 52.7
-      },
-      {
-       "id": "taunt",
-       "pct": 28.5
-      },
-      {
-       "id": "superfang",
-       "pct": 28.2
-      },
-      {
-       "id": "feint",
-       "pct": 28
-      },
-      {
-       "id": "encore",
-       "pct": 18.8
-      },
-      {
-       "id": "helpinghand",
-       "pct": 17.7
-      }
-     ],
-     "teammates": [
-      {
-       "id": "rillaboom",
-       "rank": 1
-      },
-      {
-       "id": "indeedeef",
-       "rank": 2
-      },
-      {
-       "id": "sinistcha",
-       "rank": 3
-      },
-      {
-       "id": "sneasler",
-       "rank": 4
-      },
-      {
-       "id": "incineroar",
-       "rank": 5
-      },
-      {
-       "id": "blastoise",
-       "rank": 6
-      }
-     ],
-     "spreads": [
-      {
-       "nature": "Jolly",
-       "values": [
-        2,
-        32,
-        0,
-        0,
-        0,
-        32
-       ],
-       "pct": 28.4
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        32,
-        0,
-        2,
-        0,
-        0,
-        32
-       ],
-       "pct": 7.7
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        0,
-        32,
-        2,
-        0,
-        0,
-        32
-       ],
-       "pct": 7.6
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        32,
-        0,
-        20,
-        0,
-        14,
-        0
-       ],
-       "pct": 5.1
-      },
-      {
-       "nature": "Jolly",
-       "values": [
-        0,
-        32,
-        0,
-        0,
-        2,
-        32
-       ],
-       "pct": 4
-      }
-     ]
-    },
-    {
-     "speciesId": "blaziken",
-     "usageRank": 58,
-     "abilities": [
-      {
        "id": "speedboost",
-       "pct": 98.4
+       "pct": 98.3
       },
       {
        "id": "blaze",
-       "pct": 1.6
+       "pct": 1.7
       }
      ],
      "items": [
       {
        "id": "blazikenite",
-       "pct": 54.2
+       "pct": 53.1
       },
       {
        "id": "focussash",
-       "pct": 25.3
+       "pct": 25.1
       },
       {
        "id": "lifeorb",
-       "pct": 10.6
+       "pct": 11.9
       },
       {
        "id": "widelens",
-       "pct": 4.4
+       "pct": 3.4
       },
       {
        "id": "psychicseed",
-       "pct": 1.6
+       "pct": 1.9
+      },
+      {
+       "id": "whiteherb",
+       "pct": 1
       }
      ],
      "moves": [
       {
        "id": "detect",
-       "pct": 67.3
+       "pct": 67.8
       },
       {
        "id": "closecombat",
-       "pct": 63.7
+       "pct": 63.8
       },
       {
        "id": "flareblitz",
-       "pct": 61.4
+       "pct": 61.6
       },
       {
        "id": "rockslide",
-       "pct": 57.3
+       "pct": 56.6
       },
       {
        "id": "protect",
@@ -26727,15 +26269,15 @@
       },
       {
        "id": "aurasphere",
-       "pct": 25.5
+       "pct": 25.6
       },
       {
        "id": "heatwave",
-       "pct": 24.1
+       "pct": 24.4
       },
       {
        "id": "coaching",
-       "pct": 14.9
+       "pct": 13.9
       }
      ],
      "teammates": [
@@ -26752,11 +26294,11 @@
        "rank": 3
       },
       {
-       "id": "basculegion",
+       "id": "garchomp",
        "rank": 4
       },
       {
-       "id": "garchomp",
+       "id": "basculegion",
        "rank": 5
       },
       {
@@ -26775,7 +26317,7 @@
         0,
         32
        ],
-       "pct": 37.7
+       "pct": 36.8
       },
       {
        "nature": "Adamant",
@@ -26799,10 +26341,342 @@
         0,
         32
        ],
-       "pct": 8.3
+       "pct": 7.8
       },
       {
        "nature": "Adamant",
+       "values": [
+        0,
+        32,
+        1,
+        0,
+        1,
+        32
+       ],
+       "pct": 2.6
+      },
+      {
+       "nature": "Adamant",
+       "values": [
+        0,
+        32,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 2.2
+      }
+     ]
+    },
+    {
+     "speciesId": "hydreigon",
+     "usageRank": 56,
+     "abilities": [
+      {
+       "id": "levitate",
+       "pct": 100
+      }
+     ],
+     "items": [
+      {
+       "id": "choicescarf",
+       "pct": 56.2
+      },
+      {
+       "id": "focussash",
+       "pct": 17.6
+      },
+      {
+       "id": "lifeorb",
+       "pct": 12.7
+      },
+      {
+       "id": "habanberry",
+       "pct": 4.3
+      },
+      {
+       "id": "chopleberry",
+       "pct": 2.3
+      },
+      {
+       "id": "blackglasses",
+       "pct": 1.3
+      }
+     ],
+     "moves": [
+      {
+       "id": "darkpulse",
+       "pct": 85.6
+      },
+      {
+       "id": "dracometeor",
+       "pct": 78.6
+      },
+      {
+       "id": "snarl",
+       "pct": 55.4
+      },
+      {
+       "id": "earthpower",
+       "pct": 55.3
+      },
+      {
+       "id": "protect",
+       "pct": 31.4
+      },
+      {
+       "id": "flamethrower",
+       "pct": 19.6
+      },
+      {
+       "id": "tailwind",
+       "pct": 18.1
+      },
+      {
+       "id": "heatwave",
+       "pct": 17.6
+      }
+     ],
+     "teammates": [
+      {
+       "id": "sneasler",
+       "rank": 1
+      },
+      {
+       "id": "indeedeef",
+       "rank": 2
+      },
+      {
+       "id": "rillaboom",
+       "rank": 3
+      },
+      {
+       "id": "metagross",
+       "rank": 4
+      },
+      {
+       "id": "charizard",
+       "rank": 5
+      },
+      {
+       "id": "gardevoir",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Modest",
+       "values": [
+        2,
+        0,
+        0,
+        32,
+        0,
+        32
+       ],
+       "pct": 65.1
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        0,
+        0,
+        0,
+        32,
+        2,
+        32
+       ],
+       "pct": 5.1
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        0,
+        0,
+        2,
+        32,
+        0,
+        32
+       ],
+       "pct": 3.2
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        10,
+        0,
+        0,
+        32,
+        0,
+        24
+       ],
+       "pct": 1.9
+      },
+      {
+       "nature": "Modest",
+       "values": [
+        8,
+        0,
+        1,
+        25,
+        0,
+        32
+       ],
+       "pct": 1.5
+      }
+     ]
+    },
+    {
+     "speciesId": "mausholdfour",
+     "usageRank": 57,
+     "abilities": [
+      {
+       "id": "friendguard",
+       "pct": 54.6
+      },
+      {
+       "id": "technician",
+       "pct": 44.7
+      }
+     ],
+     "items": [
+      {
+       "id": "widelens",
+       "pct": 45.1
+      },
+      {
+       "id": "chopleberry",
+       "pct": 29.4
+      },
+      {
+       "id": "focussash",
+       "pct": 12.5
+      },
+      {
+       "id": "sitrusberry",
+       "pct": 3
+      },
+      {
+       "id": "rockyhelmet",
+       "pct": 2.8
+      },
+      {
+       "id": "kingsrock",
+       "pct": 1.1
+      }
+     ],
+     "moves": [
+      {
+       "id": "followme",
+       "pct": 88.5
+      },
+      {
+       "id": "protect",
+       "pct": 76.3
+      },
+      {
+       "id": "populationbomb",
+       "pct": 53
+      },
+      {
+       "id": "taunt",
+       "pct": 29.4
+      },
+      {
+       "id": "superfang",
+       "pct": 28.4
+      },
+      {
+       "id": "feint",
+       "pct": 26.1
+      },
+      {
+       "id": "encore",
+       "pct": 18.8
+      },
+      {
+       "id": "helpinghand",
+       "pct": 17.5
+      }
+     ],
+     "teammates": [
+      {
+       "id": "indeedeef",
+       "rank": 1
+      },
+      {
+       "id": "rillaboom",
+       "rank": 2
+      },
+      {
+       "id": "incineroar",
+       "rank": 3
+      },
+      {
+       "id": "sinistcha",
+       "rank": 4
+      },
+      {
+       "id": "sneasler",
+       "rank": 5
+      },
+      {
+       "id": "blastoise",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Jolly",
+       "values": [
+        2,
+        32,
+        0,
+        0,
+        0,
+        32
+       ],
+       "pct": 29
+      },
+      {
+       "nature": "Jolly",
+       "values": [
+        32,
+        0,
+        2,
+        0,
+        0,
+        32
+       ],
+       "pct": 7.9
+      },
+      {
+       "nature": "Jolly",
+       "values": [
+        0,
+        32,
+        2,
+        0,
+        0,
+        32
+       ],
+       "pct": 7.2
+      },
+      {
+       "nature": "Jolly",
+       "values": [
+        32,
+        0,
+        20,
+        0,
+        14,
+        0
+       ],
+       "pct": 4.7
+      },
+      {
+       "nature": "Jolly",
        "values": [
         0,
         32,
@@ -26811,19 +26685,149 @@
         2,
         32
        ],
-       "pct": 2.1
+       "pct": 4.3
+      }
+     ]
+    },
+    {
+     "speciesId": "mawile",
+     "usageRank": 58,
+     "abilities": [
+      {
+       "id": "hypercutter",
+       "pct": 55.6
       },
       {
-       "nature": "Adamant",
+       "id": "intimidate",
+       "pct": 44
+      }
+     ],
+     "items": [
+      {
+       "id": "mawilite",
+       "pct": 99.9
+      }
+     ],
+     "moves": [
+      {
+       "id": "playrough",
+       "pct": 99.1
+      },
+      {
+       "id": "suckerpunch",
+       "pct": 91.5
+      },
+      {
+       "id": "protect",
+       "pct": 71.9
+      },
+      {
+       "id": "ironhead",
+       "pct": 54.5
+      },
+      {
+       "id": "rockslide",
+       "pct": 49.2
+      },
+      {
+       "id": "swordsdance",
+       "pct": 18.6
+      },
+      {
+       "id": "knockoff",
+       "pct": 4.8
+      },
+      {
+       "id": "firefang",
+       "pct": 3.4
+      }
+     ],
+     "teammates": [
+      {
+       "id": "farigiraf",
+       "rank": 1
+      },
+      {
+       "id": "torkoal",
+       "rank": 2
+      },
+      {
+       "id": "pelipper",
+       "rank": 3
+      },
+      {
+       "id": "indeedeef",
+       "rank": 4
+      },
+      {
+       "id": "incineroar",
+       "rank": 5
+      },
+      {
+       "id": "archaludon",
+       "rank": 6
+      }
+     ],
+     "spreads": [
+      {
+       "nature": "Brave",
        "values": [
-        4,
+        32,
+        32,
+        0,
+        0,
+        2,
+        0
+       ],
+       "pct": 48.8
+      },
+      {
+       "nature": "Brave",
+       "values": [
+        32,
+        32,
+        2,
+        0,
+        0,
+        0
+       ],
+       "pct": 18.2
+      },
+      {
+       "nature": "Brave",
+       "values": [
+        32,
         32,
         0,
         0,
         0,
-        30
+        2
        ],
-       "pct": 1.9
+       "pct": 3.7
+      },
+      {
+       "nature": "Brave",
+       "values": [
+        32,
+        32,
+        1,
+        0,
+        1,
+        0
+       ],
+       "pct": 3.6
+      },
+      {
+       "nature": "Brave",
+       "values": [
+        32,
+        31,
+        3,
+        0,
+        0,
+        0
+       ],
+       "pct": 2.3
       }
      ]
     },
@@ -26833,25 +26837,25 @@
      "abilities": [
       {
        "id": "magicbounce",
-       "pct": 93.9
+       "pct": 94.4
       },
       {
        "id": "healer",
-       "pct": 5.9
+       "pct": 5.3
       }
      ],
      "items": [
       {
        "id": "lifeorb",
-       "pct": 63.5
+       "pct": 64.9
       },
       {
        "id": "focussash",
-       "pct": 16.3
+       "pct": 14.9
       },
       {
        "id": "babiriberry",
-       "pct": 4.1
+       "pct": 3.7
       },
       {
        "id": "sitrusberry",
@@ -26859,45 +26863,45 @@
       },
       {
        "id": "psychicseed",
-       "pct": 3.3
+       "pct": 3.4
       },
       {
-       "id": "mentalherb",
-       "pct": 2.1
+       "id": "twistedspoon",
+       "pct": 1.8
       }
      ],
      "moves": [
       {
        "id": "dazzlinggleam",
-       "pct": 94.7
+       "pct": 95.4
       },
       {
        "id": "trickroom",
-       "pct": 90.2
+       "pct": 91.2
       },
       {
        "id": "expandingforce",
-       "pct": 85.8
+       "pct": 85.2
       },
       {
        "id": "protect",
-       "pct": 72.1
+       "pct": 71.4
       },
       {
        "id": "mysticalfire",
-       "pct": 15.7
-      },
-      {
-       "id": "magicpowder",
-       "pct": 8.5
+       "pct": 16.2
       },
       {
        "id": "psychic",
-       "pct": 8.4
+       "pct": 9.2
+      },
+      {
+       "id": "magicpowder",
+       "pct": 8.7
       },
       {
        "id": "gigadrain",
-       "pct": 4
+       "pct": 3.7
       }
      ],
      "teammates": [
@@ -26918,11 +26922,11 @@
        "rank": 4
       },
       {
-       "id": "farigiraf",
+       "id": "golisopod",
        "rank": 5
       },
       {
-       "id": "golisopod",
+       "id": "farigiraf",
        "rank": 6
       }
      ],
@@ -26937,7 +26941,7 @@
         0,
         0
        ],
-       "pct": 36.6
+       "pct": 37.1
       },
       {
        "nature": "Quiet",
@@ -26949,7 +26953,7 @@
         0,
         0
        ],
-       "pct": 18.5
+       "pct": 17.9
       },
       {
        "nature": "Quiet",
@@ -26961,7 +26965,7 @@
         2,
         0
        ],
-       "pct": 11.4
+       "pct": 10.6
       },
       {
        "nature": "Quiet",
@@ -26973,19 +26977,19 @@
         2,
         0
        ],
-       "pct": 2.5
+       "pct": 2
       },
       {
        "nature": "Quiet",
        "values": [
-        32,
         0,
-        1,
+        0,
         32,
-        1,
+        32,
+        2,
         0
        ],
-       "pct": 2.2
+       "pct": 1.9
       }
      ]
     },
@@ -26995,25 +26999,25 @@
      "abilities": [
       {
        "id": "frisk",
-       "pct": 77.5
+       "pct": 78.2
       },
       {
        "id": "blaze",
-       "pct": 22.5
+       "pct": 21.8
       }
      ],
      "items": [
       {
        "id": "choicescarf",
-       "pct": 71.9
+       "pct": 74.1
       },
       {
        "id": "charcoal",
-       "pct": 12.5
+       "pct": 11.3
       },
       {
        "id": "focussash",
-       "pct": 8.4
+       "pct": 7
       },
       {
        "id": "lifeorb",
@@ -27021,45 +27025,41 @@
       },
       {
        "id": "ironball",
-       "pct": 1.5
-      },
-      {
-       "id": "spelltag",
-       "pct": 1
+       "pct": 1.3
       }
      ],
      "moves": [
       {
        "id": "eruption",
-       "pct": 97.2
+       "pct": 96.8
       },
       {
        "id": "shadowball",
-       "pct": 89.4
+       "pct": 87.7
       },
       {
        "id": "heatwave",
-       "pct": 52.1
+       "pct": 53.5
       },
       {
        "id": "protect",
-       "pct": 30
+       "pct": 28
       },
       {
        "id": "extrasensory",
-       "pct": 17.4
+       "pct": 16.5
       },
       {
        "id": "focusblast",
-       "pct": 17
+       "pct": 15.9
       },
       {
        "id": "burnup",
-       "pct": 15.7
+       "pct": 14.7
       },
       {
        "id": "flamethrower",
-       "pct": 12.8
+       "pct": 13.2
       }
      ],
      "teammates": [
@@ -27084,7 +27084,7 @@
        "rank": 5
       },
       {
-       "id": "indeedee",
+       "id": "torkoal",
        "rank": 6
       }
      ],
@@ -27099,7 +27099,7 @@
         0,
         32
        ],
-       "pct": 55
+       "pct": 53.1
       },
       {
        "nature": "Modest",
@@ -27111,7 +27111,7 @@
         0,
         32
        ],
-       "pct": 8.1
+       "pct": 9.7
       },
       {
        "nature": "Modest",
@@ -27123,7 +27123,7 @@
         2,
         32
        ],
-       "pct": 6
+       "pct": 5.9
       },
       {
        "nature": "Modest",
@@ -27135,7 +27135,7 @@
         0,
         32
        ],
-       "pct": 4.5
+       "pct": 3.7
       },
       {
        "nature": "Modest",
@@ -27147,7 +27147,7 @@
         0,
         32
        ],
-       "pct": 4.2
+       "pct": 3.3
       }
      ]
     }
