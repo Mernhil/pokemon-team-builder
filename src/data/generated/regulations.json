@@ -52,5 +52,9 @@
       "updatedAt": "2026-09-27"
     }
   ],
-  "upcoming": []
+  "upcoming": [],
+  "seasons": [
+    { "id": "M-6", "regulation": "champions-reg-mc", "start": "2026-09-09T02:00:00Z", "end": "2026-10-07T01:59:00Z" },
+    { "id": "M-7", "regulation": "champions-reg-mc", "start": "2026-10-07T02:00:00Z", "end": "2026-11-04T01:59:00Z" }
+  ]
 }

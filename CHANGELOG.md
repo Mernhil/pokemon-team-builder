@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.29.0 — 2026-10-17
+
+### New
+- **Season reset in the regulation banner.** Build shows the running ranked season and when the ladder resets, in your own timezone. The weekly regulation check keeps the season dates up to date.
+
 ## 0.28.0 — 2026-10-08
 
 ### New
