@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarClock, Copy, RadioTower } from 'lucide-react';
+import { CalendarClock, Copy, RadioTower, RotateCcw } from 'lucide-react';
 import { create } from 'zustand';
 import type { Dex } from '@/data/dex';
 import { useRegulationChanges } from '@/data/regulationChanges';
@@ -7,6 +7,7 @@ import { useDex } from '@/data/useDex';
 import { copyTeamToRegulation, daysUntil, teamImpact } from '@/domain/regulationImpact';
 import { toast } from '@/store/toastStore';
 import { REGULATION_MANIFEST, currentRegulation, formatForRegulation, regulationInfo } from '@/domain/formats';
+import { currentSeason, formatSeasonReset, seasonDaysLeft } from '@/domain/seasons';
 import type { FormatRules, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
 import { formatMechanics, gameInfo } from '@/domain/games';
@@ -115,6 +116,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
           {daysLeft !== undefined && ` · ${daysLeft} days left`}
         </span>
       </span>
+      <SeasonChip />
       <span className="hidden text-muted sm:inline">
         {live.speciesCount} Pokémon · {live.megaCount} Megas · {live.itemCount} items
       </span>
@@ -178,6 +180,22 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
       </div>
     )}
     </div>
+  );
+}
+
+/** The running ranked season and when its ladder resets; nothing when no season is running. */
+function SeasonChip() {
+  const season = currentSeason(REGULATION_MANIFEST.seasons);
+  if (!season) return null;
+  const daysLeft = seasonDaysLeft(season);
+  return (
+    <span className="flex items-center gap-1.5" title={`Ranked season ${season.id}: the ladder resets ${new Date(season.end).toUTCString()}`}>
+      <RotateCcw size={14} className="text-accent" aria-hidden />
+      <b className="text-fg">Season {season.id}</b>
+      <span className="text-muted">
+        resets {formatSeasonReset(season)} · {daysLeft} {daysLeft === 1 ? 'day' : 'days'} left
+      </span>
+    </span>
   );
 }
 

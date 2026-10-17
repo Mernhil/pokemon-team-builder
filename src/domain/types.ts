@@ -183,10 +183,19 @@ interface UpcomingRegulation {
   sources?: string[];
 }
 
+/** A ranked ladder season; the ladder resets at `end`. Dates are UTC ISO strings. */
+export interface RankedSeason {
+  id: string;
+  regulation: string;
+  start: string;
+  end: string;
+}
+
 export interface RegulationManifest {
   generatedAt: string;
   regulations: RegulationInfo[];
   upcoming: UpcomingRegulation[];
+  seasons?: RankedSeason[];
 }
 
 export interface Dataset {
