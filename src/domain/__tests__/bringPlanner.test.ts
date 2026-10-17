@@ -166,7 +166,8 @@ describe('the opponent: meta sets, with what is known overriding', () => {
     const o = resolveOpponent(dex, fmt, 'garchomp', { full, snapshot })!;
     expect(o.set).toBe(full);
     expect(o.known).toBe('full');
-    expect(o.megaMode).toBe('both');
+    expect(o.megaMode).toBe('mega');
+    expect(resolveOpponent(dex, fmt, 'garchomp', { full, snapshot, baseForm: true })!.megaMode).toBe('base');
   });
   it('a species without meta data still gets damaging moves', () => {
     const o = resolveOpponent(dex, fmt, 'ninetales', { snapshot: { ...snapshot, entries: [] } })!;

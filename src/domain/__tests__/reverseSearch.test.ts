@@ -61,6 +61,38 @@ describe('candidates', () => {
   });
 });
 
+describe('target form', () => {
+  it('is the Mega when the meta set holds its stone, so Fire one-shots Golisopod', () => {
+    const t = targetFor(dex, fmt, 'golisopod', snap);
+    expect(dex.megaFor('golisopod', t.set.itemId)).toBeTruthy();
+    expect(t.megaMode).toBe('mega');
+    const m = evaluateCandidate(dex, { speciesId: 'typhlosion', set: defaultSet(dex, 'typhlosion', fmt), megaMode: 'base', build: 'default' }, [{ id: 'a', kind: 'ohko', target: t }], field);
+    expect(m).toBeDefined();
+    // Flipped to the base form (Bug/Water: Fire is only neutral) the same attacker no longer one-shots it.
+    expect(evaluateCandidate(dex, { speciesId: 'typhlosion', set: defaultSet(dex, 'typhlosion', fmt), megaMode: 'base', build: 'default' }, [{ id: 'a', kind: 'ohko', target: { ...t, megaMode: 'base' } }], field)).toBeUndefined();
+  });
+  it('is the base form without a stone', () => {
+    expect(targetFor(dex, fmt, 'garchomp', snap).megaMode).toBe(dex.megaFor('garchomp', targetFor(dex, fmt, 'garchomp', snap).set.itemId) ? 'mega' : 'base');
+  });
+});
+
+describe('Mega Stone holders as answers', () => {
+  it('are tried as the Mega and as the base form, and the match says which', () => {
+    const cands = buildCandidates(dex, fmt, snap).filter((c) => c.megaMode === 'both');
+    expect(cands.length).toBeGreaterThan(0);
+    const target = targetFor(dex, fmt, 'golisopod', snap);
+    const forms = new Set<string>();
+    for (const c of cands) {
+      const m = evaluateCandidate(dex, c, [{ id: 'a', kind: 'ohko', target, allowPossible: true }, { id: 'b', kind: 'survive', target }], field);
+      if (m) forms.add(m.form!);
+    }
+    for (const f of forms) expect(['mega', 'base', 'either']).toContain(f);
+    // Every holder reports a form, never undefined, when it matches.
+    const some = cands.map((c) => evaluateCandidate(dex, c, [], field)).filter(Boolean);
+    expect(some.every((m) => m!.form === 'either')).toBe(true);
+  });
+});
+
 describe('resist', () => {
   const cand = (speciesId: string): Candidate => ({ speciesId, set: defaultSet(dex, speciesId, fmt), megaMode: 'base', build: 'default', usagePct: 0 });
   it('is a type check against the target\'s attacking types', () => {
@@ -151,5 +183,24 @@ describe('required moves', () => {
       expect(m.candidate.set.moves).toContain('fakeout');
       expect(dex.canLearn(m.candidate.speciesId, 'fakeout')).toBe(true);
     }
+  });
+});
+
+describe("'safe' (isn't one-shot by)", () => {
+  it('needs every move of the target under 100%, says the worst one, and agrees with surviving one hit', () => {
+    const t = targetFor(dex, fmt, 'kingambit', snap);
+    const cands = buildCandidates(dex, fmt, snap);
+    let safe = 0;
+    for (const c of cands) {
+      const a = evaluateCandidate(dex, c, [{ id: 's', kind: 'safe', target: t }], field);
+      const b = evaluateCandidate(dex, c, [{ id: 's', kind: 'survive', target: t }], field);
+      if (a) {
+        safe++;
+        expect(a.results[0].detail).toMatch(/^(worst hit .* \d+%|takes nothing)$/);
+      }
+      expect(!!a, c.speciesId).toBe(!!b);
+    }
+    expect(safe).toBeGreaterThan(0);
+    expect(safe).toBeLessThan(cands.length);
   });
 });

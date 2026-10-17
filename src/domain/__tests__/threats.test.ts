@@ -79,7 +79,7 @@ describe('metaSet', () => {
   it('puts a Mega Stone holder in Mega mode', () => {
     const m = metaSet(entry('garchomp', { items: [{ id: 'garchompite', pct: 80 }] }), dex, fmt)!;
     expect(m.set.itemId).toBe('garchompite');
-    expect(m.megaMode).toBe('both');
+    expect(m.megaMode).toBe('mega');
   });
 
   it('drops what the format does not allow and says so', () => {
