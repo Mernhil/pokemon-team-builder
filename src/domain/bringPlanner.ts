@@ -78,11 +78,12 @@ export function resolveOpponent(
   dex: Dex,
   format: FormatRules,
   speciesId: string,
-  opts: { known?: Pick<LoggedMon, 'itemId' | 'abilityId' | 'moves'>; full?: PokemonSet; snapshot?: MetaSnapshot } = {},
+  opts: { known?: Pick<LoggedMon, 'itemId' | 'abilityId' | 'moves'>; full?: PokemonSet; snapshot?: MetaSnapshot; /** Calculate it as itself even when it holds its Mega Stone. */ baseForm?: boolean } = {},
 ): OppMon | undefined {
   const species = dex.species(speciesId);
   if (!species) return undefined;
-  const mega = (set: PokemonSet): MegaMode => (dex.megaFor(set.speciesId, set.itemId) ? 'both' : 'base');
+  // A Pokémon holding its stone Megas as it moves, so it is planned against as the Mega (unless the user says base).
+  const mega = (set: PokemonSet): MegaMode => (!opts.baseForm && dex.megaFor(set.speciesId, set.itemId) ? 'mega' : 'base');
   if (opts.full) return { speciesId: species.id, set: opts.full, megaMode: mega(opts.full), known: 'full' };
 
   const entry = opts.snapshot?.entries.find((e) => e.speciesId === species.id);
@@ -247,7 +248,7 @@ export function planBring(input: PlanInput): PlanResult {
   // Type coverage of each of my Pokémon's damaging moves against each of their Pokémon.
   const coverage = mine.map((m) =>
     opponents.map((o) => {
-      const types = dex.species(o.speciesId)?.types ?? [];
+      const types = (o.megaMode !== 'base' ? dex.megaFor(o.speciesId, o.set.itemId)?.types : undefined) ?? dex.species(o.speciesId)?.types ?? [];
       const mine = activeAbility(dex, m.set, false);
       const theirs = activeAbility(dex, o.set, o.megaMode !== 'base');
       let top = 0;

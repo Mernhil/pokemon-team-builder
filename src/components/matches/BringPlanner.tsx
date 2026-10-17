@@ -11,6 +11,7 @@ import type { FormatRules, Team } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
 import { toast } from '@/store/toastStore';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
+import { FormSwitch } from '../ui/FormSwitch';
 import { Sprite } from '../ui/Sprite';
 import { PlanCard } from './PlanCard';
 import { Button, Chip, EmptyState, Label, Panel, Select, TextArea } from '../ui/primitives';
@@ -48,6 +49,9 @@ export function BringPlanner({
   const [pasted, setPasted] = useState('');
   const [pasteMsg, setPasteMsg] = useState('');
   const [adding, setAdding] = useState<string | undefined>();
+  // Their Pokémon switched to the base form (the default is the Mega when they hold the stone).
+  const [baseForms, setBaseForms] = useState<ReadonlySet<string>>(new Set());
+  const setForm = (id: string, base: boolean) => setBaseForms((s) => { const n = new Set(s); if (base) n.add(id); else n.delete(id); return n; });
   const [saved, setSaved] = useState<number | null>(null);
 
   const limits = bringLimits(format.regulationId);
@@ -57,8 +61,8 @@ export function BringPlanner({
   );
   const mine = useMemo(() => team.slots.flatMap((s) => (s ? [{ uid: s.uid, set: s }] : [])), [team.slots]);
   const resolved = useMemo(
-    () => opps.flatMap((o) => resolveOpponent(dex, format, o.speciesId, { known: o.known, full: o.full, snapshot: picked?.snapshot }) ?? []),
-    [opps, dex, format, picked],
+    () => opps.flatMap((o) => resolveOpponent(dex, format, o.speciesId, { known: o.known, full: o.full, snapshot: picked?.snapshot, baseForm: baseForms.has(o.speciesId) }) ?? []),
+    [opps, dex, format, picked, baseForms],
   );
   const result = useMemo(
     () => (mine.length && resolved.length ? planBring({ dex, format, mine, opponents: resolved, limits }) : null),
@@ -121,6 +125,7 @@ export function BringPlanner({
                 <Sprite speciesId={o.speciesId} name={nameOf(o.speciesId)} types={dex.species(o.speciesId)?.types} set={format.spriteSet} size={26} />
                 <span className="text-xs font-semibold">{nameOf(o.speciesId)}</span>
                 <span className="text-2xs text-muted">{o.known === 'full' ? 'full set' : o.known === 'partial' ? 'some known' : 'meta set'}</span>
+                <FormSwitch dex={dex} speciesId={o.speciesId} itemId={o.set.itemId} base={baseForms.has(o.speciesId)} onChange={(b) => setForm(o.speciesId, b)} />
                 <button type="button" aria-label={`Remove ${nameOf(o.speciesId)}`} onClick={() => setOpps(opps.filter((x) => x.speciesId !== o.speciesId))} className="rounded-full p-1 text-muted hover:text-bad pointer-coarse:p-2.5">
                   <X size={13} aria-hidden />
                 </button>
