@@ -122,6 +122,21 @@ test('Champions Pokédex: Mega Evolutions filter, a Pokémon\'s Megas side by si
   expect(at('Garchomp-Mega-Z')).toBe(at('Garchomp-Mega') + 1);
   await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toContainText('Charizardite X');
 
+  // A second, quieter filter: Megas that can learn a move of a type. It stays folded until needed.
+  await page.getByText('Learns a move of a type').click();
+  const moveTypes = page.getByRole('group', { name: 'Filter by move type' });
+  await moveTypes.getByRole('button', { name: 'Fire moves' }).click();
+  await expect(page.getByText('Learns a move of a type: Fire')).toBeVisible();
+  await expect.poll(() => list.getByRole('option').count()).toBeLessThan(82);
+  expect(await list.getByRole('option').count()).toBeGreaterThan(0);
+  await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toHaveCount(1); // Flare Blitz
+  // It combines with the Pokémon's own type, and clears with "All types".
+  await page.getByRole('group', { name: 'Filter by type' }).getByRole('button', { name: 'Water Pokémon' }).click();
+  await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toHaveCount(0);
+  await page.getByRole('group', { name: 'Filter by type' }).getByRole('button', { name: 'All types' }).click();
+  await moveTypes.getByRole('button', { name: 'All types' }).click();
+  await expect.poll(() => list.getByRole('option').count()).toBe(82);
+
   // An older regulation has fewer Megas, and the newest additions are gone.
   const older = (await regulation.locator('option').allInnerTexts()).find((t) => t.includes('M-A'))!;
   await regulation.selectOption({ label: older });
