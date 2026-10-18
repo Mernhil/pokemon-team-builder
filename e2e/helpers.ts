@@ -52,6 +52,15 @@ export async function goTo(page: Page, label: 'Build' | 'Calc' | 'Analyse' | 'Po
 }
 
 export async function expectNoA11yViolations(page: Page) {
+  // Colours fade (transition-colors, ~150 ms): axe run right after a click can sample a half-faded tab, whose
+  // contrast is below AA on the way. Check the settled colours.
+  await page.evaluate(() => {
+    if (document.getElementById('e2e-no-motion')) return;
+    const style = document.createElement('style');
+    style.id = 'e2e-no-motion';
+    style.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; }';
+    document.head.append(style);
+  });
   const { violations } = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
