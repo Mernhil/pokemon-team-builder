@@ -68,3 +68,93 @@ test('Reverse search: a required move narrows the answers to Pokémon that know 
   await expect(checked(page)).toBeVisible({ timeout: 30_000 });
   expect(await count(page)).toBeGreaterThan(withFakeOut);
 });
+
+test('Reverse search: a target added while the meta is still loading is rebuilt as its Mega once it arrives', async ({ page }) => {
+  // Hold the meta chunk back so the target is added before the most-used sets exist.
+  await page.route(/assets\/meta-[^/]*\.js$/, async (route) => {
+    await new Promise((r) => setTimeout(r, 2500));
+    await route.continue();
+  });
+  await openApp(page, '#reverse');
+  await addCondition(page, 'One-shots', 'Golisopod');
+  await expect(page.getByText('Loading meta data…')).toBeVisible();
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  // The condition now holds Golisopite and is calculated as the Mega.
+  await expect(page.getByText(/Golisopod's set: Golisopite/)).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'Mega' })).toHaveAttribute('aria-checked', 'true');
+  expect(await count(page)).toBeGreaterThan(30);
+  await expect(page.getByTestId('rs-card-arcanine')).toBeVisible();
+});
+
+test('Reverse search: edit any answer\'s build, try Mega Stones, reset', async ({ page }) => {
+  await openApp(page, '#reverse');
+  await addCondition(page, 'One-shots', 'Golisopod');
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  const plain = await count(page);
+  // Medicham has no stone in its default build, so it is not an answer yet.
+  await expect(page.getByTestId('rs-card-medicham')).toHaveCount(0);
+  await expect(page.getByTestId('rs-card-medicham:medichamite')).toHaveCount(0);
+
+  // Try Mega Stones adds it, labelled with its stone; nothing else goes away.
+  const toggle = page.getByRole('button', { name: 'Try Mega Stones' });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  let card = page.getByTestId('rs-card-medicham:medichamite');
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await expect(card.getByText('with Medichamite')).toBeVisible();
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  expect(await count(page)).toBeGreaterThan(plain);
+
+  // Edit build opens the target editor in the card, with a 44pt button on a phone.
+  const edit = card.getByRole('button', { name: 'Edit build of Medicham' });
+  const touch = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+  if (touch) expect((await edit.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const top = async () => (await card.boundingBox())!.y + (await page.evaluate(() => window.scrollY));
+  const before = await top();
+  await edit.click();
+  await expect(card.getByLabel('Medicham ability')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  // A change that keeps it an answer: the card stays and says it is a custom build. It now holds its stone
+  // as its own build, so it is the species' card itself and no longer a "with <Stone>" try.
+  await pickOption(page, 'Medicham move 4', 'Rock Slide'); // its last move isn't the one that does the damage
+  card = page.getByTestId('rs-card-medicham');
+  await expect(card.getByText('Custom build')).toBeVisible();
+  await expect(page.getByTestId('rs-card-medicham:medichamite')).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Reset Medicham to default' })).toBeVisible();
+  await expect(page.getByText('1 custom build')).toBeVisible();
+
+  // A build that can't one-shot anything stays (flagged) while its editor is open, and drops out when it closes.
+  for (const [i, move] of ['Protect', 'Detect', 'Endure', 'Rest'].entries()) await pickOption(page, `Medicham move ${i + 1}`, move);
+  await expect(card.getByText(/Doesn't meet the conditions/)).toBeVisible({ timeout: 30_000 });
+  expect(await top()).toBeGreaterThanOrEqual(before - 1); // it didn't jump up the list
+  await card.getByRole('button', { name: 'Done editing Medicham' }).click();
+  await expect(card).toHaveCount(0);
+  await expect(page.getByText('1 custom build')).toBeVisible();
+
+  // Reset all brings the default build, and its answer, back.
+  await page.getByRole('button', { name: 'Reset all' }).click();
+  await expect(page.getByText(/custom build/)).toHaveCount(0);
+  await expect(page.getByTestId('rs-card-medicham:medichamite')).toBeVisible({ timeout: 30_000 });
+
+  // Back off: the answers are today's again.
+  await page.getByRole('button', { name: 'Try Mega Stones' }).click();
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => count(page)).toBe(plain);
+});
+
+test('Reverse search: a custom build is what Add to team and Open in Calc use', async ({ page }) => {
+  await openApp(page, '#reverse');
+  await addCondition(page, 'One-shots', 'Golisopod');
+  await page.getByRole('button', { name: 'Try Mega Stones' }).click();
+  let card = page.getByTestId('rs-card-medicham:medichamite');
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await card.getByRole('button', { name: 'Edit build of Medicham' }).click();
+  await pickOption(page, 'Medicham move 4', 'Rock Slide'); // its last move isn't the one that does the damage
+  card = page.getByTestId('rs-card-medicham');
+  await expect(card.getByText('Custom build')).toBeVisible();
+  await card.getByRole('button', { name: 'Add Medicham to team' }).click();
+  await expect(page.getByText(/^Added Medicham to /)).toBeVisible();
+  await page.evaluate(() => { location.hash = '#build'; });
+  await expect(page.getByText('Medichamite').first()).toBeVisible();
+});

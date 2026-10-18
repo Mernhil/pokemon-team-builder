@@ -136,7 +136,7 @@ export function teamCandidates({ dex, format, team, snapshot, includeAll }: Sugg
       notes.push(alt ? `${was} is already on your team (item clause), so ${dex.item(alt)?.name ?? alt} instead.` : `${was} is already on your team (item clause), so no item.`);
     }
     if (hasMega && format.capabilities.mega && dex.megaFor(c.speciesId, set.itemId)) notes.push('Holds a Mega Stone: only one can Mega Evolve per battle.');
-    out.push({ speciesId: c.speciesId, set, build: c.build, notes });
+    out.push({ speciesId: c.speciesId, set, build: c.build === 'default' ? 'default' : 'meta', notes }); // no overrides here: never 'custom'
   }
   return out.sort((a, b) => a.speciesId.localeCompare(b.speciesId));
 }
