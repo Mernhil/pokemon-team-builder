@@ -2,6 +2,15 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.30.0 — 2026-10-18
+
+### New
+- **Reverse search → Edit build.** Every answer has an *Edit build* button that opens the same compact editor the targets have (item, ability, nature, stat points, four moves). The search re-runs for that Pokémon and the card updates; if the new build no longer meets the conditions it stays, flagged, until you close the editor, then drops out. Builds are kept per species ("Custom build"), with *Reset to default* on the card and *Reset all* (both undoable). They are what *Add to team* and *Open in Calc* use, and what *Has to know a move* builds on. Giving a Pokémon its Mega Stone makes it a Mega-capable answer, tried as the Mega and as the base form.
+- **Reverse search → Try Mega Stones.** Off by default. On, every Pokémon that can Mega Evolve and isn't holding its stone is also tried holding it, as a separate "with <Stone>" answer (for example Medicham-Mega for "one-shots Golisopod"). Off, the answers are exactly as before.
+
+### Fixed
+- **Reverse search → Golisopod still found nothing.** A target added before the meta data had finished loading kept the generic build (no item, so never Mega Golisopod) even after it loaded, so Fire attackers never showed up. Targets you haven't edited are now rebuilt from the most-used sets as soon as they arrive.
+
 ## 0.29.0 — 2026-10-17
 
 ### New

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Plus, Search, Trash2, X } from 'lucide-react';
+import { RotateCcw, Search, Trash2, X } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { defaultField, defaultSide, type FieldConditions } from '@/domain/battle/conditions';
 import { META_STALE_DAYS, isProvisional, provisionalNote } from '@/domain/meta';
@@ -7,14 +7,16 @@ import { REGULATION_MANIFEST } from '@/domain/formats';
 import {
   CONDITION_LABEL,
   attackingTypes,
-  candidateUsageLabel,
+  candidateKey,
   describeCondition,
+  refreshTargets,
   targetFor,
   targetMegaMode,
   type Condition,
   type ConditionKind,
   type Match,
 } from '@/domain/reverseSearch';
+import { useReverseBuilds } from '@/store/reverseBuildStore';
 import { snapshotAge } from '@/domain/speedTiers';
 import { MAX_REQUIRED_MOVES } from '@/domain/reverseSearch';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
@@ -26,7 +28,8 @@ import { FieldControls, Segmented, Toggle } from '../conditions/Controls';
 import { SpeciesPicker } from '../editor/SpeciesPicker';
 import { Combobox, type ComboOption } from '../ui/Combobox';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, Disclosure, EmptyState, LoadingState, Notice, Panel, Select, TypeBadge } from '../ui/primitives';
+import { Button, Disclosure, EmptyState, LoadingState, Notice, Panel, Select, TypeBadge } from '../ui/primitives';
+import { ResultCard } from './ResultCard';
 import { TargetEditor } from './TargetEditor';
 import { useReverseSearch } from './useReverseSearch';
 
@@ -60,6 +63,16 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   const search = useReverseSearch({ dex, format, conditions, knows, field });
   const { picked, loading, candidates, matches, checked, done } = search;
   const setView = useTeamStore((s) => s.setView);
+  const { overrides, tryStones } = useReverseBuilds();
+  // The card whose build is open in its editor: it keeps its place (and stays, flagged, if the new build no longer matches) until closed.
+  const [pin, setPin] = useState<{ species: string; key: string; order: string[]; match: Match } | null>(null);
+
+  // A target added before the meta numbers arrived has the generic build (no item, never its Mega): rebuild it once they are in.
+  useEffect(() => {
+    if (loading) return;
+    // oxlint-disable-next-line react/set-state-in-effect -- reacts to the meta snapshot arriving or changing, which is what this effect is for
+    setConditions((cs) => refreshTargets(dex, format, cs, picked?.snapshot));
+  }, [dex, format, picked, loading]);
 
   // Opened from a teammate suggestion: start with "one-shots <threat>" conditions (once the meta numbers are in).
   const seed = useReverseSeed((x) => x.seed);
@@ -84,11 +97,11 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
         const set = { ...c.target.set, ...p };
         // A new item changes whether there is a Mega to be: back to the default form for it.
         const megaMode = p.itemId !== undefined && p.itemId !== c.target.set.itemId ? targetMegaMode(dex, format, set) : c.target.megaMode;
-        return { ...c, target: { ...c.target, set, megaMode } };
+        return { ...c, target: { ...c.target, set, megaMode, edited: true } };
       }),
     );
   const setForm = (id: string, megaMode: 'base' | 'mega') =>
-    setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, target: { ...c.target, megaMode } } : c)));
+    setConditions((cs) => cs.map((c) => (c.id === id ? { ...c, target: { ...c.target, megaMode, edited: true } } : c)));
   const remove = (id: string) => setConditions((cs) => cs.filter((c) => c.id !== id));
 
   const addToTeam = (m: Match) => {
@@ -109,6 +122,25 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
     calc.setField(field);
     setView('calc');
   };
+
+  const changeBuild = (m: Match, patch: Partial<PokemonSet>) => {
+    const speciesId = m.candidate.speciesId;
+    const base = useReverseBuilds.getState().overrides[speciesId] ?? m.candidate.baseSet ?? m.candidate.set;
+    useReverseBuilds.getState().setBuild(speciesId, { ...base, ...patch });
+  };
+  const resetBuild = (speciesId: string) => {
+    const was = useReverseBuilds.getState().overrides[speciesId];
+    useReverseBuilds.getState().resetBuild(speciesId);
+    setPin((p) => (p?.species === speciesId ? null : p));
+    if (was) toast(`${dex.species(speciesId)?.name ?? speciesId} is back to its default build.`, { label: 'Undo', run: () => useReverseBuilds.getState().restore({ [speciesId]: was }) });
+  };
+  const resetAll = () => {
+    const was = useReverseBuilds.getState().overrides;
+    useReverseBuilds.getState().resetAll();
+    setPin(null);
+    toast('All custom builds reset.', { label: 'Undo', run: () => useReverseBuilds.getState().restore(was) });
+  };
+  const customCount = Object.keys(overrides).length;
 
   // Every move the format allows, for the "has to know" picker.
   const moveOptions = useMemo<ComboOption[]>(
@@ -141,7 +173,24 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
   const age = picked ? snapshotAge(picked.snapshot) : undefined;
   const regName = picked ? champRegs.find((r) => r.id === picked.regulationId)?.shortName ?? picked.regulationId : '';
   const note = picked && isProvisional(picked.snapshot) ? provisionalNote(picked.snapshot, (id) => champRegs.find((r) => r.id === id)?.shortName) : undefined;
-  const metaCount = useMemo(() => candidates.filter((c) => c.build === 'meta').length, [candidates]);
+  const metaCount = useMemo(() => candidates.filter((c) => c.build === 'meta' && !c.withStone).length, [candidates]);
+  const speciesCount = useMemo(() => new Set(candidates.map((c) => c.speciesId)).size, [candidates]);
+
+  // While a card is being edited the list keeps its order, so the card doesn't jump as its numbers change.
+  const cards = useMemo(() => {
+    if (!pin) return matches.map((m) => ({ m, stale: false }));
+    const at = new Map(pin.order.map((id, i) => [id, i]));
+    const rank = (m: Match) => at.get(m.candidate.speciesId) ?? Number.MAX_SAFE_INTEGER;
+    const list = [...matches].sort((a, b) => rank(a) - rank(b)).map((m) => ({ m, stale: false }));
+    if (!list.some(({ m }) => m.candidate.speciesId === pin.species)) {
+      const own = overrides[pin.species];
+      const stale = { m: own ? { ...pin.match, candidate: { ...pin.match.candidate, set: own, build: 'custom' as const, withStone: undefined } } : pin.match, stale: true };
+      const place = list.findIndex(({ m }) => rank(m) > (at.get(pin.species) ?? 0));
+      list.splice(place < 0 ? list.length : place, 0, stale);
+    }
+    return list;
+  }, [matches, pin, overrides]);
+  const openKey = pin ? (cards.find(({ m }) => candidateKey(m.candidate) === pin.key) ?? cards.find(({ m }) => m.candidate.speciesId === pin.species))?.m : undefined;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4 p-3 sm:p-4">
@@ -258,12 +307,36 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
       {picked && age && (
         <p className="text-xs text-muted">
           Builds use the most-used sets from {regName} ({fmtMonth(age.dataDate.slice(0, 7))}
-          {age.days > META_STALE_DAYS ? `, ${age.days} days old` : ''}); {metaCount} of {candidates.length} Pokémon have one, the rest get a generic attacker build with no item.
+          {age.days > META_STALE_DAYS ? `, ${age.days} days old` : ''}); {metaCount} of {speciesCount} Pokémon have one, the rest get a generic attacker build with no item.
         </p>
       )}
       {note && <Notice tone="warn">{note}</Notice>}
       {!picked && format.datasetId === 'champions' && !loading && (
         <Notice tone="warn">No usage data yet, so every answer uses a generic attacker build with no item.</Notice>
+      )}
+
+      {!loading && (
+        <div className="flex flex-wrap items-center gap-2">
+          {format.capabilities.mega && (
+            <Toggle
+              on={tryStones}
+              onChange={(on) => useReverseBuilds.getState().setTryStones(on)}
+              title="Also try every Pokémon that can Mega Evolve holding its Mega Stone, shown as “with <Stone>”."
+            >
+              Try Mega Stones
+            </Toggle>
+          )}
+          {customCount > 0 && (
+            <>
+              <span className="text-xs text-muted">
+                {customCount} custom {customCount === 1 ? 'build' : 'builds'}
+              </span>
+              <Button size="sm" variant="ghost" onClick={resetAll}>
+                <RotateCcw size={13} aria-hidden /> Reset all
+              </Button>
+            </>
+          )}
+        </div>
       )}
 
       {loading ? (
@@ -288,73 +361,31 @@ export function ReverseSearchView({ dex, format, team }: { dex: Dex; format: For
             </EmptyState>
           )}
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {matches.slice(0, shown).map((m) => {
-              const sp = dex.species(m.candidate.speciesId);
-              const set = m.candidate.set;
+            {cards.slice(0, Math.max(shown, pin ? cards.length : 0)).map(({ m, stale }) => {
+              const key = candidateKey(m.candidate);
+              const editing = !!pin && m === openKey;
               return (
-                <li key={m.candidate.speciesId} className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-surface p-3">
-                  <div className="flex items-center gap-2">
-                    <Sprite speciesId={m.candidate.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={48} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold">{sp?.name ?? m.candidate.speciesId}</div>
-                      <div className="flex flex-wrap gap-1">{sp?.types.map((t) => <TypeBadge key={t} type={t} size="xs" />)}</div>
-                    </div>
-                    <Chip tone={m.candidate.build === 'meta' ? 'accent' : 'neutral'}>
-                      {m.candidate.build === 'meta' ? `Meta set · ${candidateUsageLabel(m.candidate)}` : 'Generic build'}
-                    </Chip>
-                  </div>
-                  {m.form && (
-                    <p className="text-xs text-muted">
-                      {m.form === 'either' ? 'Works as the Mega and as the base form.' : m.form === 'mega' ? 'Works as the Mega only; the base form does not.' : 'Works as the base form only; the Mega does not.'}
-                    </p>
-                  )}
-                  <ul className="space-y-0.5 text-xs">
-                    {knows.map((id) => {
-                      const mv = dex.move(id);
-                      const changes = m.candidate.moveChanges;
-                      const added = !!mv && !!changes?.added.includes(mv.name);
-                      return (
-                        <li key={`knows-${id}`} className="flex items-start gap-1.5">
-                          <Check size={13} className="mt-0.5 shrink-0 text-good" aria-hidden />
-                          <span>
-                            <span className="font-medium">Knows {mv?.name ?? id}</span>
-                            <span className="text-muted">
-                              {' · '}
-                              {added ? `added${changes && changes.dropped.length ? `, replacing ${changes.dropped.join(', ')}` : ''}` : 'in its usual set'}
-                            </span>
-                          </span>
-                        </li>
-                      );
-                    })}
-                    {m.results.map((r) => {
-                      const c = conditions.find((x) => x.id === r.conditionId);
-                      return (
-                        <li key={r.conditionId} className="flex items-start gap-1.5">
-                          <Check size={13} className="mt-0.5 shrink-0 text-good" aria-hidden />
-                          <span>
-                            <span className="font-medium">{c ? describeCondition(dex, c) : ''}</span>
-                            <span className="text-muted"> · {r.detail}</span>
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <p className="truncate text-xs text-muted" title="The build the numbers use">
-                    {dex.item(set.itemId)?.name ?? 'No item'} · {set.nature} · {set.moves.filter(Boolean).map((mv) => dex.move(mv)?.name ?? mv).join(', ')}
-                  </p>
-                  <div className="mt-auto flex gap-1.5">
-                    <Button onClick={() => addToTeam(m)} aria-label={`Add ${sp?.name ?? m.candidate.speciesId} to team`}>
-                      <Plus size={14} aria-hidden /> Add to team
-                    </Button>
-                    <Button variant="ghost" onClick={() => openCalc(m)}>
-                      Open in Calc
-                    </Button>
-                  </div>
-                </li>
+                <ResultCard
+                  key={key}
+                  dex={dex}
+                  format={format}
+                  match={m}
+                  conditions={conditions}
+                  knows={knows}
+                  custom={m.candidate.build === 'custom'}
+                  editing={editing}
+                  stale={stale}
+                  build={overrides[m.candidate.speciesId] ?? m.candidate.baseSet ?? m.candidate.set}
+                  onEdit={(open) => setPin(open ? { species: m.candidate.speciesId, key, order: [...new Set(matches.map((x) => x.candidate.speciesId))], match: m } : null)}
+                  onChangeBuild={(patch) => changeBuild(m, patch)}
+                  onReset={() => resetBuild(m.candidate.speciesId)}
+                  onAdd={() => addToTeam(m)}
+                  onCalc={() => openCalc(m)}
+                />
               );
             })}
           </ul>
-          {matches.length > shown && (
+          {!pin && matches.length > shown && (
             <div className="text-center">
               <Button onClick={() => setShown((n) => n + SHOWN)}>Show more ({matches.length - shown} left)</Button>
             </div>

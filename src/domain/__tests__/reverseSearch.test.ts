@@ -7,17 +7,19 @@ import { getFormat } from '@/domain/formats';
 import { parseMetaFile } from '@/domain/meta';
 import {
   buildCandidates,
+  candidateKey,
   candidateUsageLabel,
   defaultSet,
   evaluateCandidate,
   rankMatches,
+  refreshTargets,
   resistCheck,
   targetFor,
   withRequiredMoves,
   type Candidate,
   type Condition,
 } from '@/domain/reverseSearch';
-import type { Dataset } from '@/domain/types';
+import type { Dataset, PokemonSet } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
 import { createTeam } from '@/domain/team';
 
@@ -202,5 +204,119 @@ describe("'safe' (isn't one-shot by)", () => {
     }
     expect(safe).toBeGreaterThan(0);
     expect(safe).toBeLessThan(cands.length);
+  });
+});
+
+describe('a target added before the meta numbers arrived', () => {
+  it('is rebuilt from the snapshot once it is in, so Golisopod is the Mega again', () => {
+    const early: Condition = { id: 'a', kind: 'ohko', target: targetFor(dex, fmt, 'golisopod', undefined) };
+    expect(early.target.set.itemId).toBeUndefined();
+    expect(early.target.megaMode).toBe('base');
+    const [late] = refreshTargets(dex, fmt, [early], snap);
+    expect(dex.megaFor('golisopod', late.target.set.itemId)).toBeTruthy();
+    expect(late.target.megaMode).toBe('mega');
+    // The answers are the ones a target added after the load gets.
+    const run = (c: Condition) => buildCandidates(dex, fmt, snap).flatMap((x) => evaluateCandidate(dex, x, [c], field) ?? []).length;
+    expect(run(late)).toBe(run(cond('a', 'ohko', 'golisopod')));
+    expect(run(late)).toBeGreaterThan(run(early));
+  });
+  it('keeps what the player changed, and returns the same array when nothing differs', () => {
+    const early: Condition = { id: 'a', kind: 'ohko', target: { ...targetFor(dex, fmt, 'golisopod', undefined), edited: true } };
+    const conds = [early];
+    expect(refreshTargets(dex, fmt, conds, snap)).toBe(conds);
+    const fresh = [cond('b', 'ohko', 'golisopod')];
+    expect(refreshTargets(dex, fmt, fresh, snap)).toBe(fresh);
+  });
+});
+
+describe('the player\'s own builds', () => {
+  const golisopod = [{ id: 'a', kind: 'ohko' as const, target: targetFor(dex, fmt, 'golisopod', snap) }];
+  const answers = (opts: Parameters<typeof buildCandidates>[3]) => buildCandidates(dex, fmt, snap, opts).flatMap((c) => evaluateCandidate(dex, c, golisopod, field) ?? []);
+  const medichamite = { ...defaultSet(dex, 'medicham', fmt), itemId: 'medichamite' };
+
+  it('beat the meta set and the default build', () => {
+    const metaSpecies = snap!.entries.find((e) => e.speciesId !== 'garchomp')!.speciesId;
+    const mine = { ...defaultSet(dex, metaSpecies, fmt), nature: 'Bold', moves: ['protect', '', '', ''] as PokemonSet['moves'] };
+    const other = { ...defaultSet(dex, 'garchomp', fmt), nature: 'Impish' };
+    const plain = buildCandidates(dex, fmt, snap);
+    const cands = buildCandidates(dex, fmt, snap, { overrides: { [metaSpecies]: mine, garchomp: other } });
+    expect(cands.length).toBe(plain.length);
+    const a = cands.find((c) => c.speciesId === metaSpecies)!;
+    expect(a).toMatchObject({ build: 'custom', set: mine });
+    expect(a.usagePct ?? a.usageRank).toBeDefined(); // keeps the species' usage, so it ranks where it did
+    expect(plain.find((c) => c.speciesId === metaSpecies)!.set).not.toEqual(mine);
+    expect(cands.find((c) => c.speciesId === 'garchomp')).toMatchObject({ build: 'custom', set: other });
+    expect(cands.filter((c) => c.build === 'custom')).toHaveLength(2);
+  });
+  it('can be asked for alone, and ignore species the format does not have', () => {
+    const cands = buildCandidates(dex, fmt, snap, { overrides: { medicham: medichamite, notamon: { ...medichamite, speciesId: 'notamon' } }, only: new Set(['medicham', 'notamon']) });
+    expect(cands.map((c) => c.speciesId)).toEqual(['medicham']);
+  });
+  it('holding the species\' Mega Stone make it a Mega-capable candidate, tried in both forms', () => {
+    expect(answers({}).some((m) => m.candidate.speciesId === 'medicham')).toBe(false);
+    const withStone = answers({ overrides: { medicham: medichamite } }).find((m) => m.candidate.speciesId === 'medicham');
+    expect(withStone?.candidate).toMatchObject({ build: 'custom', megaMode: 'both' });
+    expect(withStone?.form).toBe('mega');
+    const noStone = buildCandidates(dex, fmt, snap, { overrides: { medicham: { ...medichamite, itemId: 'sitrusberry' } } }).find((c) => c.speciesId === 'medicham');
+    expect(noStone?.megaMode).toBe('base');
+  });
+  it('are used by "Knows these moves" like any other build', () => {
+    const mine = { ...medichamite, moves: ['closecombat', 'zenheadbutt', '', ''] as PokemonSet['moves'] };
+    const [c] = buildCandidates(dex, fmt, snap, { overrides: { medicham: mine }, only: new Set(['medicham']) });
+    const r = withRequiredMoves(dex, c, ['fakeout'], fmt.regulationId)!;
+    expect(r.set.moves).toContain('fakeout');
+    expect(r.set.moves).toContain('closecombat');
+    expect(r.baseSet).toBe(mine); // an editor starts from the build, not the injected move
+    expect(withRequiredMoves(dex, c, ['surf'], fmt.regulationId)).toBeUndefined();
+  });
+  it('rank with their species\' usage, so a card does not move while it is edited', () => {
+    const conds = [cond('a', 'ohko', 'rillaboom')];
+    const order = (overrides?: Record<string, PokemonSet>) => rankMatches(buildCandidates(dex, fmt, snap, { overrides }).flatMap((c) => evaluateCandidate(dex, c, conds, field) ?? [])).map((m) => m.candidate.speciesId);
+    const before = order();
+    const meta = before.find((id) => snap!.entries.some((e) => e.speciesId === id))!;
+    const set = buildCandidates(dex, fmt, snap).find((c) => c.speciesId === meta)!.set;
+    expect(order({ [meta]: set }).indexOf(meta)).toBe(before.indexOf(meta));
+  });
+});
+
+describe('Try Mega Stones', () => {
+  const golisopod = [{ id: 'a', kind: 'ohko' as const, target: targetFor(dex, fmt, 'golisopod', snap) }];
+  const run = (tryStones?: boolean) => buildCandidates(dex, fmt, snap, { tryStones }).flatMap((c) => evaluateCandidate(dex, c, golisopod, field) ?? []);
+
+  it('off, gives exactly the candidates and answers it always did', () => {
+    const noUid = (cs: Candidate[]) => cs.map((c) => ({ ...c, set: { ...c.set, uid: '' } }));
+    expect(noUid(buildCandidates(dex, fmt, snap, { tryStones: false }))).toEqual(noUid(buildCandidates(dex, fmt, snap)));
+    expect(buildCandidates(dex, fmt, snap).some((c) => c.withStone)).toBe(false);
+    expect(run(false).map((m) => candidateKey(m.candidate))).toEqual(run(undefined).map((m) => candidateKey(m.candidate)));
+  });
+  it('on, adds Medicham-Mega to the answers that one-shot Golisopod, labelled with its stone', () => {
+    expect(run(false).some((m) => m.candidate.speciesId === 'medicham')).toBe(false);
+    const medicham = run(true).find((m) => candidateKey(m.candidate) === 'medicham:medichamite');
+    expect(medicham).toBeDefined();
+    expect(medicham!.candidate).toMatchObject({ withStone: 'medichamite', megaMode: 'mega', build: 'default' });
+    expect(medicham!.candidate.set.itemId).toBe('medichamite');
+    expect(medicham!.form).toBe('mega');
+    // Nothing else is lost: every answer without stones is still there.
+    const keys = new Set(run(true).map((m) => candidateKey(m.candidate)));
+    for (const m of run(false)) expect(keys.has(candidateKey(m.candidate))).toBe(true);
+  });
+  it('only tries stones the species is not holding, one candidate per stone, each legal', () => {
+    const cands = buildCandidates(dex, fmt, snap, { tryStones: true });
+    const keys = cands.map(candidateKey);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const c of cands.filter((x) => x.withStone)) {
+      expect(dex.megaFor(c.speciesId, c.withStone)).toBeTruthy();
+      expect(dex.item(c.withStone)!.legalIn).toContain(fmt.regulationId);
+      const plain = cands.find((x) => x.speciesId === c.speciesId && !x.withStone)!;
+      expect(plain.set.itemId).not.toBe(c.withStone);
+    }
+    // Garchomp holds its stone in the meta set (if used) or has none: never a duplicate of itself.
+    const garchomp = cands.filter((c) => c.speciesId === 'garchomp');
+    expect(garchomp.filter((c) => c.set.itemId === 'garchompite')).toHaveLength(1);
+  });
+  it('does not add a second card for a custom build that already holds the stone', () => {
+    const mine = { ...defaultSet(dex, 'medicham', fmt), itemId: 'medichamite' };
+    const cands = buildCandidates(dex, fmt, snap, { tryStones: true, overrides: { medicham: mine } }).filter((c) => c.speciesId === 'medicham');
+    expect(cands.map(candidateKey)).toEqual(['medicham']);
   });
 });
