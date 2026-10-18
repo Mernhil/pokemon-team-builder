@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BookOpen, Search } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronRight, Search } from 'lucide-react';
 import { toID, type Dex } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
 import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
 import { BOOKS, bookForFormat, bookInfo, type DexBook } from '@/domain/games';
-import { introducedIn, megaList, megaStoneName, type PokedexData } from '@/domain/pokedex';
+import { introducedIn, learnersOfType, megaList, megaStoneName, type PokedexData } from '@/domain/pokedex';
 import type { FormatRules, Pokemon, TypeName } from '@/domain/types';
 import { usePokedexStore } from '@/store/pokedexStore';
 import { ChipRow, Toggle } from '../ui/chips';
@@ -74,6 +74,8 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
   const { select } = usePokedexStore.getState();
   const [query, setQuery] = useState('');
   const [type, setType] = useState<TypeName | ''>('');
+  // A second, quieter filter: only Pokémon that can learn a move of this type ("Megas with a Fire move").
+  const [moveType, setMoveType] = useState<TypeName | ''>('');
   const [order, setOrder] = useState<string>('national');
   const [wildOnly, setWildOnly] = useState(false);
   const [megaOnly, setMegaOnly] = useState(false);
@@ -93,16 +95,18 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
     () => (champions && megaOnly ? megaList(dex, championsRegulationId) : dex.selectableSpecies(champions ? championsRegulationId : undefined)),
     [dex, champions, megaOnly, championsRegulationId],
   );
+  const learners = useMemo(() => (moveType ? learnersOfType(dex, all, moveType, champions ? championsRegulationId : undefined) : undefined), [dex, all, moveType, champions, championsRegulationId]);
   const number = useCallback((s: Pokemon) => (order === 'national' ? s.num : data.entries[s.num]?.dex?.[order]), [order, data]);
   const list = useMemo(() => {
     const q = toID(query);
     return all
       .filter((s) => number(s) !== undefined)
       .filter((s) => !type || s.types.includes(type))
+      .filter((s) => !learners || learners.has(s.id))
       .filter((s) => !wildOnly || data.encounters[s.id]?.length)
       .filter((s) => !q || s.id.includes(q) || String(s.num) === q || toID(data.entries[s.num]?.genus).includes(q))
       .sort((a, b) => number(a)! - number(b)! || a.name.localeCompare(b.name));
-  }, [all, query, type, number, wildOnly, data]);
+  }, [all, query, type, learners, number, wildOnly, data]);
 
   const current = (selected && dex.species(selected)) || undefined;
   const listRef = useRef<HTMLDivElement>(null);
@@ -135,6 +139,13 @@ function PokedexBody({ book, dex, data, learn, format }: { book: DexBook; dex: D
             </Select>
           </div>
           <TypeFilter types={dex.types} value={type || null} onChange={(t) => setType(t ?? '')} label="Filter by type" noun="Pokémon" wrap />
+          <details className="group" open={!!moveType || undefined}>
+            <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-muted hover:text-fg pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
+              <ChevronRight size={13} className="transition-transform group-open:rotate-90" aria-hidden />
+              Learns a move of a type{moveType && <span className="font-normal">: {moveType}</span>}
+            </summary>
+            <TypeFilter types={dex.types} value={moveType || null} onChange={(t) => setMoveType(t ?? '')} label="Filter by move type" noun="moves" wrap />
+          </details>
           <label className="flex min-h-8 items-center gap-2 text-sm text-muted pointer-coarse:min-h-11">
             {data.areas.length > 0 && (
               <>

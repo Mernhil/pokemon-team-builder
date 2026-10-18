@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.31.0 — 2026-10-18
+
+### New
+- **Build → what a move knocks out.** Every damaging move in the builder has a small crosshair button. It opens a list of what that move, on that Pokémon with its own item, nature and stat points, one-shots, one-shots on a high roll and two-shots, among the 60 most used Pokémon (each with its most-used set, a Mega Stone holder as the Mega). Champions only, no field conditions.
+- **Pokédex → Learns a move of a type.** A small, folded row under the type filter keeps only the Pokémon that can learn a move of a type (for example the Mega Evolutions that learn a Fire move). It combines with the Pokémon type filter, the Mega list and the regulation picker.
+
 ## 0.30.0 — 2026-10-18
 
 ### New

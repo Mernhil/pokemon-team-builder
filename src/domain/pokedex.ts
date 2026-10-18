@@ -205,3 +205,18 @@ export function megaStoneName(dex: MegaSource, mega: Pokemon): string | undefine
 export function introducedIn(s: Pick<Pokemon, 'legalIn'>, chronological: string[]): string | undefined {
   return chronological.find((id) => s.legalIn.includes(id));
 }
+
+/** What the Pokédex needs of a Dex to tell which Pokémon learn a move of a type. */
+interface LearnsetSource {
+  learnset(speciesId: string, regulationId?: string): { type: string }[];
+}
+
+/**
+ * The ids among `species` that can learn at least one move of `type` ("Megas that learn a Fire move").
+ * A Mega counts through its base forme's learnset; `regulationId` limits it to the moves that regulation allows.
+ */
+export function learnersOfType(dex: LearnsetSource, species: readonly Pick<Pokemon, 'id'>[], type: string, regulationId?: string): Set<string> {
+  const out = new Set<string>();
+  for (const s of species) if (dex.learnset(s.id, regulationId).some((m) => m.type === type)) out.add(s.id);
+  return out;
+}
