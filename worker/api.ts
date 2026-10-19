@@ -22,6 +22,7 @@ import {
 import { ALL_MATCHES, accessTo, canWrite, type Target } from './access';
 import { AuthError, jwksProvider, verifyAccessJwt, type KeyProvider } from './auth';
 import { RedeemSchema, type DevicesResponse, type PairResponse, type RedeemResponse, TOKEN_RE } from '../src/domain/pairing';
+import { health } from './health';
 import { createPairCode, deviceByToken, listDevices, redeemAttemptAllowed, redeemPairCode, revokeDevice } from './devices';
 import { deleteShare, groupOfTeam, isLiveRootTeam, namesFor, putShare, setDisplayName, sharedDocs, sharesBetween, sharesOf } from './shares';
 import { pullDocs, pushDoc, type StoredDoc } from './store';
@@ -59,6 +60,10 @@ const ROUTES: Record<string, string[]> = {
   // Signed in with Access (the phone or the website): make a pairing code, see and revoke linked devices.
   '/api/pair': ['POST'],
   '/api/devices': ['GET', 'DELETE'],
+  // Re-login inside the installed app: needs the Access login, then sends the browser back to the app.
+  '/api/session/renew': ['GET'],
+  // Is the deployment set up (database, migrations, Access settings)? Says nothing about any account.
+  '/api/health': ['GET'],
 };
 
 /** Routes a linked device may use under /api/device/ (bearer token instead of Access). Not pairing or the device list. */
@@ -83,18 +88,28 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
   const route = ROUTES[url.pathname];
   if (!route) return fail(404, 'not found');
   if (!route.includes(request.method)) return fail(405, 'method not allowed');
-  if (!env.DB || !env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return notSetUp(env, true);
+  const isHealth = url.pathname === '/api/health';
+  // Renewing a session and the health report don't touch the database; health reports what is missing instead of refusing.
+  const needsDb = url.pathname !== '/api/session/renew' && !isHealth;
+  const { ACCESS_TEAM_DOMAIN: teamDomain, ACCESS_AUD: audience } = env;
+  // Without Access settings there is nothing to verify a token against; the report is booleans only.
+  if (isHealth && (!teamDomain || !audience)) return reply(200, await health(env, (deps.now ?? Date.now)()));
+  if (!teamDomain || !audience || (needsDb && !env.DB)) return notSetUp(env, true);
 
   // Who is asking: only a verified Access token counts, never a header the client could have written.
   const token = request.headers.get('Cf-Access-Jwt-Assertion');
   if (!token) return fail(401, 'not signed in');
   let owner: string;
   try {
-    ({ email: owner } = await verifyAccessJwt(token, { teamDomain: env.ACCESS_TEAM_DOMAIN, audience: env.ACCESS_AUD }, deps.keys ?? jwksProvider(env.ACCESS_TEAM_DOMAIN), (deps.now ?? Date.now)()));
+    ({ email: owner } = await verifyAccessJwt(token, { teamDomain, audience }, deps.keys ?? jwksProvider(teamDomain), (deps.now ?? Date.now)()));
   } catch (e) {
     return fail(401, e instanceof AuthError ? `not signed in (${e.message})` : 'not signed in');
   }
-  return handleAccount(request, env, url.pathname, owner, (deps.now ?? Date.now)());
+  const now = (deps.now ?? Date.now)();
+  if (isHealth) return reply(200, await health(env, now));
+  // The Access login just happened (or the cookie was still good): back to the app, which now holds a fresh session.
+  if (url.pathname === '/api/session/renew') return new Response(null, { status: 302, headers: { location: '/', 'cache-control': 'no-store' } });
+  return handleAccount(request, env, url.pathname, owner, now);
 }
 
 /**

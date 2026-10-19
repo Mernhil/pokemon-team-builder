@@ -1,13 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { isDesktopApp, useDeviceStore } from '@/sync/deviceStore';
+import { ago } from '@/domain/sharing';
+import { healthLine, type HealthResponse } from '@/domain/syncHealth';
+import { diagnosticsText, statusText } from '@/sync/diagnostics';
+import { request, signInAgain } from '@/sync/http';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { syncNow } from '@/sync/runner';
+import { useNow } from '@/sync/useNow';
+import { toast } from '@/store/toastStore';
 import { LinkDesktopFromHere, LinkThisDesktop } from './LinkDevices';
 import SharingSettings from './SharingSettings';
 import { Button, Checkbox, Input, Label } from '../ui/primitives';
 
 const when = (t?: number) => (t ? new Date(t).toLocaleString() : 'never');
+
+/** What GET /api/health says, as one line (the phone/web app only: a linked desktop app has no such route). */
+function useServerHealth(active: boolean, syncing: boolean): { ok: boolean; text: string } | undefined {
+  const [line, setLine] = useState<{ ok: boolean; text: string }>();
+  useEffect(() => {
+    if (!active || syncing) return;
+    let alive = true;
+    request<HealthResponse>('GET', '/api/health').then(
+      (h) => alive && setLine(healthLine(h)),
+      () => alive && setLine(undefined), // offline or signed out: the sync error above says so
+    );
+    return () => {
+      alive = false;
+    };
+  }, [active, syncing]);
+  return line;
+}
 
 /** Settings → Sync: opt in to syncing teams and the match log through the account the app is signed in with. */
 export default function SyncSettings() {
@@ -16,6 +39,9 @@ export default function SyncSettings() {
   const stats = s.lastStats;
   const desktop = isDesktopApp();
   const linked = useDeviceStore((d) => Boolean(d.token));
+  const health = useServerHealth(s.enabled && !desktop && syncAvailable(), s.status === 'syncing');
+  const known = Object.keys(s.known).length;
+  const now = useNow(30_000);
 
   if (!syncAvailable()) {
     return <p className="text-sm text-muted">Sync is available in the web app, the installed phone app and the desktop app, not in this build.</p>;
@@ -76,15 +102,55 @@ export default function SyncSettings() {
               <RefreshCw size={14} className={s.status === 'syncing' ? 'animate-spin motion-reduce:animate-none' : ''} aria-hidden /> {s.status === 'syncing' ? 'Syncing…' : 'Sync now'}
             </Button>
             <span role="status" className="text-muted">
-              Last sync: {when(s.lastSyncAt)}
+              Last synced {s.lastSyncAt ? ago(s.lastSyncAt, now) : 'never'}
               {stats && s.lastSyncAt ? ` · ${stats.updated} received, ${stats.pushed} sent${stats.conflicts ? `, ${stats.conflicts} conflict ${stats.conflicts === 1 ? 'copy' : 'copies'}` : ''}` : ''}
             </span>
           </div>
           {s.lastError && (
-            <p role="alert" className="rounded-lg border border-bad/40 bg-bad/8 p-2 text-bad">
-              {s.lastError}
+            <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-bad/40 bg-bad/8 p-2 text-bad">
+              <span className="min-w-0 flex-1">{s.lastError}</span>
+              {s.lastErrorKind === 'signin' && !desktop && (
+                <Button size="sm" variant="primary" onClick={signInAgain}>
+                  Sign in again
+                </Button>
+              )}
+            </div>
+          )}
+          {health && (
+            <p className={health.ok ? 'text-muted' : 'text-warn'} data-testid="server-health">
+              {health.text}
             </p>
           )}
+          <details className="rounded-lg border border-border p-2">
+            <summary className="cursor-pointer font-semibold">Sync diagnostics</summary>
+            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+              <dt className="text-muted">Cursor</dt>
+              <dd>{s.cursor}</dd>
+              <dt className="text-muted">Known documents</dt>
+              <dd>{known}</dd>
+              <dt className="text-muted">Last attempt</dt>
+              <dd>{when(s.lastAttemptAt)}</dd>
+              <dt className="text-muted">Last success</dt>
+              <dd>{when(s.lastSyncAt)}</dd>
+              <dt className="text-muted">Last run</dt>
+              <dd>{stats ? `${stats.pulled} pulled, ${stats.updated} applied, ${stats.pushed} pushed` : 'none since the app started'}</dd>
+              <dt className="text-muted">Last error</dt>
+              <dd>{s.lastError ? `${s.lastError} (${s.lastErrorKind ?? 'other'}, ${statusText(s.lastErrorStatus)})` : 'none'}</dd>
+            </dl>
+            <Button
+              size="sm"
+              className="mt-2"
+              onClick={() => {
+                const text = diagnosticsText({ appVersion: __APP_VERSION__, cursor: s.cursor, knownDocs: known, lastAttemptAt: s.lastAttemptAt, lastSyncAt: s.lastSyncAt, lastError: s.lastError, lastErrorKind: s.lastErrorKind, lastErrorStatus: s.lastErrorStatus, lastStats: s.lastStats, server: health?.text, online: navigator.onLine });
+                navigator.clipboard.writeText(text).then(
+                  () => toast('Diagnostics copied.'),
+                  () => toast('Could not copy. Select the text above instead.'),
+                );
+              }}
+            >
+              Copy diagnostics
+            </Button>
+          </details>
           {!desktop && <LinkDesktopFromHere />}
           <SharingSettings />
         </div>

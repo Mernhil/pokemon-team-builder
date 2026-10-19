@@ -1,7 +1,7 @@
 {
   "name": "pokemon-team-builder",
   "private": true,
-  "version": "0.31.0",
+  "version": "0.32.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -33,7 +33,8 @@
     "reg:status": "tsx scripts/regulation-status.ts",
     "data:strict": "tsx scripts/build-data.ts --strict",
     "data:audit": "tsx scripts/audit-data.ts",
-    "bump": "node scripts/bump-version.mjs"
+    "bump": "node scripts/bump-version.mjs",
+    "deploy": "npx wrangler d1 migrations apply pokemon-team-builder --remote && npx wrangler deploy"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

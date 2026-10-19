@@ -87,7 +87,7 @@ async function enableSync(page: Page) {
   await page.getByRole('menuitem', { name: /Settings/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
   await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
-  await expect(dialog.getByRole('status').filter({ hasText: /Last sync: / })).toBeVisible();
+  await expect(dialog.getByRole('status').filter({ hasText: /Last synced / })).toBeVisible();
   return dialog;
 }
 

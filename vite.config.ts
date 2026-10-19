@@ -81,6 +81,8 @@ export default defineConfig({
         globIgnores: ['splash/**', 'meta/**'],
         // The sprite atlases are up to ~4 MB each.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+        // Navigations to /api/* (the sign-in renewal, docs/SYNC.md) must reach the Worker and Cloudflare Access, not the cached index.html.
+        navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,

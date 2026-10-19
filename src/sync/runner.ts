@@ -1,6 +1,6 @@
 /**
  * Runs cloud sync in the browser: on start, when the window regains focus, a few seconds after the
- * teams or the match log change, and on demand ("Sync now"). Lazy-loaded, and only once sync is on.
+ * teams or the match log change, when the connection comes back, every 3 minutes while visible, and on demand ("Sync now"). Lazy-loaded, and only once sync is on.
  */
 import { sanitizeMatch, sanitizeTeam } from '@/domain/sanitize';
 import type { LocalDoc } from '@/domain/sync';
@@ -11,7 +11,8 @@ import { useMatchStore } from '@/store/matchStore';
 import { useTeamStore } from '@/store/teamStore';
 import { whileApplying, isApplying } from './applying';
 import { syncOnce, type LocalStore, type SyncApi } from './engine';
-import { request } from './http';
+import { SyncHttpError, request } from './http';
+import { PERIODIC_MS, createRetrier, type RunResult } from './retry';
 import { syncSharedWithNotices } from './sharedSync';
 import { syncAvailable, useSyncStore } from './syncStore';
 
@@ -47,24 +48,26 @@ export const httpApi: SyncApi = {
   push: (docs: PushDoc[]) => request<PushResponse>('POST', '/api/sync', { docs }),
 };
 
-let running: Promise<void> | undefined;
+let running: Promise<RunResult> | undefined;
 let again = false;
 
-/** Syncs now, or joins the run already in progress. Resolves when done; errors are recorded in the store, not thrown. */
-export function syncNow(): Promise<void> {
-  if (!syncAvailable()) return Promise.resolve();
+/** One run, or the one already in progress. Errors are recorded in the store, not thrown. */
+function runOnce(): Promise<RunResult> {
+  if (!syncAvailable()) return Promise.resolve({ ok: true });
   if (running) return running;
-  const store = useSyncStore.getState();
-  store.begin();
-  running = (async () => {
+  useSyncStore.getState().begin();
+  running = (async (): Promise<RunResult> => {
     try {
       const { cursor, known, deviceName } = useSyncStore.getState();
       const { stats } = await syncOnce({ store: storeAdapter, api: httpApi, state: { cursor, known }, save: (s) => useSyncStore.getState().saveState(s), deviceName });
       // What others shared with me comes after my own documents, so a failure there doesn't hide this run's result.
       await syncSharedWithNotices(deviceName);
       useSyncStore.getState().succeed(stats);
+      return { ok: true };
     } catch (e) {
-      useSyncStore.getState().fail(e instanceof Error ? e.message : String(e));
+      const kind = e instanceof SyncHttpError ? e.kind : 'other';
+      useSyncStore.getState().fail(e instanceof Error ? e.message : String(e), kind, e instanceof SyncHttpError ? e.status : undefined);
+      return { ok: false, kind };
     } finally {
       running = undefined;
       if (again) {
@@ -75,6 +78,12 @@ export function syncNow(): Promise<void> {
   })();
   return running;
 }
+
+/** Retries a failed run after 10 s, 30 s and 2 min, unless the sign-in expired or sync isn't set up (src/sync/retry.ts). */
+const retrier = createRetrier({ run: runOnce });
+
+/** Syncs now (or joins the run in progress) and restarts the retry schedule. Resolves when done. */
+export const syncNow = (): Promise<void> => retrier.trigger();
 
 let stopAuto: (() => void) | undefined;
 
@@ -94,14 +103,22 @@ export function startAutoSync(): () => void {
   };
   const onFocus = () => void syncNow();
   const onVisible = () => document.visibilityState === 'visible' && void syncNow();
+  // The connection is back: no need to wait for the next retry.
+  const onOnline = () => void syncNow();
+  // A phone app stays open for days; changes made on another device arrive without having to leave and return.
+  const tick = setInterval(() => document.visibilityState === 'visible' && void syncNow(), PERIODIC_MS);
   window.addEventListener('focus', onFocus);
+  window.addEventListener('online', onOnline);
   document.addEventListener('visibilitychange', onVisible);
   const unsubTeams = useTeamStore.subscribe((s, prev) => s.teams !== prev.teams && soon());
   const unsubMatches = useMatchStore.subscribe((s, prev) => s.matches !== prev.matches && soon());
   void syncNow();
   stopAuto = () => {
     clearTimeout(timer);
+    clearInterval(tick);
+    retrier.cancel();
     window.removeEventListener('focus', onFocus);
+    window.removeEventListener('online', onOnline);
     document.removeEventListener('visibilitychange', onVisible);
     unsubTeams();
     unsubMatches();
