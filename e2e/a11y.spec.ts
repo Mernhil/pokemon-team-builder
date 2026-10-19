@@ -120,7 +120,7 @@ for (const theme of ['light', 'dark'] as const) {
       await page.getByRole('menuitem', { name: /Settings/ }).click();
       const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
       await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
-      await dialog.getByRole('status').filter({ hasText: /Last sync: / }).waitFor();
+      await dialog.getByRole('status').filter({ hasText: /Last synced / }).waitFor();
       await expectNoA11yViolations(page);
     });
 

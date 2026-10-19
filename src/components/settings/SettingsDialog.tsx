@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Keyboard, Moon, Sparkles, Square, Sun } from 'lucide-react';
 import { DEFAULT_NAV, NAV_IDS, NAV_LABELS, NAV_LIMITS, resizeBar, setSlot, type NavKind } from '@/domain/navigation';
 import { usePrefsStore } from '@/store/prefsStore';
@@ -15,11 +15,17 @@ const SyncSettings = lazy(() => import('./SyncSettings'));
  * Settings & credits: appearance, where data lives, and who made the data and art the app uses.
  * The app claims no ownership of any Pokémon asset.
  */
-export function SettingsDialog({ open, onOpenChange, onOpenWhatsNew, onOpenShortcuts }: { open: boolean; onOpenChange: (o: boolean) => void; onOpenWhatsNew: () => void; onOpenShortcuts: () => void }) {
+export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, onOpenShortcuts }: { open: boolean; onOpenChange: (o: boolean) => void; section?: 'sync'; onOpenWhatsNew: () => void; onOpenShortcuts: () => void }) {
   const theme = useTeamStore((s) => s.theme);
   const setTheme = useTeamStore((s) => s.setTheme);
   const look = usePrefsStore((s) => s.look);
   const setLook = usePrefsStore((s) => s.setLook);
+  // Opened from the sync banner or the header light: land on Sync rather than the top.
+  useEffect(() => {
+    if (!open || section !== 'sync') return;
+    const id = setTimeout(() => document.getElementById('set-sync')?.scrollIntoView({ block: 'start' }), 50);
+    return () => clearTimeout(id);
+  }, [open, section]);
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Settings & credits" description={`Pokémon Team Builder v${__APP_VERSION__}`}>

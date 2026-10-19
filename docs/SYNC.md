@@ -10,9 +10,9 @@ nothing else is synced: not the theme, picker favourites or calculator state.
 - `worker/` is a Worker that answers `/api/*` only. `wrangler.jsonc` sets `assets.run_worker_first: ["/api/*"]`, so every other request is served from the static assets exactly as before.
 - **Identity** is the e-mail inside the `Cf-Access-Jwt-Assertion` header that Cloudflare Access adds. `worker/auth.ts` verifies its RS256 signature against the Access team's keys (`https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`), then the issuer, the audience (`ACCESS_AUD`) and the expiry. A plain e-mail header is never trusted.
 - **Storage** is one D1 table, `documents` (`migrations/0001_init.sql`): one row per account and document (a team or a match), with a tombstone row (`deleted = 1`) for deletes and a per-account `server_seq` that is the sync cursor.
-- **Endpoints:** `GET /api/sync?since=<seq>` (documents after a cursor, paged) and `POST /api/sync` (up to 100 documents). Every payload is validated with zod (`src/domain/syncProtocol.ts`), is limited in size (64 KB per document, 1 MB per request), and each team or match goes through the same sanitisers the app loads its own data with before it is stored. A document stamped more than 10 minutes in the future is refused (a wrong clock would win every conflict).
+- **Endpoints:** `GET /api/sync?since=<seq>` (documents after a cursor, paged) and `POST /api/sync` (up to 100 documents). Every payload is validated with zod (`src/domain/syncProtocol.ts`), is limited in size (64 KB per document, 1 MB per request), and each team or match goes through the same sanitisers the app loads its own data with before it is stored. A document stamped more than 10 minutes in the future is refused (a wrong clock would win every conflict). `GET /api/session/renew` (re-login, below) and `GET /api/health` (setup check, below) sit behind Access like the rest.
 - **Merge rule** (`src/domain/sync.ts`): last write wins per document by `updatedAt`, a delete is just another version. When both sides changed a team since the last sync, the losing version is kept as a variation labelled **Conflict copy (<device>, <date>)**; matches follow the same rule without copies. Clocks within 5 seconds of each other are treated as a tie (the server's version wins and the other is kept as a copy), and an edit beats a delete unless the delete is clearly later.
-- **Client** (`src/sync/`): syncs when it starts, when the window regains focus, 5 seconds after teams or matches change, and on "Sync now". The first sync on a new device merges with what is already there (nothing is wiped). The code loads only once sync is on.
+- **Client** (`src/sync/`): syncs when it starts, when the window regains focus or the app comes back to the foreground, when the connection returns (`online`), every 3 minutes while the app is visible, 5 seconds after teams or matches change, and on "Sync now". After a network failure (offline, or a server error) it retries after 10 s, 30 s and 2 min (`retry.ts`), and does not retry a sign-in or setup problem. A run pulls first, merges and saves the new state, and only then pushes (`engine.ts`), so a failure at any point loses neither local edits nor what was pulled; the next run sends what is still unsent. The first sync on a new device merges with what is already there (nothing is wiped). The code loads only once sync is on.
 
 The web app and the phone app sync through Cloudflare Access. The Tauri desktop app can't pass Access, so it is **linked with a pairing code** (below).
 
@@ -22,11 +22,44 @@ Until the steps below are done the app works exactly as before and `/api/sync` a
 
 1. **Create the D1 database** (Cloudflare dashboard → Workers & Pages → D1 → Create database, or `npx wrangler d1 create pokemon-team-builder`). Copy its **database id**.
 2. **Bind it** in `wrangler.jsonc`: uncomment the `d1_databases` line at the bottom and paste the id (and add the comma shown on the line above it). Commit and push; Workers Builds redeploys.
-3. **Apply the migrations**: `npx wrangler d1 migrations apply pokemon-team-builder --remote` applies every file in `migrations/` that hasn't run yet (0001 creates the documents table, 0002 adds sharing and a `group_id` column, 0003 adds linked devices, 0004 the redeem throttle). **Run it before the deploy of a version that adds a migration**: the sync code of this version writes `group_id`, so sync answers with an error until 0002 is applied. (Or paste the files into the D1 console, in order.)
+3. **Apply the migrations**: `npx wrangler d1 migrations apply pokemon-team-builder --remote` applies every file in `migrations/` that hasn't run yet (0001 creates the documents table, 0002 adds sharing and a `group_id` column, 0003 adds linked devices, 0004 the redeem throttle). Once the deploy command below is set, every deploy does this by itself, **before** the new code goes live (the sync code of a version that adds a migration needs it: for example 0002's `group_id`). By hand, or pasting the files into the D1 console in order, also works.
 4. **Find the Access values.** Zero Trust → Settings → Custom pages shows the team domain (`<team>.cloudflareaccess.com`). Zero Trust → Access → Applications → the app's application → Overview → **Application Audience (AUD) Tag**.
 5. **Set the two variables** on the Worker: Workers & Pages → pokemon-team-builder → Settings → Variables and Secrets → add `ACCESS_TEAM_DOMAIN` (e.g. `myteam.cloudflareaccess.com`) and `ACCESS_AUD` (the tag). `keep_vars` in `wrangler.jsonc` stops deploys from removing them.
 6. **Make Access cover `/api/*`.** The Access application protects the Worker's whole hostname (docs/IPHONE_APP.md step 2), so `/api/*` is already behind the login. If you used a path-limited application, add `/api/*` to it. Check: opening `https://<worker>/api/sync` in a private window must show the Access login, not JSON.
-7. In the app: Settings → Sync → **Sync with my account**.
+7. **Set the deploy command** (below), so migrations are applied on every deploy.
+8. **Set the Access session duration** to 1 month (see *Sign-in expired*).
+9. In the app: Settings → Sync → **Sync with my account**.
+
+### Deploy command (migrations on every deploy)
+
+`npm run deploy` is `npx wrangler d1 migrations apply pokemon-team-builder --remote && npx wrangler deploy`: the migrations first, and the deploy only if they worked (an unapplied migration can never be live with the code that needs it; applying one is a no-op when nothing is new). Workers Builds runs it once you set it:
+
+1. Cloudflare dashboard → Workers & Pages → **pokemon-team-builder** → **Settings** → **Build** (Builds).
+2. **Build command**: `npm run build` (unchanged).
+3. **Deploy command**: change `npx wrangler deploy` to `npm run deploy`. Save.
+4. The build's API token needs permission to edit D1: in the same Build settings, *API token* → the token must include **D1: Edit** (Account → D1 → Edit) next to Workers Scripts. If the first build then fails with an authentication error on the migrations step, edit that token (My Profile → API Tokens, or the build's token link) and add the permission.
+5. Push (or **Retry build**) and check the build log: *No migrations to apply!* or the list it applied, then the deploy.
+
+Settings → Sync shows one line from `GET /api/health` so you can see the result without a terminal: *Server ready*, *Database migration missing: 0004*, *Database not bound…*, or which `ACCESS_*` variable is missing. The endpoint is behind Access, answers booleans, the migration names and the server time, and nothing about any account (`worker/health.ts`; the expected list is `EXPECTED_MIGRATIONS` in `src/domain/syncHealth.ts`, kept in step with `migrations/` by a test: **add a name there with every new migration**).
+
+## Sign-in expired
+
+Access signs you out after the session duration. On a phone this used to be a trap: the installed app is the cached app, so a reload never reached Access, and the only way out was signing in on the website and re-adding the app. Now:
+
+1. **Navigations to `/api/*` skip the cache.** `vite.config.ts` has `navigateFallbackDenylist: [/^\/api\//]`, so the service worker leaves them to the network (everything else is still the cached app).
+2. **Expiry is noticed and shown.** A 401/403 or Access's redirect to its login page becomes a `signin` error (`src/sync/http.ts`; `syncStore.lastErrorKind` is `signin` | `offline` | `setup` | `other`). A banner at the top of the app says *Your sign-in has expired. Tap Sign in again.* (dismissible; it comes back with the next new failure), the header sync light turns red, and Settings → Sync shows the same message with the button. Other errors show a *Sync problem* chip that opens Settings → Sync; Settings has the diagnostics.
+3. **Sign in again** sets `location.href = '/api/session/renew'` (never `window.open`, which on iOS opens Safari, whose cookie the home-screen app can't use). Access shows its login inside the app's own window, the cookie lands where the app can use it, and the Worker answers `GET /api/session/renew` (it needs a valid Access JWT, otherwise 401) with `302 /`. The app reloads signed in and sync resumes by itself. Local data is never touched: edits made while signed out are sent afterwards.
+4. **Access must stay in front of `/api/session/renew`**: it is covered by the same application as the rest of the hostname (do not add it to a bypass). Check from a private window: `https://<worker>/api/session/renew` shows the Access login, not a redirect to the app.
+5. The desktop app has no Access login: when its device is unlinked the banner says so and opens Settings → Sync to link it again with a pairing code.
+
+**Set the session duration (by hand).** Zero Trust → Access → Applications → the application → **Edit** → **Basic information** (or *Settings*) → **Session duration** → **1 month**; Save. Also check Zero Trust → Settings → Authentication → **Global session timeout**, which can cap it. A longer session means fewer expiries; it does not remove them.
+
+**Manual test on the iPhone app.**
+1. Settings → Sync on; wait for the green dot.
+2. Expire the session: Zero Trust → Access → *Users* (Zero Trust → Team & Resources → Devices/Users) → your user → **Revoke session** (or set a 5-minute session duration, wait, and set it back to 1 month).
+3. Bring the app to the foreground or tap **Sync now**: the red banner *Your sign-in has expired. Tap Sign in again.* appears and the header dot is red. Edit a team meanwhile.
+4. Tap **Sign in again**: the Access login (e-mail → code) shows inside the app, then the app comes back.
+5. The dot turns green, Settings → Sync says *Last synced just now*, and the edit made in step 3 shows on the website's copy after its next sync.
 
 ## Sharing (two players)
 
@@ -88,4 +121,4 @@ Do the migration (`npx wrangler d1 migrations apply pokemon-team-builder --remot
 
 ## Tests
 
-`worker/__tests__` (pairing and device tokens in `devices.test.ts`: one-time and expiring codes, hashes only, device limit, account isolation, revoke, CORS; the Access JWT checks with a local JWKS: valid, expired, wrong audience or issuer, bad signature, unknown or rotated key; payload validation; last-write-wins, tombstones, paging and account isolation against a real SQLite running the real migration), `src/domain/__tests__/sync.test.ts` (the merge rules: concurrent edits, delete versus edit, clock skew, first sync) and `src/sync/__tests__/engine.test.ts` (two devices talking to the real Worker handler).
+`worker/__tests__` (pairing and device tokens in `devices.test.ts`: one-time and expiring codes, hashes only, device limit, account isolation, revoke, CORS; the Access JWT checks with a local JWKS: valid, expired, wrong audience or issuer, bad signature, unknown or rotated key; payload validation; last-write-wins, tombstones, paging and account isolation against a real SQLite running the real migration), `src/domain/__tests__/sync.test.ts` (the merge rules: concurrent edits, delete versus edit, clock skew, first sync) and `src/sync/__tests__/engine.test.ts` (two devices talking to the real Worker handler), `resilience.test.ts` (expiry then recovery, offline then retry with the backoff, a failed push losing nothing, two devices converging after one was signed out), `status.test.ts` (the header light, the diagnostics, the banner state) and `worker/__tests__/session.test.ts` (`/api/session/renew` needs a valid JWT, `/api/health`).

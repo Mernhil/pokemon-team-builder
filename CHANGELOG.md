@@ -2,6 +2,20 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.32.0 — 2026-10-19
+
+### New
+- **Sync → Sign in again, inside the installed app.** When your Cloudflare Access session expires, a banner at the top of the app says *Your sign-in has expired. Tap Sign in again.* with a **Sign in again** button (also in Settings → Sync). It opens the sign-in inside the app's own window and brings you back, so there is no more deleting and re-adding the home-screen app. The banner can be dismissed; the header's sync light turns red until you sign in.
+- **Sync status light and “Sync problem” chip.** A small dot in the header (when sync is on): green = synced in the last 10 minutes, amber = older or offline, red = a problem. Other errors show a *Sync problem* chip that opens Settings → Sync. Settings → Sync says *Last synced 5 min ago*.
+- **Sync diagnostics and server check.** Settings → Sync has a *Sync diagnostics* section (cursor, known documents, last attempt, last error with its HTTP status, what the last run received and sent) with *Copy diagnostics* (no tokens or e-mail addresses), and one line from the server's new health check: *Server ready*, *Database migration missing: 0004*, and so on.
+
+### Changed
+- **Sync keeps itself up to date.** Besides starting, focusing and editing, it now syncs when the connection comes back and every 3 minutes while the app is visible. After a network failure it retries after 10 s, 30 s and 2 min (not when the sign-in expired or sync isn't set up). A failed push never loses the pulled changes or your local edits.
+- **Deploys apply the database migrations first.** `npm run deploy` runs `wrangler d1 migrations apply` before `wrangler deploy`; docs/SYNC.md and docs/IPHONE_APP.md say how to set it as the Workers Builds deploy command.
+
+### Fixed
+- **“Reload the page” did nothing after the sign-in expired.** The service worker answered every navigation, including /api/*, with the cached app, so a reload never reached Cloudflare Access. Navigations to /api/ now go to the network.
+
 ## 0.31.0 — 2026-10-18
 
 ### New

@@ -17,6 +17,7 @@ import { LoadingState } from './components/ui/primitives';
 import { buttonClass, cn } from './components/ui/styles';
 
 import { Header } from './components/shell/Header';
+import { SyncBanner } from './components/shell/SyncStatus';
 import { BottomTabs } from './components/shell/Navigation';
 import { Builder } from './components/shell/Builder';
 // Heavier screens load when first opened.
@@ -43,6 +44,9 @@ export default function App() {
   const dexState = useDex(format.datasetId);
   const view = useTeamStore((s) => s.view);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<'sync'>();
+  const openSettings = () => (setSettingsSection(undefined), setSettingsOpen(true));
+  const openSyncSettings = () => (setSettingsSection('sync'), setSettingsOpen(true));
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -205,15 +209,16 @@ export default function App() {
         Skip to content
       </a>
       <DesktopUpdater />
-      <Header team={team} format={format} dex={dex} onOpenSettings={() => setSettingsOpen(true)} onOpenPalette={() => setPaletteOpen(true)} />
+      <SyncBanner onOpenSyncSettings={openSyncSettings} />
+      <Header team={team} format={format} dex={dex} onOpenSettings={openSettings} onOpenSyncSettings={openSyncSettings} onOpenPalette={() => setPaletteOpen(true)} />
       <main id="main" tabIndex={-1} className={cn('mx-auto w-full flex-1 p-3 pb-24 outline-none sm:p-4 sm:pb-6', view === 'calc' ? 'max-w-[1800px]' : 'max-w-[1500px]')}>
         <h1 className="sr-only">{NAV_LABELS[view as NavId] ?? 'Build'} · Pokémon Team Builder</h1>
         {content}
       </main>
-      <BottomTabs onOpenSettings={() => setSettingsOpen(true)} />
+      <BottomTabs onOpenSettings={openSettings} />
       {settingsOpen && (
         <Suspense fallback={null}>
-          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onOpenWhatsNew={() => (setSettingsOpen(false), openWhatsNew())} onOpenShortcuts={() => (setSettingsOpen(false), setShortcutsOpen(true))} />
+          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} section={settingsSection} onOpenWhatsNew={() => (setSettingsOpen(false), openWhatsNew())} onOpenShortcuts={() => (setSettingsOpen(false), setShortcutsOpen(true))} />
         </Suspense>
       )}
       {shortcutsOpen && (
@@ -223,7 +228,7 @@ export default function App() {
       )}
       {paletteOpen && (
         <Suspense fallback={null}>
-          <CommandPalette open onOpenChange={setPaletteOpen} onOpenSettings={() => setSettingsOpen(true)} onOpenWhatsNew={openWhatsNew} />
+          <CommandPalette open onOpenChange={setPaletteOpen} onOpenSettings={openSettings} onOpenWhatsNew={openWhatsNew} />
         </Suspense>
       )}
       {whatsNewOpen && (

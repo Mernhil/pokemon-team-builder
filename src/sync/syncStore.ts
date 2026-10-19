@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from '@/store/storage';
 import { isDesktopApp } from './deviceStore';
+import type { SyncErrorKind } from './http';
 import type { SyncState } from './engine';
 import type { SyncStats } from './engine';
 
@@ -15,6 +16,14 @@ interface SyncStoreState extends SyncState {
   deviceName: string;
   lastSyncAt?: number;
   lastError?: string;
+  /** What kind of failure `lastError` was; the banner, the header dot and the retries go by it. */
+  lastErrorKind?: SyncErrorKind;
+  /** The HTTP status of the failure (0: a redirect to the Access login), when there was one. */
+  lastErrorStatus?: number;
+  /** When the last run started (successful or not). */
+  lastAttemptAt?: number;
+  /** The sign-in banner was dismissed; it comes back with the next new sign-in failure. */
+  bannerDismissed: boolean;
   lastStats?: SyncStats;
   status: 'idle' | 'syncing';
 
@@ -23,7 +32,8 @@ interface SyncStoreState extends SyncState {
   saveState: (s: SyncState) => void;
   begin: () => void;
   succeed: (stats: SyncStats) => void;
-  fail: (message: string) => void;
+  fail: (message: string, kind?: SyncErrorKind, status?: number) => void;
+  dismissBanner: () => void;
   /** Forget what was synced (the next run merges everything again); local data is untouched. */
   forget: () => void;
 }
@@ -38,13 +48,17 @@ export const useSyncStore = create<SyncStoreState>()(
       cursor: 0,
       known: {},
       status: 'idle',
-      setEnabled: (enabled) => set({ enabled, lastError: undefined }),
+      bannerDismissed: false,
+      setEnabled: (enabled) => set({ enabled, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, bannerDismissed: false }),
       setDeviceName: (deviceName) => set({ deviceName: deviceName.slice(0, 40) || randomName() }),
       saveState: ({ cursor, known }) => set({ cursor, known }),
-      begin: () => set({ status: 'syncing', lastError: undefined }),
-      succeed: (lastStats) => set({ status: 'idle', lastSyncAt: Date.now(), lastError: undefined, lastStats }),
-      fail: (lastError) => set({ status: 'idle', lastError }),
-      forget: () => set({ cursor: 0, known: {}, lastSyncAt: undefined, lastStats: undefined, lastError: undefined }),
+      // The previous error stays visible while the next try runs, so a banner doesn't blink on every retry.
+      begin: () => set({ status: 'syncing', lastAttemptAt: Date.now() }),
+      succeed: (lastStats) => set({ status: 'idle', lastSyncAt: Date.now(), lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, bannerDismissed: false, lastStats }),
+      fail: (lastError, lastErrorKind = 'other', lastErrorStatus) =>
+        set((s) => ({ status: 'idle', lastError, lastErrorKind, lastErrorStatus, bannerDismissed: lastErrorKind === 'signin' && s.lastErrorKind === 'signin' ? s.bannerDismissed : false })),
+      dismissBanner: () => set({ bannerDismissed: true }),
+      forget: () => set({ cursor: 0, known: {}, lastSyncAt: undefined, lastStats: undefined, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, lastAttemptAt: undefined, bannerDismissed: false }),
     }),
     {
       name: 'ptb:sync:v1',

@@ -1,13 +1,32 @@
 import { isDesktopApp, useDeviceStore } from './deviceStore';
 
 /** Talking to the sync Worker from the browser: one fetch wrapper that turns every failure into a message the player can act on. */
+export type SyncErrorKind = 'signin' | 'offline' | 'setup' | 'other';
+
 export class SyncHttpError extends Error {
-  kind: 'signin' | 'setup' | 'offline' | 'other';
-  constructor(message: string, kind: 'signin' | 'setup' | 'offline' | 'other') {
+  kind: SyncErrorKind;
+  /** The HTTP status, 0 for a redirect to the Access login, undefined when there was no answer. */
+  status?: number;
+  constructor(message: string, kind: SyncErrorKind, status?: number) {
     super(message);
     this.kind = kind;
+    this.status = status;
   }
 }
+
+/** Where "Sign in again" goes: behind Access, so it shows the login inside the app's own window and returns to the app (worker/api.ts). */
+export const RENEW_PATH = '/api/session/renew';
+
+/**
+ * Signs in again from inside the installed app. A full navigation in the same window (never window.open: on iOS that
+ * opens Safari, whose cookie the home-screen app can't see): Access logs in there, the cookie lands where the app can
+ * use it, and the Worker sends the app back to `/`. The service worker leaves /api/* to the network (vite.config.ts).
+ */
+export function signInAgain(): void {
+  window.location.href = RENEW_PATH;
+}
+
+export const SIGNIN_MESSAGE = 'Your sign-in has expired. Tap Sign in again.';
 
 /**
  * The browser (web and phone app) talks to its own origin and is identified by the Access cookie.
@@ -47,12 +66,12 @@ export async function request<T>(method: string, path: string, body?: unknown): 
     throw new SyncHttpError("Couldn't reach the server. You may be offline.", 'offline');
   }
   if (res.type === 'opaqueredirect' || res.status === 401 || res.status === 403) {
-    throw new SyncHttpError(isDesktopApp() ? 'This desktop app was unlinked from your account. Link it again in Settings → Sync.' : 'Your sign-in has expired. Reload the page to sign in again.', 'signin');
+    throw new SyncHttpError(isDesktopApp() ? 'This desktop app was unlinked from your account. Link it again in Settings → Sync.' : SIGNIN_MESSAGE, 'signin', res.type === 'opaqueredirect' ? 0 : res.status);
   }
-  if (res.status === 501) throw new SyncHttpError(await setupMessage(res), 'setup');
+  if (res.status === 501) throw new SyncHttpError(await setupMessage(res), 'setup', 501);
   const type = res.headers.get('content-type') ?? '';
-  if (!type.includes('json')) throw new SyncHttpError(res.status === 404 ? 'This deployment has no sync service.' : `Unexpected response (HTTP ${res.status}).`, 'setup');
+  if (!type.includes('json')) throw new SyncHttpError(res.status === 404 ? 'This deployment has no sync service.' : `Unexpected response (HTTP ${res.status}).`, 'setup', res.status);
   const json = (await res.json()) as T & { error?: string };
-  if (!res.ok) throw new SyncHttpError(json.error ?? `HTTP ${res.status}`, 'other');
+  if (!res.ok) throw new SyncHttpError(json.error ?? `HTTP ${res.status}`, 'other', res.status);
   return json;
 }

@@ -138,6 +138,8 @@ export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stat
           delete state.known[k];
         } else if (r.doc) stale.push(r.doc);
       }
+      // A later chunk failing must not make this one be sent again.
+      deps.save(state);
     }
     deps.save(state);
     if (stale.length === 0) break;

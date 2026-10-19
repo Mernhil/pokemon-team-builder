@@ -8,6 +8,7 @@ import { toast } from '@/store/toastStore';
 import { isSavedTeam } from '@/domain/team';
 import { useTeamStore } from '@/store/teamStore';
 import { UpdateCheckButton } from '../DesktopUpdater';
+import { SyncStatus } from './SyncStatus';
 import { whenIdle } from '../ui/motion';
 import { TopNav } from './Navigation';
 import { GenBadge } from '../ui/GenBadge';
@@ -35,7 +36,7 @@ function FormatBadge({ format }: { format: FormatRules }) {
   return <GenBadge gen={format.generation} />;
 }
 
-export function Header({ team, format, dex, onOpenSettings, onOpenPalette }: { team: Team; format: FormatRules; dex?: Dex; onOpenSettings: () => void; onOpenPalette: () => void }) {
+export function Header({ team, format, dex, onOpenSettings, onOpenSyncSettings, onOpenPalette }: { team: Team; format: FormatRules; dex?: Dex; onOpenSettings: () => void; onOpenSyncSettings: () => void; onOpenPalette: () => void }) {
   const { switchFormat, saveTeam, clearTeam, restoreSlots, newTeam, selectTeam, deleteTeam } = useTeamStore.getState();
   const isEmpty = team.slots.every((s) => s === null);
   useEffect(() => whenIdle(preloadDialogs), []);
@@ -124,6 +125,7 @@ export function Header({ team, format, dex, onOpenSettings, onOpenPalette }: { t
           <button type="button" className={buttonClass('default', 'icon')} onClick={onOpenPalette} aria-label="Search (Ctrl K)" title="Search · Ctrl/⌘ K">
             <Search size={17} aria-hidden />
           </button>
+          <SyncStatus onOpen={onOpenSyncSettings} />
           <UpdateCheckButton />
           <Button variant="primary" onClick={() => setSaveOpen(true)}>
             {justSaved ? <Check size={15} aria-hidden /> : <Save size={15} aria-hidden />}

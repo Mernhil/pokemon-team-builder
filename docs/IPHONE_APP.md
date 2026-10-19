@@ -65,7 +65,7 @@ Workers & Pages → Create application → Import a repository → pick this rep
 
 - Production branch: the repo's default branch
 - Build command: `npm run build`
-- Deploy command: `npx wrangler deploy`
+- Deploy command: `npm run deploy` (applies the database migrations, then `wrangler deploy`; docs/SYNC.md → *Deploy command*, which also lists the API token permission it needs). Before cloud sync is set up it can stay `npx wrangler deploy`.
 - Environment variable `NODE_VERSION` = `22`
 
 Every push to the production branch redeploys `https://pokemon-team-builder.<account>.workers.dev`
@@ -81,7 +81,7 @@ no-sniff; if the app ever needs a new outside host, add it to that file's `conne
 3. Zero Trust → Access → Applications → the application just created → Policies: Action
    **Allow**, Include → **Emails** → your address and each person you invite. Login method:
    **One-time PIN** (a code sent by e-mail; no accounts to create).
-4. Session duration: a long one (e.g. 1 month) so the phone app doesn't ask to log in often.
+4. Session duration: **1 month** (Zero Trust → Access → Applications → the application → Edit → Session duration; also check Zero Trust → Settings → Authentication → Global session timeout). A long one so the phone app doesn't ask to log in often.
 
 To grant or revoke someone, add/remove their e-mail in the policy. Check it by opening the URL in a
 private window: it must show the Cloudflare login page, not the app.
@@ -91,8 +91,10 @@ private window: it must show the Cloudflare login page, not the app.
 - The first launch shows the Cloudflare login page (e-mail → PIN), then the app.
 - Once cached, the app opens offline without logging in (it's already on the phone).
 - Update checks run with the login cookie. If the session has expired the check quietly fails
-  and the app keeps the version it has; the next time the login page shows up and you log in,
-  it updates.
+  and the app keeps the version it has; after you sign in again, it updates.
+- When the session expires, the app (with cloud sync on) shows a banner, *Your sign-in has expired. Tap Sign in again.*
+  **Sign in again** shows the Cloudflare login inside the app and returns to it. Never delete and re-add
+  the home-screen app for this (docs/SYNC.md → *Sign-in expired*).
 
 ## Installing on iPhone
 
@@ -104,5 +106,5 @@ Android (Chrome): menu ⋮ → **Install app** / **Add to Home screen**.
 
 ## Updates
 
-Nothing to do on the phone: push to the default branch, wait for the Cloudflare deploy (~1–2 minutes), and the
+Nothing to do on the phone: push to the default branch, wait for the Cloudflare deploy (~1–2 minutes; it applies new database migrations first), and the
 next time the app is opened or brought back to the foreground it reloads onto the new version.

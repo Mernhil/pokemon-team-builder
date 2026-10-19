@@ -1,5 +1,5 @@
 // Cloudflare Workers deploy of the phone/web app: the static app, plus a small Worker for cloud sync
-// (/api/*, worker/). Workers Builds runs `npm run build` then `npx wrangler deploy` on every push;
+// (/api/*, worker/). Workers Builds runs `npm run build` then `npm run deploy` (D1 migrations, then `wrangler deploy`) on every push;
 // see docs/IPHONE_APP.md, and docs/SYNC.md for the one-time sync setup.
 {
   "name": "pokemon-team-builder",
