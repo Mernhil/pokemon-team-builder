@@ -1,28 +1,38 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Crosshair, Skull } from 'lucide-react';
+import { AlertTriangle, Crosshair, List, Pencil, RotateCcw, Skull } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import { defaultSide, type FieldConditions } from '@/domain/battle/conditions';
 import { usageLabel } from '@/domain/meta';
-import type { MetaSet } from '@/domain/metaSets';
-import { THREAT_COUNTS, ohkoEntries, type OhkoMode } from '@/domain/threats';
+import { topThreats, type ReportThreat } from '@/domain/reportThreats';
+import { THREAT_COUNTS, moveChoices, ohkoEntries, type Kill, type OhkoMode, type ThreatCell } from '@/domain/threats';
 import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { useCalcStore } from '@/store/calcStore';
+import { useOhkoBuilds } from '@/store/ohkoBuildStore';
 import { useTeamStore } from '@/store/teamStore';
+import { toast } from '@/store/toastStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
-import { Chip, EmptyState, Help, LoadingState, Notice, Panel, Select, Tabs } from '../ui/primitives';
+import { Button, Chip, EmptyState, Help, LoadingState, Notice, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { FormSwitch } from '../ui/FormSwitch';
+import { OpponentBuildDialog } from './OpponentBuildDialog';
 import { useThreatReport } from './useThreatReport';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions');
 const range = (p: [number, number]) => (p[0] === p[1] ? `${p[0]}%` : `${p[0]}–${p[1]}%`);
+/** How many rows a card shows before "Show more" (the full list has a few hundred). */
+const PAGE = 40;
+const KILL_WORD: Record<Kill, string> = { ohko: 'OHKO', pohko: 'Possible', '2hko': '2HKO', '3hko': '3HKO+', none: 'No damage' };
 
 /**
  * Two reports in one view, on the Threat report's engine and data: which of the most-used Pokémon can
  * OHKO each of yours ('by'), and which of them each of yours can OHKO ('to'). Guaranteed OHKOs come
  * first, then ones that only happen on some damage rolls; tap a row to open it in the Damage Calc.
+ *
+ * Every move counts, not just the best one: a card's Move row narrows the list to one move. A card's
+ * Details button lists every Pokémon the regulation allows (and the Mega variants), at every kill class.
+ * Each opponent's build can be edited (pencil on its row) and is kept until reset.
  */
 export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; format: FormatRules; team: Team; mode: OhkoMode; onMode: (m: OhkoMode) => void }) {
   const setView = useTeamStore((s) => s.setView);
@@ -31,17 +41,25 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
   const [field, setField] = useState<FieldConditions>({ gameType: 'Doubles', weather: '', terrain: '', trickRoom: false, gravity: false });
   const [baseForms, setBaseForms] = useState<ReadonlySet<string>>(new Set());
   const setForm = (id: string, base: boolean) => setBaseForms((s) => { const n = new Set(s); if (base) n.add(id); else n.delete(id); return n; });
-  const { picked, loading, threats, members, rows, done, error } = useThreatReport({ dex, format, team, count, field, baseForms });
+  // The slots whose full list is open: any one of them has the report calculate every Pokémon.
+  const [detailSlots, setDetailSlots] = useState<ReadonlySet<number>>(new Set());
+  const wide = detailSlots.size > 0;
+  const setDetails = (slot: number, on: boolean) => setDetailSlots((s) => { const n = new Set(s); if (on) n.add(slot); else n.delete(slot); return n; });
+  const builds = useOhkoBuilds((s) => s.builds);
+  const [editKey, setEditKey] = useState<string | null>(null);
+  const { picked, loading, threats, members, rows, done, error } = useThreatReport({ dex, format, team, count, field, baseForms, all: wide, builds });
   const by = mode === 'by';
   const Icon = by ? Skull : Crosshair;
   const title = by ? 'Can be OHKO’d by' : 'Can OHKO';
 
-  const entries = useMemo(
-    () => members.map((_, j) => ohkoEntries(rows, j, mode).filter((e) => possible || e.kill === 'ohko')),
-    [members, rows, mode, possible],
-  );
+  // The compact lists only ever read the most-used sets, even while the full job is running.
+  const topIds = useMemo(() => (picked ? new Set(topThreats(dex, format, picked.snapshot, count).map((t) => t.speciesId)) : new Set<string>()), [dex, format, picked, count]);
+  const isTop = (t: ReportThreat | undefined) => !!t && (!wide || (!t.withStone && topIds.has(t.speciesId)));
+  const topRows = useMemo(() => (wide ? rows.map((r, i) => (isTop(threats[i]) ? r : undefined)) : rows), [wide, rows, threats, topIds]); // oxlint-disable-line react-hooks/exhaustive-deps -- isTop only reads wide, topIds
+  const editing = editKey ? threats.find((t) => t.key === editKey) : undefined;
+  const customCount = Object.keys(builds).length;
 
-  const open = (member: PokemonSet, slot: number, threat: MetaSet) => {
+  const open = (member: PokemonSet, slot: number, threat: ReportThreat) => {
     const calc = useCalcStore.getState();
     const mine = { set: member, cond: defaultSide(!!dex.megaFor(member.speciesId, member.itemId)), crits: [false, false, false, false] as [boolean, boolean, boolean, boolean], origin: { teamName: team.name, slot: slot + 1 } };
     const theirs = { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode }, crits: [false, false, false, false] as [boolean, boolean, boolean, boolean] };
@@ -50,6 +68,20 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
     calc.setSide('defender', by ? mine : theirs);
     calc.setField(field);
     setView('calc');
+  };
+
+  const changeBuild = (t: ReportThreat, patch: Partial<PokemonSet>) => useOhkoBuilds.getState().setBuild(t.speciesId, { ...t.set, ...patch });
+  const resetBuild = (speciesId: string) => {
+    const was = useOhkoBuilds.getState().builds[speciesId];
+    useOhkoBuilds.getState().resetBuild(speciesId);
+    setEditKey(null);
+    if (was) toast(`${dex.species(speciesId)?.name ?? speciesId} is back to its most-used set.`, { label: 'Undo', run: () => useOhkoBuilds.getState().restore({ [speciesId]: was }) });
+  };
+  const resetAll = () => {
+    const was = useOhkoBuilds.getState().builds;
+    useOhkoBuilds.getState().resetAll();
+    setEditKey(null);
+    toast('All custom builds reset.', { label: 'Undo', run: () => useOhkoBuilds.getState().restore(was) });
   };
 
   if (format.datasetId !== 'champions') {
@@ -70,6 +102,7 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
   const reg = champRegs.find((r) => r.id === picked.regulationId);
   const set = <K extends keyof FieldConditions>(k: K, v: FieldConditions[K]) => setField((f) => ({ ...f, [k]: v }));
   const calculated = rows.filter(Boolean).length;
+  const stoneHolders = threats.filter((t) => isTop(t) && dex.megaFor(t.speciesId, t.set.itemId));
 
   return (
     <div className="space-y-3">
@@ -114,6 +147,16 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
             Possible OHKOs
           </Toggle>
         </ChipRow>
+        {customCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+            <span>
+              {customCount} custom {customCount === 1 ? 'build' : 'builds'} in use.
+            </span>
+            <Button variant="ghost" onClick={resetAll}>
+              <RotateCcw size={14} aria-hidden /> Reset all
+            </Button>
+          </div>
+        )}
       </Panel>
 
       {picked.fellBackFrom && (
@@ -132,13 +175,13 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
           <p role="status" className="text-xs text-muted">
             {done ? `${calculated} Pokémon calculated against ${members.length} of yours.` : `Calculating… ${calculated} of ${threats.length}`}
           </p>
-          {threats.some((t) => dex.megaFor(t.speciesId, t.set.itemId)) && (
+          {stoneHolders.length > 0 && (
             <details className="rounded-lg border border-border bg-surface-2/40 p-2 text-sm">
               <summary className="cursor-pointer text-xs font-semibold text-muted hover:text-fg">
                 Mega Stone holders are calculated as their Mega{baseForms.size ? ` (${baseForms.size} switched to Base)` : ''}. Change forms
               </summary>
               <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-                {threats.filter((t) => dex.megaFor(t.speciesId, t.set.itemId)).map((t) => (
+                {stoneHolders.map((t) => (
                   <li key={t.speciesId} className="flex items-center gap-2">
                     <Sprite speciesId={t.speciesId} name={dex.species(t.speciesId)?.name} types={dex.species(t.speciesId)?.types} set={format.spriteSet} size={24} />
                     <b>{dex.species(t.speciesId)?.name ?? t.speciesId}</b>
@@ -148,77 +191,182 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
               </ul>
             </details>
           )}
-          <ul className="grid gap-3 lg:grid-cols-2" aria-label={title}>
-            {members.map((m, j) => {
-              const sp = dex.species(m.set.speciesId);
-              const list = entries[j];
-              const sure = list.filter((e) => e.kill === 'ohko').length;
-              return (
-                <li key={m.slot}>
-                  <Panel
-                    title={
-                      <span className="flex items-center gap-2">
-                        <Sprite speciesId={m.set.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={32} />
-                        {sp?.name ?? m.set.speciesId}
-                      </span>
-                    }
-                    actions={
-                      <Chip tone={by ? (sure ? 'bad' : list.length ? 'warn' : 'good') : sure ? 'good' : 'neutral'}>
-                        {list.length === 0 ? (done ? 'None' : '…') : `${sure} sure${list.length > sure ? ` · ${list.length - sure} possible` : ''}`}
-                      </Chip>
-                    }
-                  >
-                    {list.length === 0 ? (
-                      <p className="text-sm text-muted">
-                        {!done ? 'Calculating…' : by ? `None of the top ${count} OHKOs ${sp?.name ?? 'it'}.` : `${sp?.name ?? 'It'} can’t OHKO any of the top ${count}.`}
-                      </p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {list.map((e) => {
-                          const t = threats[e.threatIndex];
-                          const tsp = dex.species(t.speciesId);
-                          const speed = e.first === 'me' ? 'you move first' : e.first === 'them' ? 'it moves first' : 'speed tie';
-                          const sentence = `${by ? `${tsp?.name} ${e.kill === 'ohko' ? 'OHKOs' : 'can OHKO'} ${sp?.name}` : `${sp?.name} ${e.kill === 'ohko' ? 'OHKOs' : 'can OHKO'} ${tsp?.name}`} with ${e.move.move} (${range(e.move.percent)}); ${speed}.`;
-                          return (
-                            <li key={e.threatIndex}>
-                              <button
-                                type="button"
-                                onClick={() => open(m.set, m.slot, t)}
-                                aria-label={`${sentence} Open in the Damage Calc.`}
-                                title={sentence}
-                                className={cn(
-                                  'flex min-h-11 w-full items-center gap-2 rounded-lg border px-2 py-1 text-left text-sm hover:brightness-95',
-                                  e.kill === 'ohko' ? (by ? 'border-warn/60 bg-warn/15' : 'border-accent/50 bg-accent/12') : 'border-border bg-surface-2',
-                                )}
-                              >
-                                <Sprite speciesId={t.speciesId} name={tsp?.name} types={tsp?.types} set={format.spriteSet} size={28} />
-                                <span className="min-w-0 flex-1">
-                                  <b className="block truncate">{tsp?.name ?? t.speciesId}</b>
-                                  <span className="block truncate text-xs text-muted">
-                                    {e.move.move} · {range(e.move.percent)} · {usageLabel(t)}
-                                  </span>
-                                </span>
-                                <span className="shrink-0 text-right text-xs">
-                                  <b className="block">{e.kill === 'ohko' ? 'OHKO' : 'Possible'}</b>
-                                  <span className="text-muted">{speed}</span>
-                                </span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </Panel>
-                </li>
-              );
-            })}
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2" aria-label={title}>
+            {members.map((m, j) => (
+              <MemberCard
+                key={`${mode}:${m.slot}`}
+                dex={dex}
+                format={format}
+                mode={mode}
+                member={m.set}
+                memberIndex={j}
+                slot={m.slot}
+                rows={rows}
+                topRows={topRows}
+                threats={threats}
+                count={count}
+                done={done}
+                possible={possible}
+                detailsOpen={detailSlots.has(m.slot)}
+                onDetails={(on) => setDetails(m.slot, on)}
+                onOpen={(t) => open(m.set, m.slot, t)}
+                onEdit={(t) => setEditKey(t.key)}
+              />
+            ))}
           </ul>
           <Help label="How to read this list">
-            “OHKO” means every damage roll knocks out from full HP; “Possible” only some rolls. {by ? 'The Pokémon is read as its Mega when it holds the stone (switch it to Base above) and your Mega Stone holders at their worse forme.' : 'Your Mega Stone holders are read at their worse forme; theirs are read as their Mega when they hold the stone (switch to Base above).'} Calculated
-            with the Damage Calc on each Pokémon’s most-used set, under the conditions above. Tap a row to open it there.
+            “OHKO” means every damage roll knocks out from full HP; “Possible” only some rolls. {by ? 'The Pokémon is read as its Mega when it holds the stone (switch it to Base above) and your Mega Stone holders at their worse forme.' : 'Your Mega Stone holders are read at their worse forme; theirs are read as their Mega when they hold the stone (switch to Base above).'} Every move of both sides is calculated; the row
+            shows the strongest, and the Move chips narrow a card to one move. Details lists every Pokémon the regulation allows, each with its most-used set (or a generic attacker build when it has no usage data) plus the Mega
+            Stone holders, with every kill class. Tap the pencil on a row to give a Pokémon your own build. Calculated with the Damage Calc under the conditions above. Tap a row to open it there.
           </Help>
         </>
       )}
+      {editing && (
+        <OpponentBuildDialog dex={dex} format={format} threat={editing} onChange={(patch) => changeBuild(editing, patch)} onReset={() => resetBuild(editing.speciesId)} onClose={() => setEditKey(null)} />
+      )}
     </div>
+  );
+}
+
+interface MemberCardProps {
+  dex: Dex;
+  format: FormatRules;
+  mode: OhkoMode;
+  member: PokemonSet;
+  memberIndex: number;
+  slot: number;
+  /** Every row calculated so far (the full list when Details is open somewhere). */
+  rows: (ThreatCell[] | undefined)[];
+  /** Only the most-used sets' rows. */
+  topRows: (ThreatCell[] | undefined)[];
+  threats: ReportThreat[];
+  count: number;
+  done: boolean;
+  possible: boolean;
+  detailsOpen: boolean;
+  onDetails: (open: boolean) => void;
+  onOpen: (threat: ReportThreat) => void;
+  onEdit: (threat: ReportThreat) => void;
+}
+
+/** One of your Pokémon: the headline count, a Move filter, the list (compact, or every Pokémon under Details). */
+function MemberCard({ dex, format, mode, member, memberIndex: j, rows, topRows, threats, count, done, possible, detailsOpen, onDetails, onOpen, onEdit }: MemberCardProps) {
+  const by = mode === 'by';
+  const [moveId, setMoveId] = useState('');
+  const [shown, setShown] = useState(PAGE);
+  const sp = dex.species(member.speciesId);
+  const src = detailsOpen ? rows : topRows;
+  const opts = { all: detailsOpen, possible };
+  const choices = useMemo(() => moveChoices(src, j, mode, opts), [src, j, mode, detailsOpen, possible]); // oxlint-disable-line react-hooks/exhaustive-deps -- opts is built from these
+  const list = useMemo(() => ohkoEntries(src, j, mode, { ...opts, move: moveId || undefined }), [src, j, mode, detailsOpen, possible, moveId]); // oxlint-disable-line react-hooks/exhaustive-deps -- opts is built from these
+  // The headline always counts OHKOs of the most-used sets (under the move filter), however the list below is showing.
+  const headline = useMemo(() => ohkoEntries(topRows, j, mode, { possible, move: moveId || undefined }), [topRows, j, mode, possible, moveId]);
+  const sure = headline.filter((e) => e.kill === 'ohko').length;
+  const chosen = choices.find((c) => c.moveId === moveId)?.move ?? dex.move(moveId)?.name;
+  const names = dex.species(member.speciesId)?.name ?? 'It';
+
+  return (
+    <li className="min-w-0">
+      <Panel
+        title={
+          <span className="flex items-center gap-2">
+            <Sprite speciesId={member.speciesId} name={sp?.name} types={sp?.types} set={format.spriteSet} size={32} />
+            {sp?.name ?? member.speciesId}
+          </span>
+        }
+        actions={
+          <Chip tone={by ? (sure ? 'bad' : headline.length ? 'warn' : 'good') : sure ? 'good' : 'neutral'}>
+            {headline.length === 0 ? (done ? 'None' : '…') : `${sure} sure${headline.length > sure ? ` · ${headline.length - sure} possible` : ''}`}
+          </Chip>
+        }
+      >
+        <div className="min-w-0 space-y-2">
+          {(choices.length > 1 || moveId) && (
+            <ChipRow label="Move">
+              <Toggle pressed={!moveId} onClick={() => { setMoveId(''); setShown(PAGE); }}>
+                All moves
+              </Toggle>
+              {choices.map((c) => (
+                <Toggle key={c.moveId} pressed={moveId === c.moveId} onClick={() => { setMoveId(moveId === c.moveId ? '' : c.moveId); setShown(PAGE); }} title={`${c.count} with ${c.move}`}>
+                  {c.move} · {c.count}
+                </Toggle>
+              ))}
+            </ChipRow>
+          )}
+          {list.length === 0 ? (
+            <p className="text-sm text-muted">
+              {!done
+                ? 'Calculating…'
+                : by
+                  ? `${chosen ? `None of the checked Pokémon OHKO ${names} with ${chosen}.` : `None of the top ${count} OHKOs ${names}.`}`
+                  : `${names} can’t OHKO any of ${chosen ? `the checked Pokémon with ${chosen}` : `the top ${count}`}.`}
+            </p>
+          ) : (
+            <ul className="space-y-1">
+              {list.slice(0, shown).map((e) => {
+                const t = threats[e.threatIndex];
+                if (!t) return null;
+                return <ThreatRow key={t.key} dex={dex} format={format} by={by} member={member} threat={t} entry={e} onOpen={() => onOpen(t)} onEdit={() => onEdit(t)} />;
+              })}
+            </ul>
+          )}
+          {list.length > shown && (
+            <Button variant="ghost" onClick={() => setShown((n) => n + PAGE)}>
+              Show {Math.min(PAGE, list.length - shown)} more ({list.length - shown} left)
+            </Button>
+          )}
+          <Button variant={detailsOpen ? 'primary' : 'default'} aria-pressed={detailsOpen} onClick={() => { onDetails(!detailsOpen); setShown(PAGE); }}>
+            <List size={14} aria-hidden /> {detailsOpen ? `Back to the top ${count}` : 'Details: every Pokémon'}
+          </Button>
+        </div>
+      </Panel>
+    </li>
+  );
+}
+
+/** One opponent on a card: tap it for the Damage Calc, the pencil beside it for its build. */
+function ThreatRow({ dex, format, by, member, threat: t, entry: e, onOpen, onEdit }: { dex: Dex; format: FormatRules; by: boolean; member: PokemonSet; threat: ReportThreat; entry: ReturnType<typeof ohkoEntries>[number]; onOpen: () => void; onEdit: () => void }) {
+  const tsp = dex.species(t.speciesId);
+  const sp = dex.species(member.speciesId);
+  const tname = tsp?.name ?? t.speciesId;
+  const speed = e.first === 'me' ? 'you move first' : e.first === 'them' ? 'it moves first' : 'speed tie';
+  const verb = e.kill === 'ohko' ? 'OHKOs' : e.kill === 'pohko' ? 'can OHKO' : `${KILL_WORD[e.kill]}s`;
+  const stone = t.withStone ? dex.item(t.withStone)?.name : undefined;
+  const sentence = `${by ? `${tname}${stone ? ` holding ${stone}` : ''} ${verb} ${sp?.name}` : `${sp?.name} ${verb} ${tname}${stone ? ` holding ${stone}` : ''}`} with ${e.move.move} (${range(e.move.percent)}); ${speed}.`;
+  const origin = t.custom ? 'Custom build' : stone ? `with ${stone}` : usageLabel(t) || 'Generic build';
+  return (
+    <li className="flex items-stretch gap-1">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`${sentence} Open in the Damage Calc.`}
+        title={sentence}
+        className={cn(
+          'flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg border px-2 py-1 text-left text-sm hover:brightness-95',
+          e.kill === 'ohko' ? (by ? 'border-warn/60 bg-warn/15' : 'border-accent/50 bg-accent/12') : 'border-border bg-surface-2',
+        )}
+      >
+        <Sprite speciesId={t.speciesId} name={tsp?.name} types={tsp?.types} set={format.spriteSet} size={28} />
+        <span className="min-w-0 flex-1">
+          <b className="block truncate">{tname}{t.megaMode !== 'base' ? ' (Mega)' : ''}</b>
+          <span className="block text-xs text-muted">
+            {e.move.move} · {range(e.move.percent)} · {origin}
+          </span>
+        </span>
+        <span className="shrink-0 text-right text-xs">
+          <b className="block">{KILL_WORD[e.kill]}</b>
+          <span className="text-muted">{speed}</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={`Edit ${tname}’s build`}
+        title="Edit this Pokémon’s build"
+        className="flex min-h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted hover:text-fg"
+      >
+        <Pencil size={14} aria-hidden />
+      </button>
+    </li>
   );
 }
