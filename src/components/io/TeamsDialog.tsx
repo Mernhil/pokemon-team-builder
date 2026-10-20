@@ -68,7 +68,7 @@ function InlineEditable({
     <button
       type="button"
       aria-label={`Rename ${value || placeholder}`}
-      className={cn('group/name flex min-w-0 items-center gap-1 text-left', className)}
+      className={cn('group/name flex max-w-full min-w-0 items-center gap-1 text-left', className)}
       onClick={(e) => {
         e.stopPropagation();
         setDraft(value);
@@ -267,17 +267,17 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
             <li key={id} className={cn('rounded-2xl border bg-surface p-3', groupIsActive ? 'border-accent ring-1 ring-accent' : 'border-border')}>
               <div className="flex flex-wrap items-start gap-1">
                 <div className="flex min-w-0 flex-1 basis-44 flex-wrap items-center gap-x-2 gap-y-1 pt-1.5">
-                  <InlineEditable value={t.name} ariaLabel="Saved team name" textClassName="text-base font-semibold" onCommit={(name) => updateTeam(id, { name })} />
+                  <InlineEditable value={t.name} ariaLabel="Saved team name" className="max-w-full" textClassName="text-base font-semibold" onCommit={(name) => updateTeam(id, { name })} />
                   <Chip>{t.category || f.shortName}</Chip>
                   <ArchetypeChips team={t} dex={dex} />
                   {variations.length > 0 && <Chip>{variations.length + 1} variations</Chip>}
                   <RegulationChips team={t} impacts={impacts.get(t.id)} live={live} />
                   {groupIsActive && <Chip tone="accent">Editing</Chip>}
                   {granted.some((g) => g.kind === 'team-group' && g.ref === id) && (
-                    <Chip icon={Users}>Shared with {granted.filter((g) => g.kind === 'team-group' && g.ref === id).map((g) => nameOf(g.grantee, names)).join(', ')}</Chip>
+                    <Chip icon={Users} wrap>Shared with {granted.filter((g) => g.kind === 'team-group' && g.ref === id).map((g) => nameOf(g.grantee, names)).join(', ')}</Chip>
                   )}
                 </div>
-                <div className="ml-auto flex items-center gap-1">
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
                 {syncOn && (
                   <Button size="icon" variant="ghost" aria-label={`Share ${t.name}`} onClick={() => setShareTeam(t)}>
                     <Share2 size={15} aria-hidden />
@@ -303,10 +303,11 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
               {variations.length > 0 && (
                 <ul className="mt-3 space-y-1.5 border-l-2 border-border pl-3">
                   {variations.map((v) => (
-                    <li key={v.id} className={cn('flex items-center gap-2 rounded-xl border p-2', v.id === editingFrom ? 'border-accent bg-accent/5' : 'border-transparent bg-surface-2')}>
-                      <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                    <li key={v.id} className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border p-2', v.id === editingFrom ? 'border-accent bg-accent/5' : 'border-transparent bg-surface-2')}>
+                      <div className="flex min-w-0 flex-1 basis-40 flex-col items-start gap-1">
                         <RegulationChips team={v} impacts={impacts.get(v.id)} live={live} />
                         <InlineEditable
+                          className="max-w-full"
                           value={v.variationLabel ?? 'Variation'}
                           ariaLabel="Variation label"
                           textClassName="text-sm font-semibold"
@@ -317,10 +318,12 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                         </button>
                         <span className="text-xs text-muted">Edited {new Date(v.updatedAt).toLocaleString()}</span>
                       </div>
-                      <Button size="sm" aria-label={`Edit team ${t.name} · ${v.variationLabel ?? 'variation'}`} onClick={() => select(v.id)}>
-                        <Pencil size={14} aria-hidden /> Edit team
-                      </Button>
-                      <DeleteButton id={v.id} label={v.variationLabel ?? 'variation'} confirmId={confirmId} setConfirmId={setConfirmId} onDelete={deleteTeam} />
+                      <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
+                        <Button size="sm" aria-label={`Edit team ${t.name} · ${v.variationLabel ?? 'variation'}`} onClick={() => select(v.id)}>
+                          <Pencil size={14} aria-hidden /> Edit team
+                        </Button>
+                        <DeleteButton id={v.id} label={v.variationLabel ?? 'variation'} confirmId={confirmId} setConfirmId={setConfirmId} onDelete={deleteTeam} />
+                      </div>
                     </li>
                   ))}
                 </ul>

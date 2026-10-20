@@ -187,10 +187,10 @@ export function Panel({
   return (
     <As className={cn('ui-panel rounded-xl border border-border bg-surface', className)}>
       {(title || actions || help) && (
-        <header className="flex min-h-11 items-center justify-between gap-2 px-4 pt-3">
+        <header className="flex min-h-11 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-4 pt-3">
           {title && <h2 className="min-w-0 text-sm font-semibold">{title}</h2>}
           {(actions || help) && (
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5">
               {actions}
               {help && <HelpToggle open={helpOpen} onToggle={() => setHelpOpen((o) => !o)} controls={helpId} label={`About ${typeof title === 'string' ? title.toLowerCase() : 'this panel'}`} />}
             </div>
@@ -311,7 +311,7 @@ export function Tabs<T extends string>({
     ref.current?.querySelector<HTMLElement>(`[data-tab="${t.id}"]`)?.focus();
   };
   return (
-    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn('ui-tabs flex gap-0.5 rounded-lg bg-surface-2 p-0.5', className)}>
+    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn('ui-tabs flex flex-wrap gap-0.5 rounded-lg bg-surface-2 p-0.5', className)}>
       {tabs.map((t) => (
         <button
           key={t.id}

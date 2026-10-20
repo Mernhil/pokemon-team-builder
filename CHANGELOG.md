@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.33.0 — 2026-10-20
+
+### Fixed
+- **Saved teams, the match log and other screens no longer run off the edge of a phone.** On a 375 px phone the Delete button (and everything to its right) of a saved team sat outside its card. The card's buttons now wrap, long names, labels and "Shared with …" chips fit, and the same pattern was fixed elsewhere: the match log list and its statistics filters (a long team name widened the whole page), panel headers with several buttons (Damage calc), tab bars at 320 px (they wrap onto a second row), and every two-column layout that only set its columns from a breakpoint up. A new end-to-end check looks at every element's box, not just the page width (docs/UI.md, *No overflow on phones*).
+
 ## 0.32.0 — 2026-10-19
 
 ### New
