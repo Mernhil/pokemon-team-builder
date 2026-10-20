@@ -3,6 +3,7 @@ import { useNow } from '@/sync/useNow';
 import { SIGNIN_MESSAGE, signInAgain } from '@/sync/http';
 import { DOT_LABEL, syncDot, type SyncDot } from '@/sync/status';
 import { isDesktopApp } from '@/sync/deviceStore';
+import { useAccountStore } from '@/sync/accountStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { Button } from '../ui/primitives';
 import { buttonClass, cn } from '../ui/styles';
@@ -10,12 +11,28 @@ import { buttonClass, cn } from '../ui/styles';
 const DOT_CLASS: Record<SyncDot, string> = { good: 'bg-good', warn: 'bg-warn', bad: 'bg-bad' };
 
 /**
- * At the very top of the app: a sign-in that has expired is said here, not only in Settings → Sync. "Sign in again"
- * renews the Access session inside the app's own window (src/sync/http.ts); the desktop app is re-linked in Settings instead.
+ * At the very top of the app: a sign-in that has expired is said here, not only in Settings. When this device's
+ * account session ended, "Sign in again" opens the login dialog in place (no navigation). A Cloudflare Access session
+ * that expired is renewed inside the app's own window (src/sync/http.ts); the desktop app is re-linked in Settings.
  */
-export function SyncBanner({ onOpenSyncSettings }: { onOpenSyncSettings: () => void }) {
+export function SyncBanner({ onOpenSyncSettings, onOpenLogin }: { onOpenSyncSettings: () => void; onOpenLogin: () => void }) {
+  const accountEnded = useAccountStore((s) => !!s.user && s.expired && !s.bannerDismissed);
+  const dismissAccount = useAccountStore((s) => s.dismissBanner);
   const show = useSyncStore((s) => s.enabled && s.lastErrorKind === 'signin' && !s.bannerDismissed);
   const dismiss = useSyncStore((s) => s.dismissBanner);
+  if (accountEnded && syncAvailable()) {
+    return (
+      <div role="alert" className="flex flex-wrap items-center gap-2 border-b border-bad/40 bg-bad/8 px-3 py-2 text-sm sm:px-4">
+        <span className="min-w-0 flex-1 font-semibold text-bad">{SIGNIN_MESSAGE}</span>
+        <Button variant="primary" size="sm" onClick={onOpenLogin}>
+          Sign in again
+        </Button>
+        <button type="button" className={buttonClass('ghost', 'icon-sm')} aria-label="Dismiss" onClick={dismissAccount}>
+          <X size={15} aria-hidden />
+        </button>
+      </div>
+    );
+  }
   if (!show || !syncAvailable()) return null;
   const desktop = isDesktopApp();
   return (

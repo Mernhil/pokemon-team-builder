@@ -2,6 +2,17 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.34.0 — 2026-10-20
+
+### New
+- **Settings → Account: create an account and log in.** Once the server has accounts switched on, Settings → Account lets you create an account with an invite code, a username and a password, log in, and reset a forgotten password with your recovery code. The recovery code is shown once, with a copy button and an *I saved it* tick. Signed in, the same place shows your devices (sign any of them out), lets you change the password, make a new recovery code, log out, or log out everywhere. The app works exactly as before without an account, and sync still uses your Cloudflare sign-in for now.
+- **Sign in again, without leaving the screen.** When a device's session ends (signed out from another device, or expired), the banner at the top says so and *Sign in again* opens a small login dialog right there.
+- A one-time card, *Make an account to sync and share*, once accounts are on. *Not now* hides it for good.
+- `#account` (and *Account* in the search, Ctrl/⌘ K) opens Settings → Account.
+
+### Changed
+- Your password never leaves the device: the app stretches it into a key (which takes a moment) and sends only that.
+
 ## 0.33.0 — 2026-10-20
 
 ### New

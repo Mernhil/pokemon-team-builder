@@ -131,6 +131,33 @@ export async function deriveKey(password: string, salt: string, iterations: numb
 }
 
 // ---------------------------------------------------------------------------
+// The device
+// ---------------------------------------------------------------------------
+
+/** "https://host" with no path, or undefined when it isn't an https (or localhost http) address. The desktop app's server address. */
+export function normalizeServer(input: string): string | undefined {
+  let u: URL;
+  try {
+    u = new URL(/^[a-z]+:\/\//i.test(input.trim()) ? input.trim() : `https://${input.trim()}`);
+  } catch {
+    return undefined;
+  }
+  const local = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && local)) return undefined;
+  return u.origin;
+}
+
+/** A readable name for this device in Settings → Account → Devices ("iPhone", "Chrome on Windows", "Desktop app on Mac"). */
+export function deviceNameFor(userAgent: string, desktopApp: boolean): string {
+  const ua = userAgent;
+  const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux|X11/.test(ua) ? 'Linux' : '';
+  if (desktopApp) return os ? `Desktop app on ${os}` : 'Desktop app';
+  if (os === 'iPhone' || os === 'iPad') return os;
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  return os ? `${browser} on ${os}` : browser;
+}
+
+// ---------------------------------------------------------------------------
 // Wire format
 // ---------------------------------------------------------------------------
 

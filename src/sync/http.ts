@@ -61,7 +61,8 @@ export async function request<T>(method: string, path: string, body?: unknown): 
   let res: Response;
   try {
     // redirect: 'manual' so an expired Access session (a redirect to the login page) is noticed, not followed.
-    res = await fetch(url, { method, ...init, headers: { ...(init.headers as Record<string, string> | undefined), accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    // X-PTB: 1 on every call: with the app's own accounts the Worker refuses a cookie request that changes something without it (CSRF, docs/ACCOUNTS.md).
+    res = await fetch(url, { method, ...init, headers: { ...(init.headers as Record<string, string> | undefined), accept: 'application/json', 'x-ptb': '1', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
   } catch {
     throw new SyncHttpError("Couldn't reach the server. You may be offline.", 'offline');
   }

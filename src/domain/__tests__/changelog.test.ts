@@ -73,6 +73,8 @@ describe('destinationFor', () => {
     expect(destinationFor('Meta data before Smogon')).toBe('#meta');
     expect(destinationFor('Pokénav for Gen 5+')).toBe('#atlas');
     expect(destinationFor(undefined)).toBeUndefined();
+    expect(destinationFor('Settings → Account: create an account and log in')).toBe('#account');
+    expect(destinationFor('Own accounts, groundwork (not switched on yet).')).toBeUndefined();
   });
 });
 

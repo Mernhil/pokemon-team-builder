@@ -306,6 +306,24 @@ describe('login', () => {
     const me = await call(env, 'GET', '/api/me', { bearer: r.body.token, origin: DESKTOP });
     expect(me.body.user.username).toBe('ash');
   });
+  it('the desktop app reaches the same routes under /api/device/ (the path Access already lets through)', async () => {
+    const env = newEnv();
+    await firstAdmin(env);
+    const p = await call(env, 'POST', '/api/device/auth/params', { body: { username: 'ash' }, origin: DESKTOP });
+    expect(p.status).toBe(200);
+    const body = { username: 'ash', key: await deriveKey(PW, p.body.salt, p.body.iterations), mode: 'token', deviceName: 'Desktop' };
+    const r = await call(env, 'POST', '/api/device/auth/login', { body, origin: DESKTOP });
+    expect(r.status).toBe(200);
+    expect(r.headers.get('access-control-allow-origin')).toBe(DESKTOP);
+    const me = await call(env, 'GET', '/api/device/me', { bearer: r.body.token, origin: DESKTOP });
+    expect(me.body.user.username).toBe('ash');
+    expect((await call(env, 'GET', '/api/device/sessions', { bearer: r.body.token, origin: DESKTOP })).body.sessions).toHaveLength(2);
+    const pre = await handleApi(new Request(`${ORIGIN}/api/device/auth/login`, { method: 'OPTIONS', headers: { origin: DESKTOP } }), env);
+    expect(pre.status).toBe(204);
+    expect(pre.headers.get('access-control-allow-headers')).toContain('x-ptb');
+    // Off in access mode: not an account route, and not a device route either.
+    expect((await call({ ...env, AUTH_MODE: 'access' }, 'GET', '/api/device/me', { bearer: r.body.token, origin: DESKTOP })).status).toBe(404);
+  });
 });
 
 describe('sessions', () => {

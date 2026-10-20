@@ -5,9 +5,11 @@ import { PALETTE_TOKEN_NAMES, paletteTokens } from '@/domain/palette';
 import { compareVersions, releasesSince } from '@/domain/changelog';
 import { usePrefsStore } from '@/store/prefsStore';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
+import { useAccountStore } from '@/sync/accountStore';
+import { isDesktopApp } from '@/sync/deviceStore';
 import { NAV_LABELS, type NavId } from '@/domain/navigation';
 import { ignoresHotkeys, nextHotkey } from '@/domain/hotkeys';
-import { parseRoute, routeHash } from '@/domain/routes';
+import { parseRoute, routeHash, settingsSectionOf } from '@/domain/routes';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { DesktopUpdater } from './components/DesktopUpdater';
 import { Toaster } from './components/ui/Toaster';
@@ -18,6 +20,7 @@ import { buttonClass, cn } from './components/ui/styles';
 
 import { Header } from './components/shell/Header';
 import { SyncBanner } from './components/shell/SyncStatus';
+import { AccountCard } from './components/account/AccountCard';
 import { BottomTabs } from './components/shell/Navigation';
 import { Builder } from './components/shell/Builder';
 // Heavier screens load when first opened.
@@ -32,6 +35,7 @@ const CommandPalette = lazy(() => import('./components/CommandPalette'));
 const SettingsDialog = lazy(() => import('./components/settings/SettingsDialog').then((m) => ({ default: m.SettingsDialog })));
 const WhatsNew = lazy(() => import('./components/WhatsNew'));
 const ShortcutsDialog = lazy(() => import('./components/ShortcutsDialog'));
+const LoginDialog = lazy(() => import('./components/account/LoginDialog'));
 const GameDayView = lazy(() => import('./components/gameday/GameDayView').then((m) => ({ default: m.GameDayView })));
 const AnalyseView = lazy(() => import('./components/analyse/AnalyseView').then((m) => ({ default: m.AnalyseView })));
 const ReverseSearchView = lazy(() => import('./components/reverse/ReverseSearchView').then((m) => ({ default: m.ReverseSearchView })));
@@ -44,9 +48,11 @@ export default function App() {
   const dexState = useDex(format.datasetId);
   const view = useTeamStore((s) => s.view);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsSection, setSettingsSection] = useState<'sync'>();
+  const [settingsSection, setSettingsSection] = useState<'sync' | 'account'>();
   const openSettings = () => (setSettingsSection(undefined), setSettingsOpen(true));
   const openSyncSettings = () => (setSettingsSection('sync'), setSettingsOpen(true));
+  const openAccountSettings = () => (setSettingsSection('account'), setSettingsOpen(true));
+  const [loginOpen, setLoginOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -132,11 +138,34 @@ export default function App() {
     };
   }, [syncOn]);
 
+  // Own accounts: is the server running them, and is this device's session still good? Only asked when it can
+  // matter (signed in, or the "make an account" card not yet dismissed); the account code loads only then.
+  useEffect(() => {
+    if (!syncAvailable()) return;
+    const a = useAccountStore.getState();
+    if (isDesktopApp() && !a.server && !a.user) return;
+    if (!a.user && a.cardDismissed) return;
+    void import('./sync/account').then((m) => m.checkAccount()).catch(() => undefined);
+  }, []);
+
   // Deep link: #calc opens the calculator, #dex the Pokédex, #analyse/speed Analyse's Speed tab, … The hashes
   // of the screens that moved into Analyse (#speed, #threats, #ohko, #ohkod, #showcase, #compare) still work.
   const setRoute = useTeamStore((s) => s.setRoute);
   useEffect(() => {
     const fromHash = () => {
+      // #account opens Settings → Account over the current screen, and the address goes back to that screen.
+      const section = settingsSectionOf(location.hash);
+      if (section) {
+        setSettingsSection(section);
+        setSettingsOpen(true);
+        const { view: v, analyseTab: tab, ohkoMode: ohko } = useTeamStore.getState();
+        try {
+          history.replaceState(null, '', routeHash({ view: v, tab, ohko }));
+        } catch {
+          /* sandboxed */
+        }
+        return;
+      }
       const route = parseRoute(location.hash);
       if (route) setRoute(route);
     };
@@ -209,10 +238,11 @@ export default function App() {
         Skip to content
       </a>
       <DesktopUpdater />
-      <SyncBanner onOpenSyncSettings={openSyncSettings} />
+      <SyncBanner onOpenSyncSettings={openSyncSettings} onOpenLogin={() => setLoginOpen(true)} />
       <Header team={team} format={format} dex={dex} onOpenSettings={openSettings} onOpenSyncSettings={openSyncSettings} onOpenPalette={() => setPaletteOpen(true)} />
       <main id="main" tabIndex={-1} className={cn('mx-auto w-full flex-1 p-3 pb-24 outline-none sm:p-4 sm:pb-6', view === 'calc' ? 'max-w-[1800px]' : 'max-w-[1500px]')}>
         <h1 className="sr-only">{NAV_LABELS[view as NavId] ?? 'Build'} · Pokémon Team Builder</h1>
+        <AccountCard onOpenAccount={openAccountSettings} />
         {content}
       </main>
       <BottomTabs onOpenSettings={openSettings} />
@@ -228,7 +258,12 @@ export default function App() {
       )}
       {paletteOpen && (
         <Suspense fallback={null}>
-          <CommandPalette open onOpenChange={setPaletteOpen} onOpenSettings={openSettings} onOpenWhatsNew={openWhatsNew} />
+          <CommandPalette open onOpenChange={setPaletteOpen} onOpenSettings={openSettings} onOpenAccount={openAccountSettings} onOpenWhatsNew={openWhatsNew} />
+        </Suspense>
+      )}
+      {loginOpen && (
+        <Suspense fallback={null}>
+          <LoginDialog open onOpenChange={setLoginOpen} />
         </Suspense>
       )}
       {whatsNewOpen && (

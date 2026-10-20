@@ -1,6 +1,6 @@
 # Own accounts instead of Cloudflare Access, then a friend list: the plan
 
-Status: **plan only, nothing is built.** No feature code is in the PR that adds this file. Phase 2 starts only after the plan is approved (section 14 is the build order).
+Status: **being built, one PR per step of section 14.** docs/ACCOUNTS.md describes what exists; docs/ACCOUNTS_MANUAL_STEPS.md is the checklist of what you do by hand.
 
 Scope: about 10 people, invite-only, on the public internet, on the existing Cloudflare Worker + D1. Small on purpose: no e-mail sender, no third-party identity provider, no new services.
 

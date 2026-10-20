@@ -27,12 +27,24 @@ A plain Worker variable. `access` (or unset) is today's behaviour: the account r
 
 Bodies are zod-validated (`src/domain/accounts.ts`) and capped at 2 KB.
 
+While Cloudflare Access is still in front of the site, the desktop app can't pass it, so it calls the same routes under `/api/device/` (`/api/device/auth/login`, `/api/device/me`, …): that path is already a Bypass path in Access (docs/SYNC.md), and the Worker answers the account routes there exactly as under `/api/`. The last PR of the plan moves the desktop app back to `/api/` when `/api/device/*` goes.
+
 ## Sessions
 
 - A random 32-byte token (`ptbs_…`); **only its SHA-256 is stored** (`sessions`). Every request looks it up in D1 joined with the user, so a revoked session, a disabled user or an expired token fails on the next request.
 - Web / phone app: the cookie `__Host-ptb_session` (HttpOnly, Secure, SameSite=Strict). Desktop app: `mode: "token"` in the login body gets the token back and sends it as `Authorization: Bearer`; only requests from the desktop webview's origins can ask for that.
 - Lifetime 180 days from last use (renewed at most once a day, and the cookie re-set), never more than a year from creation. At most 20 sessions per account.
 - **CSRF:** a cookie request that changes something, and every login/signup/recover, must come with `Origin` equal to the site (or a desktop origin) and the header `X-PTB: 1`. Bearer requests need neither.
+
+## In the app
+
+- **Settings → Account** (`src/components/settings/AccountSettings.tsx`, forms in `src/components/account/AccountForms.tsx`; `#account` and *Account* in the command palette open it). Signed out: *Create account* (invite code, username, password), *Log in*, *Forgot password?* (recovery code or an admin's reset code). Signed in: the name others see, **Devices** (every session, sign one out after asking), *Change password*, *Recovery code* (make a new one), *Log out*, *Log out everywhere*.
+- **The recovery code** is shown once (after signup, recovery, or making a new one) with *Copy code* and an *I saved it* tick that unlocks *Continue*. It is never stored on the device.
+- **Calls** (`src/sync/account.ts`): the rules (`usernameProblem`, `passwordProblem`) are checked before anything is sent; signup and recovery derive with a fresh `newSalt()`; login asks `POST /api/auth/params` for the salt, derives, then logs in. Every call sends `X-PTB: 1`; the web app uses the cookie (`credentials: same-origin`), the desktop app its bearer token (`credentials: omit`). Sync calls (`src/sync/http.ts`) send `X-PTB: 1` too.
+- **`ptb:session:v1`** (`src/sync/accountStore.ts`, sanitised on load): the user to show (id, username, display name, role), and on the desktop app also the server address and the `ptbs_` token. The web session is the HttpOnly cookie; the store never holds it.
+- **When a session ends** (a `401 not signed in` from any account call, or the check at start), the device keeps the username but marks the session expired; the banner at the top says *Your sign-in has expired* and **Sign in again** opens the login dialog in place (`src/components/account/LoginDialog.tsx`). A Cloudflare Access expiry is still handled as before (Settings → Sync).
+- **At start** the app asks `GET /api/me` only when it matters (signed in, or the first-run card not dismissed): `404` means accounts are off on this server. With accounts on and no account, a one-time card says *Make an account to sync and share* (`AccountCard.tsx`).
+- **Not yet:** sync and sharing still go through Cloudflare Access (and pairing for the desktop app) until step 5; being logged in or out doesn't change sync yet.
 
 ## Passwords (`worker/password.ts`)
 
@@ -56,4 +68,6 @@ D1 counters, keyed by a hash of the pepper, the scope and the client address / u
 
 ## Tests
 
-`worker/__tests__/accounts.test.ts`: rules, hashing parameters, the routes being off by default, first account and invites (single use, expiry, revoke, race), login answers and throttles, rehash on login, token mode, sessions (hash only, revoke on the next request, logout everywhere, disabled, expiry, renewal, the limit), CSRF, password change and recovery, no secrets in console output.
+`worker/__tests__/accounts.test.ts`: rules, hashing parameters, the routes being off by default, first account and invites (single use, expiry, revoke, race), login answers and throttles, rehash on login, token mode (and the `/api/device/` paths), sessions (hash only, revoke on the next request, logout everywhere, disabled, expiry, renewal, the limit), CSRF, password change and recovery, no secrets in console output.
+
+`src/sync/__tests__/account.test.ts`: the password never in a request, the derived key, `X-PTB`, cookie vs bearer, a `401` marking the session expired, accounts off, logout while offline, the stored state's sanitising. `e2e/account.spec.ts` (API mocked): the first-run card, signup with the recovery code, a wrong password, log in and out, the banner's login dialog, signing a device out, password-manager attributes, 16 px inputs on phones, no overflow at 320–430 px, axe.
