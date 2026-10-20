@@ -3,7 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Button, Notice } from './ui/primitives';
 
 /** A lazy chunk that can't be fetched: the app was updated since this tab loaded (old file names are gone), or the network dropped. */
-export const isChunkLoadError = (e: unknown): boolean =>
+const isChunkLoadError = (e: unknown): boolean =>
   e instanceof Error && /dynamically imported module|Importing a module script failed|Loading chunk|error loading dynamically/i.test(`${e.name} ${e.message}`);
 
 interface Props {
