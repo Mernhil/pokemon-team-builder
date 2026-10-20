@@ -23,25 +23,12 @@ import { ALL_MATCHES, accessTo, canWrite, type Target } from './access';
 import { AuthError, jwksProvider, verifyAccessJwt, type KeyProvider } from './auth';
 import { RedeemSchema, type DevicesResponse, type PairResponse, type RedeemResponse, TOKEN_RE } from '../src/domain/pairing';
 import { health } from './health';
+import { accountsEnabled, handleAuth, isAccountPath, type AuthDeps } from './authApi';
+import { JSON_HEADERS, fail, firstIssue, preflight, readJson, reply, withCors } from './http';
 import { createPairCode, deviceByToken, listDevices, redeemAttemptAllowed, redeemPairCode, revokeDevice } from './devices';
 import { deleteShare, groupOfTeam, isLiveRootTeam, namesFor, putShare, setDisplayName, sharedDocs, sharesBetween, sharesOf } from './shares';
 import { pullDocs, pushDoc, type StoredDoc } from './store';
 import type { Env } from './types';
-
-const JSON_HEADERS = { 'content-type': 'application/json', 'cache-control': 'no-store' };
-const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
-
-/** The desktop app's webview origins. A linked device sends a bearer token (never cookies), so this only lets its page read the answers. */
-const DEVICE_ORIGINS = ['tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost'];
-const deviceOrigins = (env: Env) => new Set([...DEVICE_ORIGINS, ...(env.DEVICE_EXTRA_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean)]);
-const withCors = (res: Response, origin: string | null, env: Env): Response => {
-  if (!origin || !deviceOrigins(env).has(origin)) return res;
-  const r = new Response(res.body, res);
-  r.headers.set('access-control-allow-origin', origin);
-  r.headers.set('vary', 'origin');
-  return r;
-};
-const fail = (status: number, error: string) => reply(status, { error });
 
 /** 501, naming which of the three settings the deployment lacks (the app turns it into a hint; docs/SYNC.md has the steps). */
 const notSetUp = (env: Env, needAccess: boolean) => {
@@ -69,20 +56,21 @@ const ROUTES: Record<string, string[]> = {
 /** Routes a linked device may use under /api/device/ (bearer token instead of Access). Not pairing or the device list. */
 const DEVICE_ROUTES = new Set(['/api/sync', '/api/shared', '/api/shares', '/api/profile']);
 
-export interface ApiDeps {
+export interface ApiDeps extends AuthDeps {
   /** Signing keys, injected by tests; by default the Access team's published keys. */
   keys?: KeyProvider;
-  now?: () => number;
 }
 
 export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}): Promise<Response> {
   const url = new URL(request.url);
+  const origin = request.headers.get('origin');
+  // The app's own accounts (AUTH_MODE "both" or "accounts"); otherwise these paths are not routes at all.
+  if (accountsEnabled(env) && isAccountPath(url.pathname)) {
+    if (request.method === 'OPTIONS') return preflight(origin, env);
+    return withCors(await handleAuth(request, env, url, deps), origin, env);
+  }
   if (url.pathname.startsWith('/api/device/')) {
-    const origin = request.headers.get('origin');
-    if (request.method === 'OPTIONS') {
-      const preflight = new Response(null, { status: 204, headers: { 'access-control-allow-methods': 'GET, POST, PUT, DELETE', 'access-control-allow-headers': 'authorization, content-type', 'access-control-max-age': '86400' } });
-      return withCors(preflight, origin, env);
-    }
+    if (request.method === 'OPTIONS') return preflight(origin, env);
     return withCors(await handleDevice(request, env, url, deps), origin, env);
   }
   const route = ROUTES[url.pathname];
@@ -227,17 +215,6 @@ function prepareDoc(d: { id: string; kind: 'team' | 'match'; updatedAt: number; 
   const groupId = d.kind === 'team' ? ((clean as { groupId?: string }).groupId ?? clean.id) : undefined;
   return { doc: { id: d.id, kind: d.kind, updatedAt: d.updatedAt, deleted: false, json: JSON.stringify(clean), groupId } };
 }
-
-async function readJson(request: Request, max = LIMITS.maxBodyChars): Promise<{ body: unknown } | { response: Response }> {
-  const text = await request.text();
-  if (text.length > max) return { response: fail(413, 'request too large') };
-  try {
-    return { body: JSON.parse(text) };
-  } catch {
-    return { response: fail(400, 'body is not JSON') };
-  }
-}
-const firstIssue = (e: { issues: { path: PropertyKey[]; message: string }[] }) => `invalid request at ${e.issues[0].path.join('.') || '(root)'}: ${e.issues[0].message}`;
 
 /** GET /api/shared: what others have shared with me. POST: my edits to folders shared with edit rights. */
 async function handleShared(request: Request, env: Env, me: string, now: number): Promise<Response> {
