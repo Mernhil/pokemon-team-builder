@@ -76,15 +76,15 @@ describe('GET /api/health', () => {
     env.DB.raw.exec('CREATE TABLE d1_migrations (id INTEGER PRIMARY KEY, name TEXT)');
     for (const m of EXPECTED_MIGRATIONS.slice(0, 3)) env.DB.raw.exec(`INSERT INTO d1_migrations (name) VALUES ('${m}.sql')`);
     const { body } = await health(env);
-    expect(body.missing).toEqual(['0004_redeem_attempts', '0005_accounts']);
-    expect(healthLine(body)).toEqual({ ok: false, text: 'Database migration missing: 0004, 0005' });
+    expect(body.missing).toEqual(['0004_redeem_attempts', '0005_accounts', '0006_claims']);
+    expect(healthLine(body)).toEqual({ ok: false, text: 'Database migration missing: 0004, 0005, 0006' });
   });
 
   it('reads the tables when the migrations were pasted into the console (no d1_migrations table)', async () => {
     const env = makeEnv();
     env.DB.raw.exec('DROP TABLE redeem_attempts');
     const { body } = await health(env);
-    expect(body.migrations).toEqual(['0001_init', '0002_shares', '0003_devices', '0005_accounts']);
+    expect(body.migrations).toEqual(['0001_init', '0002_shares', '0003_devices', '0005_accounts', '0006_claims']);
     expect(body.missing).toEqual(['0004_redeem_attempts']);
   });
 

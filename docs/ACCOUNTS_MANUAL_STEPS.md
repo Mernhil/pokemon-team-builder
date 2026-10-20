@@ -28,9 +28,12 @@ Tick each box; "Check" says how to know it worked.
 ## C. Backup, then claim your old data
 
 - [ ] **Back up D1** (a terminal in the repo, logged into wrangler): `npx wrangler d1 export pokemon-team-builder --remote --output backup-before-claim.sql`. Keep the file somewhere safe.
-- [ ] In the GitHub repo → Settings → Secrets and variables → Actions, add `CLOUDFLARE_API_TOKEN` (a token with **D1: Read**) and `AGE_PUBLIC_KEY` (from `age-keygen`; keep the private key in your password manager). This enables the weekly encrypted backup workflow.
-- [ ] In the app: Settings → Account → **Bring my teams from before** (while you are still signed in through Access). *Check:* your teams, match log and shares are all there, no "Conflict copy" appeared, and the desktop app still syncs.
-- [ ] If something looks wrong: `AUTH_MODE` = `access` (instant), or `npm run admin -- unclaim <username>`.
+- [ ] In the GitHub repo → Settings → Secrets and variables → Actions, add `CLOUDFLARE_API_TOKEN` (Cloudflare dashboard → My Profile → API Tokens → Create → Custom: **Account → D1 → Read**) and `AGE_PUBLIC_KEY` (`age-keygen -o key.txt` prints `Public key: age1…`; that line is the secret, and **key.txt goes in your password manager**). If the token can see more than one Cloudflare account, also add `CLOUDFLARE_ACCOUNT_ID`.
+      *Check:* Actions → **D1 backup** → *Run workflow*; the run ends with a `d1-backup` artifact (an `.age` file).
+- [ ] In the app, **in the browser or phone app where you are signed in through Access**: Settings → Account → **Bring my teams from before** → it names your Access e-mail and how many teams, matches, shares and desktop apps → *Bring them over*. (Right after making an account it is offered at once; *Skip* is only for accounts with nothing from before.)
+      *Check:* your teams, match log and shares are all there, no "Conflict copy" appeared, the phone and the website still sync, and the desktop app still syncs (it keeps its pairing until step 5).
+- [ ] Friends who used the app before: each makes their account (with an invite) while Access is still in front for them, then does the same. (Without Access for them, or if one forgets: `npm run admin -- claim <their e-mail> <their username> --backup backup.sql`.)
+- [ ] If something looks wrong: `npm run admin -- unclaim <username>` puts the data back under the e-mail; then `AUTH_MODE` = `access` if you want the old behaviour entirely. (Switching to `access` alone hides claimed data until it is unclaimed.)
 
 ## D. Go live (lets friends in)
 

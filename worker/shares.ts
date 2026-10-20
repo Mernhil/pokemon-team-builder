@@ -24,16 +24,27 @@ export async function deleteShare(db: D1Like, owner: string, grantee: string, ki
   await db.prepare('DELETE FROM shares WHERE owner = ?1 AND grantee = ?2 AND kind = ?3 AND ref = ?4').bind(owner, grantee, kind, ref).run();
 }
 
-export async function namesFor(db: D1Like, emails: string[]): Promise<Record<string, string>> {
+/** What to call each person: an account's display name or username (by id), else the name set for an e-mail. */
+export async function namesFor(db: D1Like, who: string[]): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
-  for (const e of new Set(emails)) {
-    const row = await db.prepare('SELECT display_name FROM profiles WHERE email = ?1').bind(e).first<{ display_name: string }>();
-    if (row?.display_name) out[e] = row.display_name;
+  for (const e of new Set(who)) {
+    if (e.includes('@')) {
+      const row = await db.prepare('SELECT display_name FROM profiles WHERE email = ?1').bind(e).first<{ display_name: string }>();
+      if (row?.display_name) out[e] = row.display_name;
+    } else {
+      const row = await db.prepare('SELECT username, display_name FROM users WHERE id = ?1').bind(e).first<{ username: string; display_name: string | null }>();
+      if (row) out[e] = row.display_name || row.username;
+    }
   }
   return out;
 }
 
 export async function setDisplayName(db: D1Like, email: string, name: string): Promise<void> {
+  // A claimed account (its id): the name lives on the account.
+  if (!email.includes('@')) {
+    await db.prepare('UPDATE users SET display_name = ?1 WHERE id = ?2').bind(name || null, email).run();
+    return;
+  }
   if (!name) await db.prepare('DELETE FROM profiles WHERE email = ?1').bind(email).run();
   else await db.prepare('INSERT INTO profiles (email, display_name) VALUES (?1, ?2) ON CONFLICT (email) DO UPDATE SET display_name = excluded.display_name').bind(email, name).run();
 }

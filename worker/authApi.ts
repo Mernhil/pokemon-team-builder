@@ -33,6 +33,10 @@ import {
   usernameProblem,
   type AccountUser,
   type AuthResponse,
+  type ClaimDone,
+  type ClaimInfo,
+  type ClaimState,
+  type MeResponse,
   type InvitesResponse,
   type KdfParams,
   type NewInviteResponse,
@@ -40,6 +44,7 @@ import {
   type SessionsResponse,
   type UsersResponse,
 } from '../src/domain/accounts';
+import { claim, isFresh, legacyCounts } from './claim';
 import { REFUSAL_TEXT, listInvites, listUsers, makeInvite, makeResetCode, revokeInvite, setDisabled, setRole } from './admin';
 import { randomId, safeEqualText, sha256Hex, timingSafeEqual } from './crypto';
 import { deviceOrigins, fail, firstIssue, readJson, reply } from './http';
@@ -51,6 +56,8 @@ import type { D1Like, Env } from './types';
 
 export interface AuthDeps {
   now?: () => number;
+  /** The e-mail of a verified Cloudflare Access JWT on this request, if there is one (worker/api.ts supplies it). */
+  accessEmail?: () => Promise<string | null>;
 }
 
 /** Whether the accounts routes are on: "both" (accounts next to Access) or "accounts" (Access gone). Anything else: off. */
@@ -63,6 +70,7 @@ interface Ctx {
   request: Request;
   url: URL;
   now: number;
+  accessEmail: () => Promise<string | null>;
 }
 interface Authed {
   session: ActiveSession;
@@ -185,18 +193,21 @@ const signup: Handler = async (c) => {
   const recovery = generateCode(RECOVERY_LENGTH);
   const pw = await storeKey(d.key, d.salt, d.iterations, pepper);
   const recoveryHash = await sha256Hex(recovery);
+  // While Access is still in front ("both"), a new account may bring the data its owner synced before; until it
+  // decides (claim or skip), the app offers that first. Without Access there is nothing to bring.
+  const claimState = c.env.AUTH_MODE === 'both' ? 'pending' : 'skipped';
   // One batch is one transaction: the invite is consumed by the same statements that create the user, so two signups can't both win it.
   const insert = setup
     ? db
-        .prepare("INSERT INTO users (id, username, username_key, role, pw_hash, pw_changed_at, recovery_hash, created_at) SELECT ?1, ?2, ?3, 'admin', ?4, ?5, ?6, ?5 WHERE (SELECT COUNT(*) FROM users) = 0 RETURNING id")
-        .bind(id, name, key, pw, now, recoveryHash)
+        .prepare("INSERT INTO users (id, username, username_key, role, pw_hash, pw_changed_at, recovery_hash, created_at, claim_state) SELECT ?1, ?2, ?3, 'admin', ?4, ?5, ?6, ?5, ?7 WHERE (SELECT COUNT(*) FROM users) = 0 RETURNING id")
+        .bind(id, name, key, pw, now, recoveryHash, claimState)
     : db
         .prepare(
-          `INSERT INTO users (id, username, username_key, role, pw_hash, pw_changed_at, recovery_hash, invited_by, created_at)
-           SELECT ?1, ?2, ?3, 'user', ?4, ?5, ?6, (SELECT created_by FROM invites WHERE code_hash = ?7), ?5
+          `INSERT INTO users (id, username, username_key, role, pw_hash, pw_changed_at, recovery_hash, invited_by, created_at, claim_state)
+           SELECT ?1, ?2, ?3, 'user', ?4, ?5, ?6, (SELECT created_by FROM invites WHERE code_hash = ?7), ?5, ?8
            WHERE EXISTS (SELECT 1 FROM invites WHERE code_hash = ?7 AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?5) RETURNING id`,
         )
-        .bind(id, name, key, pw, now, recoveryHash, hash);
+        .bind(id, name, key, pw, now, recoveryHash, hash, claimState);
   const statements = setup ? [insert] : [insert, db.prepare('UPDATE invites SET used_by = ?1, used_at = ?2 WHERE code_hash = ?3 AND used_at IS NULL').bind(id, now, hash)];
   let created: { results?: { id?: string }[] }[];
   try {
@@ -284,7 +295,10 @@ const logoutAll: Handler = async (c, a) => {
 };
 
 const me: Handler = async (c, a) => {
-  if (c.request.method === 'GET') return reply(200, { user: a.session.user });
+  if (c.request.method === 'GET') {
+    const row = await c.db.prepare('SELECT claim_state FROM users WHERE id = ?').bind(a.session.user.id).first<{ claim_state: ClaimState }>();
+    return reply(200, { user: a.session.user, claim: row?.claim_state ?? 'skipped', claimAvailable: claimAvailable(c.env) } satisfies MeResponse);
+  }
   const r = await readJson(c.request, SMALL);
   if ('response' in r) return r.response;
   const parsed = MeUpdateSchema.safeParse(r.body);
@@ -399,6 +413,43 @@ const userAction =
     return done(await setDisabled(c.db, actor, parsed.data.id, action === 'disable', c.now));
   };
 
+// ---------------------------------------------------------------------------
+// "Bring my teams from before" (worker/claim.ts holds the rules)
+// ---------------------------------------------------------------------------
+
+/** Only while Access is still in front: that is the only time a request can prove both identities. */
+const claimAvailable = (env: Env) => env.AUTH_MODE === 'both';
+
+const claimRoute: Handler = async (c, a) => {
+  const id = a.session.user.id;
+  const state = (await c.db.prepare('SELECT claim_state, legacy_email FROM users WHERE id = ?').bind(id).first<{ claim_state: ClaimState; legacy_email: string | null }>()) ?? { claim_state: 'skipped' as ClaimState, legacy_email: null };
+  if (!claimAvailable(c.env)) {
+    if (c.request.method === 'GET') return reply(200, { available: false, state: state.claim_state, fresh: false } satisfies ClaimInfo);
+    return fail(409, 'Bringing data from before only works while Cloudflare Access is still in front of the app.');
+  }
+  // The old identity comes from the verified Access JWT only, never from the body.
+  const email = await c.accessEmail();
+  if (c.request.method === 'GET') {
+    const fresh = await isFresh(c.db, id);
+    return reply(200, {
+      available: true,
+      state: state.claim_state,
+      fresh,
+      ...(state.legacy_email ? { claimedEmail: state.legacy_email } : {}),
+      ...(email && fresh ? { email, counts: await legacyCounts(c.db, email) } : {}),
+    } satisfies ClaimInfo);
+  }
+  if (!email) return fail(403, 'Open the app in the browser where you’re signed in with Cloudflare Access to do this.');
+  const done = await claim(c.db, email, id, c.now, id);
+  if (!done.ok) return fail(409, done.reason === 'taken' ? 'Another account has already brought that data over.' : 'This account already has teams, matches or shares of its own, so it can’t take over the old ones.');
+  return reply(200, { email, counts: done.counts } satisfies ClaimDone);
+};
+
+const skipClaim: Handler = async (c, a) => {
+  await c.db.prepare("UPDATE users SET claim_state = 'skipped' WHERE id = ? AND claim_state = 'pending'").bind(a.session.user.id).run();
+  return reply(200, { ok: true });
+};
+
 const ROUTES: Record<string, Route> = {
   '/api/auth/params': { methods: ['POST'], public: true, handle: params },
   '/api/auth/signup': { methods: ['POST'], public: true, handle: signup },
@@ -410,6 +461,8 @@ const ROUTES: Record<string, Route> = {
   '/api/me/password': { methods: ['POST'], handle: changePassword },
   '/api/me/recovery': { methods: ['POST'], handle: newRecoveryCode },
   '/api/sessions': { methods: ['GET', 'DELETE'], handle: sessions },
+  '/api/claim': { methods: ['GET', 'POST'], handle: claimRoute },
+  '/api/claim/skip': { methods: ['POST'], handle: skipClaim },
   '/api/admin/invites': { methods: ['GET', 'POST', 'DELETE'], admin: true, handle: invites },
   '/api/admin/users': { methods: ['GET'], admin: true, handle: users },
   '/api/admin/users/disable': { methods: ['POST'], admin: true, handle: userAction('disable') },
@@ -430,7 +483,7 @@ export async function handleAuth(request: Request, env: Env, url: URL, deps: Aut
   if (!route.methods.includes(request.method)) return fail(405, 'method not allowed');
   const missing = accountsMissing(env);
   if (missing.length) return reply(501, { error: 'accounts are not set up on this deployment', missing });
-  const c: Ctx = { db: env.DB!, pepper: env.PASSWORD_PEPPER!, env, request, url, now: (deps.now ?? Date.now)() };
+  const c: Ctx = { db: env.DB!, pepper: env.PASSWORD_PEPPER!, env, request, url, now: (deps.now ?? Date.now)(), accessEmail: deps.accessEmail ?? (async () => null) };
 
   if (route.public) {
     if (sameSiteProblem(c)) return fail(403, 'request refused');

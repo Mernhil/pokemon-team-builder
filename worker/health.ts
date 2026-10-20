@@ -9,6 +9,7 @@ const MIGRATION_TABLE: Record<(typeof EXPECTED_MIGRATIONS)[number], string> = {
   '0003_devices': 'devices',
   '0004_redeem_attempts': 'redeem_attempts',
   '0005_accounts': 'users',
+  '0006_claims': 'account_claims',
 };
 
 async function appliedMigrations(db: NonNullable<Env['DB']>): Promise<string[] | null> {

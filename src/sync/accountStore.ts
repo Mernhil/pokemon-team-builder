@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { SESSION_TOKEN_RE, normalizeServer, type AccountUser } from '@/domain/accounts';
+import { SESSION_TOKEN_RE, normalizeServer, type AccountUser, type ClaimState } from '@/domain/accounts';
 import { safeStorage } from '@/store/storage';
 
 /**
@@ -28,6 +28,9 @@ interface AccountState {
   cardDismissed: boolean;
   /** Does the server have accounts switched on (learnt at start; not stored)? */
   availability: AccountsAvailability;
+  /** Has this account brought over (or skipped) the data synced before accounts, and can it now? From GET /api/me. */
+  claim?: ClaimState;
+  claimAvailable?: boolean;
 
   signIn: (s: { user: AccountUser; token?: string; expiresAt?: number }) => void;
   setUser: (user: AccountUser) => void;
@@ -38,6 +41,7 @@ interface AccountState {
   dismissBanner: () => void;
   dismissCard: () => void;
   setAvailability: (a: AccountsAvailability) => void;
+  setClaim: (claim: ClaimState, available?: boolean) => void;
 }
 
 const ROLES = new Set(['user', 'admin']);
@@ -62,17 +66,18 @@ export const useAccountStore = create<AccountState>()(
       signIn: ({ user, token, expiresAt }) => set({ user, token: token && SESSION_TOKEN_RE.test(token) ? token : undefined, expiresAt, expired: false, bannerDismissed: false, cardDismissed: true, availability: 'on' }),
       setUser: (user) => set({ user, expired: false }),
       setServer: (server) => set({ server: normalizeServer(server) }),
-      signOut: () => set({ user: undefined, token: undefined, expiresAt: undefined, expired: false, bannerDismissed: false }),
+      signOut: () => set({ user: undefined, token: undefined, expiresAt: undefined, expired: false, bannerDismissed: false, claim: undefined, claimAvailable: undefined }),
       markExpired: () => set((s) => (s.user ? { expired: true, token: undefined, bannerDismissed: s.expired ? s.bannerDismissed : false } : {})),
       dismissBanner: () => set({ bannerDismissed: true }),
       dismissCard: () => set({ cardDismissed: true }),
       setAvailability: (availability) => set({ availability }),
+      setClaim: (claim, available) => set((s) => ({ claim, claimAvailable: available ?? s.claimAvailable })),
     }),
     {
       name: 'ptb:session:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ user: s.user, server: s.server, token: s.token, expiresAt: s.expiresAt, expired: s.expired, cardDismissed: s.cardDismissed }),
+      partialize: (s) => ({ user: s.user, server: s.server, token: s.token, expiresAt: s.expiresAt, expired: s.expired, cardDismissed: s.cardDismissed, claim: s.claim }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<AccountState>;
         const user = sanitizeUser(p.user);
@@ -86,6 +91,7 @@ export const useAccountStore = create<AccountState>()(
           expiresAt: user && typeof p.expiresAt === 'number' ? p.expiresAt : undefined,
           expired: user ? p.expired === true : false,
           cardDismissed: p.cardDismissed === true,
+          claim: user && (p.claim === 'pending' || p.claim === 'claimed' || p.claim === 'skipped') ? p.claim : undefined,
         };
       },
     },

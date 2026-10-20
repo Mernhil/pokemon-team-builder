@@ -90,3 +90,16 @@ describe('what the commands do (checked through the Worker)', () => {
     expect(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM reset_codes WHERE user_id = 'u_second'").get()).toEqual({ n: 0 });
   });
 });
+
+describe('claim from the command line', () => {
+  it('checks the e-mail strictly, and the freshness query tells a fresh account from a used one', async () => {
+    const { checkEmail, freshSql } = await import('../../scripts/lib/adminSql');
+    expect(checkEmail(' Me@Example.com ')).toBe('me@example.com');
+    for (const bad of ['me', 'me@x', "me'@x.com", 'me@x.com; rm -rf ~', '%PATH%@x.com', 'a b@x.com']) expect(() => checkEmail(bad)).toThrow(/not an e-mail/);
+    const env = accountEnv();
+    const ash = await firstAdmin(env);
+    expect(env.DB.raw.prepare(freshSql(ash.user.id, 'me@example.com')).get()).toEqual({ fresh: 1, taken: 0 });
+    env.DB.raw.prepare("INSERT INTO documents (owner, kind, id, json, updated_at, deleted, server_seq) VALUES (?, 'team', 'x', '{}', 1, 0, 1)").run(ash.user.id);
+    expect(env.DB.raw.prepare(freshSql(ash.user.id, 'me@example.com')).get()).toEqual({ fresh: 0, taken: 0 });
+  });
+});
