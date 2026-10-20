@@ -64,7 +64,7 @@ jobs:
           umask 077
           name="backup-$(date -u +%Y-%m-%dT%H%MZ).sql"
           work="$(mktemp -d)"
-          npx --yes wrangler@4 d1 export pokemon-team-builder --remote --output "$work/$name"
+          npx --yes wrangler@4.151.1 d1 export pokemon-team-builder --remote --output "$work/$name"
           test -s "$work/$name"
           mkdir -p out
           age -r "$AGE_PUBLIC_KEY" -o "out/$name.age" "$work/$name"
