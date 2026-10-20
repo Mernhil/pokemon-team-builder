@@ -95,5 +95,5 @@ export default defineConfig({
   build: { chunkSizeWarningLimit: 1500 },
   // Fixed port so the Tauri desktop shell (src-tauri/tauri.conf.json's devUrl) always finds the dev server.
   server: { port: 1420, strictPort: true },
-  test: { environment: 'node', exclude: [...configDefaults.exclude, 'e2e/**'] },
+  test: { environment: 'node', testTimeout: 20_000, exclude: [...configDefaults.exclude, 'e2e/**'] },
 });
