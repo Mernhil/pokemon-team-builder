@@ -2,6 +2,14 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.33.0 — 2026-10-20
+
+### New
+- **Own accounts, groundwork (not switched on yet).** The server can now create accounts with a username and password, invite-only, with long-lived device sessions and a recovery code. Nothing changes in the app until the owner turns it on; sign-in is still Cloudflare Access. docs/ACCOUNTS_PLAN.md has the whole plan and docs/ACCOUNTS_MANUAL_STEPS.md the checklist.
+
+### Changed
+- The site now asks search engines not to index it (`robots.txt` and an `X-Robots-Tag` header).
+
 ## 0.32.0 — 2026-10-19
 
 ### New

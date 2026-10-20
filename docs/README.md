@@ -9,6 +9,7 @@ Hand-written guides (edit these):
 | [IPHONE_APP.md](IPHONE_APP.md) | The installable web app on Cloudflare Workers behind Access |
 | [SYNC.md](SYNC.md) | Cloud sync and sharing: setup, how it works, backups |
 | [ACCOUNTS_PLAN.md](ACCOUNTS_PLAN.md) | Plan (not built yet): own accounts instead of Cloudflare Access, then a friend list |
+| [ACCOUNTS.md](ACCOUNTS.md) | How the accounts work as built (routes, sessions, passwords, throttling) |
 | [ACCOUNTS_MANUAL_STEPS.md](ACCOUNTS_MANUAL_STEPS.md) | The checklist of dashboard and secret steps for the accounts rollout |
 | [DESKTOP_RELEASES.md](DESKTOP_RELEASES.md) | Desktop installers and the updater |
 | [PRIVATE_REPO.md](PRIVATE_REPO.md) | Running with a private source repository |

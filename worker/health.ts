@@ -8,6 +8,7 @@ const MIGRATION_TABLE: Record<(typeof EXPECTED_MIGRATIONS)[number], string> = {
   '0002_shares': 'shares',
   '0003_devices': 'devices',
   '0004_redeem_attempts': 'redeem_attempts',
+  '0005_accounts': 'users',
 };
 
 async function appliedMigrations(db: NonNullable<Env['DB']>): Promise<string[] | null> {
@@ -32,6 +33,7 @@ export async function health(env: Env, now: number): Promise<HealthResponse> {
     migrations,
     missing: migrations ? EXPECTED_MIGRATIONS.filter((m) => !migrations.includes(m)) : [],
     access: { teamDomain: Boolean(env.ACCESS_TEAM_DOMAIN), audience: Boolean(env.ACCESS_AUD) },
+    accounts: { mode: env.AUTH_MODE === 'both' || env.AUTH_MODE === 'accounts' ? env.AUTH_MODE : 'access', pepper: Boolean(env.PASSWORD_PEPPER), setupCode: Boolean(env.SETUP_CODE) },
     time: now,
   };
 }
