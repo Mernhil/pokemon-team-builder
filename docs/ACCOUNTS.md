@@ -15,13 +15,14 @@ A plain Worker variable. `access` (or unset) is today's behaviour: the account r
 
 | Route | Needs | Does |
 |---|---|---|
+| `POST /api/auth/params` | a username | the salt and rounds to derive that username's key with (a stable fake for unknown names) |
 | `POST /api/auth/signup` | an invite code (or `SETUP_CODE` for the first account) | creates the account, returns the recovery code once, starts a session |
-| `POST /api/auth/login` | username + password | starts a session |
-| `POST /api/auth/recover` | username + recovery (or admin reset) code + new password | sets the password, signs every device out, returns a new recovery code |
+| `POST /api/auth/login` | username + derived key | starts a session |
+| `POST /api/auth/recover` | username + recovery (or admin reset) code + new salt and key | sets the password, signs every device out, returns a new recovery code |
 | `POST /api/auth/logout`, `/logout-all` | session | ends this / every session |
 | `GET`/`PUT /api/me` | session | the user; display name |
-| `POST /api/me/password` | session + current password | changes it, signs the other devices out |
-| `POST /api/me/recovery` | session + password | a new recovery code |
+| `POST /api/me/password` | session + current key | changes it, signs the other devices out |
+| `POST /api/me/recovery` | session + key | a new recovery code |
 | `GET`/`DELETE /api/sessions` | session | list / revoke devices |
 
 Bodies are zod-validated (`src/domain/accounts.ts`) and capped at 2 KB.
@@ -35,9 +36,11 @@ Bodies are zod-validated (`src/domain/accounts.ts`) and capped at 2 KB.
 
 ## Passwords (`worker/password.ts`)
 
-PBKDF2-HMAC-SHA256 over `HMAC-SHA256(pepper, NFKC(password))`, 100,000 iterations (the Workers cap), a 16-byte salt per user, stored as `pbkdf2-sha256$i=…$p=…$salt$hash` so the parameters can be raised later (a successful login re-hashes an older one). Compared in constant time; an unknown username costs the same hashing. Length 10–128, a list of about a hundred common passwords is refused, and the password can't contain the username. Cost per login is **one hash**, not per request. To check it fits your plan, look at the Worker's CPU time in the Cloudflare dashboard after the first login (Workers Free allows 10 ms per request; Paid is the recommendation).
+**The password never reaches the Worker.** Workers Free allows 10 ms of CPU per request, which a server-side PBKDF2 (capped at 100,000 rounds there) may not fit, and the plan must not need the paid tier. So the slow step runs on the person's device: `deriveKey` (`src/domain/accounts.ts`) computes PBKDF2-HMAC-SHA256 of the NFKC password with a per-user 16-byte salt and **600,000 rounds** (OWASP's number; about a second on a phone) and sends the 32-byte result, not the password. The Worker stores `ckdf-pbkdf2-sha256$i=…$p=…$salt$mac`, where `mac` is HMAC-SHA256(`PASSWORD_PEPPER`, key) (`worker/password.ts`), and compares in constant time: a few microseconds of CPU. A stolen database has MACs it can't test guesses against without the pepper, and each guess would cost 600,000 rounds.
 
-`Server-Timing` is not sent: Workers' clocks don't advance during CPU work, so it would measure nothing. The dashboard's CPU time is the real number.
+`POST /api/auth/params {username}` returns the salt and rounds to derive with. A name that doesn't exist gets a stable, real-looking salt derived from the pepper and the name, so it reveals nothing. A new password is set by sending a new salt and key (signup, recovery, password change). The server refuses fewer than 100,000 rounds and malformed keys.
+
+Because the server never sees the password, the length, blocklist and username rules (`passwordProblem`) are checked by the app; a modified client could set a weak password for its own account, which only weakens that account, and the throttles still apply. The rounds can be raised later (the stored value carries them); there is no automatic upgrade at login in this version, changing the password does it.
 
 ## Throttling (`worker/throttle.ts`, table `throttles`)
 

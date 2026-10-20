@@ -12,7 +12,7 @@ Scope: about 10 people, invite-only, on the public internet, on the existing Clo
 
 | # | Question | Default if you just say "go" |
 |---|---|---|
-| Q1 | Is the Worker on the **Workers Paid** plan ($5/month)? Free allows 10 ms CPU per request; one PBKDF2 login may not fit in that. | Assume Paid. If Free, either upgrade or accept the lower-cost fallback in section 2.4. |
+| Q1 | ~~Is the Worker on the Workers Paid plan?~~ **Decided: it must work on the Free plan.** | The slow password hashing runs on the device (section 2), so the Worker needs almost no CPU. Nothing to buy. |
 | Q2 | Passkeys in v1? | **No, v1.1** (section 1). v1 ships username + password. |
 | Q3 | E-mail one-time codes? | **No.** Not in v1, probably never (section 1). |
 | Q4 | Web/PWA identified by an HttpOnly cookie, desktop by a bearer token? | **Yes** (section 3). |
@@ -56,28 +56,33 @@ Scope: about 10 people, invite-only, on the public internet, on the existing Clo
 
 ## 2. Password storage
 
-### 2.1 Algorithm
+> **Revised for the Workers Free plan** (10 ms of CPU per request). The original design hashed on the server; that may not fit in 10 ms and is capped at 100,000 PBKDF2 rounds there. The design below replaces it and is what is built (docs/ACCOUNTS.md).
 
-**PBKDF2-HMAC-SHA256 through WebCrypto (`crypto.subtle.deriveBits`), plus a server-side pepper.** It is native and available in Workers with no dependency. Argon2id/scrypt would be stronger per CPU second but only exist in Workers as a WASM build (extra bundle, memory limits, and a CPU budget that on a per-request basis I cannot confirm from here), which is more than this app needs.
+### 2.1 Design: the device stretches, the Worker only MACs
 
-### 2.2 Real limits (to be confirmed in the PR 1 spike)
+- The app derives a 32-byte key with **PBKDF2-HMAC-SHA256, 600,000 rounds** (OWASP's current number) from the NFKC password and a per-user random 16-byte salt, using WebCrypto in the browser or the Tauri webview (about a second on a phone). It sends that key, **never the password**.
+- The Worker stores `ckdf-pbkdf2-sha256$i=600000$p=1$<salt>$<mac>` with `mac = HMAC-SHA256(PASSWORD_PEPPER, key)`, and checks a login with one HMAC and a constant-time compare: microseconds of CPU, well inside the Free plan.
+- `POST /api/auth/params {username}` returns the salt and rounds. An unknown name gets a stable fake derived from the pepper and the name (same shape, same answer every time), so it reveals nothing. A throttle applies.
+- A stolen database holds pepper-keyed MACs: without the pepper (a Worker secret, not in D1) an attacker cannot even test a guess, and with it each guess costs 600,000 rounds. This is stronger than the 100,000-round server-side option and costs the Worker nothing.
+- Stored parameters travel with the hash, so the rounds can be raised later. In this version a change of password re-derives with the current rounds (no silent upgrade at login).
 
-- **Iterations:** Workers' WebCrypto, as far as I know and as a third-party write-up reports, **rejects PBKDF2 above 100,000 iterations**. OWASP recommends 600,000 for PBKDF2-SHA256, so at the cap we are **below the OWASP number**. I do not hide that; section 2.3 is how we compensate.
-- **CPU time:** Free plan 10 ms per request; Paid default 30 s (Cloudflare's docs). Waiting on D1 or fetch does not count. One 100k-iteration PBKDF2-SHA256 is native code and typically tens of milliseconds, **which may not fit in 10 ms**. This is the one real risk in the plan, hence Q1 and the spike.
+### 2.2 Trade-offs, honestly
 
-### 2.3 Parameters and how they are stored
+- The server cannot check password quality (length, blocklist, "not your username"): the app does. A modified client can set a weak password for its own account only; throttling still protects it. Accepted.
+- A weak or buggy client could send a key derived with fewer rounds: the Worker refuses under 100,000 and malformed keys.
+- The password is never sent, so it can't leak from server logs or a TLS-terminating proxy; the derived key is the equivalent secret and is treated like one (never logged).
+- Every client must be able to run PBKDF2 (all browsers and the Tauri webview can).
+- If the pepper is lost, every password is unusable: back it up.
 
-- Stored string, self-describing so it can be upgraded: `pbkdf2-sha256$i=100000$p=1$<salt b64url>$<hash b64url>`
-  - `i` = iterations, `p` = pepper id (so the pepper can be rotated), salt = 16 random bytes per user, hash = 32 bytes.
-- **Pepper:** a Worker secret `PASSWORD_PEPPER` (32+ random bytes). The password is first run through `HMAC-SHA256(pepper, NFKC(password))` and that output is the PBKDF2 input. Effect: a stolen D1 backup alone cannot be brute-forced offline at all; the attacker also needs the Worker's secret store. This is what makes 100k iterations acceptable. Cost: if the pepper is lost, every password is unrecoverable (all users would need an admin reset). Back it up in a password manager; it is documented as such.
-- **Constant-time compare** of the derived bytes (XOR-accumulate over fixed length), never `===`.
-- **Upgrade on login:** after a successful login, if the stored `i` or `p` is not the current one, re-hash with the password just verified and update the row.
-- **Unknown user:** run the same PBKDF2 against a fixed dummy hash and return the same error and (to within noise) the same time.
-- Passwords are NFKC-normalised, 10–128 characters; the Worker never logs a request body.
+### 2.3 Rejected
+
+- **Server-side PBKDF2 at 100,000 rounds:** may exceed Free's 10 ms and is below OWASP.
+- **Argon2/scrypt in WASM on the Worker:** more CPU and memory than Free allows.
+- **Workers Paid:** ruled out by you.
 
 ### 2.4 Cost per login
 
-One PBKDF2 (~100k HMAC-SHA256 rounds) plus 1 D1 read, 1 D1 write (session) and 1–2 throttle writes. Estimate: **tens of ms CPU, one time per login, not per request** (requests after login are a SHA-256 of the token and a D1 lookup). To be measured: PR 1 adds the `Server-Timing` header on the login response and the Cloudflare dashboard shows Worker CPU p50/p99. Fallbacks, in order, if it doesn't fit: (1) Paid plan (Q1); (2) leave iterations at what fits and rely on the pepper; (3) hash in the Worker with Argon2id WASM (not planned).
+On the Worker: one D1 read, one HMAC, one session insert, a couple of throttle writes. On the device: one PBKDF2 of about a second, once per login (not per request).
 
 ---
 

@@ -1,41 +1,53 @@
 /**
- * Password hashing: PBKDF2-HMAC-SHA256 over HMAC-SHA256(pepper, password). Workers' WebCrypto caps PBKDF2
- * at 100,000 iterations, below OWASP's 600,000; the pepper (a Worker secret that is not in D1) is what makes
- * that acceptable: a stolen database alone can't be brute-forced. The stored string carries its parameters so
- * they can be raised later: `pbkdf2-sha256$i=100000$p=1$<salt>$<hash>`.
+ * What the Worker stores for a password. The slow key derivation (PBKDF2, 600,000 rounds) runs on the
+ * person's device (src/domain/accounts.ts `deriveKey`), so the Worker never sees the password and spends
+ * almost no CPU: it HMACs the derived key with a secret pepper and compares. That fits Workers' Free plan
+ * (10 ms of CPU per request), which a server-side PBKDF2 would not. A stolen database holds only
+ * pepper-keyed MACs of keys that took 600,000 rounds to derive: nothing to test guesses against without the pepper.
+ *
+ * Stored as `ckdf-pbkdf2-sha256$i=600000$p=1$<salt>$<mac>`: the salt and iteration count are what the client
+ * needs to derive the key again, and the format can change later.
  */
-import { b64url, fromB64url, randomBytes, timingSafeEqual } from './crypto';
+import { b64url, fromB64url, timingSafeEqual } from './crypto';
 
-export const PBKDF2_ITERATIONS = 100_000;
-/** Which pepper hashed it (so the secret can be rotated without locking anyone out). */
+/** Which pepper keyed it (so the secret can be rotated without locking anyone out). */
 export const PEPPER_ID = 1;
 
 const enc = new TextEncoder();
+const FORMAT = /^ckdf-pbkdf2-sha256\$i=(\d{1,8})\$p=(\d{1,3})\$([A-Za-z0-9_-]{22})\$([A-Za-z0-9_-]{43})$/;
 
-async function derive(password: string, pepper: string, salt: Uint8Array<ArrayBuffer>, iterations: number): Promise<Uint8Array> {
-  const hmacKey = await crypto.subtle.importKey('raw', enc.encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const pre = await crypto.subtle.sign('HMAC', hmacKey, enc.encode(password.normalize('NFKC')));
-  const key = await crypto.subtle.importKey('raw', pre, 'PBKDF2', false, ['deriveBits']);
-  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256));
+async function mac(pepper: string, data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey('raw', enc.encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
 }
 
-export async function hashPassword(password: string, pepper: string, iterations = PBKDF2_ITERATIONS): Promise<string> {
-  const salt = randomBytes(16);
-  return `pbkdf2-sha256$i=${iterations}$p=${PEPPER_ID}$${b64url(salt)}$${b64url(await derive(password, pepper, salt, iterations))}`;
+/** The string to store for a client-derived key (43 base64url characters). */
+export async function storeKey(key: string, salt: string, iterations: number, pepper: string): Promise<string> {
+  return `ckdf-pbkdf2-sha256$i=${iterations}$p=${PEPPER_ID}$${salt}$${b64url(await mac(pepper, fromB64url(key)))}`;
 }
 
-const FORMAT = /^pbkdf2-sha256\$i=(\d{1,7})\$p=(\d{1,3})\$([A-Za-z0-9_-]{22})\$([A-Za-z0-9_-]{43})$/;
-
-/** Does `password` match `stored`? `upgrade` says the stored parameters are older than the current ones (rehash after this login). */
-export async function verifyPassword(password: string, stored: string, pepper: string, iterations = PBKDF2_ITERATIONS): Promise<{ ok: boolean; upgrade: boolean }> {
+/** What the client needs to derive the key again. */
+export function paramsOf(stored: string): { salt: string; iterations: number } | null {
   const m = FORMAT.exec(stored);
-  if (!m) return { ok: false, upgrade: false };
-  const [, i, p, salt, hash] = m;
-  const got = await derive(password, pepper, fromB64url(salt), Number(i));
-  return { ok: timingSafeEqual(got, fromB64url(hash)), upgrade: Number(i) !== iterations || Number(p) !== PEPPER_ID };
+  return m ? { salt: m[3], iterations: Number(m[1]) } : null;
 }
 
-/** The same work as a real check, for a username that doesn't exist: an unknown user costs what a known one does. */
-export async function dummyVerify(password: string, pepper: string, iterations = PBKDF2_ITERATIONS): Promise<void> {
-  await derive(password, pepper, new Uint8Array(16), iterations);
+/** Does `key` match `stored`? Constant time. */
+export async function verifyKey(key: string, stored: string, pepper: string): Promise<boolean> {
+  const m = FORMAT.exec(stored);
+  const got = await mac(pepper, fromB64url(key));
+  return !!m && timingSafeEqual(got, fromB64url(m[4]));
+}
+
+/** The same work as a real check, for a username that doesn't exist. */
+export async function dummyVerify(key: string, pepper: string): Promise<void> {
+  await mac(pepper, fromB64url(key));
+}
+
+/**
+ * The parameters shown for a username that doesn't exist: a salt derived from the pepper and the name, so
+ * asking twice gives the same answer and it looks exactly like a real one.
+ */
+export async function fakeParams(usernameKey: string, pepper: string, iterations: number): Promise<{ salt: string; iterations: number }> {
+  return { salt: b64url((await mac(pepper, enc.encode(`salt\u0000${usernameKey}`))).slice(0, 16)), iterations };
 }

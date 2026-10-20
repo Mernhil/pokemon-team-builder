@@ -9,8 +9,10 @@
  */
 import {
   ChangePasswordSchema,
+  KDF_ITERATIONS,
   LoginSchema,
   MeUpdateSchema,
+  ParamsSchema,
   PasswordOnlySchema,
   RECOVERY_LENGTH,
   RecoverSchema,
@@ -23,25 +25,23 @@ import {
   generateCode,
   isCode,
   normalizeCode,
-  passwordProblem,
   usernameKey,
   usernameProblem,
   type AccountUser,
   type AuthResponse,
+  type KdfParams,
   type SessionsResponse,
 } from '../src/domain/accounts';
 import { randomId, safeEqualText, sha256Hex, timingSafeEqual } from './crypto';
 import { deviceOrigins, fail, firstIssue, readJson, reply } from './http';
 import { inviteHash, inviteUsable } from './invites';
-import { PBKDF2_ITERATIONS, dummyVerify, hashPassword, verifyPassword } from './password';
+import { dummyVerify, fakeParams, paramsOf, storeKey, verifyKey } from './password';
 import { createSession, listSessions, revokeAllSessions, revokeSession, sessionByToken, type ActiveSession } from './sessions';
 import { allow, bump, clientAddress, count, retryAfter, type Rule } from './throttle';
 import type { D1Like, Env } from './types';
 
 export interface AuthDeps {
   now?: () => number;
-  /** PBKDF2 iterations for new hashes (tests use a small number). */
-  iterations?: number;
 }
 
 /** Whether the accounts routes are on: "both" (accounts next to Access) or "accounts" (Access gone). Anything else: off. */
@@ -54,7 +54,6 @@ interface Ctx {
   request: Request;
   url: URL;
   now: number;
-  iterations: number;
 }
 interface Authed {
   session: ActiveSession;
@@ -128,6 +127,19 @@ async function startSession(c: Ctx, user: AccountUser, deviceName: string, mode:
 // Signup, login, recovery
 // ---------------------------------------------------------------------------
 
+/** How to derive this username's key. A name that doesn't exist gets a stable, real-looking answer, so this reveals nothing. */
+const params: Handler = async (c) => {
+  if (!(await allow(c.db, c.pepper, 'paramsIp', clientAddress(c.request), THROTTLES.paramsIp, c.now))) return tooMany(THROTTLES.paramsIp, c.now);
+  const r = await readJson(c.request, SMALL);
+  if ('response' in r) return r.response;
+  const parsed = ParamsSchema.safeParse(r.body);
+  if (!parsed.success) return fail(400, firstIssue(parsed.error));
+  const key = usernameKey(parsed.data.username);
+  const row = await userByKey(c.db, key);
+  const real = row ? paramsOf(row.pw_hash) : null;
+  return reply(200, (real ?? (await fakeParams(key, c.pepper, KDF_ITERATIONS))) satisfies KdfParams);
+};
+
 const signup: Handler = async (c) => {
   const { db, pepper, now } = c;
   const ip = clientAddress(c.request);
@@ -152,14 +164,14 @@ const signup: Handler = async (c) => {
   }
 
   const name = d.username.trim();
-  const problem = usernameProblem(name) ?? passwordProblem(d.password, name);
+  const problem = usernameProblem(name);
   if (problem) return fail(400, problem);
   const key = usernameKey(name);
   if (await userByKey(db, key)) return fail(409, 'That username is taken.');
 
   const id = randomId('u_');
   const recovery = generateCode(RECOVERY_LENGTH);
-  const pw = await hashPassword(d.password, pepper, c.iterations);
+  const pw = await storeKey(d.key, d.salt, d.iterations, pepper);
   const recoveryHash = await sha256Hex(recovery);
   // One batch is one transaction: the invite is consumed by the same statements that create the user, so two signups can't both win it.
   const insert = setup
@@ -203,15 +215,13 @@ const login: Handler = async (c) => {
   if ((await count(db, pepper, 'loginUser', key, THROTTLES.loginUser, now)) >= THROTTLES.loginUser.max) return tooMany(THROTTLES.loginUser, now);
   const row = await userByKey(db, key);
   let ok = false;
-  let upgrade = false;
-  if (row) ({ ok, upgrade } = await verifyPassword(d.password, row.pw_hash, pepper, c.iterations));
-  else await dummyVerify(d.password, pepper, c.iterations);
+  if (row) ok = await verifyKey(d.key, row.pw_hash, pepper);
+  else await dummyVerify(d.key, pepper);
   if (!row || !ok || row.disabled === 1) {
     // The same answer and the same work whether the name exists, the password is wrong or the account is disabled.
     await bump(db, pepper, 'loginUser', key, THROTTLES.loginUser, now);
     return fail(401, 'Wrong username or password.');
   }
-  if (upgrade) await db.prepare('UPDATE users SET pw_hash = ? WHERE id = ?').bind(await hashPassword(d.password, pepper, c.iterations), row.id).run();
   return startSession(c, toUser(row), d.deviceName, d.mode);
 };
 
@@ -227,9 +237,6 @@ const recover: Handler = async (c) => {
   if (d.mode === 'token' && !fromDesktop(c)) return fail(400, 'a token is only issued to the desktop app');
   const key = usernameKey(d.username);
   if ((await count(db, pepper, 'recoverUser', key, THROTTLES.recoverUser, now)) >= THROTTLES.recoverUser.max) return tooMany(THROTTLES.recoverUser, now);
-  const problem = passwordProblem(d.newPassword, d.username.trim());
-  if (problem) return fail(400, problem);
-
   const row = await userByKey(db, key);
   const code = normalizeCode(d.code);
   const codeHash = await sha256Hex(isCode(code, RECOVERY_LENGTH) ? code : '');
@@ -244,7 +251,7 @@ const recover: Handler = async (c) => {
   }
   const fresh = generateCode(RECOVERY_LENGTH);
   await db.batch([
-    db.prepare('UPDATE users SET pw_hash = ?, pw_changed_at = ?, recovery_hash = ? WHERE id = ?').bind(await hashPassword(d.newPassword, pepper, c.iterations), now, await sha256Hex(fresh), row.id),
+    db.prepare('UPDATE users SET pw_hash = ?, pw_changed_at = ?, recovery_hash = ? WHERE id = ?').bind(await storeKey(d.key, d.salt, d.iterations, pepper), now, await sha256Hex(fresh), row.id),
     db.prepare('DELETE FROM reset_codes WHERE user_id = ?').bind(row.id),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(row.id),
   ]);
@@ -276,14 +283,13 @@ const me: Handler = async (c, a) => {
 };
 
 /** The current password, checked with the same throttle in both password routes. Returns a refusal, or the user. */
-async function confirmPassword(c: Ctx, a: Authed, password: string): Promise<Response | UserRow> {
+async function confirmPassword(c: Ctx, a: Authed, key: string): Promise<Response | UserRow> {
   const scope = 'passwordUser';
   const id = a.session.user.id;
   if ((await count(c.db, c.pepper, scope, id, THROTTLES.passwordUser, c.now)) >= THROTTLES.passwordUser.max) return tooMany(THROTTLES.passwordUser, c.now);
   const row = await userById(c.db, id);
   if (!row) return fail(401, 'not signed in');
-  const { ok } = await verifyPassword(password, row.pw_hash, c.pepper, c.iterations);
-  if (!ok) {
+  if (!(await verifyKey(key, row.pw_hash, c.pepper))) {
     await bump(c.db, c.pepper, scope, id, THROTTLES.passwordUser, c.now);
     return fail(403, 'Wrong password.');
   }
@@ -297,9 +303,8 @@ const changePassword: Handler = async (c, a) => {
   if (!parsed.success) return fail(400, firstIssue(parsed.error));
   const row = await confirmPassword(c, a, parsed.data.current);
   if (row instanceof Response) return row;
-  const problem = passwordProblem(parsed.data.next, row.username);
-  if (problem) return fail(400, problem);
-  await c.db.prepare('UPDATE users SET pw_hash = ?, pw_changed_at = ? WHERE id = ?').bind(await hashPassword(parsed.data.next, c.pepper, c.iterations), c.now, row.id).run();
+  const next = parsed.data.next;
+  await c.db.prepare('UPDATE users SET pw_hash = ?, pw_changed_at = ? WHERE id = ?').bind(await storeKey(next.key, next.salt, next.iterations, c.pepper), c.now, row.id).run();
   await revokeAllSessions(c.db, row.id, a.session.id);
   return reply(200, { ok: true });
 };
@@ -309,7 +314,7 @@ const newRecoveryCode: Handler = async (c, a) => {
   if ('response' in r) return r.response;
   const parsed = PasswordOnlySchema.safeParse(r.body);
   if (!parsed.success) return fail(400, firstIssue(parsed.error));
-  const row = await confirmPassword(c, a, parsed.data.password);
+  const row = await confirmPassword(c, a, parsed.data.key);
   if (row instanceof Response) return row;
   const fresh = generateCode(RECOVERY_LENGTH);
   await c.db.prepare('UPDATE users SET recovery_hash = ? WHERE id = ?').bind(await sha256Hex(fresh), row.id).run();
@@ -331,6 +336,7 @@ const sessions: Handler = async (c, a) => {
 };
 
 const ROUTES: Record<string, Route> = {
+  '/api/auth/params': { methods: ['POST'], public: true, handle: params },
   '/api/auth/signup': { methods: ['POST'], public: true, handle: signup },
   '/api/auth/login': { methods: ['POST'], public: true, handle: login },
   '/api/auth/recover': { methods: ['POST'], public: true, handle: recover },
@@ -354,7 +360,7 @@ export async function handleAuth(request: Request, env: Env, url: URL, deps: Aut
   if (!route.methods.includes(request.method)) return fail(405, 'method not allowed');
   const missing = accountsMissing(env);
   if (missing.length) return reply(501, { error: 'accounts are not set up on this deployment', missing });
-  const c: Ctx = { db: env.DB!, pepper: env.PASSWORD_PEPPER!, env, request, url, now: (deps.now ?? Date.now)(), iterations: deps.iterations ?? PBKDF2_ITERATIONS };
+  const c: Ctx = { db: env.DB!, pepper: env.PASSWORD_PEPPER!, env, request, url, now: (deps.now ?? Date.now)() };
 
   if (route.public) {
     if (sameSiteProblem(c)) return fail(403, 'request refused');

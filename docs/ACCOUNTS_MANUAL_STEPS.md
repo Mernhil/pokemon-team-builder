@@ -6,8 +6,8 @@ Tick each box; "Check" says how to know it worked.
 
 ## A. Before the first accounts PR is useful (once)
 
-- [ ] **Confirm the Workers plan.** Cloudflare dashboard → Workers & Pages → Plans. Logging in does one password hash (tens of ms of CPU); the Free plan allows 10 ms per request and may reject it. Choose **Workers Paid ($5/month)**.
-      *Check:* after the first login, Workers & Pages → pokemon-team-builder → Metrics shows CPU time p99 well under the plan's limit, and no "exceeded CPU" errors.
+- [ ] **Stay on the Workers Free plan; nothing to buy.** The slow password hashing runs on the device, so the Worker spends well under the Free plan's 10 ms of CPU per request.
+      *Check:* after the first login, Workers & Pages → pokemon-team-builder → Metrics shows no "exceeded CPU" errors.
 - [ ] **Set the Worker secrets** (Workers & Pages → pokemon-team-builder → Settings → Variables and Secrets → Add, type **Secret**):
   - `PASSWORD_PEPPER`: 32+ random characters (for example `openssl rand -base64 48`). **Save a copy in your password manager.** If it is lost, every password is unusable and each user needs an admin reset.
   - `SETUP_CODE`: any long random string. It is used once, to create the first (admin) account.

@@ -17,6 +17,12 @@ export const MAX_SESSIONS = 20;
 export const INVITE_DEFAULT_TTL_MS = 7 * 24 * 3600_000;
 export const RESET_TTL_MS = 24 * 3600_000;
 
+/** The slow key derivation runs on the device (see worker/password.ts): OWASP's number for PBKDF2-HMAC-SHA256. */
+export const KDF_ITERATIONS = 600_000;
+/** Below this the Worker refuses a derived key (a modified client can only weaken its own account). */
+export const KDF_MIN_ITERATIONS = 100_000;
+export const KDF_MAX_ITERATIONS = 2_000_000;
+
 export const SESSION_COOKIE = '__Host-ptb_session';
 export const SESSION_TOKEN_RE = /^ptbs_[A-Za-z0-9_-]{43}$/;
 
@@ -25,6 +31,7 @@ export const THROTTLES = {
   loginIp: { windowMs: 10 * 60_000, max: 20 },
   /** Failures only: a wrong password for this username, whether or not it exists. */
   loginUser: { windowMs: 15 * 60_000, max: 8 },
+  paramsIp: { windowMs: 10 * 60_000, max: 60 },
   signupIp: { windowMs: 10 * 60_000, max: 10 },
   badInviteIp: { windowMs: 3600_000, max: 5 },
   recoverIp: { windowMs: 3600_000, max: 10 },
@@ -100,6 +107,30 @@ export function passwordProblem(password: string, username = ''): string | null 
 }
 
 // ---------------------------------------------------------------------------
+// The key derivation (runs on the device)
+// ---------------------------------------------------------------------------
+
+const toB64url = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64 = (s: string): Uint8Array<ArrayBuffer> => {
+  const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '='));
+  const out = new Uint8Array(new ArrayBuffer(bin.length));
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+};
+
+/** A fresh 16-byte salt for a new password (22 base64url characters). */
+export const newSalt = (): string => toB64url(crypto.getRandomValues(new Uint8Array(16)));
+
+/**
+ * What the app sends instead of the password: PBKDF2-HMAC-SHA256(NFKC(password), salt, iterations), 32 bytes as 43
+ * base64url characters. The server never receives the password itself. Slow on purpose (about a second on a phone).
+ */
+export async function deriveKey(password: string, salt: string, iterations: number = KDF_ITERATIONS): Promise<string> {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password.normalize('NFKC')), 'PBKDF2', false, ['deriveBits']);
+  return toB64url(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: fromB64(salt), iterations }, base, 256)));
+}
+
+// ---------------------------------------------------------------------------
 // Wire format
 // ---------------------------------------------------------------------------
 
@@ -107,16 +138,27 @@ export function passwordProblem(password: string, username = ''): string | null 
 const deviceName = z.string().max(200).transform((s) => s.replace(/[\p{Cc}\p{Cf}]/gu, '').trim()).pipe(z.string().min(1).max(40)).default('This device');
 /** "cookie": the web app (a session cookie); "token": the desktop app (a bearer token in the answer). */
 const mode = z.enum(['cookie', 'token']).default('cookie');
-const password = z.string().min(1).max(PASSWORD_MAX * 4);
 const username = z.string().min(1).max(60);
+/** A derived key (32 bytes) and the salt and iterations it was derived with. */
+const key = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
+const salt = z.string().regex(/^[A-Za-z0-9_-]{22}$/);
+const iterations = z.number().int().min(KDF_MIN_ITERATIONS).max(KDF_MAX_ITERATIONS);
+const newKey = z.object({ key, salt, iterations });
 
-export const SignupSchema = z.object({ invite: z.string().max(80), username, password, deviceName, mode });
-export const LoginSchema = z.object({ username, password, deviceName, mode });
-export const RecoverSchema = z.object({ username, code: z.string().max(80), newPassword: password, deviceName, mode });
-export const ChangePasswordSchema = z.object({ current: password, next: password });
-export const PasswordOnlySchema = z.object({ password });
+export const ParamsSchema = z.object({ username });
+export const SignupSchema = z.object({ invite: z.string().max(80), username, key, salt, iterations, deviceName, mode });
+export const LoginSchema = z.object({ username, key, deviceName, mode });
+export const RecoverSchema = z.object({ username, code: z.string().max(80), key, salt, iterations, deviceName, mode });
+export const ChangePasswordSchema = z.object({ current: key, next: newKey });
+export const PasswordOnlySchema = z.object({ key });
 export const SessionIdSchema = z.object({ id: z.string().min(1).max(64) });
 export const MeUpdateSchema = z.object({ displayName: z.string().trim().max(40) });
+
+/** What POST /api/auth/params answers: how to derive this username's key. Unknown names get a stable fake. */
+export interface KdfParams {
+  salt: string;
+  iterations: number;
+}
 
 export interface AccountUser {
   id: string;
