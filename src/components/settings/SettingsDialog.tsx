@@ -10,20 +10,21 @@ import { Button, Label, Select, Tabs } from '../ui/primitives';
 
 // Cloud sync loads when Settings opens (its engine loads only once sync is on).
 const SyncSettings = lazy(() => import('./SyncSettings'));
+const AccountSettings = lazy(() => import('./AccountSettings'));
 
 /**
  * Settings & credits: appearance, where data lives, and who made the data and art the app uses.
  * The app claims no ownership of any Pokémon asset.
  */
-export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, onOpenShortcuts }: { open: boolean; onOpenChange: (o: boolean) => void; section?: 'sync'; onOpenWhatsNew: () => void; onOpenShortcuts: () => void }) {
+export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, onOpenShortcuts }: { open: boolean; onOpenChange: (o: boolean) => void; section?: 'sync' | 'account'; onOpenWhatsNew: () => void; onOpenShortcuts: () => void }) {
   const theme = useTeamStore((s) => s.theme);
   const setTheme = useTeamStore((s) => s.setTheme);
   const look = usePrefsStore((s) => s.look);
   const setLook = usePrefsStore((s) => s.setLook);
-  // Opened from the sync banner or the header light: land on Sync rather than the top.
+  // Opened from the sync banner, the header light, #account or the palette: land on that section rather than the top.
   useEffect(() => {
-    if (!open || section !== 'sync') return;
-    const id = setTimeout(() => document.getElementById('set-sync')?.scrollIntoView({ block: 'start' }), 50);
+    if (!open || !section) return;
+    const id = setTimeout(() => document.getElementById(`set-${section}`)?.scrollIntoView({ block: 'start' }), 50);
     return () => clearTimeout(id);
   }, [open, section]);
 
@@ -100,6 +101,15 @@ export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, on
           <div className="flex items-center gap-2">
             <UpdateCheckButton />
           </div>
+        </section>
+
+        <section className="scroll-mt-4 space-y-1.5" aria-labelledby="set-account">
+          <h3 id="set-account">
+            <Label>Account</Label>
+          </h3>
+          <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+            <AccountSettings />
+          </Suspense>
         </section>
 
         <section className="space-y-1.5" aria-labelledby="set-sync">

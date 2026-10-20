@@ -3,6 +3,7 @@
  * pairing code; the desktop app trades it for a device token. Shared by the Worker and the app.
  */
 import { z } from 'zod';
+import { normalizeServer } from './accounts';
 
 /** 32 symbols (no I or O, no 0 or 1), so a code read off a screen can't be mistyped as another. 10 symbols = 50 bits. */
 export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -43,18 +44,8 @@ export function parsePairingInput(text: string): { server?: string; code: string
   return isValidCode(code) ? { code } : null;
 }
 
-/** "https://host" with no path, or undefined when it isn't an https (or localhost http) address. */
-export function normalizeServer(input: string): string | undefined {
-  let u: URL;
-  try {
-    u = new URL(/^[a-z]+:\/\//i.test(input.trim()) ? input.trim() : `https://${input.trim()}`);
-  } catch {
-    return undefined;
-  }
-  const local = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
-  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && local)) return undefined;
-  return u.origin;
-}
+/** Shared with the account login (src/domain/accounts.ts), which outlives pairing. */
+export { normalizeServer };
 
 export const RedeemSchema = z.object({
   code: z.string().max(40).transform(normalizeCode).refine(isValidCode, { message: 'not a pairing code' }),

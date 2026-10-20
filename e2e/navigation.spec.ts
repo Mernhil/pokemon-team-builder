@@ -76,7 +76,29 @@ test('Settings → Navigation: choose the bar’s destinations, and Reset restor
   expect((await nav(page).getByRole('button').allInnerTexts()).map((t) => t.trim())).not.toContain('Meta');
 });
 
+test('#account opens Settings → Account over the current screen, and the address goes back to that screen', async ({ page }) => {
+  await openApp(page, '#calc');
+  await page.evaluate(() => {
+    location.hash = '#account';
+  });
+  const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
+  await expect(dialog.getByRole('region', { name: 'Account' })).toBeVisible();
+  await expect(page).toHaveURL(/#calc$/);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Calc');
+});
+
 test.describe('command palette', () => {
+  test('finds Account and opens Settings there', async ({ page }) => {
+    await openApp(page);
+    await page.getByRole('button', { name: 'Search (Ctrl K)' }).click();
+    const box = page.getByRole('combobox', { name: /Search screens/ });
+    await box.fill('log in');
+    await expect(page.getByRole('option', { name: /Account/ })).toBeVisible();
+    await box.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Settings & credits' }).getByRole('region', { name: 'Account' })).toBeVisible();
+  });
+
   test('finds a screen by name and opens it with Enter', async ({ page }) => {
     await openApp(page);
     await page.getByRole('button', { name: 'Search (Ctrl K)' }).click();

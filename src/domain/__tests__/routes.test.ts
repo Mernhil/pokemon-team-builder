@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ANALYSE_TABS, VIEWS, parseRoute, routeFromSaved, routeHash } from '@/domain/routes';
+import { ANALYSE_TABS, VIEWS, parseRoute, routeFromSaved, routeHash, settingsSectionOf } from '@/domain/routes';
 
 describe('parseRoute', () => {
   it('reads every plain view, with or without the #', () => {
@@ -59,5 +59,15 @@ describe('routeFromSaved', () => {
     expect(routeFromSaved('garbage')).toEqual({ view: 'builder' });
     expect(routeFromSaved(42)).toEqual({ view: 'builder' });
     expect(routeFromSaved(undefined)).toEqual({ view: 'builder' });
+  });
+});
+
+describe('settingsSectionOf', () => {
+  it('reads #account (a Settings section, not a view), and nothing else', () => {
+    expect(settingsSectionOf('#account')).toBe('account');
+    expect(settingsSectionOf('account')).toBe('account');
+    expect(settingsSectionOf('#calc')).toBeNull();
+    expect(settingsSectionOf('#account/x')).toBeNull();
+    expect(parseRoute('#account')).toBeNull();
   });
 });

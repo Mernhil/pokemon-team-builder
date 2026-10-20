@@ -56,6 +56,14 @@ const ROUTES: Record<string, string[]> = {
 /** Routes a linked device may use under /api/device/ (bearer token instead of Access). Not pairing or the device list. */
 const DEVICE_ROUTES = new Set(['/api/sync', '/api/shared', '/api/shares', '/api/profile']);
 
+/** "/api/me" or "/api/device/me" → "/api/me" when it is an account route; otherwise null. */
+function accountPathOf(pathname: string): string | null {
+  if (isAccountPath(pathname)) return pathname;
+  if (!pathname.startsWith('/api/device/')) return null;
+  const inner = `/api/${pathname.slice('/api/device/'.length)}`;
+  return isAccountPath(inner) ? inner : null;
+}
+
 export interface ApiDeps extends AuthDeps {
   /** Signing keys, injected by tests; by default the Access team's published keys. */
   keys?: KeyProvider;
@@ -64,10 +72,12 @@ export interface ApiDeps extends AuthDeps {
 export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}): Promise<Response> {
   const url = new URL(request.url);
   const origin = request.headers.get('origin');
-  // The app's own accounts (AUTH_MODE "both" or "accounts"); otherwise these paths are not routes at all.
-  if (accountsEnabled(env) && isAccountPath(url.pathname)) {
+  // The app's own accounts (AUTH_MODE "both" or "accounts"); otherwise these paths are not routes at all. While
+  // Cloudflare Access is in front of the site, the desktop app reaches them under /api/device/ (already a Bypass path).
+  const accountPath = accountsEnabled(env) ? accountPathOf(url.pathname) : null;
+  if (accountPath) {
     if (request.method === 'OPTIONS') return preflight(origin, env);
-    return withCors(await handleAuth(request, env, url, deps), origin, env);
+    return withCors(await handleAuth(request, env, new URL(accountPath, url), deps), origin, env);
   }
   if (url.pathname.startsWith('/api/device/')) {
     if (request.method === 'OPTIONS') return preflight(origin, env);

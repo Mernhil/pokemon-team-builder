@@ -17,9 +17,11 @@ Tick each box; "Check" says how to know it worked.
 ## B. Turn the accounts on for yourself (still behind Access)
 
 - [ ] Set the variable `AUTH_MODE` = `both` (plain variable, not secret; `keep_vars` keeps it across deploys).
-- [ ] In the app: Settings → Account → **Create account** → enter `SETUP_CODE`, a username and a password. **Save the recovery code** it shows (once only).
+- [ ] In the app: Settings → Account → **Create account** → enter `SETUP_CODE` in *Invite code*, a username and a password. **Save the recovery code** it shows (once only; *Copy code*, then tick *I saved it*).
 - [ ] **Delete the `SETUP_CODE` secret.**
-- [ ] Log in once on the phone, the website and the desktop app. *Check:* Settings → Account → Devices lists all three.
+- [ ] Log in once on the phone, the website and the desktop app (the desktop app asks for *Your app address* the first time; it reaches the account routes through `/api/device/*`, which Access already lets through, so nothing changes in Access). *Check:* Settings → Account → Devices lists all three.
+- [ ] Try *Sign out* on one device from another: *Check:* the signed-out device shows *Your sign-in has expired* at the top within a few minutes (or when you open Settings → Account), and *Sign in again* logs it back in.
+- [ ] Sync is unchanged in this step: it still uses Cloudflare Access (and pairing on the desktop app). Being logged in or out doesn't affect it yet.
 
 ## C. Backup, then claim your old data
 

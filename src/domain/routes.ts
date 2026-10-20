@@ -60,5 +60,13 @@ export function routeHash(route: Route): string {
   return `#analyse/${tab}`;
 }
 
+/** Settings sections with a link of their own: `#account` opens Settings → Account over whatever screen is open. */
+export const SETTINGS_SECTIONS = ['account'] as const;
+export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+export const settingsSectionOf = (hash: string): SettingsSection | null => {
+  const h = hash.replace(/^#/, '');
+  return (SETTINGS_SECTIONS as readonly string[]).includes(h) ? (h as SettingsSection) : null;
+};
+
 /** A view id saved by an older version (it may be one that has moved into Analyse) as today's route. */
 export const routeFromSaved = (view: unknown): Route => (typeof view === 'string' ? parseRoute(view) : null) ?? { view: 'builder' };

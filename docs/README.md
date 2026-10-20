@@ -8,7 +8,7 @@ Hand-written guides (edit these):
 | [E2E.md](E2E.md) | The Playwright smoke and axe tests |
 | [IPHONE_APP.md](IPHONE_APP.md) | The installable web app on Cloudflare Workers behind Access |
 | [SYNC.md](SYNC.md) | Cloud sync and sharing: setup, how it works, backups |
-| [ACCOUNTS_PLAN.md](ACCOUNTS_PLAN.md) | Plan (not built yet): own accounts instead of Cloudflare Access, then a friend list |
+| [ACCOUNTS_PLAN.md](ACCOUNTS_PLAN.md) | The plan and its reasoning: own accounts instead of Cloudflare Access, then a friend list (built in steps) |
 | [ACCOUNTS.md](ACCOUNTS.md) | How the accounts work as built (routes, sessions, passwords, throttling) |
 | [ACCOUNTS_MANUAL_STEPS.md](ACCOUNTS_MANUAL_STEPS.md) | The checklist of dashboard and secret steps for the accounts rollout |
 | [DESKTOP_RELEASES.md](DESKTOP_RELEASES.md) | Desktop installers and the updater |
