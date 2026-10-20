@@ -4,7 +4,13 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 
 ## 0.33.0 — 2026-10-20
 
+### Changed
+- **Sync flushes unsent edits when the app goes to the background.** On a phone the 5-second wait before an edit is sent never runs if iOS freezes the app first. Now, when the app is hidden (or the page is closed) with unsent changes, it sends them at once with a keepalive request (the newest documents first, up to 60 KB; the rest on the next run). A saved "unsent edits" flag means an app that was killed before sending still pushes on its next start.
+- **Sync no longer hangs on a request that never answers.** Requests give up after 20 seconds (retried after 10 s, 30 s, 2 min), and a run that is still going after that is abandoned when the app comes back to the front, so "Sync now", foregrounding and the 3-minute tick start a fresh one. An abandoned run can't apply old results or save an older cursor.
+- **Sync diagnostics** (Settings → Sync) now show the unsent changes, the unsent-edits flag, the app version and the last background push; *Copy diagnostics* includes them (docs/SYNC.md says how to read it).
+
 ### Fixed
+- **An edit made on a device whose clock ran behind could be lost.** An edit is now always stamped after the version it was made on, so it can't look older than what it edits. A delete only beats an edit when it is more than 2 minutes later (it was 5 seconds), and an edit that survives a delete is restamped so the server accepts it.
 - **Saved teams, the match log and other screens no longer run off the edge of a phone.** On a 375 px phone the Delete button (and everything to its right) of a saved team sat outside its card. The card's buttons now wrap, long names, labels and "Shared with …" chips fit, and the same pattern was fixed elsewhere: the match log list and its statistics filters (a long team name widened the whole page), panel headers with several buttons (Damage calc), tab bars at 320 px (they wrap onto a second row), and every two-column layout that only set its columns from a breakpoint up. A new end-to-end check looks at every element's box, not just the page width (docs/UI.md, *No overflow on phones*).
 
 ## 0.32.0 — 2026-10-19

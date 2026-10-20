@@ -5,7 +5,7 @@
  * tombstone that is just another version, and nothing is ever silently lost:
  *  - when both sides changed a team since the last sync, the losing version is kept as a variation
  *    labelled "Conflict copy (<device>, <date>)";
- *  - an edit beats a delete unless the delete is clearly later (more than SKEW_MS), so clock drift
+ *  - an edit beats a delete unless the delete is clearly later (more than DELETE_SKEW_MS), so clock drift
  *    between two devices can't throw an edit away;
  *  - matches follow the same rule without conflict copies.
  */
@@ -13,8 +13,18 @@ import { cloneTeam } from './team';
 import type { DocKind, RemoteDocument } from './syncProtocol';
 import type { Team } from './types';
 
-/** Two clocks this close are treated as the same moment: neither device's time is trusted over the other's. */
+/**
+ * Two clocks this close are treated as the same moment: neither device's time is trusted over the other's. It only
+ * decides which of two concurrent versions is the document and which the "Conflict copy": both are always kept, so a
+ * wrong pick costs nothing but the order, and the threshold stays small.
+ */
 export const SKEW_MS = 5000;
+/**
+ * A delete beats an edit only when it is this much later. A delete is the one thing that can throw an edit away, so
+ * the margin covers two phones' or computers' clocks being a minute or two apart (the server refuses stamps more than
+ * 10 minutes ahead): when in doubt the edit survives.
+ */
+export const DELETE_SKEW_MS = 2 * 60_000;
 
 export interface LocalDoc {
   id: string;
@@ -65,9 +75,10 @@ export function sameContent(a: unknown, b: unknown): boolean {
  * document isn't here: never seen (`base` undefined too, so a first sync or a document made elsewhere)
  * or deleted here since the last sync (`base` set; the delete counts as happening at `now`).
  */
-export function resolveDocument(input: { local?: LocalDoc; remote: RemoteDocument; base?: Known; now: number; skewMs?: number }): Resolution {
+export function resolveDocument(input: { local?: LocalDoc; remote: RemoteDocument; base?: Known; now: number; skewMs?: number; deleteSkewMs?: number }): Resolution {
   const { local, remote, base, now } = input;
   const skew = input.skewMs ?? SKEW_MS;
+  const deleteSkew = input.deleteSkewMs ?? DELETE_SKEW_MS;
   const copy = remote.kind === 'team';
 
   // The server's version is one we already have (our own push coming back, or a re-pull).
@@ -79,7 +90,7 @@ export function resolveDocument(input: { local?: LocalDoc; remote: RemoteDocumen
     if (!base) return remote.deleted ? { action: 'noop' } : { action: 'apply-remote' };
     // Deleted here since the last sync, changed there.
     if (remote.deleted) return { action: 'noop' }; // deleted on both sides
-    return now > remote.updatedAt + skew ? { action: 'push-local' } : { action: 'apply-remote' }; // a clearly later delete wins; otherwise the edit does
+    return now > remote.updatedAt + deleteSkew ? { action: 'push-local' } : { action: 'apply-remote' }; // a clearly later delete wins; otherwise the edit does
   }
 
   const localChanged = !base || local.updatedAt > base.updatedAt;
@@ -88,7 +99,7 @@ export function resolveDocument(input: { local?: LocalDoc; remote: RemoteDocumen
   if (remote.deleted) {
     if (!localChanged) return { action: 'delete-local' };
     // Edited here, deleted there: the edit survives unless the delete is clearly later.
-    return remote.updatedAt > local.updatedAt + skew ? { action: 'delete-local' } : { action: 'push-local' };
+    return remote.updatedAt > local.updatedAt + deleteSkew ? { action: 'delete-local' } : { action: 'push-local' };
   }
 
   // ---- Live on both sides ----

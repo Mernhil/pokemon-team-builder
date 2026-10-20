@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { editTime } from '@/sync/local';
 import { safeStorage } from './storage';
 import { toast } from './toastStore';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
@@ -234,7 +235,7 @@ export const useTeamStore = create<TeamState>()(
             lockedNotice();
             return s;
           }
-          return { teams: { ...s.teams, [t.id]: { ...enforceCapabilities(fn(t)), updatedAt: Date.now() } } };
+          return { teams: { ...s.teams, [t.id]: { ...enforceCapabilities(fn(t)), updatedAt: editTime('team', t.id) } } };
         });
       const mutateSlot = (id: string, i: number, fn: (p: PokemonSet) => PokemonSet) =>
         mutateTeam(id, (t) => {
@@ -259,7 +260,7 @@ export const useTeamStore = create<TeamState>()(
         const copy = cloneTeam(src, DEFAULT_TEAM_NAME);
         let draft: Team = copy;
         if (reuse) {
-          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, matchupNotes: copy.matchupNotes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: Date.now() };
+          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, matchupNotes: copy.matchupNotes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: editTime('team', reuse.id) };
           if (reuse.slots.some(Boolean)) {
             const prev = { team: reuse, editingFrom: s.editingFrom, editingDraft: s.editingDraft };
             toast(`Loaded “${src.name}${src.variationLabel ? ` · ${src.variationLabel}` : ''}” into the builder.`, {
@@ -300,7 +301,7 @@ export const useTeamStore = create<TeamState>()(
         selectTeam: (id) => get().teams[id] && set({ activeTeamId: id, activeSlot: 0 }),
         editTeam: (id) => openForEdit(id),
         updateTeam: (id, patch) =>
-          set((s) => (isLocked(s.teams[id]) ? (lockedNotice(), s) : s.teams[id] ? { teams: { ...s.teams, [id]: { ...s.teams[id], ...patch, updatedAt: Date.now() } } } : s)),
+          set((s) => (isLocked(s.teams[id]) ? (lockedNotice(), s) : s.teams[id] ? { teams: { ...s.teams, [id]: { ...s.teams[id], ...patch, updatedAt: editTime('team', id) } } } : s)),
         switchFormat: (id, formatId) =>
           set((s) => {
             const t = s.teams[id];
@@ -312,7 +313,7 @@ export const useTeamStore = create<TeamState>()(
             const slotsByFormat = { ...t.slotsByFormat, [t.formatId]: t.slots };
             const slots = slotsByFormat[formatId] ?? emptySlots();
             return {
-              teams: { ...s.teams, [id]: enforceCapabilities({ ...t, formatId, category: getFormat(formatId).shortName, slots, slotsByFormat, updatedAt: Date.now() }) },
+              teams: { ...s.teams, [id]: enforceCapabilities({ ...t, formatId, category: getFormat(formatId).shortName, slots, slotsByFormat, updatedAt: editTime('team', id) }) },
               ...(id === s.activeTeamId ? { activeSlot: 0 } : {}),
             };
           }),
@@ -352,7 +353,7 @@ export const useTeamStore = create<TeamState>()(
               replicaCode: copy.replicaCode,
               slots: copy.slots,
               slotsByFormat: copy.slotsByFormat,
-              updatedAt: Date.now(),
+              updatedAt: editTime('team', target.id),
             };
             set((s) => ({ teams: { ...s.teams, [target.id]: next }, editingFrom: target.id, editingDraft: s.activeTeamId }));
             return target.id;

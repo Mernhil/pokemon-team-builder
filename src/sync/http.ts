@@ -56,12 +56,50 @@ export async function setupMessage(res: Response): Promise<string> {
   return parts.length ? `${base}: ${parts.join('; ')}.` : `${base} (see docs/SYNC.md).`;
 }
 
-export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+/** A request that hasn't been answered after this long is given up as "offline", so the retry schedule takes over (a suspended iOS app can leave a fetch hanging for good). */
+export const REQUEST_TIMEOUT_MS = 20_000;
+export const TIMEOUT_MESSAGE = 'The server took too long to answer. Will try again.';
+
+export interface RequestOptions {
+  /** Default REQUEST_TIMEOUT_MS. */
+  timeoutMs?: number;
+  /** Lets the request finish while the app is being suspended (the body must stay under ~64 KB). */
+  keepalive?: boolean;
+  /** Abandons the request (fails as `offline`). */
+  signal?: AbortSignal;
+}
+
+export async function request<T>(method: string, path: string, body?: unknown, opts: RequestOptions = {}): Promise<T> {
   const { url, init } = target(path);
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let onAbort: (() => void) | undefined;
+  // Raced against the fetch itself: a fetch that never settles (and ignores the abort) must not hang the caller.
+  const giveUp = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new SyncHttpError(TIMEOUT_MESSAGE, 'offline'));
+    }, opts.timeoutMs ?? REQUEST_TIMEOUT_MS);
+    onAbort = () => {
+      controller.abort();
+      reject(new SyncHttpError('The request was cancelled.', 'offline'));
+    };
+    if (opts.signal?.aborted) onAbort();
+    else opts.signal?.addEventListener('abort', onAbort, { once: true });
+  });
+  try {
+    return await Promise.race([send<T>(method, url, init, body, controller.signal, opts.keepalive), giveUp]);
+  } finally {
+    clearTimeout(timer);
+    if (onAbort) opts.signal?.removeEventListener('abort', onAbort);
+  }
+}
+
+async function send<T>(method: string, url: string, init: RequestInit, body: unknown, signal: AbortSignal, keepalive?: boolean): Promise<T> {
   let res: Response;
   try {
     // redirect: 'manual' so an expired Access session (a redirect to the login page) is noticed, not followed.
-    res = await fetch(url, { method, ...init, headers: { ...(init.headers as Record<string, string> | undefined), accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    res = await fetch(url, { method, ...init, signal, cache: 'no-store', ...(keepalive ? { keepalive: true } : {}), headers: { ...(init.headers as Record<string, string> | undefined), accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
   } catch {
     throw new SyncHttpError("Couldn't reach the server. You may be offline.", 'offline');
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { isDesktopApp, useDeviceStore } from '@/sync/deviceStore';
 import { ago } from '@/domain/sharing';
@@ -6,7 +6,9 @@ import { healthLine, type HealthResponse } from '@/domain/syncHealth';
 import { diagnosticsText, statusText } from '@/sync/diagnostics';
 import { request, signInAgain } from '@/sync/http';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
-import { syncNow } from '@/sync/runner';
+import { pendingChanges, syncNow } from '@/sync/runner';
+import { useMatchStore } from '@/store/matchStore';
+import { useTeamStore } from '@/store/teamStore';
 import { useNow } from '@/sync/useNow';
 import { toast } from '@/store/toastStore';
 import { LinkDesktopFromHere, LinkThisDesktop } from './LinkDevices';
@@ -42,6 +44,10 @@ export default function SyncSettings() {
   const health = useServerHealth(s.enabled && !desktop && syncAvailable(), s.status === 'syncing');
   const known = Object.keys(s.known).length;
   const now = useNow(30_000);
+  const teams = useTeamStore((t) => t.teams);
+  const matches = useMatchStore((m) => m.matches);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const pending = useMemo(() => pendingChanges(), [teams, matches, s.known]);
 
   if (!syncAvailable()) {
     return <p className="text-sm text-muted">Sync is available in the web app, the installed phone app and the desktop app, not in this build.</p>;
@@ -128,6 +134,12 @@ export default function SyncSettings() {
               <dd>{s.cursor}</dd>
               <dt className="text-muted">Known documents</dt>
               <dd>{known}</dd>
+              <dt className="text-muted">Unsent changes</dt>
+              <dd>{pending}</dd>
+              <dt className="text-muted">Unsent-edits flag</dt>
+              <dd>{s.dirty ? 'set' : 'clear'}</dd>
+              <dt className="text-muted">App version</dt>
+              <dd>{__APP_VERSION__}</dd>
               <dt className="text-muted">Last attempt</dt>
               <dd>{when(s.lastAttemptAt)}</dd>
               <dt className="text-muted">Last success</dt>
@@ -141,7 +153,7 @@ export default function SyncSettings() {
               size="sm"
               className="mt-2"
               onClick={() => {
-                const text = diagnosticsText({ appVersion: __APP_VERSION__, cursor: s.cursor, knownDocs: known, lastAttemptAt: s.lastAttemptAt, lastSyncAt: s.lastSyncAt, lastError: s.lastError, lastErrorKind: s.lastErrorKind, lastErrorStatus: s.lastErrorStatus, lastStats: s.lastStats, server: health?.text, online: navigator.onLine });
+                const text = diagnosticsText({ appVersion: __APP_VERSION__, cursor: s.cursor, knownDocs: known, pendingChanges: pending, dirty: s.dirty, lastFlushAt: s.lastFlushAt, lastAttemptAt: s.lastAttemptAt, lastSyncAt: s.lastSyncAt, lastError: s.lastError, lastErrorKind: s.lastErrorKind, lastErrorStatus: s.lastErrorStatus, lastStats: s.lastStats, server: health?.text, online: navigator.onLine });
                 navigator.clipboard.writeText(text).then(
                   () => toast('Diagnostics copied.'),
                   () => toast('Could not copy. Select the text above instead.'),

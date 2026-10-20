@@ -7,7 +7,8 @@ import { expectNoOverflow, LONG_NAME, seedRealistic } from './overflow';
  * Realistic data: three variations, a very long team name, several chips, sync on with a long device name,
  * a team shared with me, a share with a long e-mail address, a long match log and a started run.
  */
-test.beforeEach((_fixtures, info) => {
+test.beforeEach(({ browserName }, info) => {
+  void browserName;
   test.skip(info.project.name !== 'iphone', 'phone widths only');
 });
 

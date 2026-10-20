@@ -15,6 +15,10 @@ interface SyncStoreState extends SyncState {
   /** Names this device in "Conflict copy (<device>, <date>)". */
   deviceName: string;
   lastSyncAt?: number;
+  /** Local edits the server may not have yet. Set at the edit, cleared only once a push confirmed everything (persisted, so a killed app still pushes on its next start). */
+  dirty: boolean;
+  /** When the app last sent edits on its way to the background (a keepalive push). */
+  lastFlushAt?: number;
   lastError?: string;
   /** What kind of failure `lastError` was; the banner, the header dot and the retries go by it. */
   lastErrorKind?: SyncErrorKind;
@@ -31,7 +35,10 @@ interface SyncStoreState extends SyncState {
   setDeviceName: (name: string) => void;
   saveState: (s: SyncState) => void;
   begin: () => void;
-  succeed: (stats: SyncStats) => void;
+  setDirty: (dirty: boolean) => void;
+  succeed: (stats: SyncStats, stillDirty?: boolean) => void;
+  /** A background flush ended well: `stillDirty` when some edits did not fit it. */
+  endFlush: (stillDirty: boolean) => void;
   fail: (message: string, kind?: SyncErrorKind, status?: number) => void;
   dismissBanner: () => void;
   /** Forget what was synced (the next run merges everything again); local data is untouched. */
@@ -49,22 +56,25 @@ export const useSyncStore = create<SyncStoreState>()(
       known: {},
       status: 'idle',
       bannerDismissed: false,
+      dirty: false,
       setEnabled: (enabled) => set({ enabled, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, bannerDismissed: false }),
       setDeviceName: (deviceName) => set({ deviceName: deviceName.slice(0, 40) || randomName() }),
       saveState: ({ cursor, known }) => set({ cursor, known }),
       // The previous error stays visible while the next try runs, so a banner doesn't blink on every retry.
       begin: () => set({ status: 'syncing', lastAttemptAt: Date.now() }),
-      succeed: (lastStats) => set({ status: 'idle', lastSyncAt: Date.now(), lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, bannerDismissed: false, lastStats }),
+      setDirty: (dirty) => set({ dirty }),
+      endFlush: (dirty) => set({ status: 'idle', dirty, lastFlushAt: Date.now(), lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, bannerDismissed: false }),
+      succeed: (lastStats, dirty = false) => set({ status: 'idle', dirty, lastSyncAt: Date.now(), lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, bannerDismissed: false, lastStats }),
       fail: (lastError, lastErrorKind = 'other', lastErrorStatus) =>
         set((s) => ({ status: 'idle', lastError, lastErrorKind, lastErrorStatus, bannerDismissed: lastErrorKind === 'signin' && s.lastErrorKind === 'signin' ? s.bannerDismissed : false })),
       dismissBanner: () => set({ bannerDismissed: true }),
-      forget: () => set({ cursor: 0, known: {}, lastSyncAt: undefined, lastStats: undefined, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, lastAttemptAt: undefined, bannerDismissed: false }),
+      forget: () => set({ dirty: false, cursor: 0, known: {}, lastSyncAt: undefined, lastStats: undefined, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, lastAttemptAt: undefined, bannerDismissed: false }),
     }),
     {
       name: 'ptb:sync:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ enabled: s.enabled, deviceName: s.deviceName, cursor: s.cursor, known: s.known, lastSyncAt: s.lastSyncAt }),
+      partialize: (s) => ({ enabled: s.enabled, deviceName: s.deviceName, cursor: s.cursor, known: s.known, lastSyncAt: s.lastSyncAt, dirty: s.dirty }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<SyncStoreState>;
         const known: SyncState['known'] = {};
@@ -76,6 +86,7 @@ export const useSyncStore = create<SyncStoreState>()(
           cursor: typeof p.cursor === 'number' && p.cursor >= 0 ? p.cursor : 0,
           known,
           lastSyncAt: typeof p.lastSyncAt === 'number' ? p.lastSyncAt : undefined,
+          dirty: p.dirty === true,
         };
       },
     },
