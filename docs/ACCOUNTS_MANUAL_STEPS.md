@@ -33,6 +33,8 @@ Tick each box; "Check" says how to know it worked.
 - [ ] In the app, **in the browser or phone app where you are signed in through Access**: Settings → Account → **Bring my teams from before** → it names your Access e-mail and how many teams, matches, shares and desktop apps → *Bring them over*. (Right after making an account it is offered at once; *Skip* is only for accounts with nothing from before.)
       *Check:* your teams, match log and shares are all there, no "Conflict copy" appeared, the phone and the website still sync, and the desktop app still syncs (it keeps its pairing until step 5).
 - [ ] Friends who used the app before: each makes their account (with an invite) while Access is still in front for them, then does the same. (Without Access for them, or if one forgets: `npm run admin -- claim <their e-mail> <their username> --backup backup.sql`.)
+- [ ] After the claim, on every device: Settings → Account → log in (the phone, the website, the desktop app: the desktop app now syncs through its login; its old pairing link keeps working until step E, and you can *Unlink* it in Settings → Sync once it is logged in). *Check:* each one says *Last synced …* with no "Conflict copy", and a team edited on one shows up on the others.
+- [ ] Share a team with your test account as `@username` (Saved teams → share). *Check:* it shows up there, named by your display name.
 - [ ] If something looks wrong: `npm run admin -- unclaim <username>` puts the data back under the e-mail; then `AUTH_MODE` = `access` if you want the old behaviour entirely. (Switching to `access` alone hides claimed data until it is unclaimed.)
 
 ## D. Go live (lets friends in)

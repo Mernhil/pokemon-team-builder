@@ -24,8 +24,10 @@ import { ownerForEmail } from './claim';
 import { ALL_MATCHES, accessTo, canWrite, type Target } from './access';
 import { AuthError, jwksProvider, verifyAccessJwt, type KeyProvider } from './auth';
 import { RedeemSchema, type DevicesResponse, type PairResponse, type RedeemResponse, TOKEN_RE } from '../src/domain/pairing';
+import { SESSION_TOKEN_RE, usernameKey } from '../src/domain/accounts';
 import { health } from './health';
-import { accountsEnabled, handleAuth, isAccountPath, type AuthDeps } from './authApi';
+import { accountsEnabled, crossSiteRequest, findSession, handleAuth, isAccountPath, renewedCookie, type AuthDeps, type Authed } from './authApi';
+import { revokeSession } from './sessions';
 import { JSON_HEADERS, fail, firstIssue, preflight, readJson, reply, withCors } from './http';
 import { createPairCode, deviceByToken, listDevices, redeemAttemptAllowed, redeemPairCode, revokeDevice } from './devices';
 import { deleteShare, groupOfTeam, isLiveRootTeam, namesFor, putShare, setDisplayName, sharedDocs, sharesBetween, sharesOf } from './shares';
@@ -101,6 +103,18 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
   const isHealth = url.pathname === '/api/health';
   // Renewing a session and the health report don't touch the database; health reports what is missing instead of refusing.
   const needsDb = url.pathname !== '/api/session/renew' && !isHealth;
+
+  // With the app's own accounts, a session (the web cookie, or a bearer token) says who this is, before Access does.
+  if (needsDb && env.DB && accountsEnabled(env)) {
+    const now = (deps.now ?? Date.now)();
+    const auth = await findSession(env.DB, request, now);
+    if (auth) {
+      if (auth.viaCookie && request.method !== 'GET' && crossSiteRequest(request, env, url)) return fail(403, 'request refused');
+      return asAccount(auth, request, env, url.pathname, now);
+    }
+    // No session, and no Access to fall back on (after Access is gone): simply not signed in.
+    if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return fail(401, 'not signed in');
+  }
   const { ACCESS_TEAM_DOMAIN: teamDomain, ACCESS_AUD: audience } = env;
   // Without Access settings there is nothing to verify a token against; the report is booleans only.
   if (isHealth && (!teamDomain || !audience)) return reply(200, await health(env, (deps.now ?? Date.now)()));
@@ -133,6 +147,21 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
  * (a bypass policy, docs/SYNC.md), so everything here is checked by the Worker itself: a pairing
  * code or a device token that was issued to a signed-in account and can be revoked.
  */
+/**
+ * A request identified by a session. While the account hasn't decided about its data from before accounts
+ * ("Bring my teams from before" is pending, Access still in front), sync waits: syncing first would give the account
+ * documents of its own, and then it could no longer take over the old ones.
+ */
+async function asAccount(auth: Authed, request: Request, env: Env, path: string, now: number): Promise<Response> {
+  if (env.AUTH_MODE === 'both' && auth.session.claimState === 'pending') {
+    return reply(409, { error: 'Bring your teams from before into your account first, or skip it: Settings → Account.', code: 'claim-pending' });
+  }
+  const res = await handleAccount(request, env, path, auth.session.user.id, now);
+  const again = renewedCookie(auth, request, now);
+  if (again && !res.headers.has('set-cookie')) res.headers.append('set-cookie', again);
+  return res;
+}
+
 async function handleDevice(request: Request, env: Env, url: URL, deps: ApiDeps): Promise<Response> {
   const now = (deps.now ?? Date.now)();
   if (!env.DB) return notSetUp(env, false);
@@ -159,6 +188,16 @@ async function handleDevice(request: Request, env: Env, url: URL, deps: ApiDeps)
   if (!methods.includes(request.method)) return fail(405, 'method not allowed');
 
   const bearer = /^Bearer (\S+)$/.exec(request.headers.get('authorization') ?? '')?.[1];
+  // The desktop app logged in with its account: its session token (ptbs_…), here because Access lets /api/device/* through.
+  if (bearer && SESSION_TOKEN_RE.test(bearer)) {
+    const auth = accountsEnabled(env) ? await findSession(env.DB, request, now) : null;
+    if (!auth) return fail(401, 'not signed in');
+    if (isSelf) {
+      await revokeSession(env.DB, auth.session.user.id, auth.session.id);
+      return reply(200, { ok: true });
+    }
+    return asAccount(auth, request, env, sub, now);
+  }
   const device = bearer && TOKEN_RE.test(bearer) ? await deviceByToken(env.DB, bearer, now) : null;
   if (!device) return fail(401, 'this device is not linked (or was unlinked)');
   // A desktop app linked before a claim belongs to the account now; a disabled account's devices stop.
@@ -311,8 +350,13 @@ async function handleShares(request: Request, env: Env, me: string, now: number)
     const parsed = ShareSchema.safeParse(r.body);
     if (!parsed.success) return fail(400, firstIssue(parsed.error));
     let s = parsed.data;
-    // An e-mail whose data an account has claimed is that account.
-    if (accountsEnabled(env) && s.grantee.includes('@')) {
+    // "@name": an account, by its username.
+    if (s.grantee.startsWith('@')) {
+      const row = accountsEnabled(env) ? await db.prepare('SELECT id FROM users WHERE username_key = ? AND disabled = 0').bind(usernameKey(s.grantee.slice(1))).first<{ id: string }>() : null;
+      if (!row) return fail(400, 'No account has that username.');
+      s = { ...s, grantee: row.id };
+    } else if (accountsEnabled(env) && s.grantee.includes('@')) {
+      // An e-mail whose data an account has claimed is that account.
       const grantee = await ownerForEmail(db, s.grantee);
       if (!grantee) return fail(400, "that account can't receive shares");
       s = { ...s, grantee };

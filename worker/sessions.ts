@@ -18,6 +18,8 @@ export interface ActiveSession {
   expiresAt: number;
   /** The expiry was just extended: the cookie must be set again. */
   renewed: boolean;
+  /** Has the account decided about the data from before accounts ('pending' until it claims or skips)? */
+  claimState: 'pending' | 'claimed' | 'skipped';
 }
 
 /** A new session; the oldest ones beyond the limit are dropped. The token is returned once and never stored. */
@@ -44,13 +46,14 @@ interface Row {
   display_name: string | null;
   role: 'user' | 'admin';
   disabled: number;
+  claim_state: 'pending' | 'claimed' | 'skipped';
 }
 
 /** The live session a token belongs to, or null (never issued, revoked, expired, or its user is disabled). Renews a session used after a day. */
 export async function sessionByToken(db: D1Like, token: string, now: number): Promise<ActiveSession | null> {
   const row = await db
     .prepare(
-      `SELECT s.id, s.user_id, s.created_at, s.last_seen_at, s.renewed_at, s.expires_at, u.username, u.display_name, u.role, u.disabled
+      `SELECT s.id, s.user_id, s.created_at, s.last_seen_at, s.renewed_at, s.expires_at, u.username, u.display_name, u.role, u.disabled, u.claim_state
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`,
     )
     .bind(await sha256Hex(token))
@@ -69,7 +72,7 @@ export async function sessionByToken(db: D1Like, token: string, now: number): Pr
   } else if (now - row.last_seen_at > 60_000) {
     await db.prepare('UPDATE sessions SET last_seen_at = ? WHERE id = ?').bind(now, row.id).run();
   }
-  return { id: row.id, expiresAt, renewed, user: { id: row.user_id, username: row.username, displayName: row.display_name ?? undefined, role: row.role } };
+  return { id: row.id, expiresAt, renewed, claimState: row.claim_state, user: { id: row.user_id, username: row.username, displayName: row.display_name ?? undefined, role: row.role } };
 }
 
 export async function listSessions(db: D1Like, userId: string, currentId: string): Promise<SessionInfo[]> {

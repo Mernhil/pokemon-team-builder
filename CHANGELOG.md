@@ -2,6 +2,13 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.37.0 — 2026-10-20
+
+### Changed
+- **Sync and sharing use your account.** Once you're logged in (Settings → Account), your devices sync as your account, whichever way you reach the app; the desktop app logs in with your username and password instead of a pairing code (a pairing link made before keeps working for now). Logging out keeps the teams on the device and turns sync off there.
+- **Share with `@username`.** The Share dialog takes a friend's username (`@misty`) as well as an e-mail, and shared teams and match logs are labelled with their name. Someone whose account an admin disabled disappears from your shares until they are enabled again.
+- A new account syncs only after *Bring my teams from before* is done or skipped, so the teams from before can always be brought over.
+
 ## 0.36.0 — 2026-10-20
 
 ### New

@@ -72,7 +72,7 @@ interface Ctx {
   now: number;
   accessEmail: () => Promise<string | null>;
 }
-interface Authed {
+export interface Authed {
   session: ActiveSession;
   viaCookie: boolean;
 }
@@ -101,13 +101,13 @@ function sameSiteProblem(c: Ctx): boolean {
 }
 const fromDesktop = (c: Ctx): boolean => deviceOrigins(c.env).has(c.request.headers.get('origin') ?? '');
 
-/** The session behind the request: a bearer token (desktop) or the session cookie (web). */
-async function authenticate(c: Ctx): Promise<Authed | null> {
-  const bearer = /^Bearer (\S+)$/.exec(c.request.headers.get('authorization') ?? '')?.[1];
+/** The session behind a request: a bearer token (desktop) or the session cookie (web). Also used by the sync routes. */
+export async function findSession(db: D1Like, request: Request, now: number): Promise<Authed | null> {
+  const bearer = /^Bearer (\S+)$/.exec(request.headers.get('authorization') ?? '')?.[1];
   let token = bearer && SESSION_TOKEN_RE.test(bearer) ? bearer : undefined;
   let viaCookie = false;
   if (!token) {
-    for (const part of (c.request.headers.get('cookie') ?? '').split(';')) {
+    for (const part of (request.headers.get('cookie') ?? '').split(';')) {
       const [name, ...rest] = part.trim().split('=');
       const value = rest.join('=');
       if (name === SESSION_COOKIE && SESSION_TOKEN_RE.test(value)) {
@@ -117,9 +117,24 @@ async function authenticate(c: Ctx): Promise<Authed | null> {
     }
   }
   if (!token) return null;
-  const session = await sessionByToken(c.db, token, c.now);
+  const session = await sessionByToken(db, token, now);
   return session ? { session, viaCookie } : null;
 }
+const authenticate = (c: Ctx) => findSession(c.db, c.request, c.now);
+
+/** CSRF for any cookie request that changes something (the sync routes use it too). */
+export const crossSiteRequest = (request: Request, env: Env, url: URL): boolean => {
+  const origin = request.headers.get('origin');
+  if (!origin || (origin !== url.origin && !deviceOrigins(env).has(origin))) return true;
+  return request.headers.get('x-ptb') !== '1';
+};
+
+/** The cookie to send again when a request renewed the session (a sync route's answer needs it too). */
+export const renewedCookie = (a: Authed, request: Request, now: number): string | null => {
+  if (!a.viaCookie || !a.session.renewed) return null;
+  const token = /(?:^|;\s*)__Host-ptb_session=([^;]+)/.exec(request.headers.get('cookie') ?? '')?.[1];
+  return token ? cookie(token, Math.floor((a.session.expiresAt - now) / 1000)) : null;
+};
 
 const toUser = (u: { id: string; username: string; display_name: string | null; role: 'user' | 'admin' }): AccountUser => ({ id: u.id, username: u.username, displayName: u.display_name ?? undefined, role: u.role });
 
