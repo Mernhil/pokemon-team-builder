@@ -128,6 +128,10 @@ describe('sharing between accounts', () => {
     const t = team('Rain');
     await call(env, 'POST', '/api/sync', { cookie: ash.cookie, body: { docs: [doc(t)] } });
     expect((await call(env, 'PUT', '/api/shares', { cookie: ash.cookie, body: { kind: 'team-group', ref: t.id, grantee: '@nobody', role: 'view' } })).status).toBe(400);
+    // Only friends (step 6): not yet...
+    expect((await call(env, 'PUT', '/api/shares', { cookie: ash.cookie, body: { kind: 'team-group', ref: t.id, grantee: '@misty', role: 'edit' } })).status).toBe(403);
+    await call(env, 'POST', '/api/friends/request', { cookie: ash.cookie, body: { username: 'misty' } });
+    await call(env, 'POST', '/api/friends/respond', { cookie: misty.cookie, body: { id: ash.id, accept: true } });
     const shared = await call(env, 'PUT', '/api/shares', { cookie: ash.cookie, body: { kind: 'team-group', ref: t.id, grantee: '@misty', role: 'edit' } });
     expect(shared.status).toBe(200);
     expect(shared.body.granted).toEqual([{ owner: ash.id, grantee: misty.id, kind: 'team-group', ref: t.id, role: 'edit' }]);

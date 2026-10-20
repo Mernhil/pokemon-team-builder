@@ -1,3 +1,4 @@
+import { useAccountStore } from '@/sync/accountStore';
 import { useMemo } from 'react';
 import { Activity, BarChart3, BookOpen, Map as MapIcon, Calculator, ChevronDown, Flag, GitCompare, MoreHorizontal, Search, Settings, Swords, Users, type LucideIcon } from 'lucide-react';
 import { getFormat } from '@/domain/formats';
@@ -33,6 +34,18 @@ function useNav(kind: NavKind) {
   }, [kind, prefs, champions]);
 }
 
+/** A small dot when friend requests wait for an answer (Settings → Friends). */
+function RequestsDot({ label }: { label?: boolean }) {
+  const n = useAccountStore((s) => s.incomingFriends);
+  if (!n) return null;
+  return (
+    <>
+      <span aria-hidden className="ml-1 inline-block size-2 shrink-0 rounded-full bg-accent" />
+      {label && <span className="sr-only">{`, ${n} friend ${n === 1 ? 'request' : 'requests'} waiting`}</span>}
+    </>
+  );
+}
+
 /** The menu behind "More": whatever the bar leaves out (Match log, Meta, a Tools group…) and Settings. */
 function MoreItems({ kind, onOpenSettings }: { kind: NavKind; onOpenSettings: () => void }) {
   const view = useTeamStore((s) => s.view);
@@ -52,6 +65,7 @@ function MoreItems({ kind, onOpenSettings }: { kind: NavKind; onOpenSettings: ()
       <MenuSeparator />
       <MenuItem icon={Settings} onSelect={onOpenSettings}>
         Settings &amp; credits
+        <RequestsDot label />
       </MenuItem>
     </>
   );
@@ -80,6 +94,7 @@ export function TopNav({ onOpenSettings }: { onOpenSettings: () => void }) {
           <button type="button" className={item(!!secondary)} aria-current={secondary ? 'page' : undefined}>
             {secondary ? <secondary.icon size={15} aria-hidden /> : null}
             {secondary?.label ?? 'More'}
+            <RequestsDot />
             <ChevronDown size={14} aria-hidden />
           </button>
         }
@@ -114,7 +129,10 @@ export function BottomTabs({ onOpenSettings }: { onOpenSettings: () => void }) {
         trigger={
           <button type="button" className={tab(!!secondary)} aria-current={secondary ? 'page' : undefined}>
             {secondary ? <secondary.icon size={21} aria-hidden /> : <MoreHorizontal size={21} aria-hidden />}
-            {secondary?.label ?? 'More'}
+            <span className="flex items-center">
+              {secondary?.label ?? 'More'}
+              <RequestsDot />
+            </span>
           </button>
         }
       >

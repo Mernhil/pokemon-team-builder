@@ -274,3 +274,70 @@ test('Bring my teams from before: shown to a new account, with what it brings; B
   await expect(section.getByText('Bring my teams from before')).toHaveCount(0);
   expect(claimed).toBe(true);
 });
+
+test('Friends: add by username (a neutral answer), accept a request, a friend code shown once, remove after asking, share with a friend', async ({ page }) => {
+  await rememberSignedIn(page);
+  await fakeAccounts(page, { signedIn: true });
+  const misty = { id: 'u_misty0000000', username: 'misty', since: Date.now() };
+  const brock = { id: 'u_brock0000000', username: 'brock', displayName: 'Brock', since: Date.now() };
+  let state = { friends: [] as (typeof misty)[], incoming: [brock] as (typeof misty)[], outgoing: [] as (typeof misty)[], blocked: [] as { id: string; username: string }[] };
+  await page.route('**/api/me', (r) => r.fulfill({ json: { user: USER, claim: 'skipped', claimAvailable: false, incomingFriends: 1 } }));
+  await page.route('**/api/friends', (r) => {
+    if (r.request().method() === 'DELETE') state = { ...state, friends: state.friends.filter((f) => f.id !== (r.request().postDataJSON() as { id: string }).id) };
+    return r.fulfill({ json: state });
+  });
+  await page.route('**/api/friends/request', (r) => {
+    state = { ...state, outgoing: [misty] };
+    return r.fulfill({ json: { ...state, notice: 'If that person has an account, they’ll see your request.' } });
+  });
+  await page.route('**/api/friends/respond', (r) => {
+    state = { ...state, incoming: [], friends: [brock] };
+    return r.fulfill({ json: state });
+  });
+  await page.route('**/api/friends/link', (r) => r.fulfill({ json: { ...state, code: 'FR-K7QM3-XWD9P', expiresAt: Date.now() + 7 * 864e5 } }));
+
+  await page.goto('/#friends');
+  const friends = page.getByRole('dialog', { name: 'Settings & credits' }).getByRole('region', { name: /Friends/ });
+  await expect(friends).toBeVisible();
+  await expect(friends.getByRole('heading', { name: /Friends/ }).first()).toContainText('1');
+  const add = friends.getByRole('form', { name: 'Add a friend by username' });
+  await add.getByLabel('Add a friend by username').fill('misty');
+  await add.getByRole('button', { name: 'Send request' }).click();
+  await expect(add.getByRole('status')).toHaveText(/If that person has an account/);
+  await expect(friends.getByRole('region', { name: 'Waiting for an answer' })).toContainText('misty');
+
+  await friends.getByRole('button', { name: 'Accept brock' }).click();
+  await expect(friends.getByRole('region', { name: 'Friends', exact: true })).toContainText('Brock (@brock)');
+
+  await friends.getByRole('button', { name: 'Make a friend code' }).click();
+  await expect(friends.getByTestId('friend-code')).toHaveText('FR-K7QM3-XWD9P');
+  await friends.getByRole('button', { name: 'Done' }).click();
+  await expect(friends.getByTestId('friend-code')).toHaveCount(0);
+  await expectNoA11yViolations(page);
+
+  await friends.getByRole('button', { name: 'Remove brock' }).click();
+  await friends.getByRole('alert').getByRole('button', { name: 'Remove' }).click();
+  await expect(friends.getByRole('region', { name: 'Friends', exact: true })).toContainText('No friends yet');
+});
+
+test('with an account, sharing picks a friend instead of typing an e-mail', async ({ page }) => {
+  await rememberSignedIn(page);
+  await page.addInitScript(() => localStorage.setItem('ptb:sync:v1', JSON.stringify({ state: { enabled: true, deviceName: 'Phone', cursor: 0, known: {} }, version: 1 })));
+  await fakeAccounts(page, { signedIn: true });
+  await page.route('**/api/sync**', (r) => (r.request().method() === 'GET' ? r.fulfill({ json: { docs: [], cursor: 0, more: false } }) : r.fulfill({ json: { results: [] } })));
+  await page.route('**/api/shared', (r) => r.fulfill({ json: { docs: [], names: {} } }));
+  let shared: unknown;
+  await page.route('**/api/shares', (r) => {
+    if (r.request().method() === 'PUT') shared = r.request().postDataJSON();
+    return r.fulfill({ json: { me: { email: 'u_test' }, granted: [], received: [], names: {} } });
+  });
+  await page.route('**/api/friends', (r) => r.fulfill({ json: { friends: [{ id: 'u_brock0000000', username: 'brock', displayName: 'Brock', since: Date.now() }], incoming: [], outgoing: [], blocked: [] } }));
+  await openAccount(page);
+  const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
+  const pick = dialog.getByRole('combobox', { name: 'Friend to share my matches with' });
+  await expect(pick).toBeVisible();
+  await expect(dialog.getByRole('textbox', { name: 'E-mail to share my matches with' })).toHaveCount(0);
+  await pick.selectOption({ label: 'Brock (@brock)' });
+  await dialog.getByRole('button', { name: 'Share my matches' }).click();
+  await expect.poll(() => shared).toEqual({ kind: 'matches', ref: '*', grantee: 'u_brock0000000', role: 'view' });
+});

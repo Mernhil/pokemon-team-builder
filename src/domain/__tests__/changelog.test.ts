@@ -74,6 +74,7 @@ describe('destinationFor', () => {
     expect(destinationFor('Pokénav for Gen 5+')).toBe('#atlas');
     expect(destinationFor(undefined)).toBeUndefined();
     expect(destinationFor('Settings → Account: create an account and log in')).toBe('#account');
+    expect(destinationFor('Settings → Friends')).toBe('#friends');
     expect(destinationFor('Own accounts, groundwork (not switched on yet).')).toBeUndefined();
   });
 });

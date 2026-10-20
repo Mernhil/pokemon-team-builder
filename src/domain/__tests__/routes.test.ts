@@ -66,6 +66,7 @@ describe('settingsSectionOf', () => {
   it('reads #account (a Settings section, not a view), and nothing else', () => {
     expect(settingsSectionOf('#account')).toBe('account');
     expect(settingsSectionOf('account')).toBe('account');
+    expect(settingsSectionOf('#friends')).toBe('friends');
     expect(settingsSectionOf('#calc')).toBeNull();
     expect(settingsSectionOf('#account/x')).toBeNull();
     expect(parseRoute('#account')).toBeNull();

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { nameOf } from '@/domain/sharing';
 import { isShareTarget } from '@/domain/syncProtocol';
-import { useAccountStore } from '@/sync/accountStore';
+import { isSignedIn, useAccountStore } from '@/sync/accountStore';
+import { FriendPicker } from '../account/FriendPicker';
 import { useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
 import { addShare, loadShares, removeShare, saveDisplayName } from '@/sync/sharesApi';
@@ -11,6 +12,7 @@ import { Button, Input, Label } from '../ui/primitives';
 export default function SharingSettings() {
   const me = useShareStore((s) => s.me);
   const account = useAccountStore((s) => s.user);
+  const withFriends = useAccountStore(isSignedIn);
   const granted = useShareStore((s) => s.granted);
   const received = useShareStore((s) => s.received);
   const names = useShareStore((s) => s.names);
@@ -82,8 +84,8 @@ export default function SharingSettings() {
           onSubmit={(e) => {
             e.preventDefault();
             void run(async () => {
-              const to = email.trim().toLowerCase();
-              if (!isShareTarget(to)) throw new Error('Enter their e-mail address, or @username for someone with an account.');
+              const to = withFriends ? email : email.trim().toLowerCase();
+              if (withFriends ? !to : !isShareTarget(to)) throw new Error(withFriends ? 'Choose a friend.' : 'Enter their e-mail address, or @username for someone with an account.');
               const { syncNow } = await import('@/sync/runner');
               await syncNow();
               await addShare({ kind: 'matches', ref: '*', grantee: to, role: 'view' });
@@ -91,7 +93,11 @@ export default function SharingSettings() {
             });
           }}
         >
-          <Input type="text" inputMode="email" autoCapitalize="none" spellCheck={false} aria-label="E-mail to share my matches with" placeholder="friend@example.com or @username" value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1" autoComplete="off" />
+          {withFriends ? (
+            <FriendPicker label="Friend to share my matches with" value={email} onChange={setEmail} exclude={matchShares.map((g) => g.grantee)} />
+          ) : (
+            <Input type="text" inputMode="email" autoCapitalize="none" spellCheck={false} aria-label="E-mail to share my matches with" placeholder="friend@example.com or @username" value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1" autoComplete="off" />
+          )}
           <Button type="submit" disabled={busy || !email.trim()}>
             Share my matches
           </Button>

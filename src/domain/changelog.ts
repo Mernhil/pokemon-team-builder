@@ -78,6 +78,7 @@ export function releasesSince(releases: Release[], seen: string, current: string
 /** Where a bold title points: the first rule whose words appear in the title. */
 const DESTINATIONS: [RegExp, string][] = [
   [/settings → account/i, '#account'],
+  [/settings → friends/i, '#friends'],
   [/team overview/i, '#analyse/overview'],
   [/speed tiers?/i, '#analyse/speed'],
   [/threat report/i, '#analyse/threats'],

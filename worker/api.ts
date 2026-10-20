@@ -18,8 +18,10 @@ import {
   type PushResult,
   type SharedPullResponse,
   type SharesResponse,
+  USER_ID_RE,
   normalizeIdentity,
 } from '../src/domain/syncProtocol';
+import { areFriends } from './friends';
 import { ownerForEmail } from './claim';
 import { ALL_MATCHES, accessTo, canWrite, type Target } from './access';
 import { AuthError, jwksProvider, verifyAccessJwt, type KeyProvider } from './auth';
@@ -362,6 +364,11 @@ async function handleShares(request: Request, env: Env, me: string, now: number)
       s = { ...s, grantee };
     }
     if (s.grantee === me) return fail(400, "you can't share with yourself");
+    // Between accounts, only with a friend (Settings → Friends). People still on Access alone share as before.
+    if (accountsEnabled(env) && USER_ID_RE.test(me)) {
+      if (!USER_ID_RE.test(s.grantee)) return fail(400, 'Share with a friend: add them in Settings → Friends first.');
+      if (!(await areFriends(db, me, s.grantee))) return fail(403, 'You can only share with friends: add them in Settings → Friends first.');
+    }
     if (s.kind === 'matches') {
       if (s.ref !== ALL_MATCHES) return fail(400, 'the match log is shared as a whole');
       if (s.role !== 'view') return fail(400, 'a shared match log is view only');

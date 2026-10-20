@@ -37,7 +37,25 @@ export const THROTTLES = {
   recoverIp: { windowMs: 3600_000, max: 10 },
   recoverUser: { windowMs: 3600_000, max: 5 },
   passwordUser: { windowMs: 15 * 60_000, max: 8 },
+  /** Friend requests by username, per requester (sent or not: the answer is the same either way). */
+  friendRequestUser: { windowMs: 24 * 3600_000, max: 30 },
+  friendLinkIp: { windowMs: 10 * 60_000, max: 10 },
 } as const;
+
+export const MAX_FRIENDS = 100;
+/** Requests waiting for an answer, sent or received, per account. */
+export const MAX_PENDING = 20;
+export const FRIEND_LINK_LENGTH = 10;
+export const FRIEND_LINK_TTL_MS = 7 * 24 * 3600_000;
+export const MAX_LIVE_FRIEND_LINKS = 5;
+/** "K7QM3XWD9P" → "FR-K7QM3-XWD9P". */
+export const formatFriendCode = (code: string): string => `FR-${code.slice(0, 5)}-${code.slice(5)}`;
+/** What someone typed or pasted, as the 10 symbols (with or without the "FR-" and the dashes), or null. */
+export function parseFriendCode(input: string): string | null {
+  let c = normalizeCode(input);
+  if (c.length === FRIEND_LINK_LENGTH + 2 && c.startsWith('FR')) c = c.slice(2);
+  return isCode(c, FRIEND_LINK_LENGTH) ? c : null;
+}
 
 // ---------------------------------------------------------------------------
 // Codes
@@ -261,6 +279,39 @@ export interface MeResponse {
   user: AccountUser;
   claim: ClaimState;
   claimAvailable: boolean;
+  /** Friend requests waiting for this account's answer (a dot on Settings). */
+  incomingFriends?: number;
+}
+
+// Friends (docs/ACCOUNTS_PLAN.md section 10.2)
+export const FriendRequestSchema = z.object({ username: z.string().trim().min(1).max(60) });
+export const FriendRespondSchema = z.object({ id: z.string().min(1).max(64), accept: z.boolean() });
+export const FriendIdSchema = z.object({ id: z.string().min(1).max(64) });
+export const FriendRedeemSchema = z.object({ code: z.string().max(40) });
+
+export interface FriendInfo {
+  id: string;
+  username: string;
+  displayName?: string;
+  /** When the friendship (or the request) started. */
+  since: number;
+  /** The account was disabled by an admin: nothing can be shared with it until it is enabled again. */
+  unavailable?: boolean;
+}
+export interface FriendsResponse {
+  friends: FriendInfo[];
+  /** Requests to me, waiting for my answer. */
+  incoming: FriendInfo[];
+  /** My requests, waiting for theirs. */
+  outgoing: FriendInfo[];
+  blocked: { id: string; username: string }[];
+  /** The neutral answer to a request by username (the same whether or not that person exists). */
+  notice?: string;
+}
+export interface FriendLinkResponse extends FriendsResponse {
+  /** FR-XXXXX-XXXXX, shown once. */
+  code: string;
+  expiresAt: number;
 }
 
 /** What POST /api/auth/params answers: how to derive this username's key. Unknown names get a stable fake. */
