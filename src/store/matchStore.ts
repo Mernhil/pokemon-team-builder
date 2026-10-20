@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { editTime } from '@/sync/local';
 import { safeStorage } from './storage';
 import { createMatch, enforceMatchCapabilities } from '@/domain/matches';
 import type { LoggedMon, Match } from '@/domain/matches';
@@ -70,7 +71,7 @@ export const useMatchStore = create<MatchState>()(
         return m.id;
       },
       updateMatch: (id, patch) =>
-        set((s) => (s.matches[id] ? { matches: { ...s.matches, [id]: enforceMatchCapabilities({ ...s.matches[id], ...patch, updatedAt: Date.now() }) } } : s)),
+        set((s) => (s.matches[id] ? { matches: { ...s.matches, [id]: enforceMatchCapabilities({ ...s.matches[id], ...patch, updatedAt: editTime('match', id) }) } } : s)),
       deleteMatch: (id) =>
         set((s) => {
           const matches = { ...s.matches };
@@ -82,7 +83,7 @@ export const useMatchStore = create<MatchState>()(
           if (s.matches[match.id]) return s;
           const order = s.order.filter((x) => x !== match.id);
           order.splice(Math.min(Math.max(index, 0), order.length), 0, match.id);
-          return { matches: { ...s.matches, [match.id]: { ...match, updatedAt: Date.now() } }, order };
+          return { matches: { ...s.matches, [match.id]: { ...match, updatedAt: editTime('match', match.id) } }, order };
         }),
       /** "Clone last opponent" / "match against a previous entry": start a new match preloaded from `id`. */
       duplicateAsTemplate: (id, date = new Date().toISOString().slice(0, 10)) => {

@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Copy, LayoutGrid, Pencil, Plus, Share2, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, Copy, LayoutGrid, Monitor, MonitorSmartphone, Pencil, Plus, Share2, Smartphone, Sparkles, Tablet, Trash2, Users } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useRegulationChanges } from '@/data/regulationChanges';
 import { useDex } from '@/data/useDex';
 import { getFormat, regulationInfo } from '@/domain/formats';
+import { deviceDirectory, deviceText, hasSeveralDevices, matchesFilter, parseFilter, parseStamp, teamDevices, type Device, type DeviceKind } from '@/domain/deviceStamp';
 import { relevantRegulations, teamImpact, type TeamImpact } from '@/domain/regulationImpact';
 import { nameOf, sharedFolders } from '@/domain/sharing';
 import { teamVariations } from '@/domain/team';
 import type { SpriteSetId, Team } from '@/domain/types';
+import { usePrefsStore } from '@/store/prefsStore';
 import { useShowcaseStore } from '@/store/showcaseStore';
 import { editingTeam, useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
@@ -17,7 +19,7 @@ import { impactSummary } from '../teamcheck/impactSummary';
 import { ShareDialog } from './ShareDialog';
 import { Modal } from '../ui/Modal';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, ConfirmInline } from '../ui/primitives';
+import { Button, Chip, ConfirmInline, Select } from '../ui/primitives';
 import { ArchetypeChips } from '../team/ArchetypeChips';
 import { cn, typeGradient } from '../ui/styles';
 
@@ -68,7 +70,7 @@ function InlineEditable({
     <button
       type="button"
       aria-label={`Rename ${value || placeholder}`}
-      className={cn('group/name flex min-w-0 items-center gap-1 text-left', className)}
+      className={cn('group/name flex max-w-full min-w-0 items-center gap-1 text-left', className)}
       onClick={(e) => {
         e.stopPropagation();
         setDraft(value);
@@ -151,6 +153,20 @@ function DeleteButton({
 }
 
 
+const KIND_ICON: Record<DeviceKind, typeof Smartphone> = { phone: Smartphone, tablet: Tablet, computer: Monitor, unknown: MonitorSmartphone };
+
+/** Which device made (and last edited) a team: the device's icon and "Made on Phone · edited on Desktop". Read by screen readers as that text. */
+function DeviceChip({ team, dir }: { team: Team; dir: ReadonlyMap<string, Device> }) {
+  const d = teamDevices(team, dir);
+  const text = deviceText(d);
+  if (!text) return null;
+  return (
+    <Chip icon={KIND_ICON[(d.madeOn ?? d.editedOn)!.kind]} wrap>
+      {text}
+    </Chip>
+  );
+}
+
 /** "Not live" when a team's regulation isn't the live one, and how many problems it would have in the live and the next one. */
 function RegulationChips({ team, impacts, live }: { team: Team; impacts?: Map<string, TeamImpact>; live?: string }) {
   const f = getFormat(team.formatId);
@@ -183,6 +199,14 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   const granted = useShareStore((s) => s.granted);
   const names = useShareStore((s) => s.names);
   const sharedWithMe = useMemo(() => sharedFolders(teams), [teams]);
+  const deviceId = useSyncStore((s) => s.deviceId);
+  const deviceName = useSyncStore((s) => s.deviceName);
+  const unseen = useSyncStore((s) => s.unseen);
+  const savedFilter = usePrefsStore((s) => s.teamsDeviceFilter);
+  // Device labels are only useful once sync has brought a second device's teams (or two devices are named).
+  const dir = useMemo(() => deviceDirectory(Object.values(teams), { id: deviceId, name: deviceName }), [teams, deviceId, deviceName]);
+  const showDevices = syncOn && hasSeveralDevices(dir);
+  const filter = showDevices ? parseFilter(savedFilter, dir) : ({ mode: 'all' } as const);
 
   // Regulation impact: every Champions team (and variation) against the live regulation and the next
   // announced one that has data, minus what was already wrong in its own regulation.
@@ -216,6 +240,10 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
   };
 
   const select = (id: string) => {
+    // Opening a team clears its "New from …" mark (and its folder's).
+    const markSeen = useSyncStore.getState().markSeen;
+    markSeen(id);
+    if (teams[id]?.groupId) markSeen(teams[id].groupId!);
     if (teams[id]?.shared) selectTeam(id);
     else editTeam(id);
     useTeamStore.getState().setView('builder'); // "Edit team" lands on the builder screen, whichever tab you were on
@@ -253,12 +281,35 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
           )}
         </div>
       )}
+      {showDevices && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label className="text-sm font-semibold" htmlFor="teams-device-filter">
+            Show
+          </label>
+          <Select id="teams-device-filter" aria-label="Filter saved teams by device" className="w-full sm:w-auto sm:min-w-52" value={filter.mode === 'all' ? 'all' : `${filter.mode}:${filter.id}`} onChange={(e) => usePrefsStore.getState().setTeamsDeviceFilter(e.target.value)}>
+            <option value="all">All teams</option>
+            {[...dir.values()].map((d) => (
+              <option key={`m${d.id}`} value={`made:${d.id}`}>
+                Made on {d.label}
+              </option>
+            ))}
+            {[...dir.values()].map((d) => (
+              <option key={`e${d.id}`} value={`edited:${d.id}`}>
+                Edited on {d.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
       <ul className="space-y-3">
         {order.map((id) => {
           const t = teams[id];
           if (!t || t.shared) return null;
           const f = getFormat(t.formatId);
           const variations = teamVariations(teams, id);
+          if (!matchesFilter(filter, [t, ...variations])) return null;
+          const isNew = showDevices && (unseen.includes(id) || variations.some((v) => unseen.includes(v.id)));
+          const newFrom = isNew ? (() => { const p = parseStamp((unseen.includes(id) ? t : variations.find((v) => unseen.includes(v.id))!).createdOn); return p && dir.get(p.id)?.id !== deviceId ? dir.get(p.id)?.label : undefined; })() : undefined;
           const groupIsActive = id === editingFrom || (!!editingFrom && teams[editingFrom]?.groupId === id);
           // "Add variation" duplicates whichever member of this group is being edited.
           const currentInGroup = groupIsActive && editingFrom ? editingFrom : id;
@@ -267,17 +318,23 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
             <li key={id} className={cn('rounded-2xl border bg-surface p-3', groupIsActive ? 'border-accent ring-1 ring-accent' : 'border-border')}>
               <div className="flex flex-wrap items-start gap-1">
                 <div className="flex min-w-0 flex-1 basis-44 flex-wrap items-center gap-x-2 gap-y-1 pt-1.5">
-                  <InlineEditable value={t.name} ariaLabel="Saved team name" textClassName="text-base font-semibold" onCommit={(name) => updateTeam(id, { name })} />
+                  <InlineEditable value={t.name} ariaLabel="Saved team name" className="max-w-full" textClassName="text-base font-semibold" onCommit={(name) => updateTeam(id, { name })} />
                   <Chip>{t.category || f.shortName}</Chip>
                   <ArchetypeChips team={t} dex={dex} />
                   {variations.length > 0 && <Chip>{variations.length + 1} variations</Chip>}
                   <RegulationChips team={t} impacts={impacts.get(t.id)} live={live} />
                   {groupIsActive && <Chip tone="accent">Editing</Chip>}
+                  {isNew && (
+                    <Chip tone="accent" icon={Sparkles} wrap>
+                      {newFrom ? `New from ${newFrom}` : 'New from another device'}
+                    </Chip>
+                  )}
+                  {showDevices && <DeviceChip team={t} dir={dir} />}
                   {granted.some((g) => g.kind === 'team-group' && g.ref === id) && (
-                    <Chip icon={Users}>Shared with {granted.filter((g) => g.kind === 'team-group' && g.ref === id).map((g) => nameOf(g.grantee, names)).join(', ')}</Chip>
+                    <Chip icon={Users} wrap>Shared with {granted.filter((g) => g.kind === 'team-group' && g.ref === id).map((g) => nameOf(g.grantee, names)).join(', ')}</Chip>
                   )}
                 </div>
-                <div className="ml-auto flex items-center gap-1">
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
                 {syncOn && (
                   <Button size="icon" variant="ghost" aria-label={`Share ${t.name}`} onClick={() => setShareTeam(t)}>
                     <Share2 size={15} aria-hidden />
@@ -303,10 +360,12 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
               {variations.length > 0 && (
                 <ul className="mt-3 space-y-1.5 border-l-2 border-border pl-3">
                   {variations.map((v) => (
-                    <li key={v.id} className={cn('flex items-center gap-2 rounded-xl border p-2', v.id === editingFrom ? 'border-accent bg-accent/5' : 'border-transparent bg-surface-2')}>
-                      <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                    <li key={v.id} className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border p-2', v.id === editingFrom ? 'border-accent bg-accent/5' : 'border-transparent bg-surface-2')}>
+                      <div className="flex min-w-0 flex-1 basis-40 flex-col items-start gap-1">
                         <RegulationChips team={v} impacts={impacts.get(v.id)} live={live} />
+                        {showDevices && <DeviceChip team={v} dir={dir} />}
                         <InlineEditable
+                          className="max-w-full"
                           value={v.variationLabel ?? 'Variation'}
                           ariaLabel="Variation label"
                           textClassName="text-sm font-semibold"
@@ -317,10 +376,12 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                         </button>
                         <span className="text-xs text-muted">Edited {new Date(v.updatedAt).toLocaleString()}</span>
                       </div>
-                      <Button size="sm" aria-label={`Edit team ${t.name} · ${v.variationLabel ?? 'variation'}`} onClick={() => select(v.id)}>
-                        <Pencil size={14} aria-hidden /> Edit team
-                      </Button>
-                      <DeleteButton id={v.id} label={v.variationLabel ?? 'variation'} confirmId={confirmId} setConfirmId={setConfirmId} onDelete={deleteTeam} />
+                      <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
+                        <Button size="sm" aria-label={`Edit team ${t.name} · ${v.variationLabel ?? 'variation'}`} onClick={() => select(v.id)}>
+                          <Pencil size={14} aria-hidden /> Edit team
+                        </Button>
+                        <DeleteButton id={v.id} label={v.variationLabel ?? 'variation'} confirmId={confirmId} setConfirmId={setConfirmId} onDelete={deleteTeam} />
+                      </div>
                     </li>
                   ))}
                 </ul>

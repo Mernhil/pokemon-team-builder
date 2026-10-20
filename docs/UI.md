@@ -26,6 +26,15 @@ Anything tappable is at least 44 × 44 pt on a touch screen. The primitives do t
 
 Nothing may scroll the page sideways: a wide table sits in its own `overflow-x-auto` region with a label and `tabIndex={0}`. `e2e/views.spec.ts` fails if any main screen does.
 
+### No overflow on phones
+
+Test every screen at 320, 375/390 and 430 px with long data (a 100-character team name, three variations, a long e-mail address, several chips). No element's right edge may pass its card's edge or the screen: `e2e/overflow.spec.ts` (helper `e2e/overflow.ts`, seeded realistic data) checks every element's box, which the page-width check alone cannot (a card that clips or scrolls its own overflow still leaves the page the right width). Rules of thumb:
+
+- A row with several buttons on the right wraps: `flex flex-wrap items-center justify-end gap-1`, never a fixed `flex` that can't. Give the text side `min-w-0 flex-1 basis-40`, so the buttons drop under it instead of squeezing it.
+- Text that can be long (names, labels, addresses) is `truncate` inside a `min-w-0` parent, or wraps (`Chip wrap`). `shrink-0` is for icons and small buttons only.
+- A `grid` has one shrinkable column by default (`index.css`); a column that must size to its content says so (`grid-cols-[auto_1fr]`).
+- A sideways scroller is the exception: `overflow-x-auto`, labelled, in its own box (the check skips what is inside it). The dialog body is not one.
+
 ## The two looks
 
 Sticker (default) and Classic are switched by `data-look` on `<html>`. Sticker is applied by CSS only (`index.css`: thick outlines, hard shadows that press flat); components don't branch on it. A new surface gets the Sticker look by using `Panel`, `Button`, `Chip`, `Tabs`, `Modal` or `Menu`, or by carrying `ui-panel` / `ui-sheet` / `ui-cell`. The press animation is switched off under `prefers-reduced-motion`, as is every other CSS animation (global rule at the top of `index.css`).

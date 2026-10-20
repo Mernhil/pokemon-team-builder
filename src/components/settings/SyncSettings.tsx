@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { isDesktopApp, useDeviceStore } from '@/sync/deviceStore';
 import { ago } from '@/domain/sharing';
@@ -6,7 +6,11 @@ import { healthLine, type HealthResponse } from '@/domain/syncHealth';
 import { diagnosticsText, statusText } from '@/sync/diagnostics';
 import { request, signInAgain } from '@/sync/http';
 import { syncAvailable, useSyncStore } from '@/sync/syncStore';
-import { syncNow } from '@/sync/runner';
+import { unlabelled } from '@/domain/deviceStamp';
+import { labelUnlabelledAsThisDevice } from '@/sync/labels';
+import { pendingChanges, syncNow } from '@/sync/runner';
+import { useMatchStore } from '@/store/matchStore';
+import { useTeamStore } from '@/store/teamStore';
 import { useNow } from '@/sync/useNow';
 import { toast } from '@/store/toastStore';
 import { LinkDesktopFromHere, LinkThisDesktop } from './LinkDevices';
@@ -36,12 +40,17 @@ function useServerHealth(active: boolean, syncing: boolean): { ok: boolean; text
 export default function SyncSettings() {
   const s = useSyncStore();
   const [confirmOff, setConfirmOff] = useState(false);
+  const [confirmLabel, setConfirmLabel] = useState(false);
   const stats = s.lastStats;
   const desktop = isDesktopApp();
   const linked = useDeviceStore((d) => Boolean(d.token));
   const health = useServerHealth(s.enabled && !desktop && syncAvailable(), s.status === 'syncing');
   const known = Object.keys(s.known).length;
   const now = useNow(30_000);
+  const teams = useTeamStore((t) => t.teams);
+  useMatchStore((m) => m.matches); // re-render when a match changes: the unsent count below reads the stores
+  const unlabelledCount = useMemo(() => unlabelled(Object.values(teams)).length, [teams]);
+  const pending = pendingChanges();
 
   if (!syncAvailable()) {
     return <p className="text-sm text-muted">Sync is available in the web app, the installed phone app and the desktop app, not in this build.</p>;
@@ -95,7 +104,39 @@ export default function SyncSettings() {
           <div className="space-y-1">
             <Label>This device is called</Label>
             <Input aria-label="Device name" value={s.deviceName} onChange={(e) => s.setDeviceName(e.target.value)} maxLength={40} className="max-w-xs" />
-            <p className="text-xs text-muted">Used in “Conflict copy (name, date)”.</p>
+            <p className="text-xs text-muted">Used in “Conflict copy (name, date)” and to show which device made or last edited each saved team. Rename it any time: teams show the current name.</p>
+            {unlabelledCount > 0 && (
+              <div className="pt-1">
+                {confirmLabel ? (
+                  <div role="alert" className="space-y-2 rounded-lg border border-border bg-surface-2 p-3">
+                    <p>
+                      This marks {unlabelledCount} {unlabelledCount === 1 ? 'team' : 'teams'} (variations and drafts included) that have no device yet as made and last edited on “{s.deviceName}”. It isn’t an edit: the “Edited” dates stay as they are and
+                      nothing is overwritten on your other devices.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => {
+                          const n = labelUnlabelledAsThisDevice();
+                          setConfirmLabel(false);
+                          toast(`Labelled ${n} ${n === 1 ? 'team' : 'teams'} as made on this device.`);
+                        }}
+                      >
+                        Label {unlabelledCount} {unlabelledCount === 1 ? 'team' : 'teams'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setConfirmLabel(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button size="sm" onClick={() => setConfirmLabel(true)}>
+                    Label unlabelled teams as this device
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={() => void syncNow()} disabled={s.status === 'syncing'}>
@@ -128,6 +169,12 @@ export default function SyncSettings() {
               <dd>{s.cursor}</dd>
               <dt className="text-muted">Known documents</dt>
               <dd>{known}</dd>
+              <dt className="text-muted">Unsent changes</dt>
+              <dd>{pending}</dd>
+              <dt className="text-muted">Unsent-edits flag</dt>
+              <dd>{s.dirty ? 'set' : 'clear'}</dd>
+              <dt className="text-muted">App version</dt>
+              <dd>{__APP_VERSION__}</dd>
               <dt className="text-muted">Last attempt</dt>
               <dd>{when(s.lastAttemptAt)}</dd>
               <dt className="text-muted">Last success</dt>
@@ -141,7 +188,7 @@ export default function SyncSettings() {
               size="sm"
               className="mt-2"
               onClick={() => {
-                const text = diagnosticsText({ appVersion: __APP_VERSION__, cursor: s.cursor, knownDocs: known, lastAttemptAt: s.lastAttemptAt, lastSyncAt: s.lastSyncAt, lastError: s.lastError, lastErrorKind: s.lastErrorKind, lastErrorStatus: s.lastErrorStatus, lastStats: s.lastStats, server: health?.text, online: navigator.onLine });
+                const text = diagnosticsText({ appVersion: __APP_VERSION__, cursor: s.cursor, knownDocs: known, pendingChanges: pending, dirty: s.dirty, lastFlushAt: s.lastFlushAt, lastAttemptAt: s.lastAttemptAt, lastSyncAt: s.lastSyncAt, lastError: s.lastError, lastErrorKind: s.lastErrorKind, lastErrorStatus: s.lastErrorStatus, lastStats: s.lastStats, server: health?.text, online: navigator.onLine });
                 navigator.clipboard.writeText(text).then(
                   () => toast('Diagnostics copied.'),
                   () => toast('Could not copy. Select the text above instead.'),

@@ -6,6 +6,12 @@ export interface DiagnosticsInput {
   appVersion: string;
   cursor: number;
   knownDocs: number;
+  /** Documents edited, new or deleted here that the server hasn't confirmed. */
+  pendingChanges?: number;
+  /** The persisted "unsent edits" flag. */
+  dirty?: boolean;
+  /** When edits were last sent on the way to the background. */
+  lastFlushAt?: number;
   lastAttemptAt?: number;
   lastSyncAt?: number;
   lastError?: string;
@@ -29,6 +35,9 @@ export function diagnosticsText(d: DiagnosticsInput, now = Date.now()): string {
     `Pokémon Team Builder ${d.appVersion} · sync diagnostics`,
     `Cursor: ${d.cursor}`,
     `Known documents: ${d.knownDocs}`,
+    `Unsent local changes: ${d.pendingChanges ?? 'unknown'}`,
+    `Unsent-edits flag: ${d.dirty === undefined ? 'unknown' : d.dirty ? 'set' : 'clear'}`,
+    `Last background push: ${at(d.lastFlushAt, now)}`,
     `Last attempt: ${at(d.lastAttemptAt, now)}`,
     `Last successful sync: ${at(d.lastSyncAt, now)}`,
     d.lastStats ? `Last successful run: pulled ${d.lastStats.pulled}, applied ${d.lastStats.updated}, deleted ${d.lastStats.deleted}, pushed ${d.lastStats.pushed}, conflict copies ${d.lastStats.conflicts}` : 'Last successful run: none since this app started',

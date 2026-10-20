@@ -2,6 +2,15 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* A `grid` that only sets columns from a breakpoint up (sm:grid-cols-2) has one implicit `auto` column below it,
+   which grows to its widest child's min-content (a long <select> option, a long name) and pushes the card past the
+   screen on a phone. One shrinkable column instead; any grid-cols-* utility (a later layer) still overrides it. */
+@layer base {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Design tokens (the "Iris" palette) — light values here, dark overrides below. Components use them
    through Tailwind's theme utilities (bg-surface, text-muted, border-border-strong, …).
    Every text/background pair is checked for WCAG AA by src/components/ui/__tests__/contrast.test.ts;

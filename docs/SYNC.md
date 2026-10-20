@@ -11,10 +11,54 @@ nothing else is synced: not the theme, picker favourites or calculator state.
 - **Identity** is the e-mail inside the `Cf-Access-Jwt-Assertion` header that Cloudflare Access adds. `worker/auth.ts` verifies its RS256 signature against the Access team's keys (`https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`), then the issuer, the audience (`ACCESS_AUD`) and the expiry. A plain e-mail header is never trusted.
 - **Storage** is one D1 table, `documents` (`migrations/0001_init.sql`): one row per account and document (a team or a match), with a tombstone row (`deleted = 1`) for deletes and a per-account `server_seq` that is the sync cursor.
 - **Endpoints:** `GET /api/sync?since=<seq>` (documents after a cursor, paged) and `POST /api/sync` (up to 100 documents). Every payload is validated with zod (`src/domain/syncProtocol.ts`), is limited in size (64 KB per document, 1 MB per request), and each team or match goes through the same sanitisers the app loads its own data with before it is stored. A document stamped more than 10 minutes in the future is refused (a wrong clock would win every conflict). `GET /api/session/renew` (re-login, below) and `GET /api/health` (setup check, below) sit behind Access like the rest.
-- **Merge rule** (`src/domain/sync.ts`): last write wins per document by `updatedAt`, a delete is just another version. When both sides changed a team since the last sync, the losing version is kept as a variation labelled **Conflict copy (<device>, <date>)**; matches follow the same rule without copies. Clocks within 5 seconds of each other are treated as a tie (the server's version wins and the other is kept as a copy), and an edit beats a delete unless the delete is clearly later.
+- **Merge rule** (`src/domain/sync.ts`): last write wins per document by `updatedAt`, a delete is just another version. When both sides changed a team since the last sync, the losing version is kept as a variation labelled **Conflict copy (<device>, <date>)**; matches follow the same rule without copies. Clocks within 5 seconds of each other are treated as a tie (the server's version wins and the other is kept as a copy; both versions are kept whichever wins, so the threshold only picks which is the "main" one), and an edit beats a delete unless the delete is more than 2 minutes later (`DELETE_SKEW_MS`: the one thing that can throw an edit away must not depend on two clocks agreeing). Every edit is stamped at least 1 ms after the version the device last synced (`src/sync/local.ts`), so a clock that runs behind the other device's can't make an edit look older than the version it edits (the server would refuse it and the merge would drop it).
 - **Client** (`src/sync/`): syncs when it starts, when the window regains focus or the app comes back to the foreground, when the connection returns (`online`), every 3 minutes while the app is visible, 5 seconds after teams or matches change, and on "Sync now". After a network failure (offline, or a server error) it retries after 10 s, 30 s and 2 min (`retry.ts`), and does not retry a sign-in or setup problem. A run pulls first, merges and saves the new state, and only then pushes (`engine.ts`), so a failure at any point loses neither local edits nor what was pulled; the next run sends what is still unsent. The first sync on a new device merges with what is already there (nothing is wiped). The code loads only once sync is on.
 
 The web app and the phone app sync through Cloudflare Access. The Tauri desktop app can't pass Access, so it is **linked with a pairing code** (below).
+
+## Backgrounding, hung requests and diagnostics (phone)
+
+An installed iPhone app freezes its timers and can suspend a request in flight. What the client does about it (`src/sync/runner.ts`, `runControl.ts`, `http.ts`, `engine.ts`):
+
+- **Edits are flushed when the app is hidden.** On `visibilitychange` to hidden and on `pagehide`, if there are unsent changes it sends them at once instead of waiting for the 5 s debounce: no pull first, the most recently edited documents first, one `POST` of at most 60 KB with `keepalive: true` (browsers cap a keepalive body at 64 KB). What doesn't fit goes on the next run. A single document larger than that is sent as an ordinary request.
+- **Unsent-edits flag.** `dirty` in `ptb:sync:v1` is set at the edit and cleared only when a push confirmed everything (compare with the real count of unsent documents, below). If the app is killed before anything was sent, the next start still pushes.
+- **Timeout.** Every request gives up after 20 s as an `offline` error, so the retry schedule (10 s / 30 s / 2 min) takes over. It is raced against the fetch itself, so a fetch that never settles can't hang the run.
+- **Abandoned runs.** A run older than 90 s, or older than 20 s when the app returns to the foreground / the connection returns, is abandoned: its requests are aborted, whoever awaits it is released, and it can no longer write to the stores or save a cursor (`isCurrent` is checked after every await). The next trigger starts a fresh run.
+- **Order of writes.** A pull is merged into the stores first and the cursor (`server_seq`) saved after, so a failure in between replays the pull (idempotent) and never skips documents.
+- **Service worker.** It precaches the app's own files and answers navigations with `index.html` except under `/api/` (`navigateFallbackDenylist`); it has no runtime route, so an `/api` response is never served from a cache. The Worker answers with `Cache-Control: no-store` and the client asks for `cache: 'no-store'`. `e2e/sync-devices.spec.ts` checks the built `sw.js`.
+
+### Reading Settings → Sync → Sync diagnostics (and *Copy diagnostics*)
+
+- **Unsent changes**: documents edited, new or deleted here that the server hasn't confirmed. Non-zero for more than a minute with the app in front means pushes are failing: look at *Last error*.
+- **Unsent-edits flag**: `set` while there are unsent edits (or one run before it learnt they were sent); `clear` when everything was confirmed.
+- **Last attempt / Last success**: attempt much newer than success = failing; both old = no run is starting (app suspended, or sync off).
+- **Last error**: the kind (`signin`, `offline` includes *The server took too long to answer*, `setup`, `other`) and the HTTP status (`redirected to the sign-in page` = the Access session expired).
+- **Last background push**: when a keepalive flush last ended well. Hide the app with an unsent edit and it should move.
+- **Cursor / Known documents / App version**: cursor = last server sequence reached; compare *App version* between devices.
+- *Copy diagnostics* copies counts, times and the error text only: no team or match contents, no tokens, no e-mail addresses (`src/sync/diagnostics.ts` scrubs the error text).
+
+## Which device made or edited a team
+
+Saved teams can show a small chip, *Made on Phone* or *Made on Phone · edited on Desktop* (with a phone / tablet / computer icon), a **Show** filter (*All teams / Made on … / Edited on …*, remembered on the device) and *New from Desktop* on a team that arrived through sync until you open it. The chips and the filter appear only when sync is on and teams from at least two different devices exist; a team from before 0.33 shows nothing until it is labelled.
+
+**Fields** (optional, on every team document; `src/domain/deviceStamp.ts`, sanitised with the rest of the team by `sanitizeTeam`, so the Worker, the app's loaders and imports all drop anything malformed):
+
+- `createdOn`: set when a team is created, duplicated, imported (JSON backup, share code, tournament import) or copied from a shared folder. A conflict copy keeps the labels of the version it holds; the scratch draft keeps the `createdOn` of the saved team it was loaded from.
+- `updatedOn`: set on every edit that bumps `updatedAt`. The draft model: editing the draft stamps the draft; the saved team's `updatedOn` changes only when the draft is saved over it.
+- Each is `<device id>~<device name>`, at most 40 characters (longer is cut). Syncing a team writes nothing: the labels travel with the document, so every merge, conflict copy and variation keeps them.
+
+**Stable id plus current name.** Names change and can collide (two "Phone"s), so a label is looked up by the device's id, not its name. The id is made once per install (`deviceId` in `ptb:sync:v1`: a kind letter, `p` phone / `t` tablet / `c` computer / `u` unknown, and 7 random characters; it survives turning sync off or "forget"). A rename (Settings → Sync → *This device is called*) shows on this device's old labels at once; another device shows the new name as soon as it has any team stamped by the renamed device after the rename (it uses the name on the most recently updated team that carries the id). Two devices with the same name are told apart by a short suffix, *Phone (4fg)*.
+
+**Size and server.** A pair of labels is under 100 bytes next to the 64 KB document limit, and teams are stored as JSON documents, so **no D1 migration is needed** (`EXPECTED_MIGRATIONS` is unchanged). The Worker has to be redeployed with this version, because it runs `sanitizeTeam`: an older Worker would drop the labels.
+
+**Label unlabelled teams as this device** (Settings → Sync, with the number it will mark and a confirmation). It marks teams that have no label (variations and the draft included) as made and last edited on this device, and it is **not an edit**:
+
+- `updatedAt` is not touched, so the labelled team can't win a later conflict.
+- The labelled teams are queued (`forced` in `ptb:sync:v1`) and pushed once at their unchanged version. The Worker takes a team at the *same* `updatedAt` in this one case only: the content is identical and the push only adds labels the stored copy lacks (`onlyAddsStamps`; it never rewrites an existing label). It gets a new sequence number, so the other devices pull it.
+- A device that pulls it at an unchanged version takes the labels and writes nothing else (`fill-stamps` / `adoptStamps`): no conflict, no conflict copy. If that device edited the team meanwhile, it keeps its edit and only fills in a missing `createdOn`.
+- Run it on the device that really made those teams. If two devices both label the same team, the server's labels win on the others.
+
+"New from <device>" uses the list of documents the last runs created here (`stats.changed`), kept in `unseen` until the team is opened; a device's very first sync marks nothing (everything would be new).
 
 ## One-time setup (by hand)
 
