@@ -8,7 +8,11 @@
  * where a route says so (the token and the recovery code once, in the answer that creates them).
  */
 import {
+  AdminIdSchema,
+  AdminResetSchema,
+  AdminRoleSchema,
   ChangePasswordSchema,
+  InviteCreateSchema,
   KDF_ITERATIONS,
   LoginSchema,
   MeUpdateSchema,
@@ -29,9 +33,14 @@ import {
   usernameProblem,
   type AccountUser,
   type AuthResponse,
+  type InvitesResponse,
   type KdfParams,
+  type NewInviteResponse,
+  type ResetCodeResponse,
   type SessionsResponse,
+  type UsersResponse,
 } from '../src/domain/accounts';
+import { REFUSAL_TEXT, listInvites, listUsers, makeInvite, makeResetCode, revokeInvite, setDisabled, setRole } from './admin';
 import { randomId, safeEqualText, sha256Hex, timingSafeEqual } from './crypto';
 import { deviceOrigins, fail, firstIssue, readJson, reply } from './http';
 import { inviteHash, inviteUsable } from './invites';
@@ -64,10 +73,13 @@ interface Route {
   methods: string[];
   /** No session needed (signup, login, recovery). */
   public?: boolean;
+  /** Admins only (checked on every call, from the session's own lookup). */
+  admin?: boolean;
   handle: Handler;
 }
 
 const SMALL = 2048;
+const ADMIN_BODY = 4096;
 const tooMany = (rule: Rule, now: number) => fail(429, 'Too many attempts. Wait a few minutes and try again.', { 'retry-after': String(retryAfter(rule, now)) });
 
 const cookie = (token: string, maxAgeS: number) => `${SESSION_COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${maxAgeS}`;
@@ -335,6 +347,58 @@ const sessions: Handler = async (c, a) => {
   return res;
 };
 
+// ---------------------------------------------------------------------------
+// Admin: invites and users (worker/admin.ts holds the rules)
+// ---------------------------------------------------------------------------
+
+const invites: Handler = async (c, a) => {
+  const actor = a.session.user.id;
+  const list = async () => ({ invites: await listInvites(c.db, c.now) }) satisfies InvitesResponse;
+  if (c.request.method === 'GET') return reply(200, await list());
+  const r = await readJson(c.request, ADMIN_BODY);
+  if ('response' in r) return r.response;
+  if (c.request.method === 'POST') {
+    const parsed = InviteCreateSchema.safeParse(r.body);
+    if (!parsed.success) return fail(400, firstIssue(parsed.error));
+    const made = await makeInvite(c.db, actor, parsed.data.note, parsed.data.ttlHours * 3600_000, c.now);
+    return reply(200, { ...made, ...(await list()) } satisfies NewInviteResponse);
+  }
+  const parsed = AdminIdSchema.safeParse(r.body);
+  if (!parsed.success) return fail(400, firstIssue(parsed.error));
+  if (!(await revokeInvite(c.db, actor, parsed.data.id, c.now))) return fail(404, 'No open invite with that id (it may have been used already).');
+  return reply(200, await list());
+};
+
+const users: Handler = async (c) => reply(200, { users: await listUsers(c.db) } satisfies UsersResponse);
+
+/** POST /api/admin/users/disable|enable|role|reset. */
+const userAction =
+  (action: 'disable' | 'enable' | 'role' | 'reset'): Handler =>
+  async (c, a) => {
+    const actor = a.session.user.id;
+    const r = await readJson(c.request, ADMIN_BODY);
+    if ('response' in r) return r.response;
+    const done = async (refusal: keyof typeof REFUSAL_TEXT | null) => (refusal ? fail(refusal === 'not-found' ? 404 : 409, REFUSAL_TEXT[refusal]) : reply(200, { users: await listUsers(c.db) } satisfies UsersResponse));
+    if (action === 'role') {
+      const parsed = AdminRoleSchema.safeParse(r.body);
+      if (!parsed.success) return fail(400, firstIssue(parsed.error));
+      return done(await setRole(c.db, actor, parsed.data.id, parsed.data.role, c.now));
+    }
+    if (action === 'reset') {
+      const parsed = AdminResetSchema.safeParse(r.body);
+      if (!parsed.success) return fail(400, firstIssue(parsed.error));
+      // The admin's own password again: a stolen admin session alone can't take over someone's account.
+      const me = await confirmPassword(c, a, parsed.data.key);
+      if (me instanceof Response) return me;
+      const made = await makeResetCode(c.db, actor, parsed.data.id, c.now);
+      if (typeof made === 'string') return done(made);
+      return reply(200, { ...made, users: await listUsers(c.db) } satisfies ResetCodeResponse);
+    }
+    const parsed = AdminIdSchema.safeParse(r.body);
+    if (!parsed.success) return fail(400, firstIssue(parsed.error));
+    return done(await setDisabled(c.db, actor, parsed.data.id, action === 'disable', c.now));
+  };
+
 const ROUTES: Record<string, Route> = {
   '/api/auth/params': { methods: ['POST'], public: true, handle: params },
   '/api/auth/signup': { methods: ['POST'], public: true, handle: signup },
@@ -346,6 +410,12 @@ const ROUTES: Record<string, Route> = {
   '/api/me/password': { methods: ['POST'], handle: changePassword },
   '/api/me/recovery': { methods: ['POST'], handle: newRecoveryCode },
   '/api/sessions': { methods: ['GET', 'DELETE'], handle: sessions },
+  '/api/admin/invites': { methods: ['GET', 'POST', 'DELETE'], admin: true, handle: invites },
+  '/api/admin/users': { methods: ['GET'], admin: true, handle: users },
+  '/api/admin/users/disable': { methods: ['POST'], admin: true, handle: userAction('disable') },
+  '/api/admin/users/enable': { methods: ['POST'], admin: true, handle: userAction('enable') },
+  '/api/admin/users/role': { methods: ['POST'], admin: true, handle: userAction('role') },
+  '/api/admin/users/reset': { methods: ['POST'], admin: true, handle: userAction('reset') },
 };
 
 /** Is this one of the account routes (the Worker sends only these here)? */
@@ -370,6 +440,7 @@ export async function handleAuth(request: Request, env: Env, url: URL, deps: Aut
   if (!auth) return fail(401, 'not signed in');
   // A cookie is sent by the browser on its own, so a request that changes something must prove it came from our page.
   if (auth.viaCookie && request.method !== 'GET' && sameSiteProblem(c)) return fail(403, 'request refused');
+  if (route.admin && auth.session.user.role !== 'admin') return fail(403, 'Only an admin can do that.');
   const res = await route.handle(c, auth);
   if (auth.viaCookie && auth.session.renewed && !res.headers.has('set-cookie')) {
     const token = /(?:^|;\s*)__Host-ptb_session=([^;]+)/.exec(request.headers.get('cookie') ?? '')?.[1];

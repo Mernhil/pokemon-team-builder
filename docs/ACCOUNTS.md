@@ -24,6 +24,11 @@ A plain Worker variable. `access` (or unset) is today's behaviour: the account r
 | `POST /api/me/password` | session + current key | changes it, signs the other devices out |
 | `POST /api/me/recovery` | session + key | a new recovery code |
 | `GET`/`DELETE /api/sessions` | session | list / revoke devices |
+| `GET`/`POST`/`DELETE /api/admin/invites` | admin | list (never the codes) / make one (the code once; note, 1 hour–30 days) / revoke an open one |
+| `GET /api/admin/users` | admin | every account: role, disabled, devices, last seen, who invited it |
+| `POST /api/admin/users/disable`, `/enable` | admin | disable (signs the account out everywhere at once) or enable |
+| `POST /api/admin/users/role` | admin | make or remove an admin |
+| `POST /api/admin/users/reset` | admin + the admin's own key | a one-time reset code for the user (shown once) |
 
 Bodies are zod-validated (`src/domain/accounts.ts`) and capped at 2 KB.
 
@@ -58,9 +63,31 @@ Because the server never sees the password, the length, blocklist and username r
 
 D1 counters, keyed by a hash of the pepper, the scope and the client address / username, in fixed windows: login 20 per 10 minutes per address and 8 failures per 15 minutes per username; signup 10 per 10 minutes and 5 wrong invites per hour per address; recovery 10 per hour per address and 5 per hour per username; password checks 8 per 15 minutes per account. The address is `CF-Connecting-IP` (IPv6 reduced to its /64). Answers are `429` with `Retry-After`. Login, recovery and invites answer identically whatever is wrong.
 
-## Invites (`worker/invites.ts`)
+## Invites (`worker/invites.ts`, `worker/admin.ts`)
 
-12 symbols (60 bits) from the unambiguous alphabet, shown as `K7QM-3XWD-9PTR`, single use, 7 days by default, only the SHA-256 stored. The invite is consumed in the same D1 batch that creates the user, so two signups racing for one invite can't both win. Creating invites from the app is a later step; until then they are made with `createInvite` (tests) or SQL.
+12 symbols (60 bits) from the unambiguous alphabet, shown as `K7QM-3XWD-9PTR`, single use, 7 days by default (1 hour to 30 days), only the SHA-256 stored. The invite is consumed in the same D1 batch that creates the user, so two signups racing for one invite can't both win. An admin makes them in Settings → Account → Admin (or `npm run admin -- invite`); the code is shown once and the list only shows the note, status, dates and who used it. Send the **code**, never a link.
+
+## Admin (`worker/admin.ts`, Settings → Account → Admin)
+
+- Every admin route checks `role = 'admin'` from the session's own D1 lookup, so a demoted admin loses the rights on the next request. Bodies are capped at 4 KB.
+- **Disable** deletes all the account's sessions (it is out on its next request) and its pending reset codes; **enable** lets it log in again. Nobody can disable themselves.
+- **The last admin stays**: demoting or disabling the only enabled admin is refused, whoever asks.
+- **Reset password**: needs the admin's own password again, and makes a 20-symbol code valid 24 hours, once (a newer one replaces it). The user enters it under *Forgot password?* with a new password; every one of their devices is signed out. The admin never sees or sets the password.
+- Every action writes an `events` row (`at`, `actor` = the admin's id or `cli`, `kind` such as `invite.create`, `user.disable`, `user.reset`, `target` = a user id or an invite handle). No codes.
+
+## `npm run admin` (scripts/admin.ts)
+
+For when nobody can use the app's Admin screen. Needs `npx wrangler login`; works on the remote database (`--local` for the dev one, `--db <name>` for another name).
+
+| Command | Does |
+|---|---|
+| `npm run admin -- list` | accounts, roles, disabled, devices |
+| `npm run admin -- invite --note "for Sam" --days 7` | prints a new invite code once |
+| `npm run admin -- reset <username>` | prints a one-time reset code (24 hours) for *Forgot password?* |
+| `npm run admin -- disable <username>` / `enable <username>` | as in the app (never the last admin) |
+| `npm run admin -- bootstrap <username>` | the first admin when there are no accounts and `SETUP_CODE` can't be used: prints a reset code; the person then uses *Log in → Forgot password?* with it to choose a password |
+
+Values are bound (`scripts/lib/adminSql.ts`, tested in `worker/__tests__/adminScript.test.ts`), usernames and the database name are checked, and writes go to wrangler in a temporary file, so nothing typed reaches a shell. Actions are logged in `events` with the actor `cli`.
 
 ## Tables (`migrations/0005_accounts.sql`)
 
@@ -70,4 +97,6 @@ D1 counters, keyed by a hash of the pepper, the scope and the client address / u
 
 `worker/__tests__/accounts.test.ts`: rules, hashing parameters, the routes being off by default, first account and invites (single use, expiry, revoke, race), login answers and throttles, rehash on login, token mode (and the `/api/device/` paths), sessions (hash only, revoke on the next request, logout everywhere, disabled, expiry, renewal, the limit), CSRF, password change and recovery, no secrets in console output.
 
-`src/sync/__tests__/account.test.ts`: the password never in a request, the derived key, `X-PTB`, cookie vs bearer, a `401` marking the session expired, accounts off, logout while offline, the stored state's sanitising. `e2e/account.spec.ts` (API mocked): the first-run card, signup with the recovery code, a wrong password, log in and out, the banner's login dialog, signing a device out, password-manager attributes, 16 px inputs on phones, no overflow at 320–430 px, axe.
+`worker/__tests__/admin.test.ts`: admins only (and a demoted admin at once), CSRF, invites (once, never listed, revoke, expiry, the note), users (disable signs out, enable, never yourself, never the last admin, a disabled admin doesn't count), reset codes (the admin's password, once, 24 hours, replaced, not for a disabled account), events, nothing secret in the console.
+
+`src/sync/__tests__/account.test.ts`: the password never in a request, the derived key, `X-PTB`, cookie vs bearer, a `401` marking the session expired, accounts off, logout while offline, the stored state's sanitising. `e2e/account.spec.ts` (API mocked): the first-run card, signup with the recovery code, a wrong password, log in and out, the banner's login dialog, signing a device out, the Admin screen (an invite shown once, disabling after asking, a reset code that needs the admin's password), password-manager attributes, 16 px inputs on phones, no overflow at 320–430 px, axe.

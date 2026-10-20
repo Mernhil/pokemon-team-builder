@@ -21,6 +21,8 @@ Tick each box; "Check" says how to know it worked.
 - [ ] **Delete the `SETUP_CODE` secret.**
 - [ ] Log in once on the phone, the website and the desktop app (the desktop app asks for *Your app address* the first time; it reaches the account routes through `/api/device/*`, which Access already lets through, so nothing changes in Access). *Check:* Settings → Account → Devices lists all three.
 - [ ] Try *Sign out* on one device from another: *Check:* the signed-out device shows *Your sign-in has expired* at the top within a few minutes (or when you open Settings → Account), and *Sign in again* logs it back in.
+- [ ] Settings → Account → **Admin** → *Make an invite* (note "test"), then on a second device (or a private window) *Create account* with that code as a test user. *Check:* the invite shows *Used by <name>*; Admin → Accounts lists both; *Disable* signs the test account out at once, *Enable* lets it back in; *Reset password* (asks for your own password) gives a code that works once under *Forgot password?*.
+- [ ] Optional: try the command line once so you know it works when you need it: `npx wrangler login`, then `npm run admin -- list`.
 - [ ] Sync is unchanged in this step: it still uses Cloudflare Access (and pairing on the desktop app). Being logged in or out doesn't affect it yet.
 
 ## C. Backup, then claim your old data
@@ -49,5 +51,6 @@ Tick each box; "Check" says how to know it worked.
 ## If you are locked out
 
 - Lost your password: use the recovery code (Settings → Account → "Forgot password?").
-- Lost the recovery code too: `npm run admin -- reset <username>` prints a one-time code (needs wrangler logged in).
+- Lost the recovery code too: another admin makes a reset code (Settings → Account → Admin → *Reset password*), or `npm run admin -- reset <username>` prints one (needs `npx wrangler login`). Enter it under *Forgot password?*.
+- No admin can log in at all: `npm run admin -- list` to see the accounts, then `reset <username>` for yours. With no accounts at all and no `SETUP_CODE`: `npm run admin -- bootstrap <username>`.
 - Anything else: set `AUTH_MODE` = `access` and the old Access login works again (until step E).

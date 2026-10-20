@@ -181,6 +181,55 @@ export const PasswordOnlySchema = z.object({ key });
 export const SessionIdSchema = z.object({ id: z.string().min(1).max(64) });
 export const MeUpdateSchema = z.object({ displayName: z.string().trim().max(40) });
 
+// Admin (Settings → Account → Admin; every route checks role = 'admin')
+const plainText = (max: number) => z.string().max(400).transform((s) => s.replace(/[\p{Cc}\p{Cf}]/gu, '').trim()).pipe(z.string().max(max));
+export const INVITE_TTL_HOURS = { min: 1, max: 30 * 24, default: 7 * 24 } as const;
+export const InviteCreateSchema = z.object({ note: plainText(80).optional(), ttlHours: z.number().int().min(INVITE_TTL_HOURS.min).max(INVITE_TTL_HOURS.max).default(INVITE_TTL_HOURS.default) });
+export const AdminIdSchema = z.object({ id: z.string().min(1).max(64) });
+export const AdminRoleSchema = z.object({ id: z.string().min(1).max(64), role: z.enum(['user', 'admin']) });
+/** A password reset needs the admin's own password again (the threat model: a stolen admin session alone can't take over accounts). */
+export const AdminResetSchema = z.object({ id: z.string().min(1).max(64), key });
+
+export type InviteStatus = 'open' | 'used' | 'expired' | 'revoked';
+export interface InviteInfo {
+  /** A short handle for revoking it (not the code, which is never stored or shown again). */
+  id: string;
+  note?: string;
+  createdAt: number;
+  expiresAt: number;
+  status: InviteStatus;
+  /** Username of the account it made. */
+  usedBy?: string;
+  usedAt?: number;
+}
+export interface InvitesResponse {
+  invites: InviteInfo[];
+}
+export interface NewInviteResponse extends InvitesResponse {
+  /** Shown once, like K7QM-3XWD-9PTR. */
+  code: string;
+  expiresAt: number;
+}
+export interface AdminUserInfo {
+  id: string;
+  username: string;
+  displayName?: string;
+  role: 'user' | 'admin';
+  disabled: boolean;
+  createdAt: number;
+  invitedBy?: string;
+  devices: number;
+  lastSeenAt?: number;
+}
+export interface UsersResponse {
+  users: AdminUserInfo[];
+}
+export interface ResetCodeResponse extends UsersResponse {
+  /** 20 symbols in groups of 5, valid 24 hours, once. Shown once. */
+  code: string;
+  expiresAt: number;
+}
+
 /** What POST /api/auth/params answers: how to derive this username's key. Unknown names get a stable fake. */
 export interface KdfParams {
   salt: string;
