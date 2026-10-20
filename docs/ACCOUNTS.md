@@ -29,6 +29,8 @@ A plain Worker variable. `access` (or unset) is today's behaviour: the account r
 | `POST /api/admin/users/disable`, `/enable` | admin | disable (signs the account out everywhere at once) or enable |
 | `POST /api/admin/users/role` | admin | make or remove an admin |
 | `POST /api/admin/users/reset` | admin + the admin's own key | a one-time reset code for the user (shown once) |
+| `GET`/`POST /api/claim` | session (+ an Access JWT for the e-mail) | what a claim would bring / bring it (only with `AUTH_MODE=both`) |
+| `POST /api/claim/skip` | session | the account has nothing from before |
 
 Bodies are zod-validated (`src/domain/accounts.ts`) and capped at 2 KB.
 
@@ -89,13 +91,28 @@ For when nobody can use the app's Admin screen. Needs `npx wrangler login`; work
 
 Values are bound (`scripts/lib/adminSql.ts`, tested in `worker/__tests__/adminScript.test.ts`), usernames and the database name are checked, and writes go to wrangler in a temporary file, so nothing typed reaches a shell. Actions are logged in `events` with the actor `cli`.
 
-## Tables (`migrations/0005_accounts.sql`)
+## Bring my teams from before (`worker/claim.ts`, `migrations/0006_claims.sql`)
 
-`users`, `sessions`, `invites`, `reset_codes`, `throttles`, `events` (admin audit, no secrets) and `credentials` (reserved for passkeys, unused). Nothing reads them while `AUTH_MODE` is `access`.
+Before accounts, every document, share and linked desktop app was keyed by the Cloudflare Access e-mail. A **claim** moves all of it to the account's id, once:
+
+- **When:** only with `AUTH_MODE=both` (Access still in front), and only when **one request carries both** the account's session and a verified Access JWT; the e-mail comes from the JWT, never the body. The account must be **fresh** (no documents, no sync sequence, no shares, never claimed). One e-mail can be claimed by one account (`users.legacy_email` is unique).
+- **What:** one D1 batch (a transaction) rewrites `owner` from the e-mail to the id in `documents`, `sync_seq`, `shares.owner`, `shares.grantee`, `devices` and `pair_codes`, copies the name from `profiles` to the account, sets `legacy_email` and `claim_state = 'claimed'`, and writes `account_claims` (counts, for the record and the way back) and an `events` row. The first statement claims only a fresh account; every later one only runs if it did, so a refused claim changes nothing.
+- **Why nothing breaks:** only `owner`/`grantee` change. Ids, `updated_at`, tombstones, folders and **`server_seq` stay**, and `sync_seq` moves with them, so every device's cursor and `known` map stay valid: nothing is pulled again, nothing becomes a conflict copy (tested: an old cursor pulls nothing new).
+- **After:** with accounts on, a verified Access e-mail that an account claimed **is** that account (`ownerForEmail`), so the phone and the website keep syncing through Access exactly as before, and linked desktop apps keep their device tokens (`devices.owner` moved). Sharing with a claimed e-mail reaches the account; names come from the account's display name or username. A disabled account can't sync through Access or an old desktop link.
+- **Pending / skipped:** a new account made while Access is in front starts `pending` (`GET /api/me` says `claim` and `claimAvailable`); the app shows *Bring my teams from before* right after signup and in Settings → Account, with *Skip* (`skipped`; it can still claim later while fresh). Made without Access (`AUTH_MODE=accounts`): `skipped`.
+- **Desktop:** it can't pass Access, so it can't claim; claim from the web, the desktop's link moves with the account.
+- **From a terminal** (`npm run admin`): `claim <email> <username> --backup <file>` (refuses without a backup file; same SQL as the Worker) and `unclaim <username>` (everything the account owns goes back to the e-mail, `claim_state` back to `pending`, `account_claims.undone_at` set). With `AUTH_MODE=access` only unclaimed data is visible again, so roll back a claim with `unclaim` before switching to `access`.
+- **Backups:** `.github/workflows/d1-backup.yml`, weekly and by hand: `wrangler d1 export`, encrypted with `age`, a private artifact for 30 days (docs/SYNC.md).
+
+## Tables (`migrations/0005_accounts.sql`, `0006_claims.sql`)
+
+`users` (with `claim_state` from 0006), `sessions`, `invites`, `reset_codes`, `throttles`, `events` (audit, no secrets), `credentials` (reserved for passkeys, unused) and `account_claims`. Nothing reads them while `AUTH_MODE` is `access`.
 
 ## Tests
 
 `worker/__tests__/accounts.test.ts`: rules, hashing parameters, the routes being off by default, first account and invites (single use, expiry, revoke, race), login answers and throttles, rehash on login, token mode (and the `/api/device/` paths), sessions (hash only, revoke on the next request, logout everywhere, disabled, expiry, renewal, the limit), CSRF, password change and recovery, no secrets in console output.
+
+`worker/__tests__/claim.test.ts`: the preview, session + verified JWT on one request (not the body, not a forged JWT, CSRF), everything moved and every cursor intact (an old cursor pulls nothing new, the next push continues the sequence), the desktop link still works, the friend's shared folder and edits, sharing with a claimed e-mail, claim twice / an e-mail already claimed / a non-fresh account refused with nothing changed, only in `both`, skip, a disabled claimed account, unclaim (and claiming again), the script's SQL.
 
 `worker/__tests__/admin.test.ts`: admins only (and a demoted admin at once), CSRF, invites (once, never listed, revoke, expiry, the note), users (disable signs out, enable, never yourself, never the last admin, a disabled admin doesn't count), reset codes (the admin's password, once, 24 hours, replaced, not for a disabled account), events, nothing secret in the console.
 

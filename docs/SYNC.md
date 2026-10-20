@@ -82,6 +82,7 @@ Built on the same Worker, D1 database and Access identity. Nothing is shared unl
 ## Backing up D1
 
 - Export: `npx wrangler d1 export pokemon-team-builder --remote --output backup.sql` (add `--no-schema` for data only).
+- Weekly, automatically: `.github/workflows/d1-backup.yml` (Mondays, and *Run workflow* by hand) exports the database, encrypts it with `age` to the `AGE_PUBLIC_KEY` secret and keeps it as a private artifact for 30 days. It needs the secrets `CLOUDFLARE_API_TOKEN` (D1: Read) and `AGE_PUBLIC_KEY`; without them it only warns. Restore: `age -d -i key.txt -o backup.sql backup-….sql.age`, then `npx wrangler d1 execute pokemon-team-builder --remote --file backup.sql` into an empty database.
 - D1 also keeps Time Travel restore points for 30 days: `npx wrangler d1 time-travel info pokemon-team-builder`, then `... restore ... --timestamp=<time>`.
 - The app itself is a backup too: each device keeps a full copy in localStorage, and Import / Export → JSON backup still works.
 - Tombstones (deleted documents) are kept forever and are tiny. To prune old ones: `DELETE FROM documents WHERE deleted = 1 AND updated_at < <ms>`; a device that hasn't synced since then could bring a deleted document back.

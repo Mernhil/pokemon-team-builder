@@ -14,7 +14,10 @@ import {
   usernameProblem,
   type AccountUser,
   type AuthResponse,
+  type ClaimDone,
+  type ClaimInfo,
   type KdfParams,
+  type MeResponse,
   type SessionInfo,
   type SessionsResponse,
 } from '@/domain/accounts';
@@ -110,8 +113,9 @@ const remember = (r: AuthResponse): AuthResponse => {
 export async function checkAccount(): Promise<'off' | 'signedOut' | 'signedIn'> {
   const store = useAccountStore.getState();
   try {
-    const { user } = await accountRequest<{ user: AccountUser }>('GET', '/api/me');
+    const { user, claim, claimAvailable } = await accountRequest<MeResponse>('GET', '/api/me');
     store.setUser(user);
+    store.setClaim(claim, claimAvailable);
     store.setAvailability('on');
     return 'signedIn';
   } catch (e) {
@@ -228,4 +232,16 @@ export async function revokeSession(id: string, current: boolean): Promise<Sessi
   const { sessions } = await accountRequest<SessionsResponse>('DELETE', '/api/sessions', { id });
   if (current) useAccountStore.getState().signOut();
   return sessions;
+}
+
+// "Bring my teams from before" (docs/ACCOUNTS.md): what the Access sign-in synced moves into the account.
+export const loadClaim = () => accountRequest<ClaimInfo>('GET', '/api/claim');
+export async function claimOldData(): Promise<ClaimDone> {
+  const done = await accountRequest<ClaimDone>('POST', '/api/claim', {});
+  useAccountStore.getState().setClaim('claimed');
+  return done;
+}
+export async function skipClaim(): Promise<void> {
+  await accountRequest('POST', '/api/claim/skip', {});
+  useAccountStore.getState().setClaim('skipped');
 }

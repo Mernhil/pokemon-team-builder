@@ -18,15 +18,43 @@ export function sqlLiteral(v: SqlValue): string {
   return `'${v.replace(/'/g, "''")}'`;
 }
 
-/** Fills each `?` with the next value, as a prepared statement would. A `?` inside a quoted literal in `sql` is not allowed. */
+/**
+ * Fills each `?` with the next value (or each `?N` with the N-th), as a prepared statement would. A `?` inside a
+ * quoted literal in `sql` is not allowed.
+ */
 export function bindSql(sql: string, values: SqlValue[]): string {
-  if (/'[^']*\?[^']*'/.test(sql)) throw new Error('a ? inside a literal');
-  let i = 0;
-  const out = sql.replace(/\?/g, () => {
-    if (i >= values.length) throw new Error('too few values');
-    return sqlLiteral(values[i++]);
-  });
-  if (i !== values.length) throw new Error('too many values');
+  let out = '';
+  let next = 0;
+  let numbered: boolean | undefined;
+  const used = new Set<number>();
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (ch === "'") {
+      // A literal in the template, copied as it is ('' is an escaped quote inside it).
+      const end = sql.indexOf("'", i + 1);
+      if (end < 0) throw new Error('an unclosed literal');
+      if (sql.slice(i, end + 1).includes('?')) throw new Error('a ? inside a literal');
+      out += sql.slice(i, end + 1);
+      i = end;
+      continue;
+    }
+    if (ch !== '?') {
+      out += ch;
+      continue;
+    }
+    const digits = /^\d+/.exec(sql.slice(i + 1))?.[0];
+    if (numbered === undefined) numbered = !!digits;
+    if (numbered !== !!digits) throw new Error('mixed ? and ?N');
+    let k: number;
+    if (digits) {
+      k = Number(digits);
+      i += digits.length;
+    } else k = ++next;
+    if (k < 1 || k > values.length) throw new Error(digits ? `no value for ?${digits}` : 'too few values');
+    used.add(k);
+    out += sqlLiteral(values[k - 1]);
+  }
+  if (used.size !== values.length) throw new Error('too many values');
   return out;
 }
 
@@ -68,6 +96,21 @@ export function checkDbName(name: string): string {
   if (!/^[a-z0-9][a-z0-9_-]{0,62}$/i.test(name)) throw new Error(`"${name.slice(0, 40)}" is not a D1 database name.`);
   return name;
 }
+
+/** An e-mail as Cloudflare Access gives it (lower case), strictly: it goes into SQL and onto a command line. */
+export function checkEmail(email: string | undefined): string {
+  const e = (email ?? '').trim().toLowerCase();
+  if (!/^[a-z0-9._+-]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e) || e.length > 254) throw new Error(`"${e.slice(0, 60)}" is not an e-mail address.`);
+  return e;
+}
+
+/** Is the account fresh (nothing of its own, never claimed), and is the e-mail already someone's? */
+export const freshSql = (userId: string, email: string) =>
+  bindSql(
+    `SELECT ((SELECT legacy_email FROM users WHERE id = ?1) IS NULL AND NOT EXISTS (SELECT 1 FROM documents WHERE owner = ?1) AND NOT EXISTS (SELECT 1 FROM sync_seq WHERE owner = ?1)
+       AND NOT EXISTS (SELECT 1 FROM shares WHERE owner = ?1 OR grantee = ?1)) AS fresh, EXISTS (SELECT 1 FROM users WHERE legacy_email = ?2) AS taken`,
+    [userId, email],
+  );
 
 export const USER_BY_NAME = (name: string) => bindSql('SELECT id, username, role, disabled FROM users WHERE username_key = ?', [usernameKey(checkUsername(name))]);
 export const LIST_USERS =

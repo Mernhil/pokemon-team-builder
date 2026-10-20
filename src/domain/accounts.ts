@@ -230,6 +230,39 @@ export interface ResetCodeResponse extends UsersResponse {
   expiresAt: number;
 }
 
+// "Bring my teams from before" (docs/ACCOUNTS_PLAN.md section 9)
+export type ClaimState = 'pending' | 'claimed' | 'skipped';
+export interface ClaimCounts {
+  teams: number;
+  matches: number;
+  shares: number;
+  devices: number;
+}
+/** GET /api/claim. */
+export interface ClaimInfo {
+  /** Possible on this server now (Access still in front: AUTH_MODE "both"). */
+  available: boolean;
+  state: ClaimState;
+  /** The account has nothing of its own yet (only then can it take over old data). */
+  fresh: boolean;
+  /** The Access e-mail of this request, and what it owns: what a claim would bring. */
+  email?: string;
+  counts?: ClaimCounts;
+  /** Already claimed: from which e-mail. */
+  claimedEmail?: string;
+}
+/** POST /api/claim. */
+export interface ClaimDone {
+  email: string;
+  counts: ClaimCounts;
+}
+/** GET /api/me. */
+export interface MeResponse {
+  user: AccountUser;
+  claim: ClaimState;
+  claimAvailable: boolean;
+}
+
 /** What POST /api/auth/params answers: how to derive this username's key. Unknown names get a stable fake. */
 export interface KdfParams {
   salt: string;

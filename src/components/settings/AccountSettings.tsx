@@ -14,6 +14,7 @@ import { syncAvailable } from '@/sync/syncStore';
 import { useNow } from '@/sync/useNow';
 import { toast } from '@/store/toastStore';
 import { LoginForm, RecoverForm, RecoveryCodeCard, SignupForm, TextField } from '../account/AccountForms';
+import { ClaimSection } from '../account/ClaimSection';
 import { Button, Checkbox, Chip, Tabs } from '../ui/primitives';
 
 // Admins only: loads when an admin opens Settings → Account.
@@ -124,6 +125,7 @@ function SignedIn({ onRecoveryCode }: { onRecoveryCode: (code: string) => void }
           </Chip>
         )}
       </div>
+      <ClaimSection username={user.username} />
       <DisplayName />
       <Devices />
       {user.role === 'admin' && (

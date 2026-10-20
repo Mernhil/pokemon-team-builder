@@ -74,12 +74,22 @@ export interface PushResponse {
 const SHARE_ROLES = ['view', 'edit'] as const;
 const SHARE_KINDS = ['team-group', 'matches'] as const;
 export const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+/** An account's id ("u_" and 12 base64url characters, worker/crypto.ts `randomId`). Case matters. */
+export const USER_ID_RE = /^u_[A-Za-z0-9_-]{12}$/;
+/** Who someone is, as stored: an e-mail in lower case, an account id exactly as it is. */
+export const normalizeIdentity = (who: string): string => (who.includes('@') ? who.trim().toLowerCase() : who.trim());
 export const MAX_SHARES = 50;
 
 export const ShareSchema = z.object({
   kind: z.enum(SHARE_KINDS),
   ref: z.string().regex(/^(\*|[A-Za-z0-9-]{1,64})$/),
-  grantee: z.string().max(254).regex(EMAIL_RE).transform((e) => e.trim().toLowerCase()),
+  /** Who: an e-mail address (a Cloudflare Access sign-in), or an account's id once accounts are on (docs/ACCOUNTS.md). */
+  grantee: z
+    .string()
+    .max(254)
+    .transform((e) => e.trim())
+    .pipe(z.string().refine((e) => EMAIL_RE.test(e) || USER_ID_RE.test(e), 'not an e-mail address or an account'))
+    .transform(normalizeIdentity),
   role: z.enum(SHARE_ROLES),
 });
 export type ShareInput = z.infer<typeof ShareSchema>;

@@ -243,3 +243,34 @@ test('Admin: make an invite (the code shown once), disable an account after aski
   expect(resetBody).not.toContain(PW);
   expect(server.bodies.join('')).not.toContain(PW);
 });
+
+test('Bring my teams from before: shown to a new account, with what it brings; Bring them over, or Skip', async ({ page }) => {
+  await rememberSignedIn(page);
+  await fakeAccounts(page, { signedIn: true });
+  let claimed = false;
+  let skipped = false;
+  await page.route('**/api/claim', (r) => {
+    if (r.request().method() === 'POST') {
+      claimed = true;
+      return r.fulfill({ json: { email: 'me@example.com', counts: { teams: 12, matches: 30, shares: 2, devices: 1 } } });
+    }
+    return r.fulfill({ json: { available: true, state: skipped ? 'skipped' : 'pending', fresh: !claimed, email: 'me@example.com', counts: { teams: 12, matches: 30, shares: 2, devices: 1 } } });
+  });
+  await page.route('**/api/claim/skip', (r) => {
+    skipped = true;
+    return r.fulfill({ json: { ok: true } });
+  });
+  await openAccount(page);
+  const section = accountSection(page);
+  const claim = section.getByRole('region', { name: 'Bring my teams from before' });
+  await expect(claim).toContainText('me@example.com');
+  await expect(claim).toContainText('12 teams, 30 logged matches, 2 shares, 1 linked desktop app');
+  await expectNoA11yViolations(page);
+  await claim.getByRole('button', { name: 'Skip' }).click();
+  // Skipped: it folds away, still there for later.
+  await expect(claim).toHaveCount(0);
+  await section.getByText('Bring my teams from before').click();
+  await section.getByRole('button', { name: 'Bring them over' }).click();
+  await expect(section.getByText('Bring my teams from before')).toHaveCount(0);
+  expect(claimed).toBe(true);
+});

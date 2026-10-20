@@ -1,0 +1,81 @@
+name: D1 backup
+
+# A weekly, encrypted backup of the sync database (docs/ACCOUNTS_PLAN.md section 9.2, docs/SYNC.md).
+#
+# - `wrangler d1 export` writes the whole database as SQL; `age` encrypts it to AGE_PUBLIC_KEY right away and the
+#   plain file is deleted, so only the encrypted file ever leaves the runner. It is kept as a private workflow
+#   artifact for 30 days (Actions → this workflow → a run → Artifacts).
+# - Needs two repository secrets (Settings → Secrets and variables → Actions):
+#     CLOUDFLARE_API_TOKEN  a Cloudflare API token with D1: Read (Account → D1 → Read) for the account
+#     AGE_PUBLIC_KEY        the public half of an `age-keygen` key pair ("age1…"); keep the private key in your password manager
+#   and, only if the token can see more than one Cloudflare account, CLOUDFLARE_ACCOUNT_ID.
+#   Without them the run says so and stops (it doesn't fail every week).
+# - To restore: download the artifact, `age -d -i key.txt -o backup.sql backup-*.sql.age`, then
+#   `npx wrangler d1 execute pokemon-team-builder --remote --file backup.sql` into an empty database (docs/SYNC.md).
+on:
+  schedule:
+    - cron: '17 3 * * 1' # Mondays, 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: d1-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check the secrets
+        id: secrets
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AGE: ${{ secrets.AGE_PUBLIC_KEY }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$AGE" ]; then
+            echo "::warning::Set the CLOUDFLARE_API_TOKEN and AGE_PUBLIC_KEY repository secrets to turn the weekly D1 backup on (docs/ACCOUNTS_MANUAL_STEPS.md, section C)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$AGE" in age1*) ;; *) echo "::error::AGE_PUBLIC_KEY doesn't look like an age public key (age1…)."; exit 1;; esac
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Install age
+        if: steps.secrets.outputs.ready == 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Export and encrypt
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AGE_PUBLIC_KEY: ${{ secrets.AGE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "$ACCOUNT" ]; then export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT"; fi
+          umask 077
+          name="backup-$(date -u +%Y-%m-%dT%H%MZ).sql"
+          work="$(mktemp -d)"
+          npx --yes wrangler@4 d1 export pokemon-team-builder --remote --output "$work/$name"
+          test -s "$work/$name"
+          mkdir -p out
+          age -r "$AGE_PUBLIC_KEY" -o "out/$name.age" "$work/$name"
+          rm -rf "$work"
+          ls -l out
+
+      - name: Keep it (private, 30 days)
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: d1-backup
+          path: out/*.age
+          retention-days: 30
+          if-no-files-found: error

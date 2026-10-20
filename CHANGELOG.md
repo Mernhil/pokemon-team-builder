@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.36.0 — 2026-10-20
+
+### New
+- **Settings → Account → Bring my teams from before.** Right after making an account (and in Settings → Account until you do it or skip it), the app offers to move everything you synced with your Cloudflare sign-in into the account: teams with their folders, the match log, what you shared and what was shared with you, and linked desktop apps. It says which e-mail and how much before you confirm. Nothing is copied twice, no conflict copies appear and every device keeps syncing. It works in the browser that is signed in with Cloudflare, for an account that has nothing of its own yet; *Skip* if you have nothing from before.
+- A weekly encrypted backup of the sync database (a GitHub Action; it needs two secrets, see docs/ACCOUNTS_MANUAL_STEPS.md), and `npm run admin -- claim <email> <username> --backup <file>` / `unclaim <username>` for doing or undoing the same move from a terminal.
+
 ## 0.35.0 — 2026-10-20
 
 ### New

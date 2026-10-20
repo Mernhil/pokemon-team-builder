@@ -18,7 +18,9 @@ import {
   type PushResult,
   type SharedPullResponse,
   type SharesResponse,
+  normalizeIdentity,
 } from '../src/domain/syncProtocol';
+import { ownerForEmail } from './claim';
 import { ALL_MATCHES, accessTo, canWrite, type Target } from './access';
 import { AuthError, jwksProvider, verifyAccessJwt, type KeyProvider } from './auth';
 import { RedeemSchema, type DevicesResponse, type PairResponse, type RedeemResponse, TOKEN_RE } from '../src/domain/pairing';
@@ -77,7 +79,17 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
   const accountPath = accountsEnabled(env) ? accountPathOf(url.pathname) : null;
   if (accountPath) {
     if (request.method === 'OPTIONS') return preflight(origin, env);
-    return withCors(await handleAuth(request, env, new URL(accountPath, url), deps), origin, env);
+    // "Bring my teams from before" needs the old identity too: the e-mail of a verified Access JWT on the same request.
+    const accessEmail = async () => {
+      const jwt = request.headers.get('Cf-Access-Jwt-Assertion');
+      if (!jwt || !env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return null;
+      try {
+        return (await verifyAccessJwt(jwt, { teamDomain: env.ACCESS_TEAM_DOMAIN, audience: env.ACCESS_AUD }, deps.keys ?? jwksProvider(env.ACCESS_TEAM_DOMAIN), (deps.now ?? Date.now)())).email;
+      } catch {
+        return null;
+      }
+    };
+    return withCors(await handleAuth(request, env, new URL(accountPath, url), { ...deps, accessEmail }), origin, env);
   }
   if (url.pathname.startsWith('/api/device/')) {
     if (request.method === 'OPTIONS') return preflight(origin, env);
@@ -107,6 +119,12 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
   if (isHealth) return reply(200, await health(env, now));
   // The Access login just happened (or the cookie was still good): back to the app, which now holds a fresh session.
   if (url.pathname === '/api/session/renew') return new Response(null, { status: 302, headers: { location: '/', 'cache-control': 'no-store' } });
+  // With accounts on, an e-mail whose data an account has claimed is that account now (worker/claim.ts).
+  if (accountsEnabled(env)) {
+    const mapped = await ownerForEmail(env.DB!, owner);
+    if (!mapped) return fail(403, 'this account is disabled');
+    owner = mapped;
+  }
   return handleAccount(request, env, url.pathname, owner, now);
 }
 
@@ -143,6 +161,11 @@ async function handleDevice(request: Request, env: Env, url: URL, deps: ApiDeps)
   const bearer = /^Bearer (\S+)$/.exec(request.headers.get('authorization') ?? '')?.[1];
   const device = bearer && TOKEN_RE.test(bearer) ? await deviceByToken(env.DB, bearer, now) : null;
   if (!device) return fail(401, 'this device is not linked (or was unlinked)');
+  // A desktop app linked before a claim belongs to the account now; a disabled account's devices stop.
+  if (accountsEnabled(env) && device.owner.startsWith('u_')) {
+    const u = await env.DB.prepare('SELECT disabled FROM users WHERE id = ?').bind(device.owner).first<{ disabled: number }>();
+    if (!u || u.disabled === 1) return fail(401, 'this device is not linked (or was unlinked)');
+  }
   if (isSelf) {
     await revokeDevice(env.DB, device.owner, device.id);
     return reply(200, { ok: true });
@@ -242,7 +265,7 @@ async function handleShared(request: Request, env: Env, me: string, now: number)
   const results: PushResult[] = [];
   const sharesCache = new Map<string, Awaited<ReturnType<typeof sharesBetween>>>();
   for (const d of parsed.data.docs) {
-    const owner = d.owner.trim().toLowerCase();
+    const owner = normalizeIdentity(d.owner);
     if (owner === me) return fail(400, 'these are your own documents: use /api/sync');
     if (d.kind !== 'team') {
       results.push({ id: d.id, kind: d.kind, status: 'denied' });
@@ -287,7 +310,13 @@ async function handleShares(request: Request, env: Env, me: string, now: number)
   if (request.method === 'PUT') {
     const parsed = ShareSchema.safeParse(r.body);
     if (!parsed.success) return fail(400, firstIssue(parsed.error));
-    const s = parsed.data;
+    let s = parsed.data;
+    // An e-mail whose data an account has claimed is that account.
+    if (accountsEnabled(env) && s.grantee.includes('@')) {
+      const grantee = await ownerForEmail(db, s.grantee);
+      if (!grantee) return fail(400, "that account can't receive shares");
+      s = { ...s, grantee };
+    }
     if (s.grantee === me) return fail(400, "you can't share with yourself");
     if (s.kind === 'matches') {
       if (s.ref !== ALL_MATCHES) return fail(400, 'the match log is shared as a whole');
@@ -306,9 +335,9 @@ async function handleShares(request: Request, env: Env, me: string, now: number)
   const parsed = UnshareSchema.safeParse(r.body);
   if (!parsed.success) return fail(400, firstIssue(parsed.error));
   const u = parsed.data;
-  if (u.owner && u.owner.trim().toLowerCase() !== me) {
+  if (u.owner && normalizeIdentity(u.owner) !== me) {
     if (u.grantee !== me) return fail(403, 'not yours to remove');
-    await deleteShare(db, u.owner.trim().toLowerCase(), me, u.kind, u.ref);
+    await deleteShare(db, normalizeIdentity(u.owner), me, u.kind, u.ref);
   } else {
     await deleteShare(db, me, u.grantee, u.kind, u.ref);
   }
