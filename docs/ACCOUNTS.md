@@ -4,7 +4,15 @@ The app's own accounts, replacing Cloudflare Access in steps (docs/ACCOUNTS_PLAN
 
 ## Switch: `AUTH_MODE`
 
-A plain Worker variable. `access` (or unset) is today's behaviour: the account routes below answer 404. `both` turns them on next to Access. `accounts` is for after Access is gone. Health (`GET /api/health`) reports the mode and whether `PASSWORD_PEPPER` / `SETUP_CODE` exist (booleans only).
+A plain Worker variable (docs/ACCOUNTS_MANUAL_STEPS.md says when to change it).
+
+| Mode | Account routes | Sync identity | Bring my teams from before | New accounts |
+|---|---|---|---|---|
+| `access` (or unset) | 404 | the Access e-mail only | n/a | n/a |
+| `both` (Access still in front) | on | session, else the Access e-mail (mapped to a claimed account) | in the app, with the Access JWT | start `pending`: sync waits for claim or skip |
+| `accounts` (go-live: Access on Bypass) | on | session, else an Access e-mail if Access still adds one | only `npm run admin -- claim` | start `skipped` |
+
+Health (`GET /api/health`) reports the mode and whether `PASSWORD_PEPPER` / `SETUP_CODE` exist (booleans only). With accounts on it is public (it says nothing about any account), so it keeps answering once Access is on Bypass.
 
 ## Secrets (Worker → Settings → Variables and Secrets)
 

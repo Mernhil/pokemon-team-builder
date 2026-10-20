@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.39.0 — 2026-10-20
+
+### Changed
+- The go-live checklist (docs/ACCOUNTS_MANUAL_STEPS.md) is final: backups first, your account and your old teams, a test account and a friend, then `AUTH_MODE=accounts`, Access on Bypass, an optional rate-limit rule and the invites, with how to roll each step back.
+- The server check in Settings → Sync keeps working once Cloudflare Access is on Bypass (it says nothing about any account), and `npm run admin -- list` shows whether each account has brought its old teams over.
+
 ## 0.38.0 — 2026-10-20
 
 ### New

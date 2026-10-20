@@ -118,8 +118,9 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
     if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return fail(401, 'not signed in');
   }
   const { ACCESS_TEAM_DOMAIN: teamDomain, ACCESS_AUD: audience } = env;
-  // Without Access settings there is nothing to verify a token against; the report is booleans only.
-  if (isHealth && (!teamDomain || !audience)) return reply(200, await health(env, (deps.now ?? Date.now)()));
+  // The report is booleans, migration names and the time: public once accounts are on (Access may be on Bypass by then),
+  // and without Access settings there is nothing to verify a token against anyway.
+  if (isHealth && (accountsEnabled(env) || !teamDomain || !audience)) return reply(200, await health(env, (deps.now ?? Date.now)()));
   if (!teamDomain || !audience || (needsDb && !env.DB)) return notSetUp(env, true);
 
   // Who is asking: only a verified Access token counts, never a header the client could have written.
