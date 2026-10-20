@@ -2,6 +2,14 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.38.0 — 2026-10-20
+
+### New
+- **Settings → Friends.** Add a friend by username (they see your request; the app answers the same whether or not the name exists), or make a friend code (`FR-XXXXX-XXXXX`, once, for 7 days) to send over any chat: whoever enters it is your friend at once. Accept or decline requests, cancel yours, remove a friend or block someone. A dot on More → Settings says when a request is waiting. `#friends` and *Friends* in the search open it.
+
+### Changed
+- **Sharing is between friends.** With an account, the Share dialog and *Share my matches* pick from your friends instead of asking for an e-mail. Removing or blocking a friend stops everything shared between you at once. People who already shared with each other before accounts are friends from the start.
+
 ## 0.37.0 — 2026-10-20
 
 ### Changed

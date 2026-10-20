@@ -48,10 +48,11 @@ export default function App() {
   const dexState = useDex(format.datasetId);
   const view = useTeamStore((s) => s.view);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsSection, setSettingsSection] = useState<'sync' | 'account'>();
+  const [settingsSection, setSettingsSection] = useState<'sync' | 'account' | 'friends'>();
   const openSettings = () => (setSettingsSection(undefined), setSettingsOpen(true));
   const openSyncSettings = () => (setSettingsSection('sync'), setSettingsOpen(true));
   const openAccountSettings = () => (setSettingsSection('account'), setSettingsOpen(true));
+  const openFriendsSettings = () => (setSettingsSection('friends'), setSettingsOpen(true));
   const [loginOpen, setLoginOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
@@ -258,7 +259,7 @@ export default function App() {
       )}
       {paletteOpen && (
         <Suspense fallback={null}>
-          <CommandPalette open onOpenChange={setPaletteOpen} onOpenSettings={openSettings} onOpenAccount={openAccountSettings} onOpenWhatsNew={openWhatsNew} />
+          <CommandPalette open onOpenChange={setPaletteOpen} onOpenSettings={openSettings} onOpenAccount={openAccountSettings} onOpenFriends={openFriendsSettings} onOpenWhatsNew={openWhatsNew} />
         </Suspense>
       )}
       {loginOpen && (

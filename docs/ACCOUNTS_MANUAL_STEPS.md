@@ -43,7 +43,7 @@ Tick each box; "Check" says how to know it worked.
       *Check:* a private window opens `https://<your-worker>/` without an Access login, and `https://<your-worker>/api/sync` answers `401 {"error":"not signed in"}` from the Worker.
 - [ ] (Optional, recommended) Security → WAF → Rate limiting rules: a rule on URI path starts with `/api/auth/`, 20 requests per 10 seconds per IP, action Block. The Worker has its own limits; this is an outer shield.
 - [ ] Settings → Account → **Admin** → create an invite (note it for the friend). Send them the **code** (not a link). They install the app, tap Create account, enter the code.
-- [ ] Settings → Friends: add your friends by username (or make a friend link), then share a team to test.
+- [ ] Settings → **Friends**: add each friend by username (they accept under Settings → Friends; a dot on More tells them), or make a **friend code** and send it to them. *Check:* they appear under *Friends*; share a team with one of them (Saved teams → share → pick the friend) and they see it after their next sync. People who already shared with each other before accounts are friends already.
 
 ## E. Remove Access (only after you tell me to; the last PR)
 

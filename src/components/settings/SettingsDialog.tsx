@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { Keyboard, Moon, Sparkles, Square, Sun } from 'lucide-react';
 import { DEFAULT_NAV, NAV_IDS, NAV_LABELS, NAV_LIMITS, resizeBar, setSlot, type NavKind } from '@/domain/navigation';
 import { usePrefsStore } from '@/store/prefsStore';
+import { useAccountStore } from '@/sync/accountStore';
 import { useTeamStore } from '@/store/teamStore';
 import { PaletteSettings } from './PaletteSettings';
 import { UpdateCheckButton } from '../DesktopUpdater';
@@ -11,12 +12,13 @@ import { Button, Label, Select, Tabs } from '../ui/primitives';
 // Cloud sync loads when Settings opens (its engine loads only once sync is on).
 const SyncSettings = lazy(() => import('./SyncSettings'));
 const AccountSettings = lazy(() => import('./AccountSettings'));
+const FriendsSettings = lazy(() => import('./FriendsSettings'));
 
 /**
  * Settings & credits: appearance, where data lives, and who made the data and art the app uses.
  * The app claims no ownership of any Pokémon asset.
  */
-export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, onOpenShortcuts }: { open: boolean; onOpenChange: (o: boolean) => void; section?: 'sync' | 'account'; onOpenWhatsNew: () => void; onOpenShortcuts: () => void }) {
+export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, onOpenShortcuts }: { open: boolean; onOpenChange: (o: boolean) => void; section?: 'sync' | 'account' | 'friends'; onOpenWhatsNew: () => void; onOpenShortcuts: () => void }) {
   const theme = useTeamStore((s) => s.theme);
   const setTheme = useTeamStore((s) => s.setTheme);
   const look = usePrefsStore((s) => s.look);
@@ -112,6 +114,16 @@ export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, on
           </Suspense>
         </section>
 
+        <section className="scroll-mt-4 space-y-1.5" aria-labelledby="set-friends">
+          <h3 id="set-friends" className="flex items-center gap-2">
+            <Label>Friends</Label>
+            <FriendsDot />
+          </h3>
+          <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+            <FriendsSettings />
+          </Suspense>
+        </section>
+
         <section className="space-y-1.5" aria-labelledby="set-sync">
           <h3 id="set-sync">
             <Label>Sync</Label>
@@ -156,6 +168,17 @@ export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, on
         </section>
       </div>
     </Modal>
+  );
+}
+
+/** How many friend requests wait for an answer (from GET /api/me and the friends list). */
+function FriendsDot() {
+  const n = useAccountStore((s) => s.incomingFriends);
+  if (!n) return null;
+  return (
+    <span className="rounded-full bg-accent px-1.5 text-2xs font-semibold text-accent-fg">
+      {n} <span className="sr-only">{n === 1 ? 'request' : 'requests'} waiting</span>
+    </span>
   );
 }
 

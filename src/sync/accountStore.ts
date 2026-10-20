@@ -31,6 +31,8 @@ interface AccountState {
   /** Has this account brought over (or skipped) the data synced before accounts, and can it now? From GET /api/me. */
   claim?: ClaimState;
   claimAvailable?: boolean;
+  /** Friend requests waiting for my answer (the dot on Settings). Not stored. */
+  incomingFriends: number;
   /** The account this device last signed in as (kept after logging out), so a different account starts sync afresh. */
   lastUserId?: string;
 
@@ -44,6 +46,7 @@ interface AccountState {
   dismissCard: () => void;
   setAvailability: (a: AccountsAvailability) => void;
   setClaim: (claim: ClaimState, available?: boolean) => void;
+  setIncomingFriends: (n: number) => void;
 }
 
 const ROLES = new Set(['user', 'admin']);
@@ -65,14 +68,16 @@ export const useAccountStore = create<AccountState>()(
       bannerDismissed: false,
       cardDismissed: false,
       availability: 'unknown',
+      incomingFriends: 0,
       signIn: ({ user, token, expiresAt }) => set({ user, lastUserId: user.id, token: token && SESSION_TOKEN_RE.test(token) ? token : undefined, expiresAt, expired: false, bannerDismissed: false, cardDismissed: true, availability: 'on' }),
       setUser: (user) => set({ user, expired: false }),
       setServer: (server) => set({ server: normalizeServer(server) }),
-      signOut: () => set({ user: undefined, token: undefined, expiresAt: undefined, expired: false, bannerDismissed: false, claim: undefined, claimAvailable: undefined }),
+      signOut: () => set({ user: undefined, token: undefined, expiresAt: undefined, expired: false, bannerDismissed: false, claim: undefined, claimAvailable: undefined, incomingFriends: 0 }),
       markExpired: () => set((s) => (s.user ? { expired: true, token: undefined, bannerDismissed: s.expired ? s.bannerDismissed : false } : {})),
       dismissBanner: () => set({ bannerDismissed: true }),
       dismissCard: () => set({ cardDismissed: true }),
       setAvailability: (availability) => set({ availability }),
+      setIncomingFriends: (incomingFriends) => set({ incomingFriends }),
       setClaim: (claim, available) => set((s) => ({ claim, claimAvailable: available ?? s.claimAvailable })),
     }),
     {

@@ -89,7 +89,22 @@ test('#account opens Settings → Account over the current screen, and the addre
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Calc');
 });
 
+test('#friends opens Settings → Friends', async ({ page }) => {
+  await page.goto('/#friends');
+  await expect(page.getByRole('dialog', { name: 'Settings & credits' }).getByRole('region', { name: /Friends/ })).toBeVisible();
+});
+
 test.describe('command palette', () => {
+  test('finds Friends and opens Settings there', async ({ page }) => {
+    await openApp(page);
+    await page.getByRole('button', { name: 'Search (Ctrl K)' }).click();
+    const box = page.getByRole('combobox', { name: /Search screens/ });
+    await box.fill('friends');
+    await expect(page.getByRole('option', { name: /Friends/ }).first()).toBeVisible();
+    await box.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Settings & credits' }).getByRole('region', { name: /Friends/ })).toBeVisible();
+  });
+
   test('finds Account and opens Settings there', async ({ page }) => {
     await openApp(page);
     await page.getByRole('button', { name: 'Search (Ctrl K)' }).click();

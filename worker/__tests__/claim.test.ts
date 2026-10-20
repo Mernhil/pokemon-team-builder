@@ -177,6 +177,22 @@ describe('claiming', () => {
   });
 });
 
+describe('friends from shares', () => {
+  it('two people who shared through Access are friends once both have claimed', async () => {
+    const env = accountEnv();
+    await legacyData(env);
+    const ash = await signup(env);
+    await call(env, 'POST', '/api/claim', { cookie: ash.cookie, as: ME, body: {} });
+    const inv = await call(env, 'POST', '/api/admin/invites', { cookie: ash.cookie, body: {} });
+    const r = await call(env, 'POST', '/api/auth/signup', { body: { invite: inv.body.code, username: 'friend', ...(await newKeyBody(PW)) } });
+    const friend = { cookie: cookieOf(r)!, id: r.body.user.id as string };
+    expect((await call(env, 'GET', '/api/friends', { cookie: friend.cookie })).body.friends).toEqual([]);
+    expect((await call(env, 'POST', '/api/claim', { cookie: friend.cookie, as: FRIEND, body: {} })).status).toBe(200);
+    const list = await call(env, 'GET', '/api/friends', { cookie: friend.cookie });
+    expect(list.body.friends.map((f: { id: string }) => f.id)).toEqual([ash.id]);
+  });
+});
+
 describe('unclaim (npm run admin -- unclaim)', () => {
   it('puts everything back under the e-mail, with the same sequence numbers; the account can claim again', async () => {
     const env = accountEnv();

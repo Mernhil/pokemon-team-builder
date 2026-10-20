@@ -31,6 +31,11 @@ A plain Worker variable. `access` (or unset) is today's behaviour: the account r
 | `POST /api/admin/users/reset` | admin + the admin's own key | a one-time reset code for the user (shown once) |
 | `GET`/`POST /api/claim` | session (+ an Access JWT for the e-mail) | what a claim would bring / bring it (only with `AUTH_MODE=both`) |
 | `POST /api/claim/skip` | session | the account has nothing from before |
+| `GET`/`DELETE /api/friends` | session | friends, requests both ways, blocked / remove a friend (or cancel or decline a request) |
+| `POST /api/friends/request` | session | ask someone by username (always the same neutral answer) |
+| `POST /api/friends/respond` | session | accept or decline a request to me |
+| `POST /api/friends/link`, `/link/redeem` | session | make a friend code (shown once) / use one |
+| `POST`/`DELETE /api/blocks` | session | block (ends the friendship and every share between us) / unblock |
 
 Bodies are zod-validated (`src/domain/accounts.ts`) and capped at 2 KB.
 
@@ -65,6 +70,19 @@ With accounts on (`both` or `accounts`), every sync route (`/api/sync`, `/api/sh
 - **The desktop app** logs in with username and password (Settings → Account; its token lives in `ptb:session:v1`) and syncs with that token under `/api/device/`; a device linked earlier with a pairing code (`ptbd_…`) keeps working until the last step. *Unlink this desktop app* on a session-token device signs that session out.
 - **Shares** are keyed by user id (an e-mail only for people who never made an account). The Share dialog takes an e-mail or **`@username`**; an e-mail an account claimed becomes that account. Names come from the account (display name, else username). A share whose owner or grantee is a **disabled** account is hidden from every list and from what is shared (not deleted: enabling the account brings it back). User ids keep their case everywhere (`normalizeIdentity`).
 - Nothing becomes a conflict copy when a device that synced through Access logs in after the claim: the identity is the same, so its cursor is still right (tested end to end with the sync engine).
+
+## Friends (`worker/friends.ts`, `migrations/0007_friends.sql`, Settings → Friends)
+
+Small on purpose: request → accept, no feeds, no presence.
+
+- **Tables:** `friendships(a, b, state, requested_by, …)` with `a < b` (one row per pair; `pending` or `accepted`), `blocks(blocker, blocked)`, `friend_links(code_hash, owner, expires_at, used_by, used_at)`. The migration makes friends of every two accounts that already shared with each other; a claim does the same for the shares it moves.
+- **By username:** `POST /api/friends/request {username}` (with or without `@`) always answers *If that person has an account, they'll see your request.*, for a name that doesn't exist, for yourself, for someone who blocked you (dropped quietly) and for an existing friend alike. 30 per day per person (D1 throttle `friendRequestUser`, counted whatever happens). Asking someone who already asked you accepts theirs.
+- **Friend code:** `POST /api/friends/link` makes `FR-XXXXX-XXXXX` (10 symbols, 50 bits; only the SHA-256 stored), single use, 7 days, at most 5 live per person. Whoever redeems it (`/link/redeem`, 10 tries per 10 minutes per address) is a friend at once; the code is claimed by the same batch that makes the friendship. Your own code, a used or expired one, or one between blocked people: *That friend code doesn't work.*
+- **Limits:** 100 friends, 20 pending requests per account (a request into a full list is dropped quietly).
+- **Sharing needs a friendship:** between two accounts, `PUT /api/shares` refuses a grantee who isn't an accepted friend (403), and an e-mail grantee (people who never made an account still share as before through Access, from an e-mail identity). Reading a share is unchanged (`worker/access.ts`).
+- **Ending it:** remove (or cancel/decline) and block delete every share between the two, both ways, in the same batch; their copies disappear at the next sync, as with *Stop sharing* ("Make my own copy" copies stay). A blocked person's requests are dropped quietly and their codes don't work; unblock lets them ask again.
+- **Disabled accounts:** shown as *Unavailable* in friends' lists, can't be picked to share with, and their shares are hidden (step 5); their pending requests wait unseen. Enabling brings it all back.
+- **`GET /api/me`** says how many requests wait (`incomingFriends`): a dot on More and on *Settings & credits*, and a count next to *Friends* in Settings.
 
 ## Passwords (`worker/password.ts`)
 
@@ -128,6 +146,8 @@ Before accounts, every document, share and linked desktop app was keyed by the C
 `worker/__tests__/claim.test.ts`: the preview, session + verified JWT on one request (not the body, not a forged JWT, CSRF), everything moved and every cursor intact (an old cursor pulls nothing new, the next push continues the sequence), the desktop link still works, the friend's shared folder and edits, sharing with a claimed e-mail, claim twice / an e-mail already claimed / a non-fresh account refused with nothing changed, only in `both`, skip, a disabled claimed account, unclaim (and claiming again), the script's SQL.
 
 `worker/__tests__/identity.test.ts`: sync by session (pending accounts wait, CSRF, renewed cookie), session before Access and Access as the fallback, 401 without either, `access` mode ignores the cookie, the desktop app's session token (and its sign-out, and the old pairing token), sharing by `@username` keyed by id and shown by name, a disabled account's shares hidden and back, and a device that synced through Access logging in after the claim with no pulls and no conflict copies.
+
+`worker/__tests__/friends.test.ts`: request → accept both ways, decline, asking back accepts, the neutral answer (identical for unknown, self, a blocker, a friend), 30 a day, the pending and friend limits, friend codes (hash only, own code, once, 7 days, blocked, throttled), sharing refused to a non-friend, remove and block deleting shares both ways, unblock, a disabled friend unavailable and their shares hidden then back, the share rules unchanged. `claim.test.ts`: two people who shared through Access are friends after both claim.
 
 `worker/__tests__/admin.test.ts`: admins only (and a demoted admin at once), CSRF, invites (once, never listed, revoke, expiry, the note), users (disable signs out, enable, never yourself, never the last admin, a disabled admin doesn't count), reset codes (the admin's password, once, 24 hours, replaced, not for a disabled account), events, nothing secret in the console.
 

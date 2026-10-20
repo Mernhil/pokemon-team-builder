@@ -12,6 +12,10 @@ import {
   AdminResetSchema,
   AdminRoleSchema,
   ChangePasswordSchema,
+  FriendIdSchema,
+  FriendRedeemSchema,
+  FriendRequestSchema,
+  FriendRespondSchema,
   InviteCreateSchema,
   KDF_ITERATIONS,
   LoginSchema,
@@ -29,6 +33,7 @@ import {
   generateCode,
   isCode,
   normalizeCode,
+  parseFriendCode,
   usernameKey,
   usernameProblem,
   type AccountUser,
@@ -36,6 +41,8 @@ import {
   type ClaimDone,
   type ClaimInfo,
   type ClaimState,
+  type FriendLinkResponse,
+  type FriendsResponse,
   type MeResponse,
   type InvitesResponse,
   type KdfParams,
@@ -45,6 +52,7 @@ import {
   type UsersResponse,
 } from '../src/domain/accounts';
 import { claim, isFresh, legacyCounts } from './claim';
+import { FRIEND_REFUSALS, NEUTRAL, block, friendsOf, incomingCount, makeFriendLink, redeemFriendLink, removeFriend, requestFriend, respond, unblock } from './friends';
 import { REFUSAL_TEXT, listInvites, listUsers, makeInvite, makeResetCode, revokeInvite, setDisabled, setRole } from './admin';
 import { randomId, safeEqualText, sha256Hex, timingSafeEqual } from './crypto';
 import { deviceOrigins, fail, firstIssue, readJson, reply } from './http';
@@ -312,7 +320,7 @@ const logoutAll: Handler = async (c, a) => {
 const me: Handler = async (c, a) => {
   if (c.request.method === 'GET') {
     const row = await c.db.prepare('SELECT claim_state FROM users WHERE id = ?').bind(a.session.user.id).first<{ claim_state: ClaimState }>();
-    return reply(200, { user: a.session.user, claim: row?.claim_state ?? 'skipped', claimAvailable: claimAvailable(c.env) } satisfies MeResponse);
+    return reply(200, { user: a.session.user, claim: row?.claim_state ?? 'skipped', claimAvailable: claimAvailable(c.env), incomingFriends: await incomingCount(c.db, a.session.user.id) } satisfies MeResponse);
   }
   const r = await readJson(c.request, SMALL);
   if ('response' in r) return r.response;
@@ -465,6 +473,79 @@ const skipClaim: Handler = async (c, a) => {
   return reply(200, { ok: true });
 };
 
+// ---------------------------------------------------------------------------
+// Friends (worker/friends.ts holds the rules)
+// ---------------------------------------------------------------------------
+
+const FRIEND_BODY = 4096;
+const friendsList = async (c: Ctx, me: string, extra: Partial<FriendsResponse> = {}) => reply(200, { ...(await friendsOf(c.db, me)), ...extra } satisfies FriendsResponse);
+
+const friends: Handler = async (c, a) => {
+  const me = a.session.user.id;
+  if (c.request.method === 'GET') return friendsList(c, me);
+  const r = await readJson(c.request, FRIEND_BODY);
+  if ('response' in r) return r.response;
+  const parsed = FriendIdSchema.safeParse(r.body);
+  if (!parsed.success) return fail(400, firstIssue(parsed.error));
+  await removeFriend(c.db, me, parsed.data.id);
+  return friendsList(c, me);
+};
+
+const friendRequest: Handler = async (c, a) => {
+  const me = a.session.user.id;
+  const r = await readJson(c.request, FRIEND_BODY);
+  if ('response' in r) return r.response;
+  const parsed = FriendRequestSchema.safeParse(r.body);
+  if (!parsed.success) return fail(400, firstIssue(parsed.error));
+  // Counted whether or not anyone gets it: the limit can't be used to tell who exists.
+  if (!(await allow(c.db, c.pepper, 'friendRequestUser', me, THROTTLES.friendRequestUser, c.now))) return tooMany(THROTTLES.friendRequestUser, c.now);
+  const refusal = await requestFriend(c.db, me, parsed.data.username.replace(/^@/, ''), c.now);
+  if (refusal) return fail(409, FRIEND_REFUSALS[refusal]);
+  return friendsList(c, me, { notice: NEUTRAL });
+};
+
+const friendRespond: Handler = async (c, a) => {
+  const me = a.session.user.id;
+  const r = await readJson(c.request, FRIEND_BODY);
+  if ('response' in r) return r.response;
+  const parsed = FriendRespondSchema.safeParse(r.body);
+  if (!parsed.success) return fail(400, firstIssue(parsed.error));
+  const refusal = await respond(c.db, me, parsed.data.id, parsed.data.accept, c.now);
+  if (refusal) return fail(409, FRIEND_REFUSALS[refusal]);
+  return friendsList(c, me);
+};
+
+const friendLink: Handler = async (c, a) => {
+  const me = a.session.user.id;
+  const made = await makeFriendLink(c.db, me, c.now);
+  return reply(200, { ...made, ...(await friendsOf(c.db, me)) } satisfies FriendLinkResponse);
+};
+
+const friendRedeem: Handler = async (c, a) => {
+  const me = a.session.user.id;
+  if (!(await allow(c.db, c.pepper, 'friendLinkIp', clientAddress(c.request), THROTTLES.friendLinkIp, c.now))) return tooMany(THROTTLES.friendLinkIp, c.now);
+  const r = await readJson(c.request, FRIEND_BODY);
+  if ('response' in r) return r.response;
+  const parsed = FriendRedeemSchema.safeParse(r.body);
+  if (!parsed.success) return fail(400, firstIssue(parsed.error));
+  const code = parseFriendCode(parsed.data.code);
+  const done = code ? await redeemFriendLink(c.db, me, code, c.now) : false;
+  if (typeof done === 'string') return fail(409, FRIEND_REFUSALS[done]);
+  if (!done) return fail(400, 'That friend code doesn’t work. It may have been used already or have expired.');
+  return friendsList(c, me);
+};
+
+const blocks: Handler = async (c, a) => {
+  const me = a.session.user.id;
+  const r = await readJson(c.request, FRIEND_BODY);
+  if ('response' in r) return r.response;
+  const parsed = FriendIdSchema.safeParse(r.body);
+  if (!parsed.success) return fail(400, firstIssue(parsed.error));
+  if (c.request.method === 'DELETE') await unblock(c.db, me, parsed.data.id);
+  else if (!(await block(c.db, me, parsed.data.id, c.now))) return fail(404, 'There is no such account.');
+  return friendsList(c, me);
+};
+
 const ROUTES: Record<string, Route> = {
   '/api/auth/params': { methods: ['POST'], public: true, handle: params },
   '/api/auth/signup': { methods: ['POST'], public: true, handle: signup },
@@ -477,6 +558,12 @@ const ROUTES: Record<string, Route> = {
   '/api/me/recovery': { methods: ['POST'], handle: newRecoveryCode },
   '/api/sessions': { methods: ['GET', 'DELETE'], handle: sessions },
   '/api/claim': { methods: ['GET', 'POST'], handle: claimRoute },
+  '/api/friends': { methods: ['GET', 'DELETE'], handle: friends },
+  '/api/friends/request': { methods: ['POST'], handle: friendRequest },
+  '/api/friends/respond': { methods: ['POST'], handle: friendRespond },
+  '/api/friends/link': { methods: ['POST'], handle: friendLink },
+  '/api/friends/link/redeem': { methods: ['POST'], handle: friendRedeem },
+  '/api/blocks': { methods: ['POST', 'DELETE'], handle: blocks },
   '/api/claim/skip': { methods: ['POST'], handle: skipClaim },
   '/api/admin/invites': { methods: ['GET', 'POST', 'DELETE'], admin: true, handle: invites },
   '/api/admin/users': { methods: ['GET'], admin: true, handle: users },

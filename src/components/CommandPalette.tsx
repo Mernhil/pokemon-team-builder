@@ -59,12 +59,14 @@ export default function CommandPalette({
   onOpenChange,
   onOpenSettings,
   onOpenAccount,
+  onOpenFriends,
   onOpenWhatsNew,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onOpenSettings: () => void;
   onOpenAccount: () => void;
+  onOpenFriends: () => void;
   onOpenWhatsNew: () => void;
 }) {
   const team = useActiveTeam();
@@ -144,11 +146,12 @@ export default function CommandPalette({
       ),
       { id: 'settings', group: 'Settings', label: 'Settings & credits', icon: Settings, run: onOpenSettings, keywords: 'sync appearance' },
       { id: 'account', group: 'Settings', label: 'Account', icon: UserRound, run: onOpenAccount, keywords: 'log in sign in sign up create account password devices recovery log out' },
+      { id: 'friends', group: 'Settings', label: 'Friends', icon: Users, run: onOpenFriends, keywords: 'friend request add friend code block share with' },
       { id: 'whatsnew', group: 'Settings', label: 'What’s new', icon: Sparkles, run: onOpenWhatsNew, keywords: 'changelog updates' },
       { id: 'theme-light', group: 'Settings', label: 'Light theme', icon: Settings, run: () => store().setTheme('light'), keywords: 'appearance' },
       { id: 'theme-dark', group: 'Settings', label: 'Dark theme', icon: Moon, run: () => store().setTheme('dark'), keywords: 'appearance' },
     ];
-  }, [teams, order, onOpenSettings, onOpenAccount, onOpenWhatsNew]);
+  }, [teams, order, onOpenSettings, onOpenAccount, onOpenFriends, onOpenWhatsNew]);
 
   const dex = dexState.status === 'ready' ? dexState.dex : undefined;
   const speciesList = useMemo(() => dex?.selectableSpecies(format.regulationId) ?? [], [dex, format.regulationId]);

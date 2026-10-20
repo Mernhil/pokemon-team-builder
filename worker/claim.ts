@@ -38,6 +38,13 @@ export function claimStatements(email: string, userId: string, now: number, acto
     // The desktop apps linked to the e-mail keep working, now for the account.
     s(`UPDATE devices SET owner = ?2 WHERE owner = ?1 AND ${isOurs}`),
     s(`UPDATE pair_codes SET owner = ?2 WHERE owner = ?1 AND ${isOurs}`),
+    // Accounts that share with each other are friends (sharing between accounts needs that).
+    s(
+      `INSERT OR IGNORE INTO friendships (a, b, state, requested_by, created_at, updated_at)
+       SELECT MIN(owner, grantee), MAX(owner, grantee), 'accepted', owner, ?3, ?3 FROM shares
+       WHERE (owner = ?2 OR grantee = ?2) AND owner LIKE 'u!_%' ESCAPE '!' AND grantee LIKE 'u!_%' ESCAPE '!' AND owner <> grantee AND ${isOurs}`,
+      v.slice(0, 3),
+    ),
     s(
       `INSERT INTO account_claims (user_id, legacy_email, at, docs, matches, shares, devices)
        SELECT ?2, ?1, ?3,

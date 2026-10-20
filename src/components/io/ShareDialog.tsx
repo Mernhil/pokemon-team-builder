@@ -5,6 +5,8 @@ import { isShareTarget, type ShareInfo } from '@/domain/syncProtocol';
 import type { Team } from '@/domain/types';
 import { useShareStore } from '@/sync/shareStore';
 import { addShare, removeShare } from '@/sync/sharesApi';
+import { isSignedIn, useAccountStore } from '@/sync/accountStore';
+import { FriendPicker } from '../account/FriendPicker';
 import { Modal } from '../ui/Modal';
 import { Button, Input, Label, Select } from '../ui/primitives';
 
@@ -17,6 +19,8 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const mine = granted.filter((g) => g.kind === 'team-group' && g.ref === team.id);
+  // With an account, sharing is with friends; someone still on Cloudflare Access alone types an e-mail.
+  const withFriends = useAccountStore(isSignedIn);
 
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
@@ -32,8 +36,8 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
 
   const submit = () =>
     run(async () => {
-      const to = email.trim().toLowerCase();
-      if (!isShareTarget(to)) throw new Error('Enter their e-mail address, or @username for someone with an account.');
+      const to = withFriends ? email : email.trim().toLowerCase();
+      if (withFriends ? !to : !isShareTarget(to)) throw new Error(withFriends ? 'Choose a friend.' : 'Enter their e-mail address, or @username for someone with an account.');
       // The server can only share a team it has: send this device's latest first.
       const { syncNow } = await import('@/sync/runner');
       await syncNow();
@@ -79,7 +83,11 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
         >
           <Label>Share with</Label>
           <div className="flex flex-wrap gap-2">
-            <Input type="text" inputMode="email" autoCapitalize="none" spellCheck={false} aria-label="Their e-mail address" placeholder="friend@example.com or @username" value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1" autoComplete="off" />
+            {withFriends ? (
+              <FriendPicker value={email} onChange={setEmail} exclude={mine.map((g) => g.grantee)} />
+            ) : (
+              <Input type="text" inputMode="email" autoCapitalize="none" spellCheck={false} aria-label="Their e-mail address" placeholder="friend@example.com or @username" value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1" autoComplete="off" />
+            )}
             <Select aria-label="What they can do" value={role} onChange={(e) => setRole(e.target.value as 'view' | 'edit')}>
               <option value="view">Can view</option>
               <option value="edit">Can edit</option>
@@ -89,7 +97,7 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
             </Button>
           </div>
           <p className="text-xs text-muted">
-            They need to be able to sign in to this app with that address (Cloudflare Access) and turn on Settings → Sync. “Can edit” lets them change the team and add variations (not delete the team); if you both edit the same
+            {withFriends ? 'You can share with your friends (Settings → Friends); they need Settings → Sync on.' : 'They need to be able to sign in to this app with that address (Cloudflare Access) and turn on Settings → Sync.'} “Can edit” lets them change the team and add variations (not delete the team); if you both edit the same
             team, the older change is kept as a copy. You can stop sharing any time.
           </p>
         </form>

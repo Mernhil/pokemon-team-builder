@@ -60,8 +60,8 @@ export function routeHash(route: Route): string {
   return `#analyse/${tab}`;
 }
 
-/** Settings sections with a link of their own: `#account` opens Settings → Account over whatever screen is open. */
-export const SETTINGS_SECTIONS = ['account'] as const;
+/** Settings sections with a link of their own: `#account` / `#friends` open Settings there, over whatever screen is open. */
+export const SETTINGS_SECTIONS = ['account', 'friends'] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 export const settingsSectionOf = (hash: string): SettingsSection | null => {
   const h = hash.replace(/^#/, '');

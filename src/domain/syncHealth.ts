@@ -4,7 +4,7 @@
  */
 
 /** Every file in migrations/, without ".sql". A test keeps this in step with the folder. */
-export const EXPECTED_MIGRATIONS = ['0001_init', '0002_shares', '0003_devices', '0004_redeem_attempts', '0005_accounts', '0006_claims'] as const;
+export const EXPECTED_MIGRATIONS = ['0001_init', '0002_shares', '0003_devices', '0004_redeem_attempts', '0005_accounts', '0006_claims', '0007_friends'] as const;
 
 export interface HealthResponse {
   /** The D1 binding exists. */

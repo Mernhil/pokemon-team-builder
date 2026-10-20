@@ -125,9 +125,10 @@ const signedOut = () => {
 export async function checkAccount(): Promise<'off' | 'signedOut' | 'signedIn'> {
   const store = useAccountStore.getState();
   try {
-    const { user, claim, claimAvailable } = await accountRequest<MeResponse>('GET', '/api/me');
+    const { user, claim, claimAvailable, incomingFriends } = await accountRequest<MeResponse>('GET', '/api/me');
     store.setUser(user);
     store.setClaim(claim, claimAvailable);
+    store.setIncomingFriends(incomingFriends ?? 0);
     store.setAvailability('on');
     return 'signedIn';
   } catch (e) {
