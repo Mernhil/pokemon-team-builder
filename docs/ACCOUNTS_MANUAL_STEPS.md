@@ -1,0 +1,51 @@
+# Accounts rollout: what you do by hand
+
+The code ships in small PRs (docs/ACCOUNTS_PLAN.md section 14). Every merge deploys by itself and is safe with the default `AUTH_MODE=access` (today's behaviour). The steps below are the only things the code cannot do. Do them in this order, when you are home.
+
+Tick each box; "Check" says how to know it worked.
+
+## A. Before the first accounts PR is useful (once)
+
+- [ ] **Confirm the Workers plan.** Cloudflare dashboard → Workers & Pages → Plans. Logging in does one password hash (tens of ms of CPU); the Free plan allows 10 ms per request and may reject it. Choose **Workers Paid ($5/month)**.
+      *Check:* after the first login, Workers & Pages → pokemon-team-builder → Metrics shows CPU time p99 well under the plan's limit, and no "exceeded CPU" errors.
+- [ ] **Set the Worker secrets** (Workers & Pages → pokemon-team-builder → Settings → Variables and Secrets → Add, type **Secret**):
+  - `PASSWORD_PEPPER`: 32+ random characters (for example `openssl rand -base64 48`). **Save a copy in your password manager.** If it is lost, every password is unusable and each user needs an admin reset.
+  - `SETUP_CODE`: any long random string. It is used once, to create the first (admin) account.
+  *Check:* Settings → Sync (or `/api/health`) no longer says `PASSWORD_PEPPER not set`.
+- [ ] Confirm the build's deploy command is still `npm run deploy` (migrations first) and its API token has D1: Edit (docs/SYNC.md).
+
+## B. Turn the accounts on for yourself (still behind Access)
+
+- [ ] Set the variable `AUTH_MODE` = `both` (plain variable, not secret; `keep_vars` keeps it across deploys).
+- [ ] In the app: Settings → Account → **Create account** → enter `SETUP_CODE`, a username and a password. **Save the recovery code** it shows (once only).
+- [ ] **Delete the `SETUP_CODE` secret.**
+- [ ] Log in once on the phone, the website and the desktop app. *Check:* Settings → Account → Devices lists all three.
+
+## C. Backup, then claim your old data
+
+- [ ] **Back up D1** (a terminal in the repo, logged into wrangler): `npx wrangler d1 export pokemon-team-builder --remote --output backup-before-claim.sql`. Keep the file somewhere safe.
+- [ ] In the GitHub repo → Settings → Secrets and variables → Actions, add `CLOUDFLARE_API_TOKEN` (a token with **D1: Read**) and `AGE_PUBLIC_KEY` (from `age-keygen`; keep the private key in your password manager). This enables the weekly encrypted backup workflow.
+- [ ] In the app: Settings → Account → **Bring my teams from before** (while you are still signed in through Access). *Check:* your teams, match log and shares are all there, no "Conflict copy" appeared, and the desktop app still syncs.
+- [ ] If something looks wrong: `AUTH_MODE` = `access` (instant), or `npm run admin -- unclaim <username>`.
+
+## D. Go live (lets friends in)
+
+- [ ] **Access → Bypass.** Cloudflare Zero Trust → Access → Applications → your app → Policies: add a policy with action **Bypass**, *Include: Everyone* (or turn the application off). Reversible in one click. Do **not** delete the application yet.
+      *Check:* a private window opens `https://<your-worker>/` without an Access login, and `https://<your-worker>/api/sync` answers `401 {"error":"not signed in"}` from the Worker.
+- [ ] (Optional, recommended) Security → WAF → Rate limiting rules: a rule on URI path starts with `/api/auth/`, 20 requests per 10 seconds per IP, action Block. The Worker has its own limits; this is an outer shield.
+- [ ] Settings → Account → **Admin** → create an invite (note it for the friend). Send them the **code** (not a link). They install the app, tap Create account, enter the code.
+- [ ] Settings → Friends: add your friends by username (or make a friend link), then share a team to test.
+
+## E. Remove Access (only after you tell me to; the last PR)
+
+- [ ] Wait about a week of normal use with Access on Bypass.
+- [ ] Tell me "go" and I merge the final PR (removes the Access code, pairing, `/api/device/*`).
+- [ ] After that deploy: Zero Trust → Access → Applications → **delete** the main application **and** the `/api/device/*` bypass application.
+- [ ] Workers & Pages → Settings → Variables: delete `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, and `AUTH_MODE`.
+- [ ] Optional: delete unclaimed legacy data after 90 days (I will give the exact SQL then).
+
+## If you are locked out
+
+- Lost your password: use the recovery code (Settings → Account → "Forgot password?").
+- Lost the recovery code too: `npm run admin -- reset <username>` prints a one-time code (needs wrangler logged in).
+- Anything else: set `AUTH_MODE` = `access` and the old Access login works again (until step E).
