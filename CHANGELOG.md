@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.35.0 — 2026-10-20
+
+### New
+- **Settings → Account → Admin: invites and accounts.** Admins can make an invite (with a note for themselves and how long it stays valid, 1 hour to 30 days); the code is shown once, to copy and send. The list shows whether each invite is open, used (and by whom), expired or revoked, and an open one can be revoked. The accounts list shows everyone's role, devices and last visit; an admin can disable an account (it is signed out everywhere at once), enable it again, make or remove an admin (never the last one), and make a one-time password reset code (it asks for your own password first, works once for 24 hours, and the person enters it under *Forgot password?*).
+- `npm run admin -- list | invite | reset | disable | enable | bootstrap` does the same from a terminal, for when nobody can get into the app (docs/ACCOUNTS.md).
+
 ## 0.34.0 — 2026-10-20
 
 ### New

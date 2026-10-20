@@ -3,7 +3,7 @@
  * devices (sign one out), the password, a new recovery code, log out and log out everywhere. The app works the
  * same without an account: teams stay on the device, and sync (for now) still goes through Cloudflare Access.
  */
-import { useEffect, useState, type FormEvent } from 'react';
+import { Suspense, lazy, useEffect, useState, type FormEvent } from 'react';
 import { KeyRound, LogOut, Monitor, ShieldCheck, Smartphone } from 'lucide-react';
 import { ago } from '@/domain/sharing';
 import type { SessionInfo } from '@/domain/accounts';
@@ -15,6 +15,9 @@ import { useNow } from '@/sync/useNow';
 import { toast } from '@/store/toastStore';
 import { LoginForm, RecoverForm, RecoveryCodeCard, SignupForm, TextField } from '../account/AccountForms';
 import { Button, Checkbox, Chip, Tabs } from '../ui/primitives';
+
+// Admins only: loads when an admin opens Settings → Account.
+const AdminSettings = lazy(() => import('./AdminSettings'));
 
 const messageOf = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -123,6 +126,11 @@ function SignedIn({ onRecoveryCode }: { onRecoveryCode: (code: string) => void }
       </div>
       <DisplayName />
       <Devices />
+      {user.role === 'admin' && (
+        <Suspense fallback={<p className="text-muted">Loading…</p>}>
+          <AdminSettings />
+        </Suspense>
+      )}
       <details className="rounded-lg border border-border p-2">
         <summary className="flex min-h-9 cursor-pointer items-center font-semibold pointer-coarse:min-h-11">Change password</summary>
         <ChangePassword />

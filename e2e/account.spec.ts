@@ -178,3 +178,68 @@ test('the account forms fit a 320 px phone', async ({ page }) => {
     expect(await sel.evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
   }
 });
+
+test('Admin: make an invite (the code shown once), disable an account after asking, a reset code that needs my password', async ({ page }) => {
+  const admin = { ...USER, role: 'admin' };
+  await page.addInitScript((user) => localStorage.setItem('ptb:session:v1', JSON.stringify({ state: { user, cardDismissed: true }, version: 1 })), admin);
+  const server = await fakeAccounts(page, { signedIn: true });
+  await page.route('**/api/me', (r) => r.fulfill({ json: { user: admin } }));
+  let invites: Record<string, unknown>[] = [];
+  let users = [
+    { id: 'u_test', username: 'ash', role: 'admin', disabled: false, createdAt: Date.now() - 1e8, devices: 2, lastSeenAt: Date.now() },
+    { id: 'u_misty', username: 'misty', role: 'user', disabled: false, createdAt: Date.now() - 1e7, devices: 1, invitedBy: 'ash' },
+  ];
+  await page.route('**/api/admin/invites', (r) => {
+    if (r.request().method() === 'POST') {
+      invites = [{ id: '0123456789abcdef', note: (r.request().postDataJSON() as { note?: string }).note, createdAt: Date.now(), expiresAt: Date.now() + 7 * 864e5, status: 'open' }];
+      return r.fulfill({ json: { code: 'K7QM-3XWD-9PTR', expiresAt: Date.now() + 7 * 864e5, invites } });
+    }
+    return r.fulfill({ json: { invites } });
+  });
+  await page.route('**/api/admin/users', (r) => r.fulfill({ json: { users } }));
+  await page.route('**/api/admin/users/disable', (r) => {
+    users = users.map((u) => (u.id === 'u_misty' ? { ...u, disabled: true, devices: 0 } : u));
+    return r.fulfill({ json: { users } });
+  });
+  let resetBody = '';
+  await page.route('**/api/admin/users/reset', (r) => {
+    resetBody = r.request().postData() ?? '';
+    return r.fulfill({ json: { code: 'ABCDE-FGHJK-LMNPQ-RSTUV', expiresAt: Date.now() + 864e5, users } });
+  });
+
+  await page.goto('/#account');
+  const admin_ = accountSection(page).getByRole('region', { name: 'Admin' });
+  await expect(admin_).toBeVisible();
+  const form = admin_.getByRole('form', { name: 'Make an invite' });
+  await form.getByLabel('Note (only you see it)').fill('for Sam');
+  await form.getByRole('button', { name: 'Make an invite' }).click();
+  await expect(admin_.getByTestId('once-code')).toHaveText('K7QM-3XWD-9PTR');
+  await expect(admin_.getByRole('list', { name: 'Invites' })).toContainText('for Sam');
+  await admin_.getByRole('button', { name: 'Done' }).click();
+  await expect(admin_.getByTestId('once-code')).toHaveCount(0);
+
+  const accounts = admin_.getByRole('list', { name: 'Accounts' });
+  await expect(accounts.getByRole('button', { name: 'Disable ash' })).toHaveCount(0); // never yourself
+  await accounts.getByRole('button', { name: 'Disable misty' }).click();
+  await accounts.getByRole('alert').getByRole('button', { name: 'Disable' }).click();
+  await expect(accounts.getByRole('listitem').filter({ hasText: 'misty' })).toContainText('Disabled');
+  await expect(accounts.getByRole('button', { name: 'Enable misty' })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  users = users.map((u) => ({ ...u, disabled: false }));
+  // Open Settings again, so the Admin screen loads the accounts afresh.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Settings & credits' })).toBeHidden();
+  await page.evaluate(() => {
+    location.hash = '#account';
+  });
+  const again = accountSection(page).getByRole('region', { name: 'Admin' }).getByRole('list', { name: 'Accounts' });
+  await again.getByRole('button', { name: 'Reset password of misty' }).click();
+  const resetForm = again.getByRole('form', { name: 'Reset password of misty' });
+  await resetForm.getByLabel('Your password, to confirm').fill(PW);
+  await resetForm.getByRole('button', { name: 'Make reset code' }).click();
+  await expect(accountSection(page).getByTestId('once-code')).toHaveText('ABCDE-FGHJK-LMNPQ-RSTUV');
+  expect(resetBody).toContain('"key"');
+  expect(resetBody).not.toContain(PW);
+  expect(server.bodies.join('')).not.toContain(PW);
+});

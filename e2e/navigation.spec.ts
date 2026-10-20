@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { SAMPLE_TEAM, expectNoA11yViolations, importTeam, openApp, setTheme } from './helpers';
 
@@ -143,15 +144,20 @@ test.describe("What's new", () => {
   const seen = (version: string) => ({ cookies: [], origins: [{ origin: 'http://localhost:4173', localStorage: [{ name: 'ptb:prefs:v1', value: JSON.stringify({ state: { lastSeenVersion: version }, version: 1 }) }] }] });
 
   test.describe('after an update', () => {
-    test.use({ storageState: seen('0.22.0') });
+    // Two releases behind the newest, read from the changelog (a fixed version falls out of the sheet's window as releases pile up).
+    const versions = [...readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8').matchAll(/^## (\d+\.\d+\.\d+)/gm)].map((m) => m[1]);
+    test.use({ storageState: seen(versions[2]) });
     test('lists what came since, offers Try it, and is not shown again once dismissed', async ({ page }) => {
       await openApp(page);
       const sheet = page.getByRole('dialog', { name: 'What’s new' });
       await expect(sheet).toBeVisible();
-      await expect(sheet.getByRole('region', { name: 'Version 0.23.0' })).toBeVisible();
-      await expect(sheet.getByRole('region', { name: 'Version 0.22.0' })).toHaveCount(0);
-      await sheet.getByRole('link', { name: 'Try it: Team overview' }).first().click();
-      await expect(page).toHaveURL(/#analyse\/overview$/);
+      await expect(sheet.getByRole('region', { name: `Version ${versions[0]}` })).toBeVisible();
+      await expect(sheet.getByRole('region', { name: `Version ${versions[1]}` })).toBeVisible();
+      await expect(sheet.getByRole('region', { name: `Version ${versions[2]}` })).toHaveCount(0);
+      const tryIt = sheet.getByRole('link', { name: /^Try it: / }).first();
+      const href = (await tryIt.getAttribute('href')) ?? '';
+      expect(href).toMatch(/^#/);
+      await tryIt.click();
       await expect(sheet).toHaveCount(0);
       await page.reload();
       await expect(page.getByRole('heading', { level: 1 })).toBeAttached();
