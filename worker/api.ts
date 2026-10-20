@@ -30,7 +30,8 @@ import { SESSION_TOKEN_RE, usernameKey } from '../src/domain/accounts';
 import { health } from './health';
 import { accountsEnabled, crossSiteRequest, findSession, handleAuth, isAccountPath, renewedCookie, type AuthDeps, type Authed } from './authApi';
 import { revokeSession } from './sessions';
-import { JSON_HEADERS, fail, firstIssue, preflight, readJson, reply, withCors } from './http';
+import { clientAddress } from './throttle';
+import { JSON_HEADERS, declaredTooLarge, fail, firstIssue, preflight, readJson, reply, withCors } from './http';
 import { createPairCode, deviceByToken, listDevices, redeemAttemptAllowed, redeemPairCode, revokeDevice } from './devices';
 import { deleteShare, groupOfTeam, isLiveRootTeam, namesFor, putShare, setDisplayName, sharedDocs, sharesBetween, sharesOf } from './shares';
 import { pullDocs, pushDoc, type StoredDoc } from './store';
@@ -172,8 +173,8 @@ async function handleDevice(request: Request, env: Env, url: URL, deps: ApiDeps)
 
   if (sub === '/api/redeem') {
     if (request.method !== 'POST') return fail(405, 'method not allowed');
-    // Cloudflare sets this header at its edge; a request without it (local development) shares one bucket.
-    if (!(await redeemAttemptAllowed(env.DB, request.headers.get('cf-connecting-ip') ?? 'unknown', now))) {
+    // Cloudflare sets cf-connecting-ip at its edge (an IPv6 client counts by its /64, so rotating addresses doesn't reset the limit); without it (local development) everyone shares one bucket.
+    if (!(await redeemAttemptAllowed(env.DB, clientAddress(request), now))) {
       return new Response(JSON.stringify({ error: 'too many attempts: wait a few minutes and try again' }), { status: 429, headers: { ...JSON_HEADERS, 'retry-after': '600' } });
     }
     const r = await readJson(request, 1024);
@@ -245,6 +246,7 @@ async function handleAccount(request: Request, env: Env, path: string, owner: st
   }
 
   // POST
+  if (declaredTooLarge(request, LIMITS.maxBodyChars)) return fail(413, 'request too large');
   const text = await request.text();
   if (text.length > LIMITS.maxBodyChars) return fail(413, 'request too large');
   let body: unknown;

@@ -244,6 +244,14 @@ describe('redeem throttle, limits and input', () => {
     clock = NOW;
   });
 
+  it('counts an IPv6 client by its /64, so rotating addresses inside it does not reset the limit', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    for (let i = 0; i < MAX_REDEEMS_PER_WINDOW; i++) expect((await redeem(env, `2001:db8:1:2:${i}::1`)).status).toBe(400);
+    expect((await redeem(env, '2001:db8:1:2:ffff::9')).status).toBe(429);
+    expect((await redeem(env, '2001:db8:1:3::1')).status).toBe(400);
+  });
+
   it('stores only a hash of the address', async () => {
     clock = NOW;
     const env = makeEnv();
