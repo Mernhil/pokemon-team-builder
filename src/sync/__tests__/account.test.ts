@@ -192,3 +192,42 @@ describe('ptb:session:v1', () => {
     expect(deviceNameFor('', false)).toBe('Browser');
   });
 });
+
+describe('sync through the account (step 5)', () => {
+  it('the desktop app syncs with its account token under /api/device/; a 401 marks the session expired', async () => {
+    const { request, SyncHttpError } = await import('../http');
+    desktop(true);
+    useAccountStore.setState({ user: USER, token: TOKEN, server: 'https://app.example' });
+    serve({ '/api/sync': { body: { docs: [], cursor: 0, more: false } } });
+    await request('GET', '/api/sync?since=0');
+    expect(calls[0].url).toBe('https://app.example/api/device/sync?since=0');
+    expect(calls[0].headers.authorization).toBe(`Bearer ${TOKEN}`);
+    expect(calls[0].headers['x-ptb']).toBe('1');
+    serve({ '/api/sync': { status: 401, body: { error: 'not signed in' } } });
+    await expect(request('GET', '/api/sync?since=0')).rejects.toBeInstanceOf(SyncHttpError);
+    expect(useAccountStore.getState().expired).toBe(true);
+  });
+
+  it('“bring your teams first” is a setup message, not retried', async () => {
+    const { request } = await import('../http');
+    useAccountStore.getState().signIn({ user: USER });
+    serve({ '/api/sync': { status: 409, body: { error: 'x', code: 'claim-pending' } } });
+    await expect(request('GET', '/api/sync?since=0')).rejects.toMatchObject({ kind: 'setup', message: expect.stringMatching(/Bring your teams from before/) });
+  });
+
+  it('logging out turns sync off; logging in as another account starts sync afresh', async () => {
+    const { useSyncStore } = await import('../syncStore');
+    useAccountStore.setState({ lastUserId: 'u_someoneelse' });
+    useSyncStore.setState({ enabled: true, cursor: 42, known: { 'team:x': { updatedAt: 1 } } });
+    expected = await deriveKey(PW, SALT, KDF_MIN_ITERATIONS);
+    serve({ ...loginRoutes(), '/api/auth/logout': { body: { ok: true } } });
+    await login({ username: 'ash', password: PW });
+    expect(useSyncStore.getState()).toMatchObject({ cursor: 0, known: {} });
+    await logout();
+    expect(useSyncStore.getState().enabled).toBe(false);
+    // The same account again keeps its place.
+    useSyncStore.setState({ cursor: 7 });
+    await login({ username: 'ash', password: PW });
+    expect(useSyncStore.getState().cursor).toBe(7);
+  });
+});

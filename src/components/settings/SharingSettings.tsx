@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { nameOf } from '@/domain/sharing';
-import { EMAIL_RE } from '@/domain/syncProtocol';
+import { isShareTarget } from '@/domain/syncProtocol';
+import { useAccountStore } from '@/sync/accountStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
 import { addShare, loadShares, removeShare, saveDisplayName } from '@/sync/sharesApi';
@@ -9,6 +10,7 @@ import { Button, Input, Label } from '../ui/primitives';
 /** Settings → Sync → Sharing: my display name, who sees my match log, and what others have shared with me. */
 export default function SharingSettings() {
   const me = useShareStore((s) => s.me);
+  const account = useAccountStore((s) => s.user);
   const granted = useShareStore((s) => s.granted);
   const received = useShareStore((s) => s.received);
   const names = useShareStore((s) => s.names);
@@ -50,12 +52,12 @@ export default function SharingSettings() {
       >
         <Label>Your name, as the people you share with see it</Label>
         <div className="flex max-w-sm gap-2">
-          <Input aria-label="Display name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder={me?.email ?? 'Your name'} />
+          <Input aria-label="Display name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder={account?.username ?? me?.email ?? 'Your name'} />
           <Button type="submit" disabled={busy || name.trim() === (me?.displayName ?? '')}>
             Save
           </Button>
         </div>
-        <p className="text-xs text-muted">{me ? `You are signed in as ${me.email}.` : ''} Share a team from Saved teams (the share button on a team).</p>
+        <p className="text-xs text-muted">{account ? `You are signed in as ${account.username}.` : me ? `You are signed in as ${me.email}.` : ''} Share a team from Saved teams (the share button on a team).</p>
       </form>
 
       <div className="space-y-2">
@@ -81,7 +83,7 @@ export default function SharingSettings() {
             e.preventDefault();
             void run(async () => {
               const to = email.trim().toLowerCase();
-              if (!EMAIL_RE.test(to)) throw new Error('Enter their e-mail address, the one they sign in with.');
+              if (!isShareTarget(to)) throw new Error('Enter their e-mail address, or @username for someone with an account.');
               const { syncNow } = await import('@/sync/runner');
               await syncNow();
               await addShare({ kind: 'matches', ref: '*', grantee: to, role: 'view' });
@@ -89,7 +91,7 @@ export default function SharingSettings() {
             });
           }}
         >
-          <Input type="email" aria-label="E-mail to share my matches with" placeholder="friend@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1" autoComplete="off" />
+          <Input type="text" inputMode="email" autoCapitalize="none" spellCheck={false} aria-label="E-mail to share my matches with" placeholder="friend@example.com or @username" value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1" autoComplete="off" />
           <Button type="submit" disabled={busy || !email.trim()}>
             Share my matches
           </Button>

@@ -77,7 +77,11 @@ export const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 /** An account's id ("u_" and 12 base64url characters, worker/crypto.ts `randomId`). Case matters. */
 export const USER_ID_RE = /^u_[A-Za-z0-9_-]{12}$/;
 /** Who someone is, as stored: an e-mail in lower case, an account id exactly as it is. */
-export const normalizeIdentity = (who: string): string => (who.includes('@') ? who.trim().toLowerCase() : who.trim());
+export const normalizeIdentity = (who: string): string => (who.includes('@') && !who.startsWith('@') ? who.trim().toLowerCase() : who.trim());
+/** "@ash": an account by its username (as typed in the Share dialog). */
+export const USERNAME_TARGET_RE = /^@[A-Za-z0-9][A-Za-z0-9_.-]{2,19}$/;
+/** What the Share dialog accepts: an e-mail address or "@username". */
+export const isShareTarget = (to: string): boolean => EMAIL_RE.test(to) || USERNAME_TARGET_RE.test(to);
 export const MAX_SHARES = 50;
 
 export const ShareSchema = z.object({
@@ -88,7 +92,7 @@ export const ShareSchema = z.object({
     .string()
     .max(254)
     .transform((e) => e.trim())
-    .pipe(z.string().refine((e) => EMAIL_RE.test(e) || USER_ID_RE.test(e), 'not an e-mail address or an account'))
+    .pipe(z.string().refine((e) => EMAIL_RE.test(e) || USER_ID_RE.test(e) || USERNAME_TARGET_RE.test(e), 'not an e-mail address or an account'))
     .transform(normalizeIdentity),
   role: z.enum(SHARE_ROLES),
 });

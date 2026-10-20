@@ -51,7 +51,20 @@ While Cloudflare Access is still in front of the site, the desktop app can't pas
 - **`ptb:session:v1`** (`src/sync/accountStore.ts`, sanitised on load): the user to show (id, username, display name, role), and on the desktop app also the server address and the `ptbs_` token. The web session is the HttpOnly cookie; the store never holds it.
 - **When a session ends** (a `401 not signed in` from any account call, or the check at start), the device keeps the username but marks the session expired; the banner at the top says *Your sign-in has expired* and **Sign in again** opens the login dialog in place (`src/components/account/LoginDialog.tsx`). A Cloudflare Access expiry is still handled as before (Settings → Sync).
 - **At start** the app asks `GET /api/me` only when it matters (signed in, or the first-run card not dismissed): `404` means accounts are off on this server. With accounts on and no account, a one-time card says *Make an account to sync and share* (`AccountCard.tsx`).
-- **Not yet:** sync and sharing still go through Cloudflare Access (and pairing for the desktop app) until step 5; being logged in or out doesn't change sync yet.
+- **Logging out** keeps the teams on the device and turns sync off there (turn it on again after logging in). The desktop app turns sync on when it logs in. Logging in as a different account than this device last used starts its sync afresh (cursor and known documents forgotten; local teams stay).
+
+## Who sync and sharing are for (`worker/api.ts`)
+
+With accounts on (`both` or `accounts`), every sync route (`/api/sync`, `/api/shared`, `/api/shares`, `/api/profile`, and pairing) works out who is asking in this order:
+
+1. **The account session**: the web cookie, or the desktop app's bearer token under `/api/device/*`. The identity is the user's id. A cookie request that changes something needs `Origin` + `X-PTB: 1` (CSRF), like the account routes. A renewed session gets its cookie set again on the sync answer.
+2. Else **the Access JWT** (while Access is in front): an e-mail an account has claimed is that account; any other e-mail is itself, as before.
+3. Else `401 not signed in`.
+
+- **Pending accounts wait:** while `AUTH_MODE` is `both` and the account hasn't claimed or skipped (*Bring my teams from before*), its session gets `409 {"code": "claim-pending"}` from the sync routes, and the app says *Bring your teams from before into your account first, or skip it*. Syncing first would give the account data of its own and it could no longer claim.
+- **The desktop app** logs in with username and password (Settings → Account; its token lives in `ptb:session:v1`) and syncs with that token under `/api/device/`; a device linked earlier with a pairing code (`ptbd_…`) keeps working until the last step. *Unlink this desktop app* on a session-token device signs that session out.
+- **Shares** are keyed by user id (an e-mail only for people who never made an account). The Share dialog takes an e-mail or **`@username`**; an e-mail an account claimed becomes that account. Names come from the account (display name, else username). A share whose owner or grantee is a **disabled** account is hidden from every list and from what is shared (not deleted: enabling the account brings it back). User ids keep their case everywhere (`normalizeIdentity`).
+- Nothing becomes a conflict copy when a device that synced through Access logs in after the claim: the identity is the same, so its cursor is still right (tested end to end with the sync engine).
 
 ## Passwords (`worker/password.ts`)
 
@@ -113,6 +126,8 @@ Before accounts, every document, share and linked desktop app was keyed by the C
 `worker/__tests__/accounts.test.ts`: rules, hashing parameters, the routes being off by default, first account and invites (single use, expiry, revoke, race), login answers and throttles, rehash on login, token mode (and the `/api/device/` paths), sessions (hash only, revoke on the next request, logout everywhere, disabled, expiry, renewal, the limit), CSRF, password change and recovery, no secrets in console output.
 
 `worker/__tests__/claim.test.ts`: the preview, session + verified JWT on one request (not the body, not a forged JWT, CSRF), everything moved and every cursor intact (an old cursor pulls nothing new, the next push continues the sequence), the desktop link still works, the friend's shared folder and edits, sharing with a claimed e-mail, claim twice / an e-mail already claimed / a non-fresh account refused with nothing changed, only in `both`, skip, a disabled claimed account, unclaim (and claiming again), the script's SQL.
+
+`worker/__tests__/identity.test.ts`: sync by session (pending accounts wait, CSRF, renewed cookie), session before Access and Access as the fallback, 401 without either, `access` mode ignores the cookie, the desktop app's session token (and its sign-out, and the old pairing token), sharing by `@username` keyed by id and shown by name, a disabled account's shares hidden and back, and a device that synced through Access logging in after the claim with no pulls and no conflict copies.
 
 `worker/__tests__/admin.test.ts`: admins only (and a demoted admin at once), CSRF, invites (once, never listed, revoke, expiry, the note), users (disable signs out, enable, never yourself, never the last admin, a disabled admin doesn't count), reset codes (the admin's password, once, 24 hours, replaced, not for a disabled account), events, nothing secret in the console.
 

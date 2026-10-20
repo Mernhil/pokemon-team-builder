@@ -2,14 +2,17 @@ import type { Role, Share, ShareKind } from './access';
 import type { ShareInput, SharedDocument } from '../src/domain/syncProtocol';
 import type { D1Like } from './types';
 
+/** A share whose other side is a disabled account is hidden everywhere (not deleted: enabling the account brings it back). */
+const LIVE = `NOT EXISTS (SELECT 1 FROM users u WHERE (u.id = s.owner OR u.id = s.grantee) AND u.disabled = 1)`;
+
 export async function sharesOf(db: D1Like, email: string): Promise<{ granted: Share[]; received: Share[] }> {
-  const { results } = await db.prepare('SELECT owner, grantee, kind, ref, role FROM shares WHERE owner = ?1 OR grantee = ?1 ORDER BY created_at, ref').bind(email).all<Share>();
+  const { results } = await db.prepare(`SELECT owner, grantee, kind, ref, role FROM shares s WHERE (owner = ?1 OR grantee = ?1) AND ${LIVE} ORDER BY created_at, ref`).bind(email).all<Share>();
   return { granted: results.filter((s) => s.owner === email), received: results.filter((s) => s.grantee === email) };
 }
 
 /** Shares between two people, either way round (what the access check needs). */
 export async function sharesBetween(db: D1Like, owner: string, grantee: string): Promise<Share[]> {
-  const { results } = await db.prepare('SELECT owner, grantee, kind, ref, role FROM shares WHERE owner = ?1 AND grantee = ?2').bind(owner, grantee).all<Share>();
+  const { results } = await db.prepare(`SELECT owner, grantee, kind, ref, role FROM shares s WHERE owner = ?1 AND grantee = ?2 AND ${LIVE}`).bind(owner, grantee).all<Share>();
   return results;
 }
 
@@ -78,7 +81,7 @@ export async function sharedDocs(db: D1Like, grantee: string, limit: number): Pr
     .prepare(
       `SELECT d.owner, d.id, d.kind, d.json, d.updated_at, d.deleted, d.server_seq, s.role
        FROM shares s JOIN documents d ON d.owner = s.owner
-       WHERE s.grantee = ?1 AND ((s.kind = 'team-group' AND d.kind = 'team' AND d.group_id = s.ref) OR (s.kind = 'matches' AND d.kind = 'match'))
+       WHERE s.grantee = ?1 AND ${LIVE} AND ((s.kind = 'team-group' AND d.kind = 'team' AND d.group_id = s.ref) OR (s.kind = 'matches' AND d.kind = 'match'))
        ORDER BY d.owner, d.server_seq LIMIT ?2`,
     )
     .bind(grantee, limit)

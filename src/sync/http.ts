@@ -1,4 +1,5 @@
 import { isDesktopApp, useDeviceStore } from './deviceStore';
+import { useAccountStore } from './accountStore';
 
 /** Talking to the sync Worker from the browser: one fetch wrapper that turns every failure into a message the player can act on. */
 export type SyncErrorKind = 'signin' | 'offline' | 'setup' | 'other';
@@ -29,15 +30,22 @@ export function signInAgain(): void {
 export const SIGNIN_MESSAGE = 'Your sign-in has expired. Tap Sign in again.';
 
 /**
- * The browser (web and phone app) talks to its own origin and is identified by the Access cookie.
- * The desktop app talks to the linked server under /api/device/ with its device token instead.
+ * The browser (web and phone app) talks to its own origin with its cookies: the account session when it is logged
+ * in (the Worker looks at that first), else the Access cookie. The desktop app talks to its server under /api/device/
+ * with its account session token, or, if it was linked with a pairing code and never logged in, that device token.
  */
-function target(path: string): { url: string; init: RequestInit } {
-  if (!isDesktopApp()) return { url: path, init: { credentials: 'same-origin', redirect: 'manual' } };
-  const { server, token } = useDeviceStore.getState();
-  if (!server || !token) throw new SyncHttpError('This desktop app is not linked to an account yet (Settings → Sync).', 'signin');
-  return { url: `${server}${path.replace(/^\/api\//, '/api/device/')}`, init: { credentials: 'omit', headers: { authorization: `Bearer ${token}` } } };
+function target(path: string): { url: string; init: RequestInit; viaAccount: boolean } {
+  if (!isDesktopApp()) return { url: path, init: { credentials: 'same-origin', redirect: 'manual' }, viaAccount: !!useAccountStore.getState().user };
+  const account = useAccountStore.getState();
+  const device = useDeviceStore.getState();
+  const server = account.token ? (account.server ?? device.server) : device.server;
+  const token = account.token ?? device.token;
+  if (!server || !token) throw new SyncHttpError('Log in to your account (Settings → Account) to sync this desktop app.', 'signin');
+  return { url: `${server}${path.replace(/^\/api\//, '/api/device/')}`, init: { credentials: 'omit', headers: { authorization: `Bearer ${token}` } }, viaAccount: !!account.token };
 }
+
+/** The account hasn't brought over (or skipped) its data from before accounts: sync waits for that (worker/api.ts). */
+export const CLAIM_MESSAGE = 'Bring your teams from before into your account first, or skip it: Settings → Account.';
 
 /** What the 501 says is missing, in words (the Worker lists the settings it lacks). */
 export async function setupMessage(res: Response): Promise<string> {
@@ -57,7 +65,7 @@ export async function setupMessage(res: Response): Promise<string> {
 }
 
 export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const { url, init } = target(path);
+  const { url, init, viaAccount } = target(path);
   let res: Response;
   try {
     // redirect: 'manual' so an expired Access session (a redirect to the login page) is noticed, not followed.
@@ -66,8 +74,17 @@ export async function request<T>(method: string, path: string, body?: unknown): 
   } catch {
     throw new SyncHttpError("Couldn't reach the server. You may be offline.", 'offline');
   }
+  if (res.status === 401 && viaAccount) {
+    // The account session ended (and nothing else stood in for it): the banner's "Sign in again" opens the login dialog.
+    useAccountStore.getState().markExpired();
+    throw new SyncHttpError(SIGNIN_MESSAGE, 'signin', 401);
+  }
   if (res.type === 'opaqueredirect' || res.status === 401 || res.status === 403) {
-    throw new SyncHttpError(isDesktopApp() ? 'This desktop app was unlinked from your account. Link it again in Settings → Sync.' : SIGNIN_MESSAGE, 'signin', res.type === 'opaqueredirect' ? 0 : res.status);
+    throw new SyncHttpError(isDesktopApp() ? 'This desktop app is signed out. Log in again in Settings → Account.' : SIGNIN_MESSAGE, 'signin', res.type === 'opaqueredirect' ? 0 : res.status);
+  }
+  if (res.status === 409 && (res.headers.get('content-type') ?? '').includes('json')) {
+    const body = (await res.clone().json().catch(() => ({}))) as { code?: string };
+    if (body.code === 'claim-pending') throw new SyncHttpError(CLAIM_MESSAGE, 'setup', 409);
   }
   if (res.status === 501) throw new SyncHttpError(await setupMessage(res), 'setup', 501);
   const type = res.headers.get('content-type') ?? '';

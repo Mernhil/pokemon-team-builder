@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Users } from 'lucide-react';
 import { nameOf } from '@/domain/sharing';
-import { EMAIL_RE, type ShareInfo } from '@/domain/syncProtocol';
+import { isShareTarget, type ShareInfo } from '@/domain/syncProtocol';
 import type { Team } from '@/domain/types';
 import { useShareStore } from '@/sync/shareStore';
 import { addShare, removeShare } from '@/sync/sharesApi';
@@ -33,7 +33,7 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
   const submit = () =>
     run(async () => {
       const to = email.trim().toLowerCase();
-      if (!EMAIL_RE.test(to)) throw new Error('Enter their e-mail address, the one they sign in with.');
+      if (!isShareTarget(to)) throw new Error('Enter their e-mail address, or @username for someone with an account.');
       // The server can only share a team it has: send this device's latest first.
       const { syncNow } = await import('@/sync/runner');
       await syncNow();
@@ -79,7 +79,7 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
         >
           <Label>Share with</Label>
           <div className="flex flex-wrap gap-2">
-            <Input type="email" aria-label="Their e-mail address" placeholder="friend@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1" autoComplete="off" />
+            <Input type="text" inputMode="email" autoCapitalize="none" spellCheck={false} aria-label="Their e-mail address" placeholder="friend@example.com or @username" value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1" autoComplete="off" />
             <Select aria-label="What they can do" value={role} onChange={(e) => setRole(e.target.value as 'view' | 'edit')}>
               <option value="view">Can view</option>
               <option value="edit">Can edit</option>

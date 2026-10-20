@@ -31,6 +31,8 @@ interface AccountState {
   /** Has this account brought over (or skipped) the data synced before accounts, and can it now? From GET /api/me. */
   claim?: ClaimState;
   claimAvailable?: boolean;
+  /** The account this device last signed in as (kept after logging out), so a different account starts sync afresh. */
+  lastUserId?: string;
 
   signIn: (s: { user: AccountUser; token?: string; expiresAt?: number }) => void;
   setUser: (user: AccountUser) => void;
@@ -63,7 +65,7 @@ export const useAccountStore = create<AccountState>()(
       bannerDismissed: false,
       cardDismissed: false,
       availability: 'unknown',
-      signIn: ({ user, token, expiresAt }) => set({ user, token: token && SESSION_TOKEN_RE.test(token) ? token : undefined, expiresAt, expired: false, bannerDismissed: false, cardDismissed: true, availability: 'on' }),
+      signIn: ({ user, token, expiresAt }) => set({ user, lastUserId: user.id, token: token && SESSION_TOKEN_RE.test(token) ? token : undefined, expiresAt, expired: false, bannerDismissed: false, cardDismissed: true, availability: 'on' }),
       setUser: (user) => set({ user, expired: false }),
       setServer: (server) => set({ server: normalizeServer(server) }),
       signOut: () => set({ user: undefined, token: undefined, expiresAt: undefined, expired: false, bannerDismissed: false, claim: undefined, claimAvailable: undefined }),
@@ -77,7 +79,7 @@ export const useAccountStore = create<AccountState>()(
       name: 'ptb:session:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ user: s.user, server: s.server, token: s.token, expiresAt: s.expiresAt, expired: s.expired, cardDismissed: s.cardDismissed, claim: s.claim }),
+      partialize: (s) => ({ user: s.user, server: s.server, token: s.token, expiresAt: s.expiresAt, expired: s.expired, cardDismissed: s.cardDismissed, claim: s.claim, lastUserId: s.lastUserId }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<AccountState>;
         const user = sanitizeUser(p.user);
@@ -91,6 +93,7 @@ export const useAccountStore = create<AccountState>()(
           expiresAt: user && typeof p.expiresAt === 'number' ? p.expiresAt : undefined,
           expired: user ? p.expired === true : false,
           cardDismissed: p.cardDismissed === true,
+          lastUserId: typeof p.lastUserId === 'string' && p.lastUserId.length <= 64 ? p.lastUserId : undefined,
           claim: user && (p.claim === 'pending' || p.claim === 'claimed' || p.claim === 'skipped') ? p.claim : undefined,
         };
       },

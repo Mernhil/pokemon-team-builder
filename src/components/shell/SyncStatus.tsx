@@ -20,6 +20,8 @@ export function SyncBanner({ onOpenSyncSettings, onOpenLogin }: { onOpenSyncSett
   const dismissAccount = useAccountStore((s) => s.dismissBanner);
   const show = useSyncStore((s) => s.enabled && s.lastErrorKind === 'signin' && !s.bannerDismissed);
   const dismiss = useSyncStore((s) => s.dismissBanner);
+  const status = useSyncStore((s) => s.lastErrorStatus);
+  const accountKnown = useAccountStore((s) => !!s.user || s.availability === 'on');
   if (accountEnded && syncAvailable()) {
     return (
       <div role="alert" className="flex flex-wrap items-center gap-2 border-b border-bad/40 bg-bad/8 px-3 py-2 text-sm sm:px-4">
@@ -35,11 +37,15 @@ export function SyncBanner({ onOpenSyncSettings, onOpenLogin }: { onOpenSyncSett
   }
   if (!show || !syncAvailable()) return null;
   const desktop = isDesktopApp();
+  // Which sign-in ended: Cloudflare Access (a redirect to its login, status 0) is renewed in the app's window; the
+  // account's is the login dialog; a desktop app with only a pairing link goes to Settings.
+  const viaAccount = accountKnown && status !== 0;
+  const action = viaAccount ? onOpenLogin : desktop ? onOpenSyncSettings : signInAgain;
   return (
     <div role="alert" className="flex flex-wrap items-center gap-2 border-b border-bad/40 bg-bad/8 px-3 py-2 text-sm sm:px-4">
-      <span className="min-w-0 flex-1 font-semibold text-bad">{desktop ? 'This desktop app is no longer linked to your account. Link it again in Settings → Sync.' : SIGNIN_MESSAGE}</span>
-      <Button variant="primary" size="sm" onClick={desktop ? onOpenSyncSettings : signInAgain}>
-        {desktop ? 'Open Sync settings' : 'Sign in again'}
+      <span className="min-w-0 flex-1 font-semibold text-bad">{desktop && !viaAccount ? 'This desktop app is signed out. Log in again in Settings → Account.' : SIGNIN_MESSAGE}</span>
+      <Button variant="primary" size="sm" onClick={action}>
+        {desktop && !viaAccount ? 'Open Settings' : 'Sign in again'}
       </Button>
       <button type="button" className={buttonClass('ghost', 'icon-sm')} aria-label="Dismiss" onClick={dismiss}>
         <X size={15} aria-hidden />

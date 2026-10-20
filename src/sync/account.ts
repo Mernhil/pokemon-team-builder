@@ -23,6 +23,7 @@ import {
 } from '@/domain/accounts';
 import { useAccountStore } from './accountStore';
 import { isDesktopApp, useDeviceStore } from './deviceStore';
+import { useSyncStore } from './syncStore';
 
 export type AccountErrorKind = 'offline' | 'signin' | 'access' | 'off' | 'setup' | 'throttled' | 'invalid' | 'other';
 
@@ -105,8 +106,19 @@ function rememberServer(server?: string): void {
 }
 
 const remember = (r: AuthResponse): AuthResponse => {
+  const before = useAccountStore.getState().lastUserId;
+  // Another account than the one this device synced with: its sync position means nothing there, start afresh.
+  if (before && before !== r.user.id) useSyncStore.getState().forget();
   useAccountStore.getState().signIn({ user: r.user, token: r.token, expiresAt: r.expiresAt });
+  // The desktop app syncs through its account: logging in is what turns it on (as linking did).
+  if (isDesktopApp()) useSyncStore.getState().setEnabled(true);
   return r;
+};
+
+/** Logged out: this device keeps its teams and stops syncing (turn sync on again after logging in). */
+const signedOut = () => {
+  useAccountStore.getState().signOut();
+  if (useSyncStore.getState().enabled) useSyncStore.getState().setEnabled(false);
 };
 
 /** Is the server running accounts, and is this device signed in? Updates the store. Offline: throws. */
@@ -181,14 +193,14 @@ export async function logout(): Promise<void> {
   try {
     await accountRequest('POST', '/api/auth/logout', {});
   } finally {
-    useAccountStore.getState().signOut();
+    signedOut();
   }
 }
 
 /** Ends every session of the account, this one included. Needs the server. */
 export async function logoutEverywhere(): Promise<void> {
   await accountRequest('POST', '/api/auth/logout-all', {});
-  useAccountStore.getState().signOut();
+  signedOut();
 }
 
 const currentUser = (): AccountUser => {
@@ -230,7 +242,7 @@ export const loadSessions = async (): Promise<SessionInfo[]> => (await accountRe
 /** Signs a device out. Revoking this device's own session logs it out. */
 export async function revokeSession(id: string, current: boolean): Promise<SessionInfo[]> {
   const { sessions } = await accountRequest<SessionsResponse>('DELETE', '/api/sessions', { id });
-  if (current) useAccountStore.getState().signOut();
+  if (current) signedOut();
   return sessions;
 }
 

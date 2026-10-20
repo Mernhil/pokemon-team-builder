@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { isDesktopApp, useDeviceStore } from '@/sync/deviceStore';
+import { useAccountStore } from '@/sync/accountStore';
 import { ago } from '@/domain/sharing';
 import { healthLine, type HealthResponse } from '@/domain/syncHealth';
 import { diagnosticsText, statusText } from '@/sync/diagnostics';
@@ -38,7 +39,10 @@ export default function SyncSettings() {
   const [confirmOff, setConfirmOff] = useState(false);
   const stats = s.lastStats;
   const desktop = isDesktopApp();
-  const linked = useDeviceStore((d) => Boolean(d.token));
+  const paired = useDeviceStore((d) => Boolean(d.token));
+  const loggedIn = useAccountStore((a) => Boolean(a.token));
+  const linked = paired || loggedIn;
+  const hasAccount = useAccountStore((a) => !!a.user || a.availability === 'on');
   const health = useServerHealth(s.enabled && !desktop && syncAvailable(), s.status === 'syncing');
   const known = Object.keys(s.known).length;
   const now = useNow(30_000);
@@ -46,11 +50,13 @@ export default function SyncSettings() {
   if (!syncAvailable()) {
     return <p className="text-sm text-muted">Sync is available in the web app, the installed phone app and the desktop app, not in this build.</p>;
   }
-  // The desktop app syncs once it is linked to an account with a pairing code.
+  // The desktop app syncs once it is logged in to the account (Settings → Account), or linked with a pairing code.
   if (desktop && !linked) {
     return (
       <div className="space-y-3 text-sm">
-        <p className="text-muted">Link this desktop app to your account to keep your teams and match log the same on your phone and here. Nothing is sent until you do.</p>
+        <p className="text-muted">
+          Log in to your account under <b>Account</b> above to keep your teams and match log the same on your phone and here. Nothing is sent until you do. (A pairing code from the phone still works too, for now.)
+        </p>
         <LinkThisDesktop />
       </div>
     );
@@ -88,7 +94,7 @@ export default function SyncSettings() {
         </div>
       )}
 
-      {desktop && <LinkThisDesktop />}
+      {desktop && paired && !loggedIn && <LinkThisDesktop />}
 
       {s.enabled && (
         <div className="space-y-3">
@@ -109,11 +115,12 @@ export default function SyncSettings() {
           {s.lastError && (
             <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-bad/40 bg-bad/8 p-2 text-bad">
               <span className="min-w-0 flex-1">{s.lastError}</span>
-              {s.lastErrorKind === 'signin' && !desktop && (
+              {s.lastErrorKind === 'signin' && !desktop && !hasAccount && (
                 <Button size="sm" variant="primary" onClick={signInAgain}>
                   Sign in again
                 </Button>
               )}
+              {s.lastErrorKind === 'signin' && (desktop || hasAccount) && <span className="text-xs">Log in again under Account, above.</span>}
             </div>
           )}
           {health && (
