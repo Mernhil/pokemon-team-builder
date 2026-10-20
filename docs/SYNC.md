@@ -37,6 +37,29 @@ An installed iPhone app freezes its timers and can suspend a request in flight. 
 - **Cursor / Known documents / App version**: cursor = last server sequence reached; compare *App version* between devices.
 - *Copy diagnostics* copies counts, times and the error text only: no team or match contents, no tokens, no e-mail addresses (`src/sync/diagnostics.ts` scrubs the error text).
 
+## Which device made or edited a team
+
+Saved teams can show a small chip, *Made on Phone* or *Made on Phone · edited on Desktop* (with a phone / tablet / computer icon), a **Show** filter (*All teams / Made on … / Edited on …*, remembered on the device) and *New from Desktop* on a team that arrived through sync until you open it. The chips and the filter appear only when sync is on and teams from at least two different devices exist; a team from before 0.33 shows nothing until it is labelled.
+
+**Fields** (optional, on every team document; `src/domain/deviceStamp.ts`, sanitised with the rest of the team by `sanitizeTeam`, so the Worker, the app's loaders and imports all drop anything malformed):
+
+- `createdOn`: set when a team is created, duplicated, imported (JSON backup, share code, tournament import) or copied from a shared folder. A conflict copy keeps the labels of the version it holds; the scratch draft keeps the `createdOn` of the saved team it was loaded from.
+- `updatedOn`: set on every edit that bumps `updatedAt`. The draft model: editing the draft stamps the draft; the saved team's `updatedOn` changes only when the draft is saved over it.
+- Each is `<device id>~<device name>`, at most 40 characters (longer is cut). Syncing a team writes nothing: the labels travel with the document, so every merge, conflict copy and variation keeps them.
+
+**Stable id plus current name.** Names change and can collide (two "Phone"s), so a label is looked up by the device's id, not its name. The id is made once per install (`deviceId` in `ptb:sync:v1`: a kind letter, `p` phone / `t` tablet / `c` computer / `u` unknown, and 7 random characters; it survives turning sync off or "forget"). A rename (Settings → Sync → *This device is called*) shows on this device's old labels at once; another device shows the new name as soon as it has any team stamped by the renamed device after the rename (it uses the name on the most recently updated team that carries the id). Two devices with the same name are told apart by a short suffix, *Phone (4fg)*.
+
+**Size and server.** A pair of labels is under 100 bytes next to the 64 KB document limit, and teams are stored as JSON documents, so **no D1 migration is needed** (`EXPECTED_MIGRATIONS` is unchanged). The Worker has to be redeployed with this version, because it runs `sanitizeTeam`: an older Worker would drop the labels.
+
+**Label unlabelled teams as this device** (Settings → Sync, with the number it will mark and a confirmation). It marks teams that have no label (variations and the draft included) as made and last edited on this device, and it is **not an edit**:
+
+- `updatedAt` is not touched, so the labelled team can't win a later conflict.
+- The labelled teams are queued (`forced` in `ptb:sync:v1`) and pushed once at their unchanged version. The Worker takes a team at the *same* `updatedAt` in this one case only: the content is identical and the push only adds labels the stored copy lacks (`onlyAddsStamps`; it never rewrites an existing label). It gets a new sequence number, so the other devices pull it.
+- A device that pulls it at an unchanged version takes the labels and writes nothing else (`fill-stamps` / `adoptStamps`): no conflict, no conflict copy. If that device edited the team meanwhile, it keeps its edit and only fills in a missing `createdOn`.
+- Run it on the device that really made those teams. If two devices both label the same team, the server's labels win on the others.
+
+"New from <device>" uses the list of documents the last runs created here (`stats.changed`), kept in `unseen` until the team is opened; a device's very first sync marks nothing (everything would be new).
+
 ## One-time setup (by hand)
 
 Until the steps below are done the app works exactly as before and `/api/sync` answers `501 sync is not set up`. The answer lists what is missing (`{"missing": ["DB", "ACCESS_AUD"]}`) and Settings → Sync shows it in words, e.g. “the D1 database isn’t bound (steps 1–3)”.

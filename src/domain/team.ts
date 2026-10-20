@@ -15,7 +15,7 @@ export const DEFAULT_TEAM_NAME = 'Untitled Team';
 /** Whether a team is more than the scratch draft: named, a variation, or shared. Clearing one must not wipe it. */
 export const isSavedTeam = (t: Pick<Team, 'name' | 'groupId' | 'shared'>): boolean => t.name !== DEFAULT_TEAM_NAME || !!t.groupId || !!t.shared;
 
-export function createTeam(format: FormatRules, name = DEFAULT_TEAM_NAME): Team {
+export function createTeam(format: FormatRules, name = DEFAULT_TEAM_NAME, stamp?: string): Team {
   const now = Date.now();
   return {
     id: uid(),
@@ -25,6 +25,7 @@ export function createTeam(format: FormatRules, name = DEFAULT_TEAM_NAME): Team 
     slots: emptySlots(),
     createdAt: now,
     updatedAt: now,
+    ...(stamp ? { createdOn: stamp, updatedOn: stamp } : {}),
   };
 }
 
@@ -52,9 +53,10 @@ export function createSet(dex: Dex, speciesId: string, format: FormatRules): Pok
 
 /**
  * Deep-clone a team with a fresh id (used by "Duplicate", "Save as…" and "Add variation").
- * Clones are top-level groups by default — pass `overrides` to nest the copy as a variation.
+ * Clones are top-level groups by default — pass `overrides` to nest the copy as a variation, and the device stamps
+ * (`createdOn`/`updatedOn`, src/domain/deviceStamp.ts) of whoever made the copy: none by default.
  */
-export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: Partial<Pick<Team, 'groupId' | 'variationLabel'>>): Team {
+export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: Partial<Pick<Team, 'groupId' | 'variationLabel' | 'createdOn' | 'updatedOn'>>): Team {
   const now = Date.now();
   // A copy's Pokémon get new ids, so a matchup note's leads follow them to the new ones.
   const renamed = new Map<string, string>();
@@ -73,6 +75,9 @@ export function cloneTeam(team: Team, name = `${team.name} (copy)`, overrides?: 
     groupId: undefined,
     variationLabel: undefined,
     shared: undefined, // a copy is always mine
+    // Made (and edited) where it is copied, unless the caller says whose version this is (a draft, a conflict copy).
+    createdOn: undefined,
+    updatedOn: undefined,
     ...overrides,
     slots: slotsCopy,
     matchupNotes: team.matchupNotes?.map((n) => ({ ...n, ...(n.leads ? { leads: n.leads.flatMap((l) => (renamed.has(l) ? [renamed.get(l)!] : [])) } : {}) })),

@@ -4,6 +4,7 @@
  * about React, zustand or fetch: the stores and the server arrive as small interfaces, so the same
  * code is tested with two in-memory devices against the real Worker handler.
  */
+import { adoptStamps } from '@/domain/deviceStamp';
 import { conflictCopy, docKey, localChanges, resolveDocument, type Known, type LocalDoc } from '@/domain/sync';
 import { LIMITS, type DocKind, type PullResponse, type PushDoc, type PushResponse, type RemoteDocument } from '@/domain/syncProtocol';
 import type { Team } from '@/domain/types';
@@ -36,6 +37,8 @@ export interface SyncState {
   cursor: number;
   /** For each document last synced, the `updatedAt` of that version. */
   known: Record<string, Known>;
+  /** Documents to send once although their version didn't change (teams labelled with their device); removed when the server answered. */
+  forced?: string[];
 }
 
 export interface SyncStats {
@@ -74,7 +77,7 @@ const MAX_PASSES = 3;
 export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stats: SyncStats }> {
   const now = deps.now ?? Date.now;
   const stats: SyncStats = { pulled: 0, pushed: 0, updated: 0, deleted: 0, conflicts: 0, changed: [] };
-  let state: SyncState = { cursor: deps.state.cursor, known: { ...deps.state.known } };
+  let state: SyncState = { cursor: deps.state.cursor, known: { ...deps.state.known }, forced: deps.state.forced && [...deps.state.forced] };
   let stale: RemoteDocument[] = [];
   const guard = () => {
     if (deps.isCurrent && !deps.isCurrent()) throw new RunAbandoned();
@@ -113,6 +116,12 @@ export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stat
         stats.changed.push({ kind: r.kind, id: r.id, updatedAt: r.updatedAt, existed: !!mine });
       };
       if (res.action === 'apply-remote') take();
+      else if (res.action === 'fill-stamps' && mine) {
+        // Labels only: same `updatedAt`, so nothing is pushed back and no conflict can come of it.
+        const doc: LocalDoc = { ...mine, json: adoptStamps(mine.json, r.json, mine.updatedAt > (known[k]?.updatedAt ?? 0)) };
+        upserts.push(doc);
+        local.set(k, doc);
+      }
       else if (res.action === 'delete-local') {
         deletes.push({ kind: r.kind, id: r.id });
         local.delete(k);
@@ -149,11 +158,11 @@ export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stat
     }
     guard();
     if (upserts.length || deletes.length) deps.store.apply({ upserts, deletes });
-    state = { cursor, known };
+    state = { cursor, known, forced: state.forced };
     deps.save(state);
 
     // ---- push ----
-    let changes = localChanges(deps.store.list(), state.known, now());
+    let changes = localChanges(deps.store.list(), state.known, now(), state.forced ? new Set(state.forced) : undefined);
     let keepalive: boolean | undefined;
     if (deps.flush) {
       // Most recently edited first, as many as fit one keepalive request; the rest waits for the next run.
@@ -178,6 +187,7 @@ export async function syncOnce(deps: SyncDeps): Promise<{ state: SyncState; stat
         const c = byId.get(docKey(r.kind, r.id));
         if (!c) continue;
         const k = docKey(c.kind, c.id);
+        if (state.forced) state.forced = state.forced.filter((x) => x !== k); // the server has answered for it
         if (r.status === 'applied') {
           stats.pushed++;
           if (c.deleted) delete state.known[k];

@@ -55,7 +55,7 @@ export const makeHttpApi = (signal?: AbortSignal): SyncApi => ({
 export const httpApi: SyncApi = makeHttpApi();
 
 /** How many documents differ from what the server last confirmed (edited, new or deleted here). */
-export const pendingChanges = (): number => localChanges(storeAdapter.list(), useSyncStore.getState().known, Date.now()).length;
+export const pendingChanges = (): number => localChanges(storeAdapter.list(), useSyncStore.getState().known, Date.now(), new Set(useSyncStore.getState().forced)).length;
 
 /** A run older than this is dropped when a new one is wanted, whatever the individual requests are doing. */
 export const MAX_RUN_MS = 90_000;
@@ -79,11 +79,12 @@ const controller = createRunController<RunResult>({
     const store = useSyncStore.getState();
     store.begin();
     try {
-      const { cursor, known, deviceName } = store;
+      const { cursor, known, forced, deviceName } = store;
+      const firstSync = cursor === 0 && Object.keys(known).length === 0;
       const { stats } = await syncOnce({
         store: storeAdapter,
         api: makeHttpApi(signal),
-        state: { cursor, known },
+        state: { cursor, known, forced },
         save: (s) => isCurrent() && useSyncStore.getState().saveState(s),
         deviceName,
         isCurrent,
@@ -94,7 +95,11 @@ const controller = createRunController<RunResult>({
       if (!isCurrent()) return ABANDONED;
       // Unsent edits are only forgotten once the server confirmed them (a flush may have fitted only some).
       if (flush) useSyncStore.getState().endFlush(pendingChanges() > 0);
-      else useSyncStore.getState().succeed(stats, pendingChanges() > 0);
+      else {
+        useSyncStore.getState().succeed(stats, pendingChanges() > 0);
+        // Teams that arrived from another device get a "New from <device>" mark until opened (not on a device's first sync: everything is new then).
+        if (!firstSync) useSyncStore.getState().markUnseen(stats.changed.filter((c) => c.kind === 'team' && !c.existed).map((c) => c.id));
+      }
       return { ok: true };
     } catch (e) {
       if (e instanceof RunAbandoned || !isCurrent()) return ABANDONED;

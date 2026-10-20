@@ -55,7 +55,9 @@ export class FakeServer {
       this.pushes.push({ device, ids: body.docs.map((d) => d.id) });
       const results = body.docs.map((d) => {
         const cur = this.docs.get(`${d.kind}:${d.id}`);
-        if (cur && !(d.updatedAt > cur.updatedAt)) return { id: d.id, kind: d.kind, status: 'stale', doc: cur };
+        // As the Worker: strictly newer wins, except the same version of a team that only gained device labels.
+        const adds = cur && !cur.deleted && cur.updatedAt === d.updatedAt && !(cur.json as { createdOn?: string })?.createdOn && !!(d.json as { createdOn?: string } | undefined)?.createdOn;
+        if (cur && !adds && !(d.updatedAt > cur.updatedAt)) return { id: d.id, kind: d.kind, status: 'stale', doc: cur };
         this.put({ id: d.id, kind: d.kind, updatedAt: d.updatedAt, deleted: !!d.deleted, json: d.deleted ? undefined : d.json });
         return { id: d.id, kind: d.kind, status: 'applied' };
       });

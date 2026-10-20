@@ -9,6 +9,7 @@
  *    between two devices can't throw an edit away;
  *  - matches follow the same rule without conflict copies.
  */
+import { adoptStamps } from './deviceStamp';
 import { cloneTeam } from './team';
 import type { DocKind, RemoteDocument } from './syncProtocol';
 import type { Team } from './types';
@@ -43,6 +44,8 @@ export type Resolution =
   | { action: 'noop' }
   /** The server's version replaces (or creates) the local one. */
   | { action: 'apply-remote' }
+  /** The same version, labelled on the server (which device made it): take the labels, keep `updatedAt` and everything else. */
+  | { action: 'fill-stamps' }
   /** The server's version is a delete: remove the local document. */
   | { action: 'delete-local' }
   /** The local version stands and is pushed (a local edit, or a local delete). */
@@ -83,7 +86,11 @@ export function resolveDocument(input: { local?: LocalDoc; remote: RemoteDocumen
 
   // The server's version is one we already have (our own push coming back, or a re-pull).
   const remoteChanged = !base || remote.updatedAt > base.updatedAt;
-  if (!remoteChanged) return { action: 'noop' };
+  if (!remoteChanged) {
+    // Not a newer version, but the same team may have been labelled since (Settings → Sync → Label unlabelled teams).
+    if (local && base && copy && !remote.deleted && remote.updatedAt === base.updatedAt && adoptStamps(local.json, remote.json, local.updatedAt > base.updatedAt) !== local.json) return { action: 'fill-stamps' };
+    return { action: 'noop' };
+  }
 
   // ---- Not here ----
   if (!local) {
@@ -120,7 +127,7 @@ export const conflictLabel = (deviceName: string, now: number) => `Conflict copy
  */
 export function conflictCopy(loser: Team, winner: Team, deviceName: string, now: number): Team {
   // Stamped with the sync's clock (not Date.now), like everything else the sync writes.
-  return { ...cloneTeam(loser, loser.name, { groupId: winner.groupId ?? winner.id, variationLabel: conflictLabel(deviceName, now) }), createdAt: now, updatedAt: now };
+  return { ...cloneTeam(loser, loser.name, { groupId: winner.groupId ?? winner.id, variationLabel: conflictLabel(deviceName, now), createdOn: loser.createdOn, updatedOn: loser.updatedOn }), createdAt: now, updatedAt: now };
 }
 
 // ---------------------------------------------------------------------------
@@ -139,17 +146,18 @@ const keyOf = (kind: DocKind, id: string) => `${kind}:${id}`;
 export { keyOf as docKey };
 
 /**
- * The documents to push: new or edited since the last sync, plus tombstones for documents that were
+ * The documents to push: new or edited since the last sync (or `forced`: labelled without an edit, which the server
+ * takes at an unchanged version), plus tombstones for documents that were
  * synced before and are gone now (a delete happens "now", since the stores keep no deletion time).
  */
-export function localChanges(local: LocalDoc[], known: Record<string, Known>, now: number): LocalChange[] {
+export function localChanges(local: LocalDoc[], known: Record<string, Known>, now: number, forced?: ReadonlySet<string>): LocalChange[] {
   const out: LocalChange[] = [];
   const present = new Set<string>();
   for (const d of local) {
     const k = keyOf(d.kind, d.id);
     present.add(k);
     const base = known[k];
-    if (!base || d.updatedAt > base.updatedAt) out.push({ id: d.id, kind: d.kind, updatedAt: d.updatedAt, deleted: false, json: d.json });
+    if (!base || d.updatedAt > base.updatedAt || forced?.has(k)) out.push({ id: d.id, kind: d.kind, updatedAt: d.updatedAt, deleted: false, json: d.json });
   }
   for (const k of Object.keys(known)) {
     if (present.has(k)) continue;

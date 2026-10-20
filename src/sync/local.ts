@@ -1,3 +1,4 @@
+import { makeStamp } from '@/domain/deviceStamp';
 import type { DocKind } from '@/domain/syncProtocol';
 import { useShareStore } from './shareStore';
 import { useSyncStore } from './syncStore';
@@ -13,4 +14,10 @@ export function editTime(kind: DocKind, id: string, now: number = Date.now()): n
   const key = `${kind}:${id}`;
   const base = Math.max(useSyncStore.getState().known[key]?.updatedAt ?? 0, useShareStore.getState().known[key]?.updatedAt ?? 0);
   return Math.max(now, base + 1);
+}
+
+/** What this device writes into `createdOn` / `updatedOn` of the teams it makes or edits: its stable id and its name now. */
+export function currentStamp(): string {
+  const s = useSyncStore.getState();
+  return makeStamp(s.deviceId || s.ensureDeviceId(), s.deviceName);
 }

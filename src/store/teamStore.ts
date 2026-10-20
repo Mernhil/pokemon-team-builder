@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { editTime } from '@/sync/local';
+import { currentStamp, editTime } from '@/sync/local';
 import { safeStorage } from './storage';
 import { toast } from './toastStore';
 import { DEFAULT_FORMAT_ID, getFormat } from '@/domain/formats';
@@ -128,7 +128,13 @@ function lockedNotice() {
   toast('This team was shared with you to view only. Use “Make my own copy” to change it.');
 }
 
-const firstTeam = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team');
+/** Both stamps of this device, for a team made here (new, duplicated, imported, received by sharing). */
+const mine = () => {
+  const s = currentStamp();
+  return { createdOn: s, updatedOn: s };
+};
+
+const firstTeam = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team', currentStamp());
 
 /** Where the pre-v3 save is copied before the v3 migration rewrites it (see migrateTeamState). */
 export const TEAM_BACKUP_V2_KEY = 'ptb:v1:backup-v2';
@@ -196,7 +202,7 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
   // saved team that was left open becomes a draft copy of itself and stays as it was.
   const open = teams[activeTeamId];
   if (open && isSavedTeam(open) && !isLocked(open)) {
-    const draft = cloneTeam(open, DEFAULT_TEAM_NAME);
+    const draft = cloneTeam(open, DEFAULT_TEAM_NAME, { createdOn: open.createdOn, updatedOn: open.updatedOn });
     teams[draft.id] = draft;
     order = [draft.id, ...order];
     editingFrom = open.id;
@@ -235,7 +241,7 @@ export const useTeamStore = create<TeamState>()(
             lockedNotice();
             return s;
           }
-          return { teams: { ...s.teams, [t.id]: { ...enforceCapabilities(fn(t)), updatedAt: editTime('team', t.id) } } };
+          return { teams: { ...s.teams, [t.id]: { ...enforceCapabilities(fn(t)), updatedAt: editTime('team', t.id), updatedOn: currentStamp() } } };
         });
       const mutateSlot = (id: string, i: number, fn: (p: PokemonSet) => PokemonSet) =>
         mutateTeam(id, (t) => {
@@ -257,10 +263,11 @@ export const useTeamStore = create<TeamState>()(
         }
         const active = s.teams[s.activeTeamId];
         const reuse = active && active.id !== id && !isSavedTeam(active) ? active : undefined;
-        const copy = cloneTeam(src, DEFAULT_TEAM_NAME);
+        // The draft is the saved team's content: it keeps whose it is; `updatedOn` moves only when it is saved back.
+        const copy = cloneTeam(src, DEFAULT_TEAM_NAME, { createdOn: src.createdOn, updatedOn: src.updatedOn });
         let draft: Team = copy;
         if (reuse) {
-          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, matchupNotes: copy.matchupNotes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: editTime('team', reuse.id) };
+          draft = { ...reuse, formatId: copy.formatId, category: copy.category, notes: copy.notes, matchupNotes: copy.matchupNotes, replicaCode: copy.replicaCode, slots: copy.slots, slotsByFormat: copy.slotsByFormat, updatedAt: editTime('team', reuse.id), updatedOn: currentStamp() };
           if (reuse.slots.some(Boolean)) {
             const prev = { team: reuse, editingFrom: s.editingFrom, editingDraft: s.editingDraft };
             toast(`Loaded “${src.name}${src.variationLabel ? ` · ${src.variationLabel}` : ''}” into the builder.`, {
@@ -294,14 +301,14 @@ export const useTeamStore = create<TeamState>()(
         battle: {},
 
         newTeam: (formatId = DEFAULT_FORMAT_ID) => {
-          const t = createTeam(getFormat(formatId));
+          const t = createTeam(getFormat(formatId), undefined, currentStamp());
           set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order], activeTeamId: t.id, activeSlot: 0 }));
           return t.id;
         },
         selectTeam: (id) => get().teams[id] && set({ activeTeamId: id, activeSlot: 0 }),
         editTeam: (id) => openForEdit(id),
         updateTeam: (id, patch) =>
-          set((s) => (isLocked(s.teams[id]) ? (lockedNotice(), s) : s.teams[id] ? { teams: { ...s.teams, [id]: { ...s.teams[id], ...patch, updatedAt: editTime('team', id) } } } : s)),
+          set((s) => (isLocked(s.teams[id]) ? (lockedNotice(), s) : s.teams[id] ? { teams: { ...s.teams, [id]: { ...s.teams[id], ...patch, updatedAt: editTime('team', id), updatedOn: currentStamp() } } } : s)),
         switchFormat: (id, formatId) =>
           set((s) => {
             const t = s.teams[id];
@@ -313,14 +320,14 @@ export const useTeamStore = create<TeamState>()(
             const slotsByFormat = { ...t.slotsByFormat, [t.formatId]: t.slots };
             const slots = slotsByFormat[formatId] ?? emptySlots();
             return {
-              teams: { ...s.teams, [id]: enforceCapabilities({ ...t, formatId, category: getFormat(formatId).shortName, slots, slotsByFormat, updatedAt: editTime('team', id) }) },
+              teams: { ...s.teams, [id]: enforceCapabilities({ ...t, formatId, category: getFormat(formatId).shortName, slots, slotsByFormat, updatedAt: editTime('team', id), updatedOn: currentStamp() }) },
               ...(id === s.activeTeamId ? { activeSlot: 0 } : {}),
             };
           }),
         duplicateTeam: (id) => {
           const src = get().teams[id];
           if (!src) return id;
-          const t = cloneTeam(src); // always a new top-level group, even if `src` was a variation
+          const t = cloneTeam(src, undefined, mine()); // always a new top-level group, even if `src` was a variation
           set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order] }));
           openForEdit(t.id);
           return t.id;
@@ -328,7 +335,7 @@ export const useTeamStore = create<TeamState>()(
         saveAsNew: (name) => {
           const src = get().teams[get().activeTeamId];
           if (!src) return get().activeTeamId;
-          const t = cloneTeam(src, name.trim() || src.name);
+          const t = cloneTeam(src, name.trim() || src.name, mine());
           // The build stays open as the draft; the saved copy only changes when you Save over it.
           set((s) => ({ teams: { ...s.teams, [t.id]: t }, order: [t.id, ...s.order], editingFrom: t.id, editingDraft: s.activeTeamId }));
           return t.id;
@@ -341,7 +348,7 @@ export const useTeamStore = create<TeamState>()(
           // Saving the open team under its own name: it is already stored (edits save as you go).
           if (mode === 'new' && src.name.trim().toLowerCase() === name.trim().toLowerCase() && isSavedTeam(src)) return src.id;
           if (!target || target.id === src.id || isLocked(target) || mode === 'new') return get().saveAsNew(name);
-          const copy = cloneTeam(src, target.name);
+          const copy = cloneTeam(src, target.name, mine());
           if (mode === 'overwrite') {
             const next: Team = {
               ...target,
@@ -354,6 +361,7 @@ export const useTeamStore = create<TeamState>()(
               slots: copy.slots,
               slotsByFormat: copy.slotsByFormat,
               updatedAt: editTime('team', target.id),
+              updatedOn: currentStamp(), // saving the draft is the edit; the draft itself never changed the saved team's labels
             };
             set((s) => ({ teams: { ...s.teams, [target.id]: next }, editingFrom: target.id, editingDraft: s.activeTeamId }));
             return target.id;
@@ -374,7 +382,7 @@ export const useTeamStore = create<TeamState>()(
           const groupId = src.groupId ?? src.id;
           const siblings = Object.values(get().teams).filter((t) => t.groupId === groupId).length;
           // A variation added to a folder shared with edit rights belongs to that folder (and syncs there).
-          const t = { ...cloneTeam(src, src.name, { groupId, variationLabel: `Variation ${siblings + 2}` }), shared: src.shared };
+          const t = { ...cloneTeam(src, src.name, { groupId, variationLabel: `Variation ${siblings + 2}`, ...mine() }), shared: src.shared };
           set((s) => ({ teams: { ...s.teams, [t.id]: t } }));
           openForEdit(t.id);
           return t.id;
@@ -408,9 +416,9 @@ export const useTeamStore = create<TeamState>()(
           if (!src) return id;
           const rootId = src.groupId ?? src.id;
           const root = get().teams[rootId] ?? src;
-          const copy = cloneTeam(root, root.name);
+          const copy = cloneTeam(root, root.name, mine());
           const members = Object.values(get().teams).filter((t) => t.groupId === rootId);
-          const variations = members.map((v) => cloneTeam(v, v.name, { groupId: copy.id, variationLabel: v.variationLabel }));
+          const variations = members.map((v) => cloneTeam(v, v.name, { groupId: copy.id, variationLabel: v.variationLabel, ...mine() }));
           set((s) => {
             const teams = { ...s.teams, [copy.id]: copy };
             for (const v of variations) teams[v.id] = v;
@@ -440,9 +448,9 @@ export const useTeamStore = create<TeamState>()(
           set((s) => {
             const teams = { ...s.teams };
             const idMap = new Map<string, string>(); // original incoming id -> id actually used, when remapped to avoid a collision
-            const prepared = incoming.map((t) => ({ ...t, shared: undefined })).map((t) => {
+            const prepared = incoming.map((t) => ({ ...t, shared: undefined, ...mine() })).map((t) => {
               if (teams[t.id]) {
-                const copy = cloneTeam(t, t.name, { groupId: t.groupId, variationLabel: t.variationLabel });
+                const copy = cloneTeam(t, t.name, { groupId: t.groupId, variationLabel: t.variationLabel, ...mine() });
                 idMap.set(t.id, copy.id);
                 return copy;
               }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from '@/store/storage';
+import { DEVICE_ID_RE, deviceKind, newDeviceId } from '@/domain/deviceStamp';
 import { isDesktopApp } from './deviceStore';
 import type { SyncErrorKind } from './http';
 import type { SyncState } from './engine';
@@ -12,8 +13,14 @@ import type { SyncStats } from './engine';
  */
 interface SyncStoreState extends SyncState {
   enabled: boolean;
-  /** Names this device in "Conflict copy (<device>, <date>)". */
+  /** Names this device in "Conflict copy (<device>, <date>)" and on the teams it makes. */
   deviceName: string;
+  /** This install's stable id (kind letter + 7 characters), stamped on the teams it makes or edits (src/domain/deviceStamp.ts). Made on first use, kept when sync is turned off or forgotten. */
+  deviceId: string;
+  /** Teams labelled without an edit, to send once at their unchanged version (Settings → Sync → Label unlabelled teams). */
+  forced: string[];
+  /** Ids of teams that arrived through sync and haven't been opened yet ("New from <device>"). */
+  unseen: string[];
   lastSyncAt?: number;
   /** Local edits the server may not have yet. Set at the edit, cleared only once a push confirmed everything (persisted, so a killed app still pushes on its next start). */
   dirty: boolean;
@@ -33,6 +40,12 @@ interface SyncStoreState extends SyncState {
 
   setEnabled: (enabled: boolean) => void;
   setDeviceName: (name: string) => void;
+  /** This install's device id, made on first use. */
+  ensureDeviceId: () => string;
+  markUnseen: (ids: string[]) => void;
+  markSeen: (id: string) => void;
+  /** Queue labelled teams for a one-off push at their unchanged version. */
+  force: (keys: string[]) => void;
   saveState: (s: SyncState) => void;
   begin: () => void;
   setDirty: (dirty: boolean) => void;
@@ -49,7 +62,7 @@ const randomName = () => `Device ${Math.random().toString(36).slice(2, 6).toUppe
 
 export const useSyncStore = create<SyncStoreState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       enabled: false,
       deviceName: randomName(),
       cursor: 0,
@@ -57,9 +70,22 @@ export const useSyncStore = create<SyncStoreState>()(
       status: 'idle',
       bannerDismissed: false,
       dirty: false,
+      deviceId: '',
+      forced: [],
+      unseen: [],
       setEnabled: (enabled) => set({ enabled, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, bannerDismissed: false }),
       setDeviceName: (deviceName) => set({ deviceName: deviceName.slice(0, 40) || randomName() }),
-      saveState: ({ cursor, known }) => set({ cursor, known }),
+      ensureDeviceId: () => {
+        const cur = get().deviceId;
+        if (cur) return cur;
+        const id = newDeviceId(deviceKind({ userAgent: typeof navigator === 'undefined' ? undefined : navigator.userAgent, maxTouchPoints: typeof navigator === 'undefined' ? 0 : navigator.maxTouchPoints, desktopApp: isDesktopApp() }));
+        set({ deviceId: id });
+        return id;
+      },
+      markUnseen: (ids) => set((s) => (ids.length ? { unseen: [...new Set([...s.unseen, ...ids])].slice(-200) } : s)),
+      markSeen: (id) => set((s) => (s.unseen.includes(id) ? { unseen: s.unseen.filter((x) => x !== id) } : s)),
+      force: (keys) => set((s) => ({ forced: [...new Set([...s.forced, ...keys])] })),
+      saveState: ({ cursor, known, forced }) => set({ cursor, known, ...(forced ? { forced } : { forced: [] }) }),
       // The previous error stays visible while the next try runs, so a banner doesn't blink on every retry.
       begin: () => set({ status: 'syncing', lastAttemptAt: Date.now() }),
       setDirty: (dirty) => set({ dirty }),
@@ -68,13 +94,13 @@ export const useSyncStore = create<SyncStoreState>()(
       fail: (lastError, lastErrorKind = 'other', lastErrorStatus) =>
         set((s) => ({ status: 'idle', lastError, lastErrorKind, lastErrorStatus, bannerDismissed: lastErrorKind === 'signin' && s.lastErrorKind === 'signin' ? s.bannerDismissed : false })),
       dismissBanner: () => set({ bannerDismissed: true }),
-      forget: () => set({ dirty: false, cursor: 0, known: {}, lastSyncAt: undefined, lastStats: undefined, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, lastAttemptAt: undefined, bannerDismissed: false }),
+      forget: () => set({ dirty: false, forced: [], unseen: [], cursor: 0, known: {}, lastSyncAt: undefined, lastStats: undefined, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, lastAttemptAt: undefined, bannerDismissed: false }),
     }),
     {
       name: 'ptb:sync:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ enabled: s.enabled, deviceName: s.deviceName, cursor: s.cursor, known: s.known, lastSyncAt: s.lastSyncAt, dirty: s.dirty }),
+      partialize: (s) => ({ enabled: s.enabled, deviceName: s.deviceName, deviceId: s.deviceId, forced: s.forced, unseen: s.unseen, cursor: s.cursor, known: s.known, lastSyncAt: s.lastSyncAt, dirty: s.dirty }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<SyncStoreState>;
         const known: SyncState['known'] = {};
@@ -87,6 +113,9 @@ export const useSyncStore = create<SyncStoreState>()(
           known,
           lastSyncAt: typeof p.lastSyncAt === 'number' ? p.lastSyncAt : undefined,
           dirty: p.dirty === true,
+          deviceId: typeof p.deviceId === 'string' && DEVICE_ID_RE.test(p.deviceId) ? p.deviceId : '',
+          forced: Array.isArray(p.forced) ? p.forced.filter((k): k is string => typeof k === 'string' && /^team:/.test(k)).slice(0, 2000) : [],
+          unseen: Array.isArray(p.unseen) ? p.unseen.filter((k): k is string => typeof k === 'string').slice(-200) : [],
         };
       },
     },

@@ -368,6 +368,13 @@ export interface Team {
   createdAt: number;
   updatedAt: number;
   /**
+   * Which device made the team and which last edited it (src/domain/deviceStamp.ts: `<device id>~<name>`, at most 40
+   * characters). Set when the team is created, duplicated, imported or received by sharing, and on every edit that
+   * bumps `updatedAt`; absent on teams from before 0.33, which show no device.
+   */
+  createdOn?: string;
+  updatedOn?: string;
+  /**
    * Id of the top-level team this is a variation of. Absent means this team IS a top-level
    * group (its `name` is the group's name; it may have zero or more variations pointing at it).
    */

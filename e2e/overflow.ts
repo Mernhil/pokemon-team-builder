@@ -114,6 +114,8 @@ const mon = (speciesId: string, moves: string[] = ['protect', 'earthquake']) => 
   ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
 });
 
+export const OWN_STAMP = 'pabcdefg~A phone with a rather long device name';
+const OTHER_STAMP = 'cchijklm~Lorenzo’s desktop computer at the office';
 const team = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
   id,
   name,
@@ -133,11 +135,11 @@ export function seededStorage() {
   const teams: Record<string, unknown> = {};
   const add = (t: ReturnType<typeof team>) => (teams[t.id] = t);
   add(team('draft-1', 'Untitled Team', { slots: [null, null, null, null, null, null], category: 'Champions Reg M-C' }));
-  add(team('long-1', LONG_NAME));
+  add(team('long-1', LONG_NAME, { createdOn: OWN_STAMP, updatedOn: OTHER_STAMP }));
   add(team('long-1-v1', LONG_NAME, { groupId: 'long-1', variationLabel: 'Variation 2 vs Trick Room and a very long label' }));
-  add(team('long-1-v2', LONG_NAME, { groupId: 'long-1', variationLabel: 'Variation 3' }));
+  add(team('long-1-v2', LONG_NAME, { groupId: 'long-1', variationLabel: 'Variation 3', createdOn: OTHER_STAMP, updatedOn: OTHER_STAMP }));
   add(team('long-1-v3', LONG_NAME, { groupId: 'long-1', variationLabel: 'Conflict copy (Device 4F2A, 2026-10-03)', formatId: 'champions-vgc-reg-ma', category: 'Champions Reg M-A' }));
-  add(team('old-1', 'Old reg team', { formatId: 'champions-vgc-reg-ma', category: 'Champions Reg M-A' }));
+  add(team('old-1', 'Old reg team', { createdOn: OTHER_STAMP, updatedOn: OTHER_STAMP, formatId: 'champions-vgc-reg-ma', category: 'Champions Reg M-A' }));
   add(team('gen9-1', 'Gen 9 doubles', { formatId: 'gen9vgc2024', category: 'Gen 9 VGC' }));
   const matches: Record<string, unknown> = {};
   for (let i = 0; i < 4; i++) {
@@ -157,7 +159,7 @@ export function seededStorage() {
   return {
     'ptb:v1': JSON.stringify({ state: { teams, order: ['draft-1', 'long-1', 'old-1', 'gen9-1'], activeTeamId: 'draft-1', view: 'builder', theme: 'dark' }, version: 4 }),
     'ptb:matches:v1': JSON.stringify({ state: { matches, order: Object.keys(matches) }, version: 3 }),
-    'ptb:sync:v1': JSON.stringify({ state: { enabled: true, deviceName: 'A phone with a rather long device name', cursor: 0, known: {} }, version: 1 }),
+    'ptb:sync:v1': JSON.stringify({ state: { enabled: true, deviceName: 'A phone with a rather long device name', deviceId: 'pabcdefg', unseen: ['old-1'], cursor: 0, known: {} }, version: 1 }),
   };
 }
 
