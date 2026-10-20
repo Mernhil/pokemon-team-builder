@@ -114,7 +114,7 @@ export const freshSql = (userId: string, email: string) =>
 
 export const USER_BY_NAME = (name: string) => bindSql('SELECT id, username, role, disabled FROM users WHERE username_key = ?', [usernameKey(checkUsername(name))]);
 export const LIST_USERS =
-  "SELECT u.username, u.role, u.disabled, datetime(u.created_at / 1000, 'unixepoch') AS created, (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id) AS devices FROM users u ORDER BY u.created_at";
+  "SELECT u.username, u.role, u.disabled, datetime(u.created_at / 1000, 'unixepoch') AS created, (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id) AS devices, u.claim_state AS old_data, u.legacy_email AS claimed_from FROM users u ORDER BY u.created_at";
 export const COUNT_USERS = 'SELECT COUNT(*) AS n FROM users';
 export const OTHER_ADMINS = (id: string) => bindSql("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND disabled = 0 AND id <> ?", [id]);
 

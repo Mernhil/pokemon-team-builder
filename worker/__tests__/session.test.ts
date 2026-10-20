@@ -98,8 +98,11 @@ describe('GET /api/health', () => {
     expect(healthLine(noAccess).text).toContain('ACCESS_AUD');
   });
 
-  it('needs the Access login once Access is configured', async () => {
+  it('needs the Access login once Access is configured, until accounts are on (then it is public, as Access may be on Bypass)', async () => {
     expect((await health(makeEnv(), null)).status).toBe(401);
     expect((await health(makeEnv(), 'a.b.c')).status).toBe(401);
+    const open = await health({ ...makeEnv(), AUTH_MODE: 'both' }, null);
+    expect(open.status).toBe(200);
+    expect(Object.keys(open.body).sort()).toEqual(['access', 'accounts', 'database', 'migrations', 'missing', 'time']);
   });
 });
