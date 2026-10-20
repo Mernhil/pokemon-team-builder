@@ -54,7 +54,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
+    "@axe-core/playwright": "4.13.0",
     "@pkmn/dex": "^0.10.11",
     "@pkmn/mods": "^0.10.11",
     "@playwright/test": "1.56.1",
