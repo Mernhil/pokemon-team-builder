@@ -3,6 +3,7 @@ import { ExternalLink, Flag, Swords, Trophy, Columns2, Download, X } from 'lucid
 import { useDex } from '@/data/useDex';
 import { useTournamentTeams } from '@/data/useTournamentTeams';
 import { detectArchetypes, type ArchetypeMon } from '@/domain/archetypes';
+import { safeHttpUrl } from '@/domain/links';
 import { metaSetLookup } from '@/domain/archetypeInputs';
 import { formatForRegulation, getFormat } from '@/domain/formats';
 import { playableTeams } from '@/domain/gameday';
@@ -223,7 +224,7 @@ function TeamDetail({ t, data, dex, snapshot, regulationId, onClose }: { t: Tour
         Spreads aren’t on an open team sheet: used in the app, each Pokémon gets its most common spread (or an estimate from base stats), marked “spread estimated”.
       </p>
       <p className="text-sm">
-        Source: <a className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline" href={ev.url} target="_blank" rel="noreferrer">Limitless <ExternalLink size={13} aria-hidden /></a>
+        Source: <a className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:underline" href={safeHttpUrl(ev.url)} target="_blank" rel="noreferrer">Limitless <ExternalLink size={13} aria-hidden /></a>
       </p>
       {imported.dropped.length > 0 && <Notice title="Left out (not legal in this regulation)">{imported.dropped.join(' ')}</Notice>}
 
