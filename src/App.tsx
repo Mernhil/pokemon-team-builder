@@ -13,6 +13,7 @@ import { parseRoute, routeHash, settingsSectionOf } from '@/domain/routes';
 import { useActiveTeam, useTeamStore } from '@/store/teamStore';
 import { DesktopUpdater } from './components/DesktopUpdater';
 import { Toaster } from './components/ui/Toaster';
+import { ErrorBoundary } from './components/ErrorBoundary';
 // Starts remembering where focus was, so a dialog opened later (they load on demand) can give it back.
 import './components/ui/returnFocus';
 import { LoadingState } from './components/ui/primitives';
@@ -244,7 +245,7 @@ export default function App() {
       <main id="main" tabIndex={-1} className={cn('mx-auto w-full flex-1 p-3 pb-24 outline-none sm:p-4 sm:pb-6', view === 'calc' ? 'max-w-[1800px]' : 'max-w-[1500px]')}>
         <h1 className="sr-only">{NAV_LABELS[view as NavId] ?? 'Build'} · Pokémon Team Builder</h1>
         <AccountCard onOpenAccount={openAccountSettings} />
-        {content}
+        <ErrorBoundary key={view} label={NAV_LABELS[view as NavId]}>{content}</ErrorBoundary>
       </main>
       <BottomTabs onOpenSettings={openSettings} />
       {settingsOpen && (

@@ -2,6 +2,15 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.39.1 — 2026-10-20
+
+### Fixed
+- **A crashing screen no longer blanks the app.** If a screen hits an error, or its file is gone because the app was updated while the tab was open, it now says so with *Try again* / *Reload*, and the header and navigation keep working. Your teams and matches are not touched.
+- **You are told when teams or matches can't be saved.** A full or blocked browser store used to lose edits silently; the app now shows one notice suggesting a JSON backup.
+- **Meta tab links** only open when they are plain web addresses.
+- Server: answers can't be sniffed as another type, a server error answers in JSON, an oversized request is refused before it is read, and the pairing-code limit also covers IPv6 address rotation.
+- Dependencies updated within their versions (clears the two dev-only audit findings); the site also sends `Strict-Transport-Security`.
+
 ## 0.39.0 — 2026-10-20
 
 ### Changed
