@@ -32,6 +32,19 @@ export async function linkThisDevice(serverInput: string, codeInput: string, dev
   return { owner: json.owner };
 }
 
+/** The phone (installed app or browser tab): the server is this site itself, so only the code is typed. Same token, same routes as the desktop. */
+export const linkThisPhone = (codeInput: string, deviceName: string) => linkThisDevice(location.origin, codeInput, deviceName || 'Phone');
+
+/** Unlinks this phone: tells the server (best effort) and forgets the token. Sync stays as it was (it falls back to the Access cookie) and nothing local is lost. */
+export async function unlinkThisPhone(): Promise<void> {
+  try {
+    await request('DELETE', '/api/self');
+  } catch {
+    /* offline or already revoked: forgetting the token locally is what matters */
+  }
+  useDeviceStore.getState().unlink();
+}
+
 /** Unlinks this desktop app: tells the server (best effort), forgets the token and stops syncing. Local teams stay. */
 export async function unlinkThisDevice(): Promise<void> {
   try {

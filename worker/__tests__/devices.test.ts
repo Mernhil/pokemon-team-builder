@@ -86,6 +86,64 @@ describe('pairing codes', () => {
   });
 });
 
+describe('a phone (the installed iPhone app) linked with a code', () => {
+  // The phone's requests come from the app's own origin, with the token and no Access cookie or header at all.
+  const phone = (env: Env, method: string, path: string, token: string | null, body?: unknown, extra: Record<string, string> = {}) =>
+    handleApi(
+      new Request(`https://app.example/api/device${path}`, {
+        method,
+        headers: { origin: 'https://app.example', 'cf-connecting-ip': `10.2.${nextClient >> 8}.${nextClient++ & 255}`, 'x-ptb': '1', ...(token ? { authorization: `Bearer ${token}` } : {}), ...extra },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+      env,
+      deps(),
+    );
+
+  it('links and syncs from its own origin without any Access login, and shares the account with the Access devices', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    const redeem = await phone(env, 'POST', '/redeem', null, { code: formatCode(await pair(env)), name: 'iPhone' });
+    const { token, owner } = (await redeem.json()) as { token: string; owner: string };
+    expect(owner).toBe('me@example.com');
+    expect(redeem.headers.get('access-control-allow-origin')).toBeNull(); // same-origin: no CORS needed
+    const push = await phone(env, 'POST', '/sync', token, { docs: [{ id: 'team-1', kind: 'team', updatedAt: NOW, json: team() }] });
+    expect(push.status).toBe(200);
+    expect((await access(env, 'GET', '/api/sync?since=0', 'me@example.com')).body.docs.map((d: { id: string }) => d.id)).toEqual(['team-1']);
+    expect(((await (await phone(env, 'GET', '/sync?since=0', token)).json()) as { docs: unknown[] }).docs).toHaveLength(1);
+    // The Access devices list shows it by name.
+    expect((await access(env, 'GET', '/api/devices', 'me@example.com')).body.devices.map((d: { name: string }) => d.name)).toEqual(['iPhone']);
+  });
+
+  it('is the token that decides, never an Access header that comes along', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    const mine = (await (await phone(env, 'POST', '/redeem', null, { code: await pair(env, 'me@example.com'), name: 'iPhone' })).json()) as { token: string };
+    await phone(env, 'POST', '/sync', mine.token, { docs: [{ id: 'team-1', kind: 'team', updatedAt: NOW, json: team() }] });
+    // A stale or foreign Access JWT on the request is ignored under /api/device/.
+    const other = await signJwt(key, goodClaims('other@example.com'));
+    const pulled = await phone(env, 'GET', '/sync?since=0', mine.token, undefined, { 'Cf-Access-Jwt-Assertion': other });
+    expect(((await pulled.json()) as { docs: unknown[] }).docs).toHaveLength(1);
+    // And an Access login without a token gets nothing from these routes.
+    const noToken = await phone(env, 'GET', '/sync?since=0', null, undefined, { 'Cf-Access-Jwt-Assertion': await signJwt(key, goodClaims('me@example.com')) });
+    expect(noToken.status).toBe(401);
+  });
+
+  it('answers a refused token with 401 JSON (what the app turns into "link this phone again"), never a redirect, and cannot make codes', async () => {
+    clock = NOW;
+    const env = makeEnv();
+    const { token } = (await (await phone(env, 'POST', '/redeem', null, { code: await pair(env), name: 'iPhone' })).json()) as { token: string };
+    const refused = await phone(env, 'GET', '/sync?since=0', 'ptbd_' + 'A'.repeat(43));
+    expect(refused.status).toBe(401);
+    expect(refused.headers.get('content-type')).toContain('json');
+    expect(refused.headers.get('location')).toBeNull();
+    expect((await phone(env, 'POST', '/pair', token)).status).toBe(404);
+    expect((await phone(env, 'GET', '/health', token)).status).toBe(404);
+    // Unlinking from the phone itself ends the link at once.
+    expect((await phone(env, 'DELETE', '/self', token)).status).toBe(200);
+    expect((await phone(env, 'GET', '/sync?since=0', token)).status).toBe(401);
+  });
+});
+
 describe('a linked device', () => {
   it('syncs as the account that linked it, and sees what the account\'s other devices wrote', async () => {
     clock = NOW;

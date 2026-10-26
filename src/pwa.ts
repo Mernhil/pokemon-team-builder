@@ -17,10 +17,18 @@ export function setupPwa() {
 
   registerSW({
     immediate: true,
+    // Behind Cloudflare Access an expired session turns every fetch of the worker script into a redirect to the login. That is
+    // not an error to show: the app keeps running from its cache and updates once the session is back (docs/IPHONE_APP.md).
+    onRegisterError: () => {},
     onRegisteredSW(_url, registration) {
       if (!registration) return;
       const check = () => {
-        if (navigator.onLine) registration.update().catch(() => {});
+        if (!navigator.onLine) return;
+        try {
+          registration.update().catch(() => {});
+        } catch {
+          /* an update check must never break the app */
+        }
       };
       setInterval(check, CHECK_INTERVAL_MS);
       document.addEventListener('visibilitychange', () => {
