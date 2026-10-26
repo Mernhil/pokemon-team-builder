@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.39.2 — 2026-10-26
+
+### Fixed
+- **Saved teams layout on phones.** On an iPhone the list could slide sideways and clip names and buttons: a team's action row (Share, Overview, Edit team, duplicate, delete) didn't wrap, and confirming a delete widened it further. *Edit team* now has a full-width row of its own, the other actions are one row of small buttons, confirmations wrap, variation rows wrap too, dates are shorter, and no sheet can scroll sideways any more.
+- **Signing back in on the installed iPhone app.** The Home Screen app can't keep a Cloudflare sign-in (iOS gives it cookies of its own, and the login sheet ended on a white page). Settings → Sync now has *Link this phone with a pairing code* (make the code in Safari or on a computer): a linked phone syncs without any Cloudflare cookie. When the session has expired and the phone isn't linked, the app says *Session expired: link this phone with a code, or sign in from Safari.*, never navigates to the login by itself, and opens from its cache as before.
+
 ## 0.39.1 — 2026-10-20
 
 ### Fixed

@@ -14,7 +14,7 @@ nothing else is synced: not the theme, picker favourites or calculator state.
 - **Merge rule** (`src/domain/sync.ts`): last write wins per document by `updatedAt`, a delete is just another version. When both sides changed a team since the last sync, the losing version is kept as a variation labelled **Conflict copy (<device>, <date>)**; matches follow the same rule without copies. Clocks within 5 seconds of each other are treated as a tie (the server's version wins and the other is kept as a copy), and an edit beats a delete unless the delete is clearly later.
 - **Client** (`src/sync/`): syncs when it starts, when the window regains focus or the app comes back to the foreground, when the connection returns (`online`), every 3 minutes while the app is visible, 5 seconds after teams or matches change, and on "Sync now". After a network failure (offline, or a server error) it retries after 10 s, 30 s and 2 min (`retry.ts`), and does not retry a sign-in or setup problem. A run pulls first, merges and saves the new state, and only then pushes (`engine.ts`), so a failure at any point loses neither local edits nor what was pulled; the next run sends what is still unsent. The first sync on a new device merges with what is already there (nothing is wiped). The code loads only once sync is on.
 
-The web app and the phone app sync through Cloudflare Access. The Tauri desktop app can't pass Access, so it is **linked with a pairing code** (below).
+The web app syncs through Cloudflare Access. The Tauri desktop app can't pass Access, so it is **linked with a pairing code** (below), and so can the **installed iPhone app**, which can't keep an Access login for long (see *The installed iPhone app*).
 
 ## One-time setup (by hand)
 
@@ -27,7 +27,7 @@ Until the steps below are done the app works exactly as before and `/api/sync` a
 5. **Set the two variables** on the Worker: Workers & Pages → pokemon-team-builder → Settings → Variables and Secrets → add `ACCESS_TEAM_DOMAIN` (e.g. `myteam.cloudflareaccess.com`) and `ACCESS_AUD` (the tag). `keep_vars` in `wrangler.jsonc` stops deploys from removing them.
 6. **Make Access cover `/api/*`.** The Access application protects the Worker's whole hostname (docs/IPHONE_APP.md step 2), so `/api/*` is already behind the login. If you used a path-limited application, add `/api/*` to it. Check: opening `https://<worker>/api/sync` in a private window must show the Access login, not JSON.
 7. **Set the deploy command** (below), so migrations are applied on every deploy.
-8. **Set the Access session duration** to 1 month (see *Sign-in expired*).
+8. **Set the Access session duration** to 1 month (see *Sign-in expired*, which also lists what the phone app needs).
 9. In the app: Settings → Sync → **Sync with my account**.
 
 ### Deploy command (migrations on every deploy)
@@ -44,22 +44,44 @@ Settings → Sync shows one line from `GET /api/health` so you can see the resul
 
 ## Sign-in expired
 
-Access signs you out after the session duration. On a phone this used to be a trap: the installed app is the cached app, so a reload never reached Access, and the only way out was signing in on the website and re-adding the app. Now:
+Access signs you out after the session duration. What the app does when that happens:
 
-1. **Navigations to `/api/*` skip the cache.** `vite.config.ts` has `navigateFallbackDenylist: [/^\/api\//]`, so the service worker leaves them to the network (everything else is still the cached app).
-2. **Expiry is noticed and shown.** A 401/403 or Access's redirect to its login page becomes a `signin` error (`src/sync/http.ts`; `syncStore.lastErrorKind` is `signin` | `offline` | `setup` | `other`). A banner at the top of the app says *Your sign-in has expired. Tap Sign in again.* (dismissible; it comes back with the next new failure), the header sync light turns red, and Settings → Sync shows the same message with the button. Other errors show a *Sync problem* chip that opens Settings → Sync; Settings has the diagnostics.
-3. **Sign in again** sets `location.href = '/api/session/renew'` (never `window.open`, which on iOS opens Safari, whose cookie the home-screen app can't use). Access shows its login inside the app's own window, the cookie lands where the app can use it, and the Worker answers `GET /api/session/renew` (it needs a valid Access JWT, otherwise 401) with `302 /`. The app reloads signed in and sync resumes by itself. Local data is never touched: edits made while signed out are sent afterwards.
-4. **Access must stay in front of `/api/session/renew`**: it is covered by the same application as the rest of the hostname (do not add it to a bypass). Check from a private window: `https://<worker>/api/session/renew` shows the Access login, not a redirect to the app.
-5. The desktop app has no Access login: when its device is unlinked the banner says so and opens Settings → Sync to link it again with a pairing code.
+1. **The app shell never needs the session.** The installed app is the cached app: the service worker (`vite.config.ts`, Workbox precache) answers every navigation from its cache without touching the network, so opening, editing and every screen work signed out and offline. Its update check (`src/pwa.ts`, `registration.update()`) fetches the worker script; behind an expired Access session that is a redirect to the login, which the browser treats as a failed update. It is caught and ignored (`onRegisterError`, `.catch`): the app keeps the version it has and updates once the session is back. `navigateFallbackDenylist: [/^\/api\//]` keeps navigations to `/api/*` out of the cache. `e2e/phone-signin.spec.ts` reloads the app offline from the worker's cache.
+2. **Expiry is noticed and said in words.** Every sync call uses `redirect: 'manual'` (`src/sync/http.ts`), so Access's 302 to `https://<team>.cloudflareaccess.com/…` is seen as an *opaque redirect* instead of being followed (a followed one would be a CORS failure that looks like "offline"). `accessSessionEnded` (`src/domain/accessSession.ts`, tested in `src/domain/__tests__/accessSession.test.ts`) treats an opaque redirect, any 3xx, a 401 or 403, and a redirect that ended on `cloudflareaccess.com` as "the sign-in ended": a `signin` error (`syncStore.lastErrorKind` is `signin` | `offline` | `setup` | `other`, status 0 for the redirect). A banner at the top says it (dismissible; it comes back with the next new failure), the header sync light turns red, and Settings → Sync shows the same message. Other errors show a *Sync problem* chip that opens Settings → Sync; Settings has the diagnostics.
+3. **What the message says depends on where the app runs** (`signedOutMessage`):
+   - installed phone app: *Session expired: link this phone with a code, or sign in from Safari.* with **Open Settings** (no "Sign in again": see below);
+   - a phone linked with a code whose token was refused: *This phone is no longer linked. Link it again with a new pairing code (Settings → Sync).*;
+   - an ordinary browser tab: *Your sign-in has expired. Tap Sign in again.* **Sign in again** sets `location.href = '/api/session/renew'` (never `window.open`); Access shows its login in that tab, and the Worker answers `GET /api/session/renew` (it needs a valid Access JWT, otherwise 401) with `302 /`. Sync resumes by itself;
+   - the desktop app: *This desktop app is signed out. Log in again in Settings → Account.*
+   Local data is never touched: edits made while signed out are sent afterwards. **The app never navigates to the login by itself.**
+4. **Access must stay in front of `/api/session/renew`** (the browser-tab flow): it is covered by the same application as the rest of the hostname (do not add it to a bypass). Check from a private window: `https://<worker>/api/session/renew` shows the Access login, not a redirect to the app.
 
-**Set the session duration (by hand).** Zero Trust → Access → Applications → the application → **Edit** → **Basic information** (or *Settings*) → **Session duration** → **1 month**; Save. Also check Zero Trust → Settings → Authentication → **Global session timeout**, which can cap it. A longer session means fewer expiries; it does not remove them.
+### The installed iPhone app (why it can't just sign in again)
+
+On iOS the Home Screen app is a separate browser context with **its own cookie jar**, not shared with Safari. Access's login is a cross-site page (`cloudflareaccess.com`), so when the app navigates there iOS shows it in an in-app browser sheet; the login completes in that sheet and the `CF_Authorization` cookie is stored there, not in the app. The last redirect back to the app's own page then ends on a white page, and the app never gets the cookie. (This is the likely cause of the white page, from how iOS treats standalone web apps and from what the code did before: `signInAgain` navigated the app's window to `/api/session/renew` and relied on the cookie landing in the app's jar. It could not be checked on a real device from here, which is why the fix doesn't depend on it.) Signing in from Safari and re-adding the app worked only because a fresh install starts from Safari's cookie.
+
+So the installed app is **linked with a pairing code** like the desktop app, and then never needs the Access cookie for sync:
+
+1. On a device that is signed in, make a code: **Safari on the same phone** (open the site, Settings → Sync → *Make a pairing code*) or the website on a computer. It is valid 10 minutes, single use.
+2. In the installed app: Settings → Sync → **Link this phone with a pairing code**, type the code → **Link this phone**. (The form opens by itself when the session has expired.) The app trades the code for a **device token** (`POST /api/device/redeem`, same endpoint and rules as the desktop: one-time code, hash-only storage, rate limit, 10 devices per account) and from then on sends it as `Authorization: Bearer` to `/api/device/sync` etc., with `credentials: 'omit'`. `/api/device/*` is already a Bypass path in Access (below), so no cookie is involved. The phone shows up in the other devices' *Linked desktop apps* list by the name in *This device is called* and can be unlinked from there at once, or with **Unlink this phone**.
+3. A linked phone cannot make pairing codes or list devices (those need Access); make codes in Safari or on the computer. The server-check line is hidden on a linked phone (`/api/health` isn't a device route).
+4. If the token is ever refused (unlinked from another device), the banner says *This phone is no longer linked*; link again with a new code.
+
+Token trade-off: same as the desktop (below): the token lives in the app's local storage (`ptb:device:v1`), next to the teams it syncs; it is revocable from any signed-in device. A phone linked with a code and signed in to an account (docs/ACCOUNTS.md) uses the account session instead.
+
+**What a link cannot fix:** if iOS has evicted the app's service worker and cache (Safari clears website data after weeks without use), the next launch is a real navigation to Access, and Access's login can't return to the app. Then only signing in from Safari and re-adding the app helps (the same as before). The longest session duration (below) and opening the app now and then keep this rare.
+
+**By hand in the Cloudflare dashboard** (nothing else changes: no migration, no Worker variable, no deploy step; linking a phone uses the pairing tables and the bypass already set up for the desktop):
+1. **Session duration to the longest: 1 month.** Zero Trust → Access → Applications → the app's application → **Edit** → **Basic information** (or *Settings*) → **Session duration** → **1 month**; Save. Also check Zero Trust → Settings → Authentication → **Global session timeout**, which can cap it. A longer session means fewer expiries (and fewer reasons to leave the app); it does not remove them, and it does not help the installed app, which has no Access cookie at all.
+2. **Check the Bypass application for `/api/device/*`** exists (it is the one from *One-time setup for linking*): Zero Trust → Access → Applications → Self-hosted, the same hostname, **path `/api/device/*` and nothing else**, one policy, action **Bypass**, *Include: Everyone*. Without it the phone's link and sync calls are redirected to the login and the app says the session expired. Check from a private window: `curl -i https://<worker>/api/device/sync` → `401` JSON from the Worker, not an Access page.
+3. Nothing to change for the phone app's own address, policies or login method.
 
 **Manual test on the iPhone app.**
 1. Settings → Sync on; wait for the green dot.
 2. Expire the session: Zero Trust → Access → *Users* (Zero Trust → Team & Resources → Devices/Users) → your user → **Revoke session** (or set a 5-minute session duration, wait, and set it back to 1 month).
-3. Bring the app to the foreground or tap **Sync now**: the red banner *Your sign-in has expired. Tap Sign in again.* appears and the header dot is red. Edit a team meanwhile.
-4. Tap **Sign in again**: the Access login (e-mail → code) shows inside the app, then the app comes back.
-5. The dot turns green, Settings → Sync says *Last synced just now*, and the edit made in step 3 shows on the website's copy after its next sync.
+3. Bring the app to the foreground or tap **Sync now**: the red banner *Session expired: link this phone with a code, or sign in from Safari.* appears and the header dot is red. The app still opens and edits. Edit a team meanwhile.
+4. In Safari: sign in, Settings → Sync → **Make a pairing code**. In the app: Settings → Sync → **Link this phone with a pairing code**, enter it.
+5. The dot turns green, Settings → Sync says *Last synced just now* and *This phone is linked with a pairing code*, and the edit made in step 3 shows on the website's copy after its next sync. Revoke the session again: nothing changes for the app now.
 
 ## Sharing (two players)
 
@@ -93,7 +115,7 @@ Settings → Sync → untick **Sync with my account**. Everything on the device 
 
 ## Linking the desktop app (pairing code)
 
-The desktop app has no Access login, so the phone (or the website) vouches for it:
+The desktop app has no Access login, so the phone (or the website) vouches for it. (The installed iPhone app links the same way, with the code typed in Settings → Sync; see *The installed iPhone app*.)
 
 1. In the phone/web app: Settings → Sync → **Make a pairing code**. It shows `ABCDE-FGHJK` (10 symbols, 50 bits, valid 10 minutes, single use) and a **Copy link** button (`https://<worker>/#pair=ABCDE-FGHJK`, server and code in one).
 2. In the desktop app: Settings → Sync → paste the link (or type the server address and the code) → **Link this desktop app**. The app trades the code for a **device token** and turns sync on. From then on it syncs exactly like the web app (teams, match log, sharing).
@@ -122,4 +144,4 @@ Do the migration (`npx wrangler d1 migrations apply pokemon-team-builder --remot
 
 ## Tests
 
-`worker/__tests__` (pairing and device tokens in `devices.test.ts`: one-time and expiring codes, hashes only, device limit, account isolation, revoke, CORS; the Access JWT checks with a local JWKS: valid, expired, wrong audience or issuer, bad signature, unknown or rotated key; payload validation; last-write-wins, tombstones, paging and account isolation against a real SQLite running the real migration), `src/domain/__tests__/sync.test.ts` (the merge rules: concurrent edits, delete versus edit, clock skew, first sync) and `src/sync/__tests__/engine.test.ts` (two devices talking to the real Worker handler), `resilience.test.ts` (expiry then recovery, offline then retry with the backoff, a failed push losing nothing, two devices converging after one was signed out), `status.test.ts` (the header light, the diagnostics, the banner state) and `worker/__tests__/session.test.ts` (`/api/session/renew` needs a valid JWT, `/api/health`).
+`worker/__tests__` (pairing and device tokens in `devices.test.ts`: one-time and expiring codes, hashes only, device limit, account isolation, revoke, CORS, and a phone on the same origin with a token and no Access login: the token decides, a refused token is 401 JSON; the Access JWT checks with a local JWKS: valid, expired, wrong audience or issuer, bad signature, unknown or rotated key; payload validation; last-write-wins, tombstones, paging and account isolation against a real SQLite running the real migration), `src/domain/__tests__/sync.test.ts` (the merge rules: concurrent edits, delete versus edit, clock skew, first sync) and `src/sync/__tests__/engine.test.ts` (two devices talking to the real Worker handler), `resilience.test.ts` (expiry then recovery, offline then retry with the backoff, a failed push losing nothing, two devices converging after one was signed out), `status.test.ts` (the header light, the diagnostics, the banner state) `worker/__tests__/session.test.ts` (`/api/session/renew` needs a valid JWT, `/api/health`), `src/domain/__tests__/accessSession.test.ts` (what counts as an ended Access session, and the message for each place the app runs) and `src/sync/__tests__/phone.test.ts` (a phone linked with a code syncs with the bearer token while the Access cookie is missing). `e2e/phone-signin.spec.ts` (iPhone project) answers `/api/sync` with a 302 to the login and checks the message, that the app stays usable and never navigates away, that a code brings sync back, and that the app shell opens offline from the service worker.
