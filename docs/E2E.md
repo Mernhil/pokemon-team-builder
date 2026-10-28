@@ -19,6 +19,10 @@ npx playwright test --project=desktop e2e/builder.spec.ts -g "reload"   # one te
 `npm run e2e` rebuilds first; `npx playwright test` alone reuses the existing `dist/` (rebuild it with
 `npm run build` after changing the app). `npx playwright test` starts `vite preview` on port 4173 itself.
 
+`e2e/signin-return.spec.ts` is the exception: it turns the service worker **on** and serves `dist/` from its own
+servers (`e2e/support/accessSim.ts`: a stand-in for Cloudflare Access on another origin, the Worker's `/api/*` and the
+single-page-app fallback) to run the real sign-in round trip, bad answers while the worker installs, and the blank-screen guard.
+
 Where WebKit can't be installed (some sandboxes), `E2E_IPHONE_BROWSER=chromium npx playwright test`
 runs the iPhone project on Chromium with the same screen size, touch and user agent. That catches
 layout differences but not WebKit-only bugs; CI always uses real WebKit.
