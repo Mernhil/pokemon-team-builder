@@ -1,8 +1,9 @@
 import { fileURLToPath, URL } from 'node:url';
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, type Plugin, type ResolvedConfig } from 'vite';
 import { configDefaults } from 'vitest/config'; // also types the `test` field below
 import { VitePWA } from 'vite-plugin-pwa';
 import { parseChangelog } from './src/domain/changelog.ts';
@@ -17,6 +18,27 @@ const cacheBustIcons = (): Plugin => ({
   name: 'cache-bust-icons',
   transformIndexHtml: (html) => html.replaceAll('%APP_VERSION%', appVersion),
 });
+
+// The blank-screen guard (src/bootGuard.js) is inlined into index.html, outside the bundle, so it still runs when the bundle can't
+// load. The CSP is `script-src 'self'` (public/_headers), so the build adds this script's hash to it.
+const bootGuard = (): Plugin => {
+  const source = readFileSync(new URL('./src/bootGuard.js', import.meta.url), 'utf-8');
+  const hash = `'sha256-${createHash('sha256').update(source).digest('base64')}'`;
+  let outDir = 'dist';
+  return {
+    name: 'boot-guard',
+    apply: 'build',
+    configResolved: (config: ResolvedConfig) => { outDir = config.build.outDir; },
+    transformIndexHtml: { order: 'pre', handler: (html) => html.replace('<!-- boot-guard -->', `<script>${source}</script>`) },
+    closeBundle() {
+      const file = `${outDir}/_headers`;
+      const headers = readFileSync(file, 'utf-8');
+      if (headers.includes(hash)) return;
+      if (!headers.includes("script-src 'self'")) throw new Error(`${file} has no "script-src 'self'" to add the boot guard's hash to`);
+      writeFileSync(file, headers.replace("script-src 'self'", `script-src 'self' ${hash}`));
+    },
+  };
+};
 
 // "What's new": CHANGELOG.md as data (src/domain/changelog.ts), the latest releases only. Imported lazily
 // as `virtual:changelog`, so it costs nothing until the sheet opens.
@@ -50,6 +72,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     cacheBustIcons(),
+    bootGuard(),
     changelog(),
     emitMeta(),
     // Installable web app ("Add to Home Screen" on iPhone). The service worker precaches the whole
@@ -74,18 +97,18 @@ export default defineConfig({
           { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      // The worker is sw/sw.ts (src/domain/swGuard.ts has its rules): the stock generated one can't refuse a redirect or a login
+      // page standing in for a file, and its navigation fallback swallowed Access's /cdn-cgi/access/callback.
+      strategies: 'injectManifest',
+      srcDir: 'sw',
+      filename: 'sw.ts',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,json}'],
         // iOS launch screens are fetched once when the app is added to the home screen; no need to
         // precache ~0.8 MB of them for everyone.
         globIgnores: ['splash/**', 'meta/**'],
         // The sprite atlases are up to ~4 MB each.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
-        // Navigations to /api/* (the sign-in renewal, docs/SYNC.md) must reach the Worker and Cloudflare Access, not the cached index.html.
-        navigateFallbackDenylist: [/^\/api\//],
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
       },
     }),
   ],

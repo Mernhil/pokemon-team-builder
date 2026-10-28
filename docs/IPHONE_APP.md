@@ -4,7 +4,7 @@ The app is also shipped as a PWA (Progressive Web App): open it once in the phon
 to the home screen, and from then on it behaves like a native app — own icon, full screen, works
 offline — without the App Store or an Apple developer account.
 
-- `vite.config.ts` → `VitePWA(...)`: web manifest, and a service worker that precaches the whole
+- `vite.config.ts` → `VitePWA(...)` and `sw/sw.ts` (rules in `src/domain/swGuard.ts`, docs/SYNC.md → *A blank screen*): web manifest, and a service worker that precaches the whole
   app including every sprite atlas and every Atlas file (about 44 MB in all, of which the sprites are 16 MB; downloaded once, then only what changed). The limit is checked by `npm run size` (`scripts/check-bundle.mjs`).
 - `src/pwa.ts`: registers the service worker and checks for a new deploy on launch, every 30
   minutes, and whenever the app returns to the foreground. When one is found the page reloads
