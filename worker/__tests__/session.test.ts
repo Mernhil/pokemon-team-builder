@@ -33,6 +33,14 @@ describe('GET /api/session/renew', () => {
     expect(header.status).toBe(401);
   });
 
+  it('with accounts on and no Access login, sends the browser to the account login instead of a bare error', async () => {
+    const res = await get({ ...makeEnv(), AUTH_MODE: 'both' }, '/api/session/renew', null);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/#account');
+    // A forged token is still refused.
+    expect((await get({ ...makeEnv(), AUTH_MODE: 'both' }, '/api/session/renew', 'a.b.c')).status).toBe(401);
+  });
+
   it('is GET only, and works without a database (it only needs the Access settings)', async () => {
     const env = makeEnv();
     expect((await get(env, '/api/session/renew', undefined, 'POST')).status).toBe(405);

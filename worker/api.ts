@@ -118,6 +118,11 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
     // No session, and no Access to fall back on (after Access is gone): simply not signed in.
     if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) return fail(401, 'not signed in');
   }
+  // With accounts on, "Sign in again" can arrive here with no Access login at all (Access on Bypass, or never used on
+  // this phone): a bare 401/501 page is a dead end (black in dark mode), so go to the account login in the app.
+  if (url.pathname === '/api/session/renew' && accountsEnabled(env) && !request.headers.get('Cf-Access-Jwt-Assertion')) {
+    return new Response(null, { status: 302, headers: { location: '/#account', 'cache-control': 'no-store' } });
+  }
   const { ACCESS_TEAM_DOMAIN: teamDomain, ACCESS_AUD: audience } = env;
   // The report is booleans, migration names and the time: public once accounts are on (Access may be on Bypass by then),
   // and without Access settings there is nothing to verify a token against anyway.
