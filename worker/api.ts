@@ -76,6 +76,16 @@ export interface ApiDeps extends AuthDeps {
   keys?: KeyProvider;
 }
 
+/**
+ * The page the Access login comes back to. A bare 302 here ended on a blank white page in iPhone Safari (after the
+ * Access round trip, with the service worker in play), so it is a real page that says what is happening and moves on
+ * to the app by itself (a meta refresh: no script, so nothing for a CSP to block), with a link as the fallback.
+ */
+function renewed(): Response {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light"><meta http-equiv="refresh" content="0;url=/"><title>Signed in</title></head><body style="font:16px/1.5 system-ui,sans-serif;padding:2rem;text-align:center"><p>Signed in. Opening the app…</p><p><a href="/">Open the app</a></p></body></html>`;
+  return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+}
+
 export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}): Promise<Response> {
   const url = new URL(request.url);
   const origin = request.headers.get('origin');
@@ -141,7 +151,7 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
   const now = (deps.now ?? Date.now)();
   if (isHealth) return reply(200, await health(env, now));
   // The Access login just happened (or the cookie was still good): back to the app, which now holds a fresh session.
-  if (url.pathname === '/api/session/renew') return new Response(null, { status: 302, headers: { location: '/', 'cache-control': 'no-store' } });
+  if (url.pathname === '/api/session/renew') return renewed();
   // With accounts on, an e-mail whose data an account has claimed is that account now (worker/claim.ts).
   if (accountsEnabled(env)) {
     const mapped = await ownerForEmail(env.DB!, owner);
