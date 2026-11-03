@@ -16,12 +16,9 @@ const get = async (env: ReturnType<typeof makeEnv>, path: string, token?: string
 describe('GET /api/session/renew', () => {
   it('sends a signed-in browser back to the app', async () => {
     const res = await get(makeEnv(), '/api/session/renew');
-    expect(res.status).toBe(200);
-    expect(res.headers.get('content-type')).toContain('text/html');
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/');
     expect(res.headers.get('cache-control')).toBe('no-store');
-    const html = await res.text();
-    expect(html).toContain('http-equiv="refresh" content="0;url=/"');
-    expect(html).toContain('<a href="/">');
   });
 
   it('needs a valid Access JWT: none, forged, expired, wrong audience or issuer all get 401, never a redirect', async () => {
@@ -47,7 +44,7 @@ describe('GET /api/session/renew', () => {
   it('is GET only, and works without a database (it only needs the Access settings)', async () => {
     const env = makeEnv();
     expect((await get(env, '/api/session/renew', undefined, 'POST')).status).toBe(405);
-    expect((await get({ ...env, DB: undefined }, '/api/session/renew')).status).toBe(200);
+    expect((await get({ ...env, DB: undefined }, '/api/session/renew')).status).toBe(302);
     expect((await get({ ...env, ACCESS_AUD: undefined }, '/api/session/renew')).status).toBe(501);
   });
 
