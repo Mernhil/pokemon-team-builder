@@ -2,6 +2,14 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.39.2 — 2026-10-28
+
+### Fixed
+- **Signing in again no longer ends on a black screen.** After the Cloudflare Access login the browser returns through `/cdn-cgi/access/callback`; the app's offline copy answered that address itself, so the login never completed and the app opened at an address where none of its files exist. The offline copy now leaves everything under `/cdn-cgi/` (and `/api/`) to the network.
+- **The offline copy never keeps a login redirect or a web page in place of a file.** An update that cannot download all of its files is dropped as a whole and the running version is left untouched; files stored from a bad answer by an older version are downloaded again.
+- **A screen that stays blank explains itself.** If the app has drawn nothing after 8 seconds or its script fails to load, a plain message offers *Reload*, *Reset app cache* (never touches your teams or matches) and *Sign in again*.
+- A phone that is already stuck needs a one-time manual step to receive this fix: see docs/SYNC.md → *A blank screen*.
+
 ## 0.39.1 — 2026-10-20
 
 ### Fixed
