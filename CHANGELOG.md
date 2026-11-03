@@ -2,11 +2,19 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
-## 0.39.2 — 2026-10-26
+## 0.39.3 — 2026-11-03
 
 ### Fixed
 - **Saved teams layout on phones.** On an iPhone the list could slide sideways and clip names and buttons: a team's action row (Share, Overview, Edit team, duplicate, delete) didn't wrap, and confirming a delete widened it further. *Edit team* now has a full-width row of its own, the other actions are one row of small buttons, confirmations wrap, variation rows wrap too, dates are shorter, and no sheet can scroll sideways any more.
 - **Signing back in on the installed iPhone app.** The Home Screen app can't keep a Cloudflare sign-in (iOS gives it cookies of its own, and the login sheet ended on a white page). Settings → Sync now has *Link this phone with a pairing code* (make the code in Safari or on a computer): a linked phone syncs without any Cloudflare cookie. When the session has expired and the phone isn't linked, the app says *Session expired: link this phone with a code, or sign in from Safari.*, never navigates to the login by itself, and opens from its cache as before.
+
+## 0.39.2 — 2026-10-28
+
+### Fixed
+- **Signing in again no longer ends on a black screen.** After the Cloudflare Access login the browser returns through `/cdn-cgi/access/callback`; the app's offline copy answered that address itself, so the login never completed and the app opened at an address where none of its files exist. The offline copy now leaves everything under `/cdn-cgi/` (and `/api/`) to the network.
+- **The offline copy never keeps a login redirect or a web page in place of a file.** An update that cannot download all of its files is dropped as a whole and the running version is left untouched; files stored from a bad answer by an older version are downloaded again.
+- **A screen that stays blank explains itself.** If the app has drawn nothing after 8 seconds or its script fails to load, a plain message offers *Reload*, *Reset app cache* (never touches your teams or matches) and *Sign in again*.
+- A phone that is already stuck needs a one-time manual step to receive this fix: see docs/SYNC.md → *A blank screen*.
 
 ## 0.39.1 — 2026-10-20
 

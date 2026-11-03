@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { EXPECTED_MIGRATIONS, healthLine, type HealthResponse } from '../../src/domain/syncHealth';
+import { NETWORK_ONLY_PATHS } from '../../src/domain/swGuard';
 import { handleApi } from '../api';
 import { NOW, goodClaims, makeEnv, makeKey, signJwt, type TestKey } from './helpers';
 
@@ -41,8 +42,9 @@ describe('GET /api/session/renew', () => {
   });
 
   it('is a route the service worker leaves to the network and Cloudflare serves from the Worker first', () => {
-    const vite = readFileSync(new URL('../../vite.config.ts', import.meta.url), 'utf8');
-    expect(vite).toContain('navigateFallbackDenylist: [/^\\/api\\//]');
+    const sw = readFileSync(new URL('../../sw/sw.ts', import.meta.url), 'utf8');
+    expect(sw).toContain('denylist: NETWORK_ONLY_PATHS');
+    expect(NETWORK_ONLY_PATHS.some((re) => re.test('/api/session/renew'))).toBe(true);
     const wrangler = readFileSync(new URL('../../wrangler.jsonc', import.meta.url), 'utf8');
     expect(wrangler).toMatch(/"run_worker_first":\s*\["\/api\/\*"\]/);
     expect(/^\/api\//.test('/api/session/renew')).toBe(true);

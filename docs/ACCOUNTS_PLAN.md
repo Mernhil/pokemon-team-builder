@@ -185,7 +185,7 @@ Other rules:
 - `worker/auth.ts` (JWT verification), `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and their health/`notSetUp` handling.
 - `worker/devices.ts` pairing codes, `src/domain/pairing.ts`, `src/sync/pairing.ts`, `LinkDevices.tsx`, `pair_codes`, `redeem_attempts`, the `devices` table (after its rows are migrated to `sessions` or dropped).
 - The "sign in again" banner copy: it stays, but its button opens the **in-app login dialog** (no navigation to Access, no `/api/session/renew`). `RENEW_PATH` and `signInAgain()` go.
-- The service-worker rule `navigateFallbackDenylist: [/^\/api\//]` **stays** (a navigation to `/api/...` should still reach the network), it just no longer exists for Access's sake.
+- The service-worker rule (`NETWORK_ONLY_PATHS` in `src/domain/swGuard.ts`: `/api/` and `/cdn-cgi/`; before 0.39.2 `navigateFallbackDenylist: [/^\/api\//]`) **stays** (a navigation to `/api/...` should still reach the network), it just no longer exists for Access's sake.
 - The **Access bypass application** for `/api/device/*` and the main Access application: you delete them by hand, last.
 
 ### 7.3 Deploy order so nobody is locked out
