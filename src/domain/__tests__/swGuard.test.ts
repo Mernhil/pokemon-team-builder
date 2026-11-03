@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { checkPrecacheResponse, NETWORK_ONLY_PATHS } from '@/domain/swGuard';
+import { atlasChunkGame, checkPrecacheResponse, NETWORK_ONLY_PATHS } from '@/domain/swGuard';
+
+describe('atlasChunkGame', () => {
+  it('names the game of an Atlas chunk and ignores everything else', () => {
+    expect(atlasChunkGame('https://app.test/assets/atlas-platinum-DeDyvazC.js')).toBe('platinum');
+    expect(atlasChunkGame('https://app.test/assets/atlas-letsgopikachu-BLePMgEA.js')).toBe('letsgopikachu');
+    expect(atlasChunkGame('https://app.test/assets/atlas-heartgold-XNeFl8W-.js')).toBe('heartgold');
+    expect(atlasChunkGame('https://app.test/assets/atlas-Dy_x-1.js')).toBeNull();
+    expect(atlasChunkGame('https://app.test/assets/index-abc.js')).toBeNull();
+    expect(atlasChunkGame('https://app.test/assets/atlas-platinum-DeDyvazC.css')).toBeNull();
+    expect(atlasChunkGame('https://app.test/data/atlas-platinum-abc.js')).toBeNull();
+  });
+});
 
 const ok = { status: 200, type: 'basic', redirected: false };
 const check = (url: string, contentType: string | null, over: Partial<typeof ok> = {}, html?: string) => checkPrecacheResponse(url, { ...ok, ...over, contentType }, html);

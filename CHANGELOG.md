@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.39.3 — 2026-11-03
+
+### Changed
+- **The offline copy is about 9 MB smaller.** A game's Atlas data is no longer downloaded with the app: it is kept on the device the first time you open that game's Atlas, and works offline from then on. Games whose Atlas you haven't opened yet aren't available offline until you have.
+
 ## 0.39.2 — 2026-10-28
 
 ### Fixed
