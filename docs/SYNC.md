@@ -83,6 +83,18 @@ Token trade-off: same as the desktop (below): the token lives in the app's local
 4. In Safari: sign in, Settings → Sync → **Make a pairing code**. In the app: Settings → Sync → **Link this phone with a pairing code**, enter it.
 5. The dot turns green, Settings → Sync says *Last synced just now* and *This phone is linked with a pairing code*, and the edit made in step 3 shows on the website's copy after its next sync. Revoke the session again: nothing changes for the app now.
 
+## A blank screen
+
+Since 0.39.2 `index.html` carries a small inline script (`src/bootGuard.js`, outside the bundle, allowed by a hash the build adds to the CSP in `dist/_headers`). If the entry script fails to load, or `#root` is still empty after 8 seconds, it covers the screen with a plain message and three buttons: **Reload**, **Reset app cache** (unregisters the service workers and deletes the caches; never `localStorage` or IndexedDB, where the teams and matches are) and **Sign in again** (`/api/session/renew`). It goes away by itself if the app draws after all.
+
+**The service worker (`sw/sw.ts`) never keeps a bad answer.** Its precache downloads use `redirect: 'error'` and `cache: 'reload'`, and a file is stored only if `checkPrecacheResponse` (`src/domain/swGuard.ts`) accepts it: status 200, not redirected, a content type that fits the extension (never a web page for a script, stylesheet or data file), and `index.html` must contain the app's `#root`. Behind Access (or the single-page-app fallback) a missing file can come back as a login redirect or `index.html` with a 200, and Workbox keys a hashed file by its URL and never downloads it again. Any refused file fails the whole install, so the running version and its precache stay exactly as they were and the next check retries; entries an older worker stored from a bad answer are dropped and downloaded again at the next install. Test: `e2e/signin-return.spec.ts` (a stand-in for Access, `e2e/support/accessSim.ts`).
+
+**How a phone that is already stuck gets the fix.** It is served by the old service worker, which swallows the callback, so the phone can never log in, and it cannot download the new worker either: while the Access cookie is missing `/sw.js` answers with a redirect to the login and the update fails (“the script resource is behind a redirect”). The fix reaches a phone by itself only while it still has a valid Access session: opening the app (or bringing it to the foreground) checks for a new deploy, installs it and reloads. By hand, on a phone that is already black:
+
+1. *Sure way:* delete the app from the home screen, open the site in Safari, sign in, **Share → Add to Home Screen** again. That drops the old worker and caches, and also this app's `localStorage` (iOS keeps a home-screen app's data apart from Safari's): teams and matches that were synced come back at the first sync (Settings → Sync on), whatever was only on the phone is lost. Back up first from a phone that still works, if you have one (Team actions → export).
+2. *Without losing local data (not tried on a phone):* in Zero Trust → Access → Applications → this application, add a **Bypass → Everyone** policy for a few minutes, open the installed app once (it downloads the new worker without a login and reloads), close it, remove the bypass, and use **Sign in again**. While the bypass is on, anyone can download the app's files (not your data: `/api/*` checks the Access token itself).
+3. A phone that is black *and* sits on a `/cdn-cgi/…` address after a relaunch is the same state: use 1 or 2.
+
 ## Sharing (two players)
 
 Built on the same Worker, D1 database and Access identity. Nothing is shared unless the owner does it, and every read and write is checked on the server.
