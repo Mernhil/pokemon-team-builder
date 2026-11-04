@@ -142,20 +142,24 @@ function SetsTab({ team, dex, format, members, view, mega, onMega }: { team: Tea
 
 function TeamTab({ team, dex, format }: { team: Team; dex: Dex; format: FormatRules }) {
   const speeds = useMemo(() => speedOrder(team, dex, format), [team, dex, format]);
-  const top = speeds[0]?.speed ?? 1;
+  const top = Math.max(1, ...speeds.map((r) => r.withItem ?? r.speed));
 
   return (
     <section aria-label={`${team.name}: team`} className="space-y-3">
-      <Panel title="Speed order" help="Final Speed with each Pokémon’s spread and nature, before any boosts. Megas are listed as their own rows.">
+      <Panel title="Speed order" help="Final Speed with each Pokémon’s spread and nature, before any boosts; the green bar is Speed with a Choice Scarf. Megas are listed as their own rows.">
         <ol className="space-y-1" aria-label="Speed, fastest first">
           {speeds.map((r) => (
             <li key={r.id} className="flex items-center gap-2 text-sm">
               <Sprite speciesId={r.id} name={r.name} types={r.types} set={format.spriteSet} size={28} />
               <span className="w-36 shrink-0 truncate font-medium">{r.name}</span>
-              <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-2" aria-hidden>
-                <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.max(4, (r.speed / top) * 100)}%` }} />
+              <span className="relative h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+                {r.withItem && <span className="absolute inset-y-0 left-0 rounded-full bg-good" style={{ width: `${Math.max(4, (r.withItem / top) * 100)}%` }} />}
+                <span className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${Math.max(4, (r.speed / top) * 100)}%` }} />
               </span>
               <span className="w-10 shrink-0 text-right font-mono tabular-nums">{r.speed}</span>
+              <span className="w-10 shrink-0 font-mono text-xs text-good tabular-nums" title={r.withItem ? 'Speed with Choice Scarf' : undefined}>
+                {r.withItem ? <>{r.withItem}<span className="sr-only"> with Choice Scarf</span></> : null}
+              </span>
             </li>
           ))}
         </ol>
