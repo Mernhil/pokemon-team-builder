@@ -52,10 +52,18 @@ export async function goTo(page: Page, label: 'Build' | 'Calc' | 'Analyse' | 'Po
 }
 
 export async function expectNoA11yViolations(page: Page) {
+  // Colours fade (transition-colors, ~150 ms): axe run right after a click can sample a half-faded tab, whose
+  // contrast is below AA on the way. Check the settled colours.
+  await page.evaluate(() => {
+    if (document.getElementById('e2e-no-motion')) return;
+    const style = document.createElement('style');
+    style.id = 'e2e-no-motion';
+    style.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; }';
+    document.head.append(style);
+  });
   const { violations } = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    // index.html disables pinch zoom on purpose (a fixed, native-feeling viewport), which axe reports as WCAG 1.4.4.
-    .disableRules(['meta-viewport']).analyze();
+    .analyze();
   expect(violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length}) ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
 }
 
@@ -189,4 +197,44 @@ export async function renameTeam(page: Page, name: string) {
   await dialog.getByRole('textbox', { name: 'Team name' }).fill(name);
   await dialog.getByRole('button', { name: /^(Save|Update)$/ }).click();
   await expect(dialog).toBeHidden();
+}
+
+/**
+ * Nothing sticks out sideways: the page doesn't scroll horizontally, no dialog scrolls horizontally, and no visible
+ * element's right (or left) edge is outside the viewport. Elements inside an intentional horizontal scroller
+ * (overflow-x auto/scroll: tab strips, wide tables) are skipped; overflow hidden does not excuse anything, so a
+ * clipped row is still reported. Returns nothing; fails with a list of the offenders.
+ */
+export async function expectNoHorizontalOverflow(page: Page) {
+  const problems = await page.evaluate(() => {
+    const vw = window.innerWidth;
+    const out: string[] = [];
+    const describe = (el: Element) => `${el.tagName.toLowerCase()}${el.getAttribute('aria-label') ? `[${el.getAttribute('aria-label')!.slice(0, 40)}]` : ''} "${(el.textContent ?? '').trim().slice(0, 30)}"`;
+    if (document.documentElement.scrollWidth > vw) out.push(`document scrolls horizontally: ${document.documentElement.scrollWidth} > ${vw}`);
+    // The dialog's own scrolling body must not scroll sideways (that is what shifted the whole list left).
+    for (const d of document.querySelectorAll('[role="dialog"]')) {
+      for (const el of [d, ...d.querySelectorAll('*')]) {
+        const style = getComputedStyle(el);
+        const scrollsY = style.overflowY === 'auto' || style.overflowY === 'scroll';
+        if (scrollsY && el.scrollWidth > el.clientWidth + 1) out.push(`${describe(el)} scrolls sideways: scrollWidth ${el.scrollWidth} > clientWidth ${el.clientWidth}`);
+      }
+    }
+    const scrollers = (el: Element) => {
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        const x = getComputedStyle(p).overflowX;
+        if ((x === 'auto' || x === 'scroll') && p.scrollWidth > p.clientWidth) return true;
+      }
+      return false;
+    };
+    for (const el of document.body.querySelectorAll('*')) {
+      if (el.closest('svg') && el.tagName.toLowerCase() !== 'svg') continue;
+      const style = getComputedStyle(el);
+      if (style.visibility === 'hidden' || style.display === 'none' || style.position === 'fixed' && el.closest('[data-sonner-toast]')) continue;
+      const b = el.getBoundingClientRect();
+      if (!b.width || !b.height) continue;
+      if ((b.right > vw + 1 || b.left < -1) && !scrollers(el)) out.push(`${describe(el)} spans ${Math.round(b.left)}–${Math.round(b.right)} of ${vw}`);
+    }
+    return out.slice(0, 15);
+  });
+  expect(problems).toEqual([]);
 }

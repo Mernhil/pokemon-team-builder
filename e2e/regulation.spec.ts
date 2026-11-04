@@ -38,6 +38,8 @@ test('Banner: a team in an older regulation shows what moving to the live one do
   const regB = await page.getByRole('combobox', { name: 'Game and format' }).locator('option', { hasText: 'Reg M-B' }).getAttribute('value');
   await page.getByRole('combobox', { name: 'Game and format' }).selectOption(regB!);
   await importTeam(page, 'Garchomp @ Garchompite\nAbility: Rough Skin\nJolly Nature\n- Earthquake\n- Protect\n');
+  // The older-regulation banner is wide; it wraps and never widens the page (a phone would zoom out to fit it).
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   await expect(page.getByText('Not live').or(page.getByRole('button', { name: /Copy to Reg M-C/ }))).toBeVisible();
 
   await page.getByRole('button', { name: /What changes in Reg M-C/ }).click();
@@ -64,5 +66,15 @@ test('Banner: the live regulation counts down to its end', async ({ page }) => {
   // Reg M-C is live; its end date counts down in the banner. A next regulation with a start date counts down the same way
   // ("in N days"), but none is announced yet, so only the live one is visible here.
   await expect(page.getByText(/Reg M-C is live/)).toBeVisible();
-  await expect(page.getByText(/\d+ days left/)).toBeVisible();
+  await expect(page.getByText(/Dec 2, 2026 · \d+ days left/)).toBeVisible();
+});
+
+test('Banner: the running ranked season and when its ladder resets', async ({ page }) => {
+  // The shipped M-7 runs 2026-10-07 to 2026-11-04, so pin the clock inside it.
+  await page.clock.setFixedTime(new Date('2026-10-17T10:00:00Z'));
+  await openApp(page);
+  const chip = page.getByTitle(/Ranked season M-7: the ladder resets/);
+  await expect(chip).toBeVisible();
+  await expect(chip).toContainText('Season M-7');
+  await expect(chip).toContainText(/resets .+ · 18 days left/);
 });

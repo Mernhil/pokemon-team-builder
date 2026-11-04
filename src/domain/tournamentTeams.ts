@@ -8,6 +8,7 @@
  */
 import { z } from 'zod';
 import type { TeamRecord } from './metaSources.ts';
+import { toID } from './id.ts';
 
 export const TT_TOP_N = 8;
 export const TT_MIN_PLAYERS = 32;
@@ -15,7 +16,7 @@ export const TT_DAYS = 60;
 export const TT_CAP = 300;
 
 const id = z.string().regex(/^[a-z0-9]{0,64}$/);
-export const TournamentEventSchema = z.object({
+const TournamentEventSchema = z.object({
   id: z.string().min(1).max(64),
   name: z.string().min(1).max(120),
   /** YYYY-MM-DD */
@@ -27,9 +28,9 @@ export type TournamentEvent = z.infer<typeof TournamentEventSchema>;
 
 /** [species id, item id, ability id, moves] ('' where the sheet doesn't say). */
 const SetTuple = z.tuple([id.refine((s) => s.length > 0), id, id, z.array(id).max(4)]);
-export type TournamentSet = z.infer<typeof SetTuple>;
+type TournamentSet = z.infer<typeof SetTuple>;
 
-export const TournamentTeamSchema = z.object({
+const TournamentTeamSchema = z.object({
   /** Index into the regulation's events. */
   e: z.number().int().min(0),
   /** Placing in the event. */
@@ -40,7 +41,7 @@ export const TournamentTeamSchema = z.object({
 });
 export type TournamentTeam = z.infer<typeof TournamentTeamSchema>;
 
-export const TournamentTeamsSchema = z.object({
+const TournamentTeamsSchema = z.object({
   version: z.literal(1),
   generatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
   regulations: z.record(z.string(), z.object({ events: z.array(TournamentEventSchema), teams: z.array(TournamentTeamSchema) })),
@@ -91,8 +92,7 @@ export function parseStanding(raw: unknown, teamFromDecklist: (decklist: unknown
   return { placing: Math.floor(s.data.placing), player, team };
 }
 
-export const limitlessUrl = (eventId: string) => `https://play.limitlesstcg.com/tournament/${encodeURIComponent(eventId)}`;
-const toId = (s: string | undefined) => (s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+const limitlessUrl = (eventId: string) => `https://play.limitlesstcg.com/tournament/${encodeURIComponent(eventId)}`;
 
 export interface SelectOptions {
   today?: string;
@@ -134,7 +134,7 @@ export function selectTopCuts(events: RawEvent[], o: SelectOptions = {}): Tourna
         e: outEvents.length - 1,
         p: s.placing,
         n: s.player,
-        m: s.team.slice(0, 6).map((m) => [m.speciesId, toId(m.itemId), toId(m.abilityId), m.moves.map(toId).filter(Boolean).slice(0, 4)] as TournamentSet),
+        m: s.team.slice(0, 6).map((m) => [m.speciesId, toID(m.itemId), toID(m.abilityId), m.moves.map(toID).filter(Boolean).slice(0, 4)] as TournamentSet),
       });
     }
   }

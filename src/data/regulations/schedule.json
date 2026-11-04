@@ -1,4 +1,8 @@
 {
-  "note": "Announced regulations that are not in the dataset yet. The weekly updater moves an entry into its own <id>.json once its details are published.",
-  "upcoming": []
+  "note": "Announced regulations that are not in the dataset yet. The weekly updater moves an entry into its own <id>.json once its details are published. \"seasons\" lists the ranked seasons; the ladder resets at `end`.",
+  "upcoming": [],
+  "seasons": [
+    { "id": "M-6", "regulation": "champions-reg-mc", "start": "2026-09-09T02:00:00Z", "end": "2026-10-07T01:59:00Z" },
+    { "id": "M-7", "regulation": "champions-reg-mc", "start": "2026-10-07T02:00:00Z", "end": "2026-11-04T01:59:00Z" }
+  ]
 }

@@ -35,14 +35,18 @@ export interface ThreatReport {
  * Runs the Threat engine for a team in a Web Worker (see src/workers) and returns rows as they
  * arrive. Restarts, debounced, when the team, the field or the threat count changes.
  */
-export function useThreatReport({ dex, format, team, count, field, delay = 150 }: { dex: Dex; format: FormatRules; team: Team; count: number; field: FieldConditions; delay?: number }): ThreatReport {
+export function useThreatReport({ dex, format, team, count, field, delay = 150, baseForms }: { dex: Dex; format: FormatRules; team: Team; count: number; field: FieldConditions; delay?: number; /** Species to calculate in their base form instead of their Mega. */ baseForms?: ReadonlySet<string> }): ThreatReport {
   const metaFor = useMetaFor();
   const champions = format.datasetId === 'champions';
   const picked = useMemo(
     () => (champions && metaFor ? pickSpeedSnapshot(format.regulationId, champRegIds, metaFor) : undefined),
     [champions, format.regulationId, metaFor],
   );
-  const threats = useMemo(() => (picked ? metaSets(picked.snapshot, dex, format, count) : []), [picked, dex, format, count]);
+  const allThreats = useMemo(() => (picked ? metaSets(picked.snapshot, dex, format, count) : []), [picked, dex, format, count]);
+  const threats = useMemo(
+    () => (baseForms?.size ? allThreats.map((t) => (baseForms.has(t.speciesId) ? { ...t, megaMode: 'base' as const } : t)) : allThreats),
+    [allThreats, baseForms],
+  );
   const members = useMemo(() => team.slots.flatMap((set, slot) => (set ? [{ slot, set }] : [])), [team.slots]);
   const job = useMemo<ThreatJob | undefined>(
     () =>

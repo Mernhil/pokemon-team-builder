@@ -23,7 +23,7 @@ export function Toggle({ pressed, onClick, children, title }: { pressed: boolean
 export function ChipRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div role="group" aria-label={label} className="flex items-center gap-2">
-      <span className="w-16 shrink-0 text-[11px] font-bold tracking-wide text-muted uppercase">{label}</span>
+      <span className="w-16 shrink-0 text-2xs font-bold tracking-wide text-muted uppercase">{label}</span>
       <div className="scrollbar-thin -mx-1 flex gap-1.5 overflow-x-auto px-1 py-1">{children}</div>
     </div>
   );

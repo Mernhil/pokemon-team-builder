@@ -56,7 +56,7 @@ export interface SurviveGoal {
 }
 
 /** Be faster than a target Speed (or, in Trick Room, slower). Solves Spe. */
-export interface OutspeedGoal {
+interface OutspeedGoal {
   kind: 'outspeed';
   /** The Speed to beat, in the scenario being planned for. */
   target: number;
@@ -96,7 +96,7 @@ export interface OptimizeOptions {
   caps?: { total?: number; perStat?: number };
 }
 
-export interface GoalResult {
+interface GoalResult {
   index: number;
   label: string;
   met: boolean;

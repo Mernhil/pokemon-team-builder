@@ -10,6 +10,7 @@ import type { FormatRules } from '@/domain/types';
 import { useMatchStore } from '@/store/matchStore';
 import { useMetaFor } from '@/data/useMeta';
 import { useTeamStore } from '@/store/teamStore';
+import { toast } from '@/store/toastStore';
 import { BringPicker, type RosterMon } from './BringPicker';
 import { sourcesFromLog } from '@/domain/bringPlanner';
 import { BringPlanner } from './BringPlanner';
@@ -45,6 +46,12 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
   const teamOrder = useTeamStore((s) => s.order);
   const [myMode, setMyMode] = useState<'saved' | 'freeform'>(match.myTeamId ? 'saved' : 'freeform');
   const [planning, setPlanning] = useState(false);
+  const removeWithUndo = () => {
+    const state = useMatchStore.getState();
+    const index = state.order.indexOf(match.id);
+    deleteMatch(match.id);
+    toast('Deleted the match.', { label: 'Undo', run: () => useMatchStore.getState().restoreMatch(match, index) });
+  };
 
   const set = (patch: Partial<Match>) => updateMatch(match.id, patch);
   const tera = matchCapabilities(match.regulationId).tera;
@@ -122,7 +129,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
     <Panel
       title={`${match.date} · ${match.result === 'win' ? 'Win' : 'Loss'}`}
       actions={
-        <Button size="sm" variant="danger" onClick={() => deleteMatch(match.id)}>
+        <Button size="sm" variant="danger" onClick={removeWithUndo}>
           <Trash2 size={13} /> Delete
         </Button>
       }
@@ -182,7 +189,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">My team</span>
+              <span className="text-2xs font-semibold uppercase tracking-wider text-muted">My team</span>
               <div className="flex rounded-md bg-surface-2 p-0.5 text-xs">
                 <button type="button" onClick={() => { setMyMode('saved'); set({ myTeam: undefined, myBrought: undefined, myLeads: undefined }); }} className={cn('rounded px-2 py-0.5', myMode === 'saved' ? 'bg-surface shadow-sm' : 'text-muted')}>
                   Saved team
@@ -221,7 +228,7 @@ export function MatchForm({ dex, format, match, onDone }: { dex: Dex; format: Fo
           </div>
 
           <div className="space-y-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Opponent (Team Preview)</span>
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted">Opponent (Team Preview)</span>
             {knownCore && (
               <p className="rounded-md bg-accent/10 px-2 py-1 text-xs text-accent">
                 Overlaps a known popular core built around {dex.species(knownCore.speciesId)?.name ?? knownCore.speciesId} (see the Meta tab).

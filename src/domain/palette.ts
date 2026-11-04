@@ -11,10 +11,20 @@ export interface Palette {
   /** How colourful, 0 (grey) to 0.2 (vivid). */
   chroma: number;
 }
-/** The tokens a palette overrides (the rest, like good/warn/bad and the stat colours, stay fixed). */
-export type PaletteTokens = Record<'bg' | 'surface' | 'surface-2' | 'border' | 'border-strong' | 'fg' | 'muted' | 'accent' | 'accent-fg', string>;
+/** The status and stat colours, which keep their hue but are darkened or lightened until they read on a palette's surfaces. */
+export const STATUS_TOKEN_NAMES = ['good', 'warn', 'bad', 'stat-hp', 'stat-atk', 'stat-def', 'stat-spa', 'stat-spd', 'stat-spe'] as const;
+type StatusToken = (typeof STATUS_TOKEN_NAMES)[number];
 
-export const PALETTE_TOKEN_NAMES = ['bg', 'surface', 'surface-2', 'border', 'border-strong', 'fg', 'muted', 'accent', 'accent-fg'] as const satisfies readonly (keyof PaletteTokens)[];
+/** The tokens a palette overrides. */
+export type PaletteTokens = Record<'bg' | 'surface' | 'surface-2' | 'border' | 'border-strong' | 'fg' | 'muted' | 'accent' | 'accent-fg' | StatusToken, string>;
+
+export const PALETTE_TOKEN_NAMES = ['bg', 'surface', 'surface-2', 'border', 'border-strong', 'fg', 'muted', 'accent', 'accent-fg', ...STATUS_TOKEN_NAMES] as const satisfies readonly (keyof PaletteTokens)[];
+
+/** The hand-tuned values in index.css (a test keeps these in step with it). */
+export const STATUS_BASE: Record<Theme, Record<StatusToken, string>> = {
+  light: { good: '#1d7943', warn: '#925e0a', bad: '#c0392f', 'stat-hp': '#bc3b3b', 'stat-atk': '#a35410', 'stat-def': '#826600', 'stat-spa': '#3264c8', 'stat-spd': '#2c7838', 'stat-spe': '#b8356f' },
+  dark: { good: '#5fd08a', warn: '#e9b75a', bad: '#f08a80', 'stat-hp': '#f07a7a', 'stat-atk': '#f0a060', 'stat-def': '#e6cc5c', 'stat-spa': '#7fa6f5', 'stat-spd': '#7cd08a', 'stat-spe': '#f07fae' },
+};
 
 export const CHROMA_RANGE = { min: 0, max: 0.2 } as const;
 
@@ -67,6 +77,19 @@ function fit(L: number, C: number, hue: number, backgrounds: string[], min: numb
   return color;
 }
 
+/** Mixes `hex` towards black or white in small steps until it reaches `min` on every background (a little over AA, so text on a tinted fill still passes). */
+function nudge(hex: string, backgrounds: string[], min: number, towards: '#000000' | '#ffffff'): string {
+  const mix = (t: number) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - t) + parseInt(towards.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
+  for (let t = 0; t <= 1; t += 0.02) {
+    const c = mix(t);
+    if (backgrounds.every((bg) => contrast(c, bg) >= min)) return c;
+  }
+  return towards;
+}
+
+const statusTokens = (theme: Theme, backgrounds: string[]) =>
+  Object.fromEntries(STATUS_TOKEN_NAMES.map((n) => [n, nudge(STATUS_BASE[theme][n], backgrounds, 4.7, theme === 'dark' ? '#ffffff' : '#000000')])) as Record<StatusToken, string>;
+
 /** The interface colours for a palette in one theme. */
 export function paletteTokens({ hue, chroma }: Palette, theme: Theme): PaletteTokens {
   const c = Math.max(CHROMA_RANGE.min, Math.min(CHROMA_RANGE.max, chroma));
@@ -88,6 +111,7 @@ export function paletteTokens({ hue, chroma }: Palette, theme: Theme): PaletteTo
       muted: fit(0.72, tint * 1.5, hue, bgs, 4.5, 1),
       accent,
       'accent-fg': contrast('#111111', accent) >= contrast('#ffffff', accent) ? '#111111' : '#ffffff',
+      ...statusTokens('dark', bgs),
     };
   }
   const bg = make(0.96, tint * 0.7, hue);
@@ -105,6 +129,7 @@ export function paletteTokens({ hue, chroma }: Palette, theme: Theme): PaletteTo
     muted: fit(0.48, tint * 1.5, hue, bgs, 4.5, -1),
     accent,
     'accent-fg': '#ffffff',
+    ...statusTokens('light', bgs),
   };
 }
 

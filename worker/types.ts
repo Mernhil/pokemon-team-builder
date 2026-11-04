@@ -20,6 +20,12 @@ export interface Env {
   ACCESS_TEAM_DOMAIN?: string;
   /** The Access application's audience tag. */
   ACCESS_AUD?: string;
+  /** "access" (default: Cloudflare Access only), "both" (accounts next to Access) or "accounts" (docs/ACCOUNTS_PLAN.md section 7.3). */
+  AUTH_MODE?: string;
+  /** Secret mixed into every password hash; losing it locks everyone out (docs/ACCOUNTS_MANUAL_STEPS.md). */
+  PASSWORD_PEPPER?: string;
+  /** Secret that lets the very first account (the admin) sign up while there are no users. */
+  SETUP_CODE?: string;
   /** Extra webview origins the device routes answer, comma separated (local development only, e.g. http://localhost:1420 in .dev.vars; never set in production). */
   DEVICE_EXTRA_ORIGINS?: string;
 }

@@ -11,7 +11,7 @@ import { DEFAULT_ANALYSE_TAB, DEFAULT_OHKO_MODE, routeFromSaved, type AnalyseTab
 import type { PokemonSet, StatId, Team, TeamSlots } from '@/domain/types';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
 
-export type Theme = 'dark' | 'light';
+type Theme = 'dark' | 'light';
 export type { View };
 
 /** Advanced-details state for one team member (keyed by set uid). */

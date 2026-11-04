@@ -35,7 +35,7 @@ scripts/build-pokedex.ts     Pokédex entries, regional numbers, wild encounters
 scripts/pkhex-encounters.ts  Reads PKHeX's wild-encounter tables (BDSP, Legends, SV, ORAS, SM/USUM)
 scripts/sources.ts           Pinned Showdown / PKHeX checkouts the build scripts read from
 scripts/build-atlas.ts       Atlas driver: `npm run atlas [-- game]` writes atlas-<game>.json + docs/data-gaps/<game>.md
-scripts/atlas/               one builder per engine: gen1 (Red/Blue/Yellow), gen2 (Gold/Silver/Crystal), gba (Ruby/Emerald/FireRed), platinum
+scripts/atlas/               one builder per engine: gen1 (Red/Blue/Yellow), gen2 (Gold/Silver/Crystal), gba (Ruby/Emerald/FireRed), platinum, dp (Diamond/Pearl), hgss (HeartGold/SoulSilver); encounters.ts builds the encounters-only files for Generation 5 onward
 scripts/build-maps.ts        Area maps: renders the Gen 1–4 in-game maps from pret, validates the schematics, writes docs/MAP_COVERAGE.md
 src/
   domain/                    Framework-free core (100% unit-testable)
@@ -52,7 +52,7 @@ src/
   data/
     dex.ts                   Dex query layer (lookup, legality, learnsets, type effectiveness, search) + lazy dataset loader
     useDex.ts                React hook for loading a dataset
-    generated/champions.json 379 species (incl. Megas), 511 moves, 165 items, 216 abilities, natures, type chart
+    generated/champions.json 382 species (incl. Megas), 511 moves, 165 items, 216 abilities, natures, type chart
     generated/gen<N>.json    Gen 1–9 datasets; gen<N>-learn.json learn methods; pokedex-gen<N>.json; maps.json
     maps/*.json              Hand-placed schematic region maps (Unova → Paldea); edit these, not maps.json
     pokedex.ts               Lazy loaders for the Pokédex files
@@ -61,7 +61,7 @@ src/
     editor/StatDistributor   Champions SP calculator (sliders, numeric input, +/− alignment, presets, speed target)
     editor/SetEditor         Species / item / ability / nature / Tera / moves (learnset-filtered)
     team/TeamSlots           6-slot roster with drag-and-drop (dnd-kit)
-    analysis/                Validation panel, defensive type matrix
+    teamcheck/               Team check: validation panel, defensive and offensive type matrices
     io/                      Import/export dialog, saved-teams dialog
     atlas/                   Pokénav tab: interactive game maps, location panel, trainer detail, item database, trainer index, progress
     pokedex/                 Pokédex list + entry (Info / Moves / Area) and the region map renderer
@@ -311,9 +311,6 @@ Replica codes are issued by the game's servers and point to a team stored there,
 The app checks and normalises a code you paste (10 alphanumerics), stores it on the team and prints it in the team list.
 To share a team between builders, use the self-contained **share code** (`PTB1.…`) instead.
 
-## Roadmap
+## What's next
 
-- **Gen 1–9:** level caps and Nuzlocke planning; gift/static encounters for the PKHeX-sourced games; the Legends games' own move data once Showdown has it.
-- **Module 1:** full ChampDex explorer (radar chart, learnset filters).
-- **Module 3:** offensive coverage and speed-tier chart against format threats (Tailwind / Trick Room).
-- **Persistence:** IndexedDB / Supabase sync behind the same store interface.
+What shipped is in [CHANGELOG.md](CHANGELOG.md); the current polish work (QOL, accessibility, performance, tidiness) is planned in [docs/POLISH_PLAN.md](docs/POLISH_PLAN.md). Not built: level caps and Nuzlocke planning beyond the Pokénav run tracker, gift/static encounters for the PKHeX-sourced games, and the Legends games' own move data (once Showdown has it).

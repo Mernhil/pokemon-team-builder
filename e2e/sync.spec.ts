@@ -47,7 +47,7 @@ test('Sync is off by default; turning it on pulls the account\'s teams, pushes o
   expect(calls).toEqual([]); // nothing was sent before opting in
 
   await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
-  await expect(dialog.getByRole('status').filter({ hasText: /Last sync: .*1 received, 1 sent/ })).toBeVisible();
+  await expect(dialog.getByRole('status').filter({ hasText: /Last synced .*1 received, 1 sent/ })).toBeVisible();
   expect(pushed.some((d) => d.kind === 'team')).toBe(true);
   await expect(dialog.getByRole('textbox', { name: 'Device name' })).toHaveValue(/^Device /);
 
@@ -98,7 +98,7 @@ test('Sync is remembered across a reload and syncs again on start', async ({ pag
   await fakeServer(page);
   const dialog = await openSettings(page);
   await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
-  await expect(dialog.getByRole('status').filter({ hasText: /Last sync: / })).toBeVisible();
+  await expect(dialog.getByRole('status').filter({ hasText: /Last synced / })).toBeVisible();
   await page.keyboard.press('Escape');
   const gets: string[] = [];
   page.on('request', (r) => r.url().includes('/api/sync') && r.method() === 'GET' && gets.push(r.url()));
@@ -152,6 +152,45 @@ test('The desktop app links with a pasted pairing link, then syncs with its toke
   await dialog.getByRole('button', { name: 'Link this desktop app' }).click();
   await expect(dialog.getByText('Unlink this desktop app')).toBeVisible();
   expect(redeemed).toMatchObject({ code: 'ABCDE-FGHJK'.replace('-', '') });
-  await expect(dialog.getByRole('status').filter({ hasText: /Last sync:/ })).toBeVisible();
+  await expect(dialog.getByRole('status').filter({ hasText: /Last synced/ })).toBeVisible();
   expect(auth).toBe(`Bearer ptbd_${'A'.repeat(43)}`);
+});
+
+test('An expired sign-in shows a banner at the top with Sign in again, and the header light turns red', async ({ page }) => {
+  await openApp(page);
+  await fakeServer(page, [], 200);
+  const dialog = await openSettings(page);
+  await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
+  await expect(dialog.getByRole('status').filter({ hasText: /Last synced/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /Sync status: synced recently/i })).toBeVisible();
+
+  await page.unroute('**/api/sync**');
+  await fakeServer(page, [], 401);
+  // "Sign in again" is a full navigation to the renewal route, which Access answers with its login.
+  await page.route('**/api/session/renew', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>renewed</title>' }));
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  const banner = page.getByRole('alert').filter({ hasText: 'Your sign-in has expired. Tap Sign in again.' });
+  await expect(banner).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sync status: sync problem' })).toBeVisible();
+
+  await banner.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(banner).toBeHidden();
+
+  await page.getByRole('button', { name: 'Sync status: sync problem' }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings & credits' });
+  await expect(settings.getByRole('button', { name: 'Sign in again' })).toBeVisible();
+  await Promise.all([page.waitForURL('**/api/session/renew'), settings.getByRole('button', { name: 'Sign in again' }).click()]);
+});
+
+test('Sync diagnostics and the server line in Settings → Sync', async ({ page }) => {
+  await openApp(page);
+  await fakeServer(page, [], 200);
+  await page.route('**/api/health', (route) => route.fulfill({ json: { database: true, migrations: ['0001_init', '0002_shares', '0003_devices'], missing: ['0004_redeem_attempts'], access: { teamDomain: true, audience: true }, time: 1 } }));
+  const dialog = await openSettings(page);
+  await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
+  await expect(dialog.getByTestId('server-health')).toHaveText('Database migration missing: 0004');
+  await dialog.getByText('Sync diagnostics').click();
+  await expect(dialog.getByText('Known documents')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Copy diagnostics' })).toBeVisible();
 });

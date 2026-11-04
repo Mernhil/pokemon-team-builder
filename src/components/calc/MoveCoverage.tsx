@@ -20,7 +20,7 @@ function Grid({ title, set, dex, against, mega }: { title: string; set: PokemonS
   const sup = group((r) => (r.mult ?? 0) > 1).length;
   return (
     <div>
-      <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+      <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 text-2xs font-semibold uppercase tracking-wider text-muted">
         {title}
         {hasAttack && <span className="font-normal normal-case tracking-normal">hits {sup} of {rows.length} types super-effectively</span>}
       </div>
@@ -39,12 +39,12 @@ function Grid({ title, set, dex, against, mega }: { title: string; set: PokemonS
                   against?.includes(defType) && 'ring-2 ring-fg/60',
                 )}
               >
-                <div className="truncate rounded text-[10px] font-bold uppercase" style={{ background: TYPE_BADGE[defType].fill, color: TYPE_BADGE[defType].text }}>
+                <div aria-hidden className="truncate rounded text-3xs font-bold uppercase" style={{ background: TYPE_BADGE[defType].fill, color: TYPE_BADGE[defType].text }}>
                   {defType.slice(0, 4)}
                 </div>
-                <div className={cn('font-mono text-[11px] font-bold', (mult ?? 1) > 1 ? 'text-good' : mult === 0 ? 'text-accent' : (mult ?? 1) < 1 ? 'text-bad' : 'text-muted')}>
+                <div className={cn('font-mono text-2xs font-bold', (mult ?? 1) > 1 ? 'text-good' : mult === 0 ? 'text-accent' : (mult ?? 1) < 1 ? 'text-bad' : 'text-muted')}>
                   <span aria-hidden>{label(mult)}</span>
-                  <span className="sr-only">{mult === 0 ? 'no effect' : `times ${mult}`}</span>
+                  <span className="sr-only">{defType}: {mult === 0 ? 'no effect' : `times ${mult}`}{by.length ? ` with ${by.join(', ')}` : ''}</span>
                 </div>
               </div>
             ))}

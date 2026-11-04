@@ -15,8 +15,8 @@
  */
 import { z } from 'zod';
 import { MetaSnapshotSchema, type MetaEntry, type MetaSnapshot } from './meta.ts';
+import { toID } from './id.ts';
 
-const toId = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const isId = (s: string) => /^[a-z0-9]{1,64}$/.test(s);
 
@@ -24,7 +24,7 @@ const isId = (s: string) => /^[a-z0-9]{1,64}$/.test(s);
 // Team records: one team as a source saw it
 // ---------------------------------------------------------------------------
 
-export interface TeamMember {
+interface TeamMember {
   speciesId: string;
   /** Replays: whether it was sent out (VGC brings 4 of 6). Team lists: always true. */
   brought: boolean;
@@ -168,10 +168,10 @@ export function parseReplayLog(log: string, resolve: SpeciesResolver): [TeamReco
   const ofArg = (args: string[]) => args.find((a) => a.startsWith('[of] '))?.slice(5);
   const fromArg = (args: string[]) => args.find((a) => a.startsWith('[from]'));
   const setItem = (m: Mon | undefined, name: string) => {
-    if (m && !m.itemTainted && !m.itemId && name) m.itemId = toId(name);
+    if (m && !m.itemTainted && !m.itemId && name) m.itemId = toID(name);
   };
   const setAbility = (m: Mon | undefined, name: string) => {
-    if (m && !m.abilityTainted && !m.abilityId && name) m.abilityId = toId(name);
+    if (m && !m.abilityTainted && !m.abilityId && name) m.abilityId = toID(name);
   };
 
   for (const line of log.split('\n')) {
@@ -214,7 +214,7 @@ export function parseReplayLog(log: string, resolve: SpeciesResolver): [TeamReco
         const m = mon(args[0]);
         const name = args[1] ?? '';
         if (!m || m.movesTainted || !name || name === 'Struggle' || from) break;
-        const id = toId(name);
+        const id = toID(name);
         if (!m.moves.includes(id)) m.moves.push(id);
         break;
       }
@@ -242,7 +242,7 @@ export function parseReplayLog(log: string, resolve: SpeciesResolver): [TeamReco
         const fromAbility = from?.match(/^\[from\] ability: (.+)$/)?.[1];
         if (from?.startsWith('[from] move:')) {
           if (m) m.abilityTainted = true;
-        } else if (fromAbility && ABILITY_COPIERS.has(toId(fromAbility))) {
+        } else if (fromAbility && ABILITY_COPIERS.has(toID(fromAbility))) {
           setAbility(m, fromAbility);
           setAbility(of, args[1] ?? '');
           if (m) m.abilityTainted = true;
@@ -256,7 +256,7 @@ export function parseReplayLog(log: string, resolve: SpeciesResolver): [TeamReco
         const what = args[1] ?? '';
         if (what === 'move: Skill Swap') {
           for (const m of [mon(args[0]), of]) if (m) m.abilityTainted = true;
-        } else if (ABILITY_SPREADERS.has(toId(what.slice(9))) && of) {
+        } else if (ABILITY_SPREADERS.has(toID(what.slice(9))) && of) {
           // Mummy and the like: "[of]" holds it; the subject loses its own (named after it, if shown).
           const m = mon(args[0]);
           setAbility(of, what.slice(9));
@@ -293,7 +293,7 @@ export function ratingFromLog(log: string): number {
 }
 
 /** Rating cutoffs tried for replays, best first: the highest with enough games is used. */
-export const REPLAY_CUTOFFS = [1500, 1300, 1100, 0];
+const REPLAY_CUTOFFS = [1500, 1300, 1100, 0];
 
 /** Picks the highest rating cutoff with at least `minGames` games (else everything). */
 export function replayCutoff(games: Pick<ReplayGame, 'rating'>[], minGames: number): number {
@@ -332,9 +332,9 @@ export function teamFromDecklist(decklist: unknown, speciesId: SpeciesResolver):
     team.push({
       speciesId: id,
       brought: true,
-      itemId: m.data.item ? toId(m.data.item) || undefined : undefined,
-      abilityId: m.data.ability ? toId(m.data.ability) || undefined : undefined,
-      moves: (m.data.attacks ?? m.data.moves ?? []).map(toId).filter(Boolean),
+      itemId: m.data.item ? toID(m.data.item) || undefined : undefined,
+      abilityId: m.data.ability ? toID(m.data.ability) || undefined : undefined,
+      moves: (m.data.attacks ?? m.data.moves ?? []).map(toID).filter(Boolean),
     });
   }
   return team.length >= 4 ? team : null;
@@ -422,7 +422,7 @@ export function fillSpreads(snap: MetaSnapshot, donors: MetaSnapshot[], baseStat
 
 /** One daily snapshot of the in-game ranked usage, as the community mirror publishes it. */
 const IngameShare = z.tuple([z.string(), z.number(), z.number()]).rest(z.unknown());
-export const IngameSnapshotSchema = z.object({
+const IngameSnapshotSchema = z.object({
   season: z.string().min(1).max(16),
   /** dd_mm_yyyy */
   date: z.string().regex(/^\d{2}_\d{2}_\d{4}$/),
@@ -467,7 +467,7 @@ export function ingameToSnapshot(raw: unknown, o: IngameOptions): MetaSnapshot {
   const snap = IngameSnapshotSchema.parse(raw);
   const shares = (rows: z.infer<typeof IngameShare>[], n: number) =>
     rows
-      .map(([name, pct]) => ({ id: toId(name), pct: round1(Math.min(100, Math.max(0, pct))) }))
+      .map(([name, pct]) => ({ id: toID(name), pct: round1(Math.min(100, Math.max(0, pct))) }))
       .filter((x) => isId(x.id) && x.pct >= 1)
       .sort((a, b) => b.pct - a.pct)
       .slice(0, n);

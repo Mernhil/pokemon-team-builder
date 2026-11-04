@@ -1,3 +1,5 @@
+import { useViewStore } from '@/store/viewStore';
+import type { MetaTab } from '@/domain/viewPrefs';
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AlertTriangle, BarChart3, CloudOff, ExternalLink, RefreshCw } from 'lucide-react';
 import type { Dex } from '@/data/dex';
@@ -5,6 +7,7 @@ import { useMetaFor } from '@/data/useMeta';
 import { useMetaHistory } from '@/data/useMetaHistory';
 import { TREND_PERIODS, type HistoryEntry, type TrendPeriod } from '@/domain/metaHistory';
 import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
+import { safeHttpUrl } from '@/domain/links';
 import { META_STALE_DAYS, isProvisional, localMetaFromMatches, metaAgeDays, metaDataDate, metaSourceKind, usageLabel, type MetaEntry, type MetaSnapshot } from '@/domain/meta';
 import { STAT_IDS, STAT_LABELS, type FormatRules } from '@/domain/types';
 import { MATCH_SOURCE_LABEL, matchesForSource, nameOf, type MatchSource } from '@/domain/sharing';
@@ -57,8 +60,11 @@ export function MetaView({ dex, format }: { dex: Dex; format: FormatRules }) {
   const refresh = useMetaStore((s) => s.refresh);
   const matches = useMatchStore((s) => s.matches);
   const online = useOnline();
-  const [tab, setTab] = useState<'usage' | 'trends' | 'teams'>('usage');
-  const [period, setPeriod] = useState<TrendPeriod>(7);
+  const tab = useViewStore((s) => s.metaTab);
+  const period = useViewStore((s) => s.metaPeriod);
+  const setView = useViewStore((s) => s.set);
+  const setTab = (t: MetaTab) => setView('metaTab', t);
+  const setPeriod = (p: TrendPeriod) => setView('metaPeriod', p);
   const history = useMetaHistory(regId);
 
   const metaFor = useMetaFor();
@@ -206,8 +212,8 @@ function SourceLine({ snapshot }: { snapshot: MetaSnapshot }) {
   ].filter(Boolean);
   return (
     <p className="min-w-0 text-sm text-muted">
-      {s.url ? (
-        <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-fg underline-offset-2 hover:underline">
+      {safeHttpUrl(s.url) ? (
+        <a href={safeHttpUrl(s.url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-fg underline-offset-2 hover:underline">
           {s.name}
           <ExternalLink size={13} aria-hidden />
         </a>

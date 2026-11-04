@@ -4,6 +4,7 @@ import { useMetaFor } from '@/data/useMeta';
 import type { FieldConditions } from '@/domain/battle/conditions';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import { buildCandidates, evaluateCandidate, rankMatches, withRequiredMoves, type Candidate, type Condition, type Match } from '@/domain/reverseSearch';
+import { useReverseBuilds } from '@/store/reverseBuildStore';
 import { pickSpeedSnapshot, type PickedSnapshot } from '@/domain/speedTiers';
 import type { FormatRules } from '@/domain/types';
 
@@ -14,6 +15,9 @@ const champRegIds = REGULATION_MANIFEST.regulations
 
 /** Candidates checked per slice before yielding to the browser, so typing and scrolling stay smooth. */
 const SLICE = 12;
+
+const knowing = (dex: Dex, list: Candidate[], knowsKey: string, regulationId: string | undefined) =>
+  knowsKey ? list.flatMap((c) => withRequiredMoves(dex, c, knowsKey.split(','), regulationId) ?? []) : list;
 
 export interface ReverseSearch {
   /** The meta numbers behind the "most-used set" builds, or undefined (not Champions, or none published). */
@@ -37,14 +41,26 @@ export function useReverseSearch({ dex, format, conditions, knows = [], field, d
     [champions, format.regulationId, metaFor],
   );
   const loading = champions && !metaFor;
-  const everyone = useMemo(() => (loading ? [] : buildCandidates(dex, format, picked?.snapshot)), [dex, format, picked, loading]);
+  const snapshot = picked?.snapshot;
+  const overrides = useReverseBuilds((s) => s.overrides);
+  const tryStones = useReverseBuilds((s) => s.tryStones);
+  // The slow, sliced search covers the meta and default builds only, so editing one species' build never
+  // restarts it; the (few) custom builds are calculated right away and replace their species' results.
+  const everyone = useMemo(() => (loading ? [] : buildCandidates(dex, format, snapshot, { tryStones })), [dex, format, snapshot, tryStones, loading]);
+  const customIds = useMemo(() => new Set(Object.keys(overrides)), [overrides]);
+  const custom = useMemo(
+    () => (loading || customIds.size === 0 ? [] : buildCandidates(dex, format, snapshot, { tryStones, overrides, only: customIds })),
+    [dex, format, snapshot, tryStones, overrides, customIds, loading],
+  );
   // Only Pokémon that can learn every required move, each built to know them.
   const knowsKey = knows.join(',');
-  const candidates = useMemo(
-    () => (knowsKey ? everyone.flatMap((c) => withRequiredMoves(dex, c, knowsKey.split(','), format.regulationId) ?? []) : everyone),
-    [everyone, knowsKey, dex, format.regulationId],
-  );
+  const candidates = useMemo(() => knowing(dex, everyone, knowsKey, format.regulationId), [dex, everyone, knowsKey, format.regulationId]);
+  const customCandidates = useMemo(() => knowing(dex, custom, knowsKey, format.regulationId), [dex, custom, knowsKey, format.regulationId]);
   const job = useMemo(() => ((conditions.length || knowsKey) && candidates.length ? { conditions, field, candidates } : undefined), [conditions, knowsKey, field, candidates]);
+  const customMatches = useMemo(
+    () => (conditions.length || knowsKey ? customCandidates.flatMap((c) => evaluateCandidate(dex, c, conditions, field) ?? []) : []),
+    [customCandidates, conditions, knowsKey, field, dex],
+  );
 
   const [state, setState] = useState<{ job?: typeof job; matches: Match[]; checked: number; done: boolean }>({ matches: [], checked: 0, done: false });
   useEffect(() => {
@@ -72,5 +88,10 @@ export function useReverseSearch({ dex, format, conditions, knows = [], field, d
   }, [dex, job, delay]);
 
   const current = !!job && state.job === job;
-  return { picked, loading, candidates, matches: current ? state.matches : [], checked: current ? state.checked : 0, done: job ? current && state.done : true };
+  const all = useMemo(() => [...candidates.filter((c) => !customIds.has(c.speciesId)), ...customCandidates], [candidates, customCandidates, customIds]);
+  const matches = useMemo(
+    () => rankMatches([...(current ? state.matches : []).filter((m) => !customIds.has(m.candidate.speciesId)), ...customMatches]),
+    [current, state.matches, customMatches, customIds],
+  );
+  return { picked, loading, candidates: all, matches, checked: current ? state.checked : 0, done: job ? current && state.done : true };
 }

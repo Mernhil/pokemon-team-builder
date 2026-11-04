@@ -20,8 +20,8 @@ function load<T>(name: string, files: Record<string, () => Promise<unknown>>): P
   return p as Promise<T>;
 }
 
-export const loadPokedex = (book: string) => load<PokedexData>(`pokedex-${book}`, pokedexFiles);
-export const loadLearnData = (book: string) => load<LearnData>(`${book}-learn`, learnFiles);
+const loadPokedex = (book: string) => load<PokedexData>(`pokedex-${book}`, pokedexFiles);
+const loadLearnData = (book: string) => load<LearnData>(`${book}-learn`, learnFiles);
 
 /** Pokédex text/encounters and learn methods for a book; null while loading. */
 export function usePokedexData(book: string): { dex: PokedexData; learn: LearnData } | null {

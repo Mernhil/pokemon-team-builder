@@ -31,7 +31,7 @@ import type { FormatRules, PokemonSet, Team } from './types';
 
 /** How much each component counts in the total (all in 0–1 before weighting). */
 export const WEIGHTS = { synergy: 3, defense: 3, offense: 2, roles: 2, threats: 3 } as const;
-export type ComponentId = keyof typeof WEIGHTS;
+type ComponentId = keyof typeof WEIGHTS;
 /** A second Mega Stone holder is allowed but worth a little less (only one Mega Evolves per battle). */
 export const SECOND_MEGA_PENALTY = 0.4;
 /** How many of the cheap ranking go through the damage engine. */
@@ -41,7 +41,7 @@ export const TOP_N = 10;
 /** Reasons shown on a card. */
 export const MAX_REASONS = 3;
 /** The threats checked: the ones that beat at least this many of the team's members, at most this many of them. */
-export const MIN_BEATEN = 2;
+const MIN_BEATEN = 2;
 export const MAX_THREATS = 5;
 
 /** What one extra role is worth, 0–1 (summed and capped at 1). */
@@ -66,7 +66,7 @@ const rolesOf = (s: Pick<PokemonSet, 'moves' | 'abilityId'>): Role[] => {
   return [...out];
 };
 
-export interface Reason {
+interface Reason {
   component: ComponentId;
   text: string;
 }
@@ -136,7 +136,7 @@ export function teamCandidates({ dex, format, team, snapshot, includeAll }: Sugg
       notes.push(alt ? `${was} is already on your team (item clause), so ${dex.item(alt)?.name ?? alt} instead.` : `${was} is already on your team (item clause), so no item.`);
     }
     if (hasMega && format.capabilities.mega && dex.megaFor(c.speciesId, set.itemId)) notes.push('Holds a Mega Stone: only one can Mega Evolve per battle.');
-    out.push({ speciesId: c.speciesId, set, build: c.build, notes });
+    out.push({ speciesId: c.speciesId, set, build: c.build === 'default' ? 'default' : 'meta', notes }); // no overrides here: never 'custom'
   }
   return out.sort((a, b) => a.speciesId.localeCompare(b.speciesId));
 }

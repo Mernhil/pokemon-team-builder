@@ -459,7 +459,7 @@ export function buildPlatinum(): { file: AtlasFile; gaps: string } {
           }
         }
         // a story item not handed out by a visible NPC: AddItem in a label no NPC reached
-        if (!loc.npcs.some((n) => n.gives?.length) || true) {
+        {
           for (const g of gainedItems(body)) {
             const id = item(g.c);
             if (loc.items.some((i) => i.item === id && i.how === 'gift')) continue;

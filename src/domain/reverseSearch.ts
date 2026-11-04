@@ -13,14 +13,16 @@ import type { MetaSnapshot } from './meta';
 import { metaSet } from './metaSets';
 import { createSet } from './team';
 import { computeCell, type ThreatCell } from './threats';
-import type { FormatRules, Move, Pokemon, PokemonSet, TypeName } from './types';
+import type { FormatRules, Item, Move, Pokemon, PokemonSet, TypeName } from './types';
 
-export type ConditionKind = 'ohko' | 'survive' | 'resist' | 'outspeed';
+export type ConditionKind = 'ohko' | 'survive' | 'safe' | 'resist' | 'outspeed';
 
 export interface SearchTarget {
   speciesId: string;
   set: PokemonSet;
   megaMode: MegaMode;
+  /** The player changed the set or the form: it is theirs now, and a new meta snapshot must not replace it. */
+  edited?: boolean;
 }
 
 export interface Condition {
@@ -52,15 +54,26 @@ export interface Candidate extends CandidateUsage {
   speciesId: string;
   set: PokemonSet;
   megaMode: MegaMode;
-  /** 'meta': the most-used set; 'default': a computed attacker build (no item). */
-  build: 'meta' | 'default';
+  /** 'meta': the most-used set; 'default': a computed attacker build (no item); 'custom': the player's own build of the species. */
+  build: 'meta' | 'default' | 'custom';
+  /** "Try Mega Stones": the stone (item id) this candidate holds only for the sake of trying the Mega. */
+  withStone?: string;
   /** Set when moves had to be changed so it knows the required ones: what came in and what went out. */
   moveChanges?: { added: string[]; dropped: string[] };
+  /** The build before the required moves went in (what an editor should start from). Present with `moveChanges`. */
+  baseSet?: PokemonSet;
 }
+
+/** One card per candidate: the species, plus the stone for a species also tried with one. */
+export const candidateKey = (c: Pick<Candidate, 'speciesId' | 'withStone'>): string => (c.withStone ? `${c.speciesId}:${c.withStone}` : c.speciesId);
+
+/** The player's own builds, by species id. */
+export type BuildOverrides = Readonly<Record<string, PokemonSet>>;
 
 export const CONDITION_LABEL: Record<ConditionKind, string> = {
   ohko: 'One-shots',
   survive: 'Survives',
+  safe: 'Isn\'t one-shot by',
   resist: 'Resists',
   outspeed: 'Outspeeds',
 };
@@ -78,7 +91,7 @@ const UNRELIABLE_TEXT = /cannot move next turn|faints|loses 50%|charges|hits tur
 const unreliable = (m: Move) => (m.accuracy !== true && m.accuracy < 80) || UNRELIABLE_TEXT.test(m.shortDesc);
 
 /** Four damaging moves for a species, best first, preferring a different type per slot. */
-export function defaultMoves(dex: Dex, species: Pokemon, regulationId: string | undefined, physical: boolean): string[] {
+function defaultMoves(dex: Dex, species: Pokemon, regulationId: string | undefined, physical: boolean): string[] {
   const want = physical ? 'Physical' : 'Special';
   const pool = dex
     .learnset(species.id, regulationId)
@@ -110,29 +123,93 @@ export function defaultSet(dex: Dex, speciesId: string, format: FormatRules): Po
   };
 }
 
+/**
+ * The form a target is calculated in: the Mega when it holds its stone (it Megas as it moves, so
+ * "what beats this" means the Mega), else the base. The user can flip a target to its base form.
+ */
+export function targetMegaMode(dex: Dex, format: FormatRules, set: PokemonSet): MegaMode {
+  return format.capabilities.mega && dex.megaFor(set.speciesId, set.itemId) ? 'mega' : 'base';
+}
+
 /** A target (an opponent) for a species: its meta set when there is one, else the default build. */
 export function targetFor(dex: Dex, format: FormatRules, speciesId: string, snapshot?: MetaSnapshot): SearchTarget {
   const entry = snapshot?.entries.find((e) => e.speciesId === speciesId);
   const m = entry && metaSet(entry, dex, format);
-  if (m) return { speciesId, set: m.set, megaMode: m.megaMode };
-  const set = defaultSet(dex, speciesId, format);
-  return { speciesId, set, megaMode: format.capabilities.mega && dex.megaFor(speciesId, set.itemId) ? 'both' : 'base' };
+  const set = m ? m.set : defaultSet(dex, speciesId, format);
+  return { speciesId, set, megaMode: targetMegaMode(dex, format, set) };
 }
 
-/** Every species the format allows as a candidate, meta-backed ones first (by usage). */
-export function buildCandidates(dex: Dex, format: FormatRules, snapshot?: MetaSnapshot): Candidate[] {
+/**
+ * The conditions with every target the player hasn't touched built again from this snapshot. A target
+ * added before the meta numbers arrived got the generic build (no item, so never its Mega); this swaps it
+ * for the most-used set once they are in. Returns the same array when nothing changes.
+ */
+export function refreshTargets(dex: Dex, format: FormatRules, conditions: Condition[], snapshot?: MetaSnapshot): Condition[] {
+  let changed = false;
+  const next = conditions.map((c) => {
+    if (c.target.edited) return c;
+    const fresh = targetFor(dex, format, c.target.speciesId, snapshot);
+    const same = fresh.megaMode === c.target.megaMode && fresh.set.itemId === c.target.set.itemId && fresh.set.nature === c.target.set.nature && fresh.set.abilityId === c.target.set.abilityId && fresh.set.moves.join() === c.target.set.moves.join();
+    if (same) return c;
+    changed = true;
+    return { ...c, target: fresh };
+  });
+  return changed ? next : conditions;
+}
+
+export interface BuildOptions {
+  /** The player's builds: for these species they replace the meta and the default set. */
+  overrides?: BuildOverrides;
+  /** Also try every Mega-capable species holding a stone it isn't holding already (as a separate "with <Stone>" candidate). */
+  tryStones?: boolean;
+  /** Only these species (the rest are skipped): lets a few overrides be built without the whole list. */
+  only?: ReadonlySet<string>;
+}
+
+/** The Mega Stones of a species this format allows (a species with two Megas has two). */
+function stonesOf(dex: Dex, regulationId: string | undefined): Map<string, Item[]> {
+  const out = new Map<string, Item[]>();
+  for (const item of dex.items(regulationId)) {
+    for (const [speciesId, megaId] of Object.entries(item.megaStone ?? {})) {
+      if (!dex.species(megaId)) continue;
+      out.set(speciesId, [...(out.get(speciesId) ?? []), item]);
+    }
+  }
+  return out;
+}
+
+/**
+ * Every species the format allows as a candidate, meta-backed ones first (by usage). A player's build
+ * of a species beats the meta set and the default; one holding its Mega Stone is tried as the Mega and
+ * as the base form (`both`). With `tryStones` each species not holding a stone of its own also comes
+ * once more holding it, as the Mega only (its base form is the plain candidate).
+ */
+export function buildCandidates(dex: Dex, format: FormatRules, snapshot?: MetaSnapshot, options: BuildOptions = {}): Candidate[] {
+  const { overrides, tryStones, only } = options;
+  const stones = tryStones && format.capabilities.mega ? stonesOf(dex, format.regulationId) : undefined;
   const out: Candidate[] = [];
   for (const species of dex.selectableSpecies(format.regulationId)) {
+    if (only && !only.has(species.id)) continue;
     const entry = snapshot?.entries.find((e) => e.speciesId === species.id);
     const m = entry && metaSet(entry, dex, format);
-    if (m) {
+    const own = overrides?.[species.id];
+    let base: Candidate;
+    if (own) {
+      const usage: CandidateUsage = m ?? {};
+      base = { speciesId: species.id, set: own, megaMode: format.capabilities.mega && dex.megaFor(species.id, own.itemId) ? 'both' : 'base', build: 'custom', usagePct: usage.usagePct, usageRank: usage.usageRank };
+    } else if (m) {
       const usage: CandidateUsage = m;
-      out.push({ speciesId: species.id, set: m.set, megaMode: m.megaMode, build: 'meta', usagePct: usage.usagePct, usageRank: usage.usageRank });
-      continue;
+      base = { speciesId: species.id, set: m.set, megaMode: dex.megaFor(species.id, m.set.itemId) ? 'both' : 'base', build: 'meta', usagePct: usage.usagePct, usageRank: usage.usageRank };
+    } else {
+      const set = defaultSet(dex, species.id, format);
+      if (!set.moves[0]) continue; // nothing worth attacking with: not a sensible answer to "one-shots"
+      base = { speciesId: species.id, set, megaMode: 'base', build: 'default' };
     }
-    const set = defaultSet(dex, species.id, format);
-    if (!set.moves[0]) continue; // nothing worth attacking with: not a sensible answer to "one-shots"
-    out.push({ speciesId: species.id, set, megaMode: 'base', build: 'default' });
+    out.push(base);
+    for (const stone of stones?.get(species.id) ?? []) {
+      if (stone.id === base.set.itemId) continue;
+      out.push({ ...base, set: { ...base.set, itemId: stone.id }, megaMode: 'mega', withStone: stone.id });
+    }
   }
   return out;
 }
@@ -172,14 +249,14 @@ export function withRequiredMoves(dex: Dex, cand: Candidate, required: string[],
   const kept = own.filter((id) => !drop.has(id));
   const moves = [...kept, ...missing, '', '', '', ''].slice(0, 4) as PokemonSet['moves'];
   const name = (id: string) => dex.move(id)?.name ?? id;
-  return { ...cand, set: { ...cand.set, moves }, moveChanges: { added: missing.map(name), dropped: [...drop].map(name) } };
+  return { ...cand, set: { ...cand.set, moves }, baseSet: cand.set, moveChanges: { added: missing.map(name), dropped: [...drop].map(name) } };
 }
 
 // ---------------------------------------------------------------------------
 // Checking conditions
 // ---------------------------------------------------------------------------
 
-export interface ConditionResult {
+interface ConditionResult {
   conditionId: string;
   pass: boolean;
   /** One line of evidence: "Close Combat 112–132%", "takes at most 38% from Flare Blitz". */
@@ -188,6 +265,8 @@ export interface ConditionResult {
 
 export interface Match {
   candidate: Candidate;
+  /** A Mega Stone holder: the form(s) that meet every condition ('either' when both do). Absent for the others. */
+  form?: 'mega' | 'base' | 'either';
   results: ConditionResult[];
   /** Sum of the margins (bigger = more comfortable); the tie-break after usage. */
   score: number;
@@ -206,11 +285,12 @@ export function attackingTypes(dex: Dex, t: SearchTarget): TypeName[] {
 }
 
 /** Does the candidate resist (take ≤ ½ from) every type the target attacks with? */
-export function resistCheck(dex: Dex, cand: Candidate, target: SearchTarget): { pass: boolean; detail: string } {
+export function resistCheck(dex: Dex, cand: Candidate, target: SearchTarget, only?: 'base' | 'mega'): { pass: boolean; detail: string } {
   const attacks = attackingTypes(dex, target);
   if (!attacks.length) return { pass: false, detail: 'target has no attacking types' };
-  const forms = [{ form: dex.species(cand.speciesId), mega: false }];
-  if (cand.megaMode !== 'base') {
+  const forms: { form: Pokemon | undefined; mega: boolean }[] = [];
+  if (only !== 'mega') forms.push({ form: dex.species(cand.speciesId), mega: false });
+  if (only === 'mega' || (!only && cand.megaMode !== 'base')) {
     const mega = dex.megaFor(cand.speciesId, cand.set.itemId);
     if (mega) forms.push({ form: mega, mega: true });
   }
@@ -242,6 +322,12 @@ function checkCell(cond: Condition, cell: ThreatCell): { pass: boolean; detail: 
       const dmg = t ? t.percent[1] : 0;
       return { pass, detail: t ? `takes up to ${Math.round(dmg * hits)}% from ${t.move}${hits === 2 ? ' ×2' : ''}` : 'takes nothing', margin: 100 - dmg * hits };
     }
+    case 'safe': {
+      // Whatever its best roll of its best move does stays under 100%: no move of theirs can one-shot it.
+      const t = cell.theirs;
+      const worst = t ? t.percent[1] : 0;
+      return { pass: worst < 100, detail: t ? `worst hit ${t.move} ${Math.round(worst)}%` : 'takes nothing', margin: 100 - worst };
+    }
     case 'outspeed':
       return { pass: cell.first === 'me', detail: `${cell.mySpeed} vs ${cell.theirSpeed}`, margin: cell.mySpeed - cell.theirSpeed };
     default:
@@ -249,21 +335,18 @@ function checkCell(cond: Condition, cell: ThreatCell): { pass: boolean; detail: 
   }
 }
 
-/**
- * All conditions for one candidate, or undefined as soon as one fails (a search only keeps full
- * matches). Calc cells are computed once per target and shared by the conditions on that target.
- */
-export function evaluateCandidate(dex: Dex, cand: Candidate, conditions: Condition[], field: FieldConditions): Match | undefined {
+/** All conditions for one candidate in one form (undefined: not a Mega Stone holder), or undefined as soon as one fails. */
+function evaluateForm(dex: Dex, cand: Candidate, conditions: Condition[], field: FieldConditions, form: 'base' | 'mega' | undefined): Match | undefined {
   const cells = new Map<string, ThreatCell>();
   const results: ConditionResult[] = [];
   let score = 0;
   for (const cond of conditions) {
     let r: { pass: boolean; detail: string; margin?: number };
-    if (cond.kind === 'resist') r = resistCheck(dex, cand, cond.target);
+    if (cond.kind === 'resist') r = resistCheck(dex, cand, cond.target, form);
     else {
       let cell = cells.get(cond.target.set.uid);
       if (!cell) {
-        cell = computeCell(dex, cand.set, cond.target, field);
+        cell = computeCell(dex, cand.set, cond.target, field, form);
         cells.set(cond.target.set.uid, cell);
       }
       r = checkCell(cond, cell);
@@ -275,14 +358,33 @@ export function evaluateCandidate(dex: Dex, cand: Candidate, conditions: Conditi
   return { candidate: cand, results, score };
 }
 
+/**
+ * All conditions for one candidate, or undefined when none of its forms meets them (a search only
+ * keeps full matches). A Mega Stone holder is tried as its Mega and as itself, each form on its own
+ * (one Pokémon is one form at a time); the match says which form(s) work. Calc cells are computed
+ * once per target and shared by the conditions on that target.
+ */
+export function evaluateCandidate(dex: Dex, cand: Candidate, conditions: Condition[], field: FieldConditions): Match | undefined {
+  if (cand.megaMode === 'base' || !dex.megaFor(cand.speciesId, cand.set.itemId)) return evaluateForm(dex, cand, conditions, field, undefined);
+  const asMega = evaluateForm(dex, cand, conditions, field, 'mega');
+  const asBase = cand.megaMode === 'both' ? evaluateForm(dex, cand, conditions, field, 'base') : undefined;
+  if (asMega && asBase) return { ...(asMega.score <= asBase.score ? asMega : asBase), form: 'either' };
+  if (asMega) return { ...asMega, form: 'mega' };
+  if (asBase) return { ...asBase, form: 'base' };
+  return undefined;
+}
+
 /** Meta-backed answers first (by usage), then default builds; ties by comfort, then name. */
 export function rankMatches(matches: Match[]): Match[] {
+  // A custom build ranks with its species' usage, so editing a card doesn't move it up or down.
+  const used = (c: Candidate) => c.build === 'meta' || c.usagePct !== undefined || c.usageRank !== undefined;
   return [...matches].sort(
     (a, b) =>
-      Number(b.candidate.build === 'meta') - Number(a.candidate.build === 'meta') ||
+      Number(used(b.candidate)) - Number(used(a.candidate)) ||
       byCandidateUsage(a.candidate, b.candidate) ||
       b.score - a.score ||
-      a.candidate.speciesId.localeCompare(b.candidate.speciesId),
+      a.candidate.speciesId.localeCompare(b.candidate.speciesId) ||
+      (a.candidate.withStone ?? '').localeCompare(b.candidate.withStone ?? ''),
   );
 }
 
@@ -294,6 +396,8 @@ export function describeCondition(dex: Dex, c: Condition): string {
       return `${c.allowPossible ? 'Can one-shot' : 'One-shots'} ${name}`;
     case 'survive':
       return `Survives ${(c.hits ?? 1) === 2 ? 'two hits from' : 'a hit from'} ${name}`;
+    case 'safe':
+      return `Takes under 100% from every move of ${name}`;
     case 'resist':
       return `Resists ${name}'s attacking types`;
     case 'outspeed':

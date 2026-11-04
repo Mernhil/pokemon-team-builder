@@ -11,6 +11,7 @@ import { usePokedexStore } from '@/store/pokedexStore';
 import { Panel } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { RegionMaps } from './RegionMap';
+import { scrollBehavior } from '../ui/motion';
 
 interface Props {
   species: Pokemon;
@@ -52,7 +53,7 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
   const selected = pickedLoc.scope === scope ? pickedLoc.loc : '';
   const setSelected = (loc: string) => setPickedLoc({ scope, loc });
   useEffect(() => {
-    if (selected) document.getElementById(`area-loc-${selected}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (selected) document.getElementById(`area-loc-${selected}`)?.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() });
   }, [selected]);
 
   return (
@@ -121,7 +122,7 @@ export function AreaView({ species, data, book, encounters, dex }: Props) {
                           <td className="px-1 py-1">
                             <span className="flex flex-wrap gap-1">
                               {e.conditions.map((c) => (
-                                <span key={c} className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted">
+                                <span key={c} className="rounded bg-surface-2 px-1.5 py-0.5 text-3xs text-muted">
                                   {c}
                                 </span>
                               ))}

@@ -4,8 +4,8 @@ The app is also shipped as a PWA (Progressive Web App): open it once in the phon
 to the home screen, and from then on it behaves like a native app — own icon, full screen, works
 offline — without the App Store or an Apple developer account.
 
-- `vite.config.ts` → `VitePWA(...)`: web manifest, and a service worker that precaches the whole
-  app including every sprite atlas (~17 MB, downloaded once, then only what changed).
+- `vite.config.ts` → `VitePWA(...)` and `sw/sw.ts` (rules in `src/domain/swGuard.ts`, docs/SYNC.md → *A blank screen*): web manifest, and a service worker that precaches the whole
+  app including every sprite atlas and every Atlas file (about 44 MB in all, of which the sprites are 16 MB; downloaded once, then only what changed). The limit is checked by `npm run size` (`scripts/check-bundle.mjs`).
 - `src/pwa.ts`: registers the service worker and checks for a new deploy on launch, every 30
   minutes, and whenever the app returns to the foreground. When one is found the page reloads
   itself onto the new version; teams are in localStorage, so nothing is lost.
@@ -65,7 +65,7 @@ Workers & Pages → Create application → Import a repository → pick this rep
 
 - Production branch: the repo's default branch
 - Build command: `npm run build`
-- Deploy command: `npx wrangler deploy`
+- Deploy command: `npm run deploy` (applies the database migrations, then `wrangler deploy`; docs/SYNC.md → *Deploy command*, which also lists the API token permission it needs). Before cloud sync is set up it can stay `npx wrangler deploy`.
 - Environment variable `NODE_VERSION` = `22`
 
 Every push to the production branch redeploys `https://pokemon-team-builder.<account>.workers.dev`
@@ -81,7 +81,7 @@ no-sniff; if the app ever needs a new outside host, add it to that file's `conne
 3. Zero Trust → Access → Applications → the application just created → Policies: Action
    **Allow**, Include → **Emails** → your address and each person you invite. Login method:
    **One-time PIN** (a code sent by e-mail; no accounts to create).
-4. Session duration: a long one (e.g. 1 month) so the phone app doesn't ask to log in often.
+4. Session duration: **1 month** (Zero Trust → Access → Applications → the application → Edit → Session duration; also check Zero Trust → Settings → Authentication → Global session timeout). A long one so the phone app doesn't ask to log in often.
 
 To grant or revoke someone, add/remove their e-mail in the policy. Check it by opening the URL in a
 private window: it must show the Cloudflare login page, not the app.
@@ -89,10 +89,16 @@ private window: it must show the Cloudflare login page, not the app.
 ### How login interacts with the installed app
 
 - The first launch shows the Cloudflare login page (e-mail → PIN), then the app.
-- Once cached, the app opens offline without logging in (it's already on the phone).
-- Update checks run with the login cookie. If the session has expired the check quietly fails
-  and the app keeps the version it has; the next time the login page shows up and you log in,
-  it updates.
+- Once cached, the app opens offline and signed out: the service worker serves the cached app without asking the network, so an expired Access session never stops it from opening.
+- Update checks fetch the worker script. If the session has expired that is a redirect to the login; the check quietly fails and the app keeps the version it has. After you sign in again, it updates.
+- **iOS keeps the Home Screen app's cookies apart from Safari's.** A Cloudflare login done in Safari, or in the sheet iOS opens for another site, does not sign the app in, and that sheet can end on a white page. So the installed app does not sign in to Access again: it is **linked with a pairing code** once (Settings → Sync → *Link this phone with a pairing code*; make the code in Safari or on a computer under Settings → Sync → *Make a pairing code*) and syncs with a device token through `/api/device/*`, which Access lets through. See docs/SYNC.md → *The installed iPhone app* for the steps, what it can't fix and the manual test.
+- When the Access session has ended and the phone isn't linked, the app (with cloud sync on) shows a banner, *Session expired: link this phone with a code, or sign in from Safari.*, with **Open Settings**. It never navigates the app to the login by itself. (An ordinary browser tab still gets *Sign in again*.)
+- Never delete and re-add the home-screen app for this; link it with a code.
+
+### Dashboard changes you make by hand for the phone app
+
+1. Access application → **Session duration: 1 month** (the longest; also check *Global session timeout*). Step 4 above.
+2. The **Bypass** application for path `/api/device/*` (docs/SYNC.md → *One-time setup for linking*) must exist: it is what lets a linked phone sync without a cookie.
 
 ## Installing on iPhone
 
@@ -104,5 +110,5 @@ Android (Chrome): menu ⋮ → **Install app** / **Add to Home screen**.
 
 ## Updates
 
-Nothing to do on the phone: push to the default branch, wait for the Cloudflare deploy (~1–2 minutes), and the
+Nothing to do on the phone: push to the default branch, wait for the Cloudflare deploy (~1–2 minutes; it applies new database migrations first), and the
 next time the app is opened or brought back to the foreground it reloads onto the new version.

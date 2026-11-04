@@ -45,7 +45,7 @@ export interface MapView {
   y: number;
 }
 
-export const MIN_ZOOM = 1;
+const MIN_ZOOM = 1;
 export const MAX_ZOOM = 6;
 export const IDENTITY_VIEW: MapView = { scale: 1, x: 0, y: 0 };
 

@@ -181,3 +181,21 @@ test('Aegislash: Advanced details offers a Form choice (Auto / Base / Blade)', a
   await form.getByRole('radio', { name: 'Blade' }).click();
   await expect(form.getByRole('radio', { name: 'Blade' })).toBeChecked();
 });
+
+test('A move\'s reach: one small button on a damaging move lists what it one-shots and two-shots', async ({ page }) => {
+  await openApp(page);
+  await importTeam(page, SAMPLE_TEAM);
+  // Only damaging moves get the button, and it is a 44pt target on a phone.
+  const button = page.getByRole('button', { name: 'What Earthquake knocks out' });
+  await expect(button).toBeVisible();
+  if (await page.evaluate(() => matchMedia('(pointer: coarse)').matches)) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await button.click();
+  const dialog = page.getByRole('dialog', { name: /Earthquake from Garchomp/ });
+  await expect(dialog.getByRole('region', { name: 'One-shots', exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(dialog.getByRole('region', { name: 'Two-shots', exact: true })).toBeVisible();
+  // Each group lists Pokémon with the damage they take.
+  await expect(dialog.getByRole('listitem').first()).toContainText('%');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});

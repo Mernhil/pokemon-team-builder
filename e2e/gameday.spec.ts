@@ -24,6 +24,11 @@ test('Game day: tap their six, read the plan, log a win, and find it in the matc
   await tapSix(page, 6);
   await expect(page.getByRole('heading', { name: 'Their six (6/6)' })).toBeVisible();
 
+  // The wide matchups table scrolls inside its own region and never widens the page (a phone would zoom out to fit it).
+  const width = page.viewportSize()!.width;
+  await expect(page.getByRole('region', { name: /Matchups table/ })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+
   // The plan, the matchups and the speed order.
   await expect(page.getByRole('heading', { name: 'The plan' })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Plan 1 Pokémon' })).toBeVisible();

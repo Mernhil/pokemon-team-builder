@@ -5,7 +5,7 @@
 import { getFormat } from './formats';
 import { STAT_IDS, STAT_LABELS, type PokemonSet, type StatTable, type Team } from './types';
 
-export type SetField = 'item' | 'ability' | 'nature' | 'tera' | 'moves' | 'spread' | 'ivs' | 'level';
+type SetField = 'item' | 'ability' | 'nature' | 'tera' | 'moves' | 'spread' | 'ivs' | 'level';
 
 export interface SetChange {
   field: SetField;

@@ -114,11 +114,28 @@ test('Champions Pokédex: Mega Evolutions filter, a Pokémon\'s Megas side by si
 
   await page.getByRole('button', { name: 'Mega Evolutions' }).click();
   expect(await list.getByRole('option').count()).toBe(82); // Reg M-C is live
-  const texts = await list.getByRole('option').allInnerTexts();
-  const at = (name: string) => texts.findIndex((t) => t.includes(`${name}\n`));
+  // textContent, not innerText: rows far below the fold are not rendered (content-visibility) and have no innerText.
+  const texts = await list.getByRole('option').allTextContents();
+  // The row starts with the dex number, then the name (the first match is the base Mega, which is listed before its -Z/-X/-Y siblings).
+  const at = (name: string) => texts.findIndex((t) => t.replace(/^\d+/, '').startsWith(name));
   expect(at('Charizard-Mega-Y')).toBe(at('Charizard-Mega-X') + 1);
   expect(at('Garchomp-Mega-Z')).toBe(at('Garchomp-Mega') + 1);
   await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toContainText('Charizardite X');
+
+  // A second, quieter filter: Megas that can learn a move of a type. It stays folded until needed.
+  await page.getByText('Learns a move of a type').click();
+  const moveTypes = page.getByRole('group', { name: 'Filter by move type' });
+  await moveTypes.getByRole('button', { name: 'Fire moves' }).click();
+  await expect(page.getByText('Learns a move of a type: Fire')).toBeVisible();
+  await expect.poll(() => list.getByRole('option').count()).toBeLessThan(82);
+  expect(await list.getByRole('option').count()).toBeGreaterThan(0);
+  await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toHaveCount(1); // Flare Blitz
+  // It combines with the Pokémon's own type, and clears with "All types".
+  await page.getByRole('group', { name: 'Filter by type' }).getByRole('button', { name: 'Water Pokémon' }).click();
+  await expect(list.getByRole('option').filter({ hasText: 'Charizard-Mega-X' })).toHaveCount(0);
+  await page.getByRole('group', { name: 'Filter by type' }).getByRole('button', { name: 'All types' }).click();
+  await moveTypes.getByRole('button', { name: 'All types' }).click();
+  await expect.poll(() => list.getByRole('option').count()).toBe(82);
 
   // An older regulation has fewer Megas, and the newest additions are gone.
   const older = (await regulation.locator('option').allInnerTexts()).find((t) => t.includes('M-A'))!;
@@ -139,3 +156,14 @@ test('Champions Pokédex: Mega Evolutions filter, a Pokémon\'s Megas side by si
   await page.getByRole('button', { name: 'Pokémon', exact: true }).click();
   await expect(list.getByRole('option').filter({ hasText: '-Mega' })).toHaveCount(0);
 });
+
+// Nothing on a main screen may scroll the whole page sideways (wide tables scroll inside their own region).
+for (const hash of ['#builder', '#calc', '#analyse/overview', '#analyse/speed', '#analyse/threats', '#analyse/ohko/by', '#analyse/compare', '#dex', '#atlas', '#matches', '#gameday', '#meta', '#reverse', '#regdiff']) {
+  test(`${hash} does not scroll sideways`, async ({ page }) => {
+    await openApp(page, hash);
+    await page.waitForTimeout(500);
+    // Against the device's width, not window.innerWidth: a phone widens its layout viewport to fit an overflowing page, which hides the overflow.
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
+}

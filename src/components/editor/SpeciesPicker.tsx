@@ -7,7 +7,7 @@ import { usePickerPrefs, usePrefsStore } from '@/store/prefsStore';
 import { Combobox, type ComboGroup, type ComboOption } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
-import { TypeBadge } from '../ui/primitives';
+import { Checkbox, TypeBadge } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
 interface Props {
@@ -58,9 +58,9 @@ export function SpeciesPicker({ dex, format, value, onChange, placeholder, class
           render: (
             <span className="flex items-center gap-2">
               <Sprite speciesId={s.id} name={s.name} types={s.types} set={format.spriteSet} size={32} />
-              <span className="w-8 font-mono text-[10px] text-muted">#{s.num}</span>
+              <span className="w-8 font-mono text-3xs text-muted">#{s.num}</span>
               <span className="min-w-0 flex-1 truncate">{s.name}</span>
-              {mega && s.megaForms.length > 0 && <span className="text-[10px] font-bold text-accent">MEGA</span>}
+              {mega && s.megaForms.length > 0 && <span className="text-3xs font-bold text-accent">MEGA</span>}
               <GenBadge gen={s.gen} size="xs" />
               <span className="hidden gap-0.5 sm:flex">
                 {s.types.map((t) => (
@@ -78,8 +78,8 @@ export function SpeciesPicker({ dex, format, value, onChange, placeholder, class
 
   const toolbar =
     unavailable.length > 0 ? (
-      <label className="flex items-center gap-2 text-xs text-muted">
-        <input type="checkbox" checked={showUnavailable} onChange={(e) => setShowUnavailableSpecies(e.target.checked)} />
+      <label className="flex items-center gap-2 text-xs text-muted pointer-coarse:min-h-11">
+        <Checkbox checked={showUnavailable} onChange={(e) => setShowUnavailableSpecies(e.target.checked)} />
         Show {unavailable.length} Pokémon not in {format.shortName} (greyed out)
       </label>
     ) : undefined;
@@ -93,7 +93,7 @@ export function SpeciesPicker({ dex, format, value, onChange, placeholder, class
             onClick={() => setGen(null)}
             aria-pressed={gen === null}
             className={cn(
-              'h-5 rounded px-1.5 text-[10px] font-semibold',
+              'h-5 rounded px-1.5 text-3xs font-semibold',
               gen === null ? 'bg-fg text-bg' : 'text-muted hover:bg-surface-2',
             )}
           >

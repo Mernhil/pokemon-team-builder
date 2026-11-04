@@ -25,3 +25,20 @@ playwright-report
 *.sln
 *.sw?
 .cache/
+
+# Secrets and local Cloudflare/Tauri state: never commit these
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+.wrangler
+*.pem
+*.key
+!src-tauri/updater.key.pub
+*.p12
+*.jks
+*.keystore
+backup.sql
+backup-*.sql
+backup-*.sql.age

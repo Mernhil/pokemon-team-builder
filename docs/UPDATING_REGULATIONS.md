@@ -44,6 +44,7 @@ Compare the research with `npm run reg:status`.
 | Next set announced, details not published yet | Add it to `schedule.json` → `upcoming` with name, dates, one-line summary and sources. |
 | Details published (before or after the start date) | Create `src/data/regulations/<id>.json` and remove the entry from `upcoming`. |
 | An existing set changed (ban, errata, extension) | Edit that file and bump its `updatedAt`. |
+| A new ranked season starts, or its dates changed | Append or fix it in `schedule.json` → `seasons` and in the generated `regulations.json` (`id`, `regulation`, UTC `start`/`end`). Seasons run 02:00 UTC to 01:59 UTC four weeks later; the ladder resets at `end`. Cross-check two sites, because some pages show the previous season. |
 
 ## 3. Write the regulation file
 

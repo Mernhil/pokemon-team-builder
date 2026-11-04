@@ -3,8 +3,9 @@ import { Map as MapIcon, Maximize2, Minus, Plus } from 'lucide-react';
 import type { Encounter } from '@/domain/pokedex';
 import { IDENTITY_VIEW, MAX_ZOOM, centerOn, clampView, placeCenter, resolveLocations, zoomAt, type MapView, type Rect } from '@/domain/regionMaps';
 import { SchematicBase } from './SchematicMap';
-import { Button, Notice } from '../ui/primitives';
+import { Button, Notice, Skeleton } from '../ui/primitives';
 import { cn } from '../ui/styles';
+import { asset, loadMaps } from './mapAssets';
 
 export interface RegionMapData {
   id: string;
@@ -28,10 +29,6 @@ export interface MapsFile {
   games: Record<string, string[]>;
 }
 
-let mapsPromise: Promise<MapsFile> | undefined;
-export const loadMaps = () =>
-  (mapsPromise ??= import('@/data/generated/maps.json').then((m) => m.default as unknown as MapsFile));
-export const asset = (path: string) => `${import.meta.env.BASE_URL ?? './'}${path}`.replace(/^\/\//, '/');
 
 const SOURCE_LABEL: Record<string, string> = {
   'pret/pokered': 'Red / Blue town map',
@@ -74,7 +71,7 @@ export function RegionMaps({ game, encounters, selected, onSelect }: { game: str
   const current = holder ?? maps.find((m) => m.id === picked) ?? resolved.best;
 
   if (failed) return <Notice icon={MapIcon} tone="accent">The region maps couldn’t load. The locations are listed below.</Notice>;
-  if (!file) return <div className="aspect-[3/2] w-full animate-pulse rounded-xl bg-surface-2" />;
+  if (!file) return <Skeleton className="aspect-[3/2] w-full" />;
   if (!current) return null;
   const offMap = resolved.offMap.map((l) => names.get(l) ?? l);
 

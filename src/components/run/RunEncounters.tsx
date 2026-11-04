@@ -5,7 +5,7 @@ import { ENCOUNTER_LABEL, areaStatus, encounterCheck, logEncounter, removeEncoun
 import { useRunStore } from '@/store/runStore';
 import { toast } from '@/store/toastStore';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, Input, Panel, Select } from '../ui/primitives';
+import { Button, Checkbox, Chip, Input, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useAtlasCtx } from '../atlas/context';
 
@@ -95,7 +95,7 @@ function PlaceEncounters({ run, loc, rows, onLog }: { run: Run; loc: string; row
     <div className="space-y-2 bg-surface-2/50 px-3 pb-3">
       {run.rules.nuzlocke && run.rules.shiny && rows.length > 0 && (
         <label className="flex min-h-8 items-center gap-2 text-sm pointer-coarse:min-h-11">
-          <input type="checkbox" checked={shiny} onChange={(e) => setShiny(e.target.checked)} className="size-4 accent-[var(--color-accent)]" />
+          <Checkbox checked={shiny} onChange={(e) => setShiny(e.target.checked)} />
           It was shiny (the shiny clause allows it even if the area is used)
         </label>
       )}

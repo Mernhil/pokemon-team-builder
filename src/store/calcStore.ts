@@ -34,7 +34,7 @@ interface CalcState {
  * v3: the "Mega Evolved" toggle (cond.mega: boolean) became a Base/Mega/Both control
  * (cond.megaMode: 'base' | 'mega' | 'both').
  */
-export function migrateCalcState(persisted: unknown, version: number): CalcState {
+function migrateCalcState(persisted: unknown, version: number): CalcState {
   const p = (persisted ?? {}) as Partial<CalcState>;
   if (version < 2) {
     for (const k of ['attacker', 'defender'] as const) {

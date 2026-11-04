@@ -6,7 +6,7 @@ export type Boosts = Record<BoostStat, number>;
 export type Weather = '' | 'Sun' | 'Rain' | 'Sand' | 'Snow';
 export type Terrain = '' | 'Electric' | 'Grassy' | 'Psychic' | 'Misty';
 export type Status = '' | 'brn' | 'par' | 'psn' | 'tox' | 'slp' | 'frz';
-export type GameType = 'Doubles' | 'Singles';
+type GameType = 'Doubles' | 'Singles';
 /** Which forme(s) to use in battle when a Mega Stone is held. */
 export type MegaMode = 'base' | 'mega' | 'both';
 export type StatFormChoice = 'auto' | 'base' | 'alt';
