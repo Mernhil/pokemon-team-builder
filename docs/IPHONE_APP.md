@@ -89,12 +89,16 @@ private window: it must show the Cloudflare login page, not the app.
 ### How login interacts with the installed app
 
 - The first launch shows the Cloudflare login page (e-mail → PIN), then the app.
-- Once cached, the app opens offline without logging in (it's already on the phone).
-- Update checks run with the login cookie. If the session has expired the check quietly fails
-  and the app keeps the version it has; after you sign in again, it updates.
-- When the session expires, the app (with cloud sync on) shows a banner, *Your sign-in has expired. Tap Sign in again.*
-  **Sign in again** shows the Cloudflare login inside the app and returns to it. Never delete and re-add
-  the home-screen app for this (docs/SYNC.md → *Sign-in expired*).
+- Once cached, the app opens offline and signed out: the service worker serves the cached app without asking the network, so an expired Access session never stops it from opening.
+- Update checks fetch the worker script. If the session has expired that is a redirect to the login; the check quietly fails and the app keeps the version it has. After you sign in again, it updates.
+- **iOS keeps the Home Screen app's cookies apart from Safari's.** A Cloudflare login done in Safari, or in the sheet iOS opens for another site, does not sign the app in, and that sheet can end on a white page. So the installed app does not sign in to Access again: it is **linked with a pairing code** once (Settings → Sync → *Link this phone with a pairing code*; make the code in Safari or on a computer under Settings → Sync → *Make a pairing code*) and syncs with a device token through `/api/device/*`, which Access lets through. See docs/SYNC.md → *The installed iPhone app* for the steps, what it can't fix and the manual test.
+- When the Access session has ended and the phone isn't linked, the app (with cloud sync on) shows a banner, *Session expired: link this phone with a code, or sign in from Safari.*, with **Open Settings**. It never navigates the app to the login by itself. (An ordinary browser tab still gets *Sign in again*.)
+- Never delete and re-add the home-screen app for this; link it with a code.
+
+### Dashboard changes you make by hand for the phone app
+
+1. Access application → **Session duration: 1 month** (the longest; also check *Global session timeout*). Step 4 above.
+2. The **Bypass** application for path `/api/device/*` (docs/SYNC.md → *One-time setup for linking*) must exist: it is what lets a linked phone sync without a cookie.
 
 ## Installing on iPhone
 

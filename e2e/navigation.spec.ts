@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
+import { destinationFor, parseChangelog } from '../src/domain/changelog';
 import { SAMPLE_TEAM, expectNoA11yViolations, importTeam, openApp, setTheme } from './helpers';
 
 const isPhone = (page: import('@playwright/test').Page) => (page.viewportSize()?.width ?? 1280) < 640;
@@ -159,16 +160,19 @@ test.describe("What's new", () => {
   const seen = (version: string) => ({ cookies: [], origins: [{ origin: 'http://localhost:4173', localStorage: [{ name: 'ptb:prefs:v1', value: JSON.stringify({ state: { lastSeenVersion: version }, version: 1 }) }] }] });
 
   test.describe('after an update', () => {
-    // Two releases behind the newest, read from the changelog (a fixed version falls out of the sheet's window as releases pile up).
-    const versions = [...readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8').matchAll(/^## (\d+\.\d+\.\d+)/gm)].map((m) => m[1]);
-    test.use({ storageState: seen(versions[2]) });
+    // Behind the newest by at least two releases, read from the changelog (a fixed version falls out of the sheet's window as releases
+    // pile up), and far enough back that the sheet includes a release with a bold title that names a screen (that is what gets a Try it link).
+    const releases = parseChangelog(readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'));
+    const versions = releases.map((r) => r.version);
+    const firstWithTryIt = releases.findIndex((r) => r.sections.some((s) => s.items.some((i) => destinationFor(i.title))));
+    test.use({ storageState: seen(versions[Math.max(2, firstWithTryIt + 1)]) });
     test('lists what came since, offers Try it, and is not shown again once dismissed', async ({ page }) => {
       await openApp(page);
       const sheet = page.getByRole('dialog', { name: 'What’s new' });
       await expect(sheet).toBeVisible();
       await expect(sheet.getByRole('region', { name: `Version ${versions[0]}` })).toBeVisible();
       await expect(sheet.getByRole('region', { name: `Version ${versions[1]}` })).toBeVisible();
-      await expect(sheet.getByRole('region', { name: `Version ${versions[2]}` })).toHaveCount(0);
+      await expect(sheet.getByRole('region', { name: `Version ${versions[Math.max(2, firstWithTryIt + 1)]}` })).toHaveCount(0);
       const tryIt = sheet.getByRole('link', { name: /^Try it: / }).first();
       const href = (await tryIt.getAttribute('href')) ?? '';
       expect(href).toMatch(/^#/);

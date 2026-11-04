@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { isDesktopApp, useDeviceStore } from '@/sync/deviceStore';
+import { isDesktopApp, isStandalone, useDeviceStore } from '@/sync/deviceStore';
 import { useAccountStore } from '@/sync/accountStore';
 import { ago } from '@/domain/sharing';
 import { healthLine, type HealthResponse } from '@/domain/syncHealth';
@@ -10,7 +10,7 @@ import { syncAvailable, useSyncStore } from '@/sync/syncStore';
 import { syncNow } from '@/sync/runner';
 import { useNow } from '@/sync/useNow';
 import { toast } from '@/store/toastStore';
-import { LinkDesktopFromHere, LinkThisDesktop } from './LinkDevices';
+import { LinkDesktopFromHere, LinkThisDesktop, LinkThisPhone } from './LinkDevices';
 import SharingSettings from './SharingSettings';
 import { Button, Checkbox, Input, Label } from '../ui/primitives';
 
@@ -42,8 +42,10 @@ export default function SyncSettings() {
   const paired = useDeviceStore((d) => Boolean(d.token));
   const loggedIn = useAccountStore((a) => Boolean(a.token));
   const linked = paired || loggedIn;
+  const phoneLinked = paired && !desktop;
+  const standalone = isStandalone();
   const hasAccount = useAccountStore((a) => !!a.user || a.availability === 'on');
-  const health = useServerHealth(s.enabled && !desktop && syncAvailable(), s.status === 'syncing');
+  const health = useServerHealth(s.enabled && !desktop && !phoneLinked && syncAvailable(), s.status === 'syncing');
   const known = Object.keys(s.known).length;
   const now = useNow(30_000);
 
@@ -95,6 +97,7 @@ export default function SyncSettings() {
       )}
 
       {desktop && paired && !loggedIn && <LinkThisDesktop />}
+      {!desktop && !hasAccount && <LinkThisPhone expired={s.enabled && s.lastErrorKind === 'signin'} />}
 
       {s.enabled && (
         <div className="space-y-3">
@@ -115,11 +118,13 @@ export default function SyncSettings() {
           {s.lastError && (
             <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-bad/40 bg-bad/8 p-2 text-bad">
               <span className="min-w-0 flex-1">{s.lastError}</span>
-              {s.lastErrorKind === 'signin' && !desktop && !hasAccount && (
+              {/* The installed app never navigates to the Access login (iOS: separate cookies, a white page): it links with a code, below. */}
+              {s.lastErrorKind === 'signin' && !desktop && !hasAccount && !phoneLinked && !standalone && (
                 <Button size="sm" variant="primary" onClick={signInAgain}>
                   Sign in again
                 </Button>
               )}
+              {s.lastErrorKind === 'signin' && !desktop && !hasAccount && (phoneLinked || standalone) && <span className="text-xs">Link this phone with a code, above.</span>}
               {s.lastErrorKind === 'signin' && (desktop || hasAccount) && <span className="text-xs">Log in again under Account, above.</span>}
             </div>
           )}
@@ -158,7 +163,7 @@ export default function SyncSettings() {
               Copy diagnostics
             </Button>
           </details>
-          {!desktop && <LinkDesktopFromHere />}
+          {!desktop && !phoneLinked && <LinkDesktopFromHere />}
           <SharingSettings />
         </div>
       )}
