@@ -29,6 +29,15 @@ const extensionOf = (url: string): string => {
   return path.slice(path.lastIndexOf('/') + 1).split('.').slice(1).pop()?.toLowerCase() ?? '';
 };
 
+/**
+ * The game of an Atlas data chunk (`assets/atlas-platinum-<hash>.js` → `platinum`), or null for any other URL. These chunks are
+ * ~9 MB together, so the worker does not precache them: it keeps each one the first time that game's Atlas opens
+ * (vite.config.ts `globIgnores`, sw/sw.ts), and drops an older build of the same game when a new one is stored.
+ */
+export function atlasChunkGame(url: string): string | null {
+  return /\/assets\/atlas-([a-z0-9]+)-[\w-]+\.js$/.exec(new URL(url, 'https://x.invalid').pathname)?.[1] ?? null;
+}
+
 export interface PrecacheVerdict { ok: boolean; reason?: string }
 
 /**

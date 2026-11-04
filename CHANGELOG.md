@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.40.1 — 2026-11-04
+
+### Changed
+- **Pokénav game data is no longer downloaded with the app.** The offline copy is about 9 MB smaller: a game's Pokénav Atlas is kept on the device the first time you open it, and works offline from then on. Games whose Pokénav you haven't opened yet aren't available offline until you have.
+
 ## 0.40.0 — 2026-11-04
 
 ### New

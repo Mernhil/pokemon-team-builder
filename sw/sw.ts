@@ -2,7 +2,7 @@
 import { cacheNames, clientsClaim } from 'workbox-core';
 import { cleanupOutdatedCaches, PrecacheController, PrecacheRoute, type PrecacheEntry } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
-import { checkPrecacheResponse, NETWORK_ONLY_PATHS } from '../src/domain/swGuard';
+import { atlasChunkGame, checkPrecacheResponse, NETWORK_ONLY_PATHS } from '../src/domain/swGuard';
 
 /**
  * The app's service worker (vite.config.ts → vite-plugin-pwa, `injectManifest`): precaches the whole build, answers
@@ -53,6 +53,26 @@ self.addEventListener('install', (event) => event.waitUntil(dropBadEntries().the
 self.addEventListener('activate', (event) => event.waitUntil(precache.activate(event)));
 
 registerRoute(new PrecacheRoute(precache));
+
+// Atlas chunks are not precached (~9 MB; vite.config.ts): the first time a game's Atlas opens its chunk is kept here, and it is
+// served from here, offline too, from then on. File names carry a content hash, so a hit is never stale; an older build of the
+// same game is dropped when a new one is stored. The same distrust applies as for the precache: only a plain 200 of the right type.
+const ATLAS_CACHE = 'ptb-atlas-v1';
+registerRoute(
+  ({ url, request }) => request.method === 'GET' && url.origin === self.location.origin && atlasChunkGame(url.href) !== null,
+  async ({ request, url }) => {
+    const cache = await caches.open(ATLAS_CACHE);
+    const hit = await cache.match(request);
+    if (hit) return hit;
+    const response = await fetch(request);
+    if ((await judge(request, response.clone())).ok) {
+      const game = atlasChunkGame(url.href);
+      for (const old of await cache.keys()) if (atlasChunkGame(old.url) === game) await cache.delete(old);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  },
+);
 // Navigations get the cached app, except where Cloudflare or the Worker answers: /api/* (the sign-in renewal, docs/SYNC.md) and
 // /cdn-cgi/* (Access's callback after its login: swallowing it never sets the cookie and opens the app at the wrong depth).
 registerRoute(new NavigationRoute(precache.createHandlerBoundToURL('index.html'), { denylist: NETWORK_ONLY_PATHS }));

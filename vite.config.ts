@@ -106,7 +106,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,webp,json}'],
         // iOS launch screens are fetched once when the app is added to the home screen; no need to
         // precache ~0.8 MB of them for everyone.
-        globIgnores: ['splash/**', 'meta/**'],
+        // The Atlas chunks (~9 MB, one per game) are cached when a game's Atlas first opens instead (sw/sw.ts).
+        globIgnores: ['splash/**', 'meta/**', 'assets/atlas-*.js'],
         // The sprite atlases are up to ~4 MB each.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },
