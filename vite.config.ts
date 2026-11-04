@@ -22,7 +22,9 @@ const cacheBustIcons = (): Plugin => ({
 // The blank-screen guard (src/bootGuard.js) is inlined into index.html, outside the bundle, so it still runs when the bundle can't
 // load. The CSP is `script-src 'self'` (public/_headers), so the build adds this script's hash to it.
 const bootGuard = (): Plugin => {
-  const source = readFileSync(new URL('./src/bootGuard.js', import.meta.url), 'utf-8');
+  // LF only: the browser hashes an inline script with its line endings normalised to LF, so a CRLF checkout (Windows) would
+  // produce a CSP hash that never matches and the guard would be blocked.
+  const source = readFileSync(new URL('./src/bootGuard.js', import.meta.url), 'utf-8').replace(/\r\n/g, '\n');
   const hash = `'sha256-${createHash('sha256').update(source).digest('base64')}'`;
   let outDir = 'dist';
   return {
