@@ -21,11 +21,11 @@ function edit(path, pattern, replacement) {
 }
 
 edit('src-tauri/tauri.conf.json', /("version":\s*")[^"]+(")/, `$1${version}$2`);
-edit('src-tauri/Cargo.toml', /(\[package\][^[]*?\nversion\s*=\s*")[^"]+(")/, `$1${version}$2`);
-edit('src-tauri/Cargo.lock', /(\[\[package\]\]\nname = "pokemon-team-builder"\nversion = ")[^"]+(")/, `$1${version}$2`);
+edit('src-tauri/Cargo.toml', /(\[package\][^[]*?\r?\nversion\s*=\s*")[^"]+(")/, `$1${version}$2`);
+edit('src-tauri/Cargo.lock', /(\[\[package\]\]\r?\nname = "pokemon-team-builder"\r?\nversion = ")[^"]+(")/, `$1${version}$2`);
 edit('package.json', /("version":\s*")[^"]+(")/, `$1${version}$2`);
 // package-lock.json: the top-level version and the root package entry (packages[""]).
-edit('package-lock.json', /^(\{\n\s*"name": "pokemon-team-builder",\n\s*"version": ")[^"]+(")/, `$1${version}$2`);
-edit('package-lock.json', /("packages": \{\n\s*"": \{\n\s*"name": "pokemon-team-builder",\n\s*"version": ")[^"]+(")/, `$1${version}$2`);
+edit('package-lock.json', /^(\{\r?\n\s*"name": "pokemon-team-builder",\r?\n\s*"version": ")[^"]+(")/, `$1${version}$2`);
+edit('package-lock.json', /("packages": \{\r?\n\s*"": \{\r?\n\s*"name": "pokemon-team-builder",\r?\n\s*"version": ")[^"]+(")/, `$1${version}$2`);
 
 console.log(`Version set to ${version}. Commit it, then publish a GitHub release tagged v${version}.`);
