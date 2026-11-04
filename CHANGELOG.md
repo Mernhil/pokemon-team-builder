@@ -2,6 +2,158 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.41.0 — 2026-11-04
+
+### New
+- **Reverse search: start from an idea.** The empty screen now offers one-tap starting points instead of a bare prompt: Pokémon that one-shot the most-used Pokémon of the live meta, Pokémon that survive their strongest hits, and users of Fake Out, Trick Room, Tailwind or Wide Guard (only moves legal in the chosen regulation). A tap fills in the conditions; change anything afterwards.
+- **Outline strength and brightness.** Settings → Appearance has two sliders: how strong the Sticker outlines are (10–100, default 65) and the overall brightness (70–110, default 100). Both are remembered on this device.
+
+## 0.40.0 — 2026-11-04
+
+### New
+- **Item-boosted stats show as a green bar.** In Team overview, a Pokémon holding Choice Band, Choice Specs, Choice Scarf or Assault Vest shows the boosted stat in green, with a green bar running past the normal one in the Stats tab and in the Speed order (a Choice Scarf's Speed). Items that change no stat are unchanged.
+
+## 0.39.3 — 2026-11-03
+
+### Fixed
+- **Saved teams layout on phones.** On an iPhone the list could slide sideways and clip names and buttons: a team's action row (Share, Overview, Edit team, duplicate, delete) didn't wrap, and confirming a delete widened it further. *Edit team* now has a full-width row of its own, the other actions are one row of small buttons, confirmations wrap, variation rows wrap too, dates are shorter, and no sheet can scroll sideways any more.
+- **Signing back in on the installed iPhone app.** The Home Screen app can't keep a Cloudflare sign-in (iOS gives it cookies of its own, and the login sheet ended on a white page). Settings → Sync now has *Link this phone with a pairing code* (make the code in Safari or on a computer): a linked phone syncs without any Cloudflare cookie. When the session has expired and the phone isn't linked, the app says *Session expired: link this phone with a code, or sign in from Safari.*, never navigates to the login by itself, and opens from its cache as before.
+
+## 0.39.2 — 2026-10-28
+
+### Fixed
+- **Signing in again no longer ends on a black screen.** After the Cloudflare Access login the browser returns through `/cdn-cgi/access/callback`; the app's offline copy answered that address itself, so the login never completed and the app opened at an address where none of its files exist. The offline copy now leaves everything under `/cdn-cgi/` (and `/api/`) to the network.
+- **The offline copy never keeps a login redirect or a web page in place of a file.** An update that cannot download all of its files is dropped as a whole and the running version is left untouched; files stored from a bad answer by an older version are downloaded again.
+- **A screen that stays blank explains itself.** If the app has drawn nothing after 8 seconds or its script fails to load, a plain message offers *Reload*, *Reset app cache* (never touches your teams or matches) and *Sign in again*.
+- A phone that is already stuck needs a one-time manual step to receive this fix: see docs/SYNC.md → *A blank screen*.
+
+## 0.39.1 — 2026-10-20
+
+### Fixed
+- **A crashing screen no longer blanks the app.** If a screen hits an error, or its file is gone because the app was updated while the tab was open, it now says so with *Try again* / *Reload*, and the header and navigation keep working. Your teams and matches are not touched.
+- **You are told when teams or matches can't be saved.** A full or blocked browser store used to lose edits silently; the app now shows one notice suggesting a JSON backup.
+- **Meta tab links** only open when they are plain web addresses.
+- Server: answers can't be sniffed as another type, a server error answers in JSON, an oversized request is refused before it is read, and the pairing-code limit also covers IPv6 address rotation.
+- Dependencies updated within their versions (clears the two dev-only audit findings); the site also sends `Strict-Transport-Security`.
+
+## 0.39.0 — 2026-10-20
+
+### Changed
+- The go-live checklist (docs/ACCOUNTS_MANUAL_STEPS.md) is final: backups first, your account and your old teams, a test account and a friend, then `AUTH_MODE=accounts`, Access on Bypass, an optional rate-limit rule and the invites, with how to roll each step back.
+- The server check in Settings → Sync keeps working once Cloudflare Access is on Bypass (it says nothing about any account), and `npm run admin -- list` shows whether each account has brought its old teams over.
+
+## 0.38.0 — 2026-10-20
+
+### New
+- **Settings → Friends.** Add a friend by username (they see your request; the app answers the same whether or not the name exists), or make a friend code (`FR-XXXXX-XXXXX`, once, for 7 days) to send over any chat: whoever enters it is your friend at once. Accept or decline requests, cancel yours, remove a friend or block someone. A dot on More → Settings says when a request is waiting. `#friends` and *Friends* in the search open it.
+
+### Changed
+- **Sharing is between friends.** With an account, the Share dialog and *Share my matches* pick from your friends instead of asking for an e-mail. Removing or blocking a friend stops everything shared between you at once. People who already shared with each other before accounts are friends from the start.
+
+## 0.37.0 — 2026-10-20
+
+### Changed
+- **Sync and sharing use your account.** Once you're logged in (Settings → Account), your devices sync as your account, whichever way you reach the app; the desktop app logs in with your username and password instead of a pairing code (a pairing link made before keeps working for now). Logging out keeps the teams on the device and turns sync off there.
+- **Share with `@username`.** The Share dialog takes a friend's username (`@misty`) as well as an e-mail, and shared teams and match logs are labelled with their name. Someone whose account an admin disabled disappears from your shares until they are enabled again.
+- A new account syncs only after *Bring my teams from before* is done or skipped, so the teams from before can always be brought over.
+
+## 0.36.0 — 2026-10-20
+
+### New
+- **Settings → Account → Bring my teams from before.** Right after making an account (and in Settings → Account until you do it or skip it), the app offers to move everything you synced with your Cloudflare sign-in into the account: teams with their folders, the match log, what you shared and what was shared with you, and linked desktop apps. It says which e-mail and how much before you confirm. Nothing is copied twice, no conflict copies appear and every device keeps syncing. It works in the browser that is signed in with Cloudflare, for an account that has nothing of its own yet; *Skip* if you have nothing from before.
+- A weekly encrypted backup of the sync database (a GitHub Action; it needs two secrets, see docs/ACCOUNTS_MANUAL_STEPS.md), and `npm run admin -- claim <email> <username> --backup <file>` / `unclaim <username>` for doing or undoing the same move from a terminal.
+
+## 0.35.0 — 2026-10-20
+
+### New
+- **Settings → Account → Admin: invites and accounts.** Admins can make an invite (with a note for themselves and how long it stays valid, 1 hour to 30 days); the code is shown once, to copy and send. The list shows whether each invite is open, used (and by whom), expired or revoked, and an open one can be revoked. The accounts list shows everyone's role, devices and last visit; an admin can disable an account (it is signed out everywhere at once), enable it again, make or remove an admin (never the last one), and make a one-time password reset code (it asks for your own password first, works once for 24 hours, and the person enters it under *Forgot password?*).
+- `npm run admin -- list | invite | reset | disable | enable | bootstrap` does the same from a terminal, for when nobody can get into the app (docs/ACCOUNTS.md).
+
+## 0.34.0 — 2026-10-20
+
+### New
+- **Settings → Account: create an account and log in.** Once the server has accounts switched on, Settings → Account lets you create an account with an invite code, a username and a password, log in, and reset a forgotten password with your recovery code. The recovery code is shown once, with a copy button and an *I saved it* tick. Signed in, the same place shows your devices (sign any of them out), lets you change the password, make a new recovery code, log out, or log out everywhere. The app works exactly as before without an account, and sync still uses your Cloudflare sign-in for now.
+- **Sign in again, without leaving the screen.** When a device's session ends (signed out from another device, or expired), the banner at the top says so and *Sign in again* opens a small login dialog right there.
+- A one-time card, *Make an account to sync and share*, once accounts are on. *Not now* hides it for good.
+- `#account` (and *Account* in the search, Ctrl/⌘ K) opens Settings → Account.
+
+### Changed
+- Your password never leaves the device: the app stretches it into a key (which takes a moment) and sends only that.
+
+## 0.33.0 — 2026-10-20
+
+### New
+- **Own accounts, groundwork (not switched on yet).** The server can now create accounts with a username and password, invite-only, with long-lived device sessions and a recovery code. Nothing changes in the app until the owner turns it on; sign-in is still Cloudflare Access. docs/ACCOUNTS_PLAN.md has the whole plan and docs/ACCOUNTS_MANUAL_STEPS.md the checklist.
+
+### Changed
+- The site now asks search engines not to index it (`robots.txt` and an `X-Robots-Tag` header).
+
+## 0.32.0 — 2026-10-19
+
+### New
+- **Sync → Sign in again, inside the installed app.** When your Cloudflare Access session expires, a banner at the top of the app says *Your sign-in has expired. Tap Sign in again.* with a **Sign in again** button (also in Settings → Sync). It opens the sign-in inside the app's own window and brings you back, so there is no more deleting and re-adding the home-screen app. The banner can be dismissed; the header's sync light turns red until you sign in.
+- **Sync status light and “Sync problem” chip.** A small dot in the header (when sync is on): green = synced in the last 10 minutes, amber = older or offline, red = a problem. Other errors show a *Sync problem* chip that opens Settings → Sync. Settings → Sync says *Last synced 5 min ago*.
+- **Sync diagnostics and server check.** Settings → Sync has a *Sync diagnostics* section (cursor, known documents, last attempt, last error with its HTTP status, what the last run received and sent) with *Copy diagnostics* (no tokens or e-mail addresses), and one line from the server's new health check: *Server ready*, *Database migration missing: 0004*, and so on.
+
+### Changed
+- **Sync keeps itself up to date.** Besides starting, focusing and editing, it now syncs when the connection comes back and every 3 minutes while the app is visible. After a network failure it retries after 10 s, 30 s and 2 min (not when the sign-in expired or sync isn't set up). A failed push never loses the pulled changes or your local edits.
+- **Deploys apply the database migrations first.** `npm run deploy` runs `wrangler d1 migrations apply` before `wrangler deploy`; docs/SYNC.md and docs/IPHONE_APP.md say how to set it as the Workers Builds deploy command.
+
+### Fixed
+- **“Reload the page” did nothing after the sign-in expired.** The service worker answered every navigation, including /api/*, with the cached app, so a reload never reached Cloudflare Access. Navigations to /api/ now go to the network.
+
+## 0.31.0 — 2026-10-18
+
+### New
+- **Build → what a move knocks out.** Every damaging move in the builder has a small crosshair button. It opens a list of what that move, on that Pokémon with its own item, nature and stat points, one-shots, one-shots on a high roll and two-shots, among the 60 most used Pokémon (each with its most-used set, a Mega Stone holder as the Mega). Champions only, no field conditions.
+- **Pokédex → Learns a move of a type.** A small, folded row under the type filter keeps only the Pokémon that can learn a move of a type (for example the Mega Evolutions that learn a Fire move). It combines with the Pokémon type filter, the Mega list and the regulation picker.
+
+## 0.30.0 — 2026-10-18
+
+### New
+- **Reverse search → Edit build.** Every answer has an *Edit build* button that opens the same compact editor the targets have (item, ability, nature, stat points, four moves). The search re-runs for that Pokémon and the card updates; if the new build no longer meets the conditions it stays, flagged, until you close the editor, then drops out. Builds are kept per species ("Custom build"), with *Reset to default* on the card and *Reset all* (both undoable). They are what *Add to team* and *Open in Calc* use, and what *Has to know a move* builds on. Giving a Pokémon its Mega Stone makes it a Mega-capable answer, tried as the Mega and as the base form.
+- **Reverse search → Try Mega Stones.** Off by default. On, every Pokémon that can Mega Evolve and isn't holding its stone is also tried holding it, as a separate "with <Stone>" answer (for example Medicham-Mega for "one-shots Golisopod"). Off, the answers are exactly as before.
+
+### Fixed
+- **Reverse search → Golisopod still found nothing.** A target added before the meta data had finished loading kept the generic build (no item, so never Mega Golisopod) even after it loaded, so Fire attackers never showed up. Targets you haven't edited are now rebuilt from the most-used sets as soon as they arrive.
+
+## 0.29.0 — 2026-10-17
+
+### New
+- **Season reset in the regulation banner.** Build shows the running ranked season and when the ladder resets, in your own timezone. The weekly regulation check keeps the season dates up to date.
+
+## 0.28.0 — 2026-10-08
+
+### New
+- **Speed control check.** Analyse → Threats and Game day now say whether your team leans on Tailwind or Trick Room: how often you move first against the common Pokémon (or the six they showed) with the plan off and on, a warning when one Pokémon is the only setter, and a warning when a team with no speed control is mostly outsped (and when it looks built for a room it can't set).
+- **Reverse search → Isn't one-shot by.** A new condition: no move of the target's can one-shot the Pokémon (every roll of its strongest move stays under 100%), with the worst hit shown. It gives the same answers as *Survives* one hit.
+
+### Changed
+- **Reverse search.** A target holding its Mega Stone is now calculated as the Mega, not as "worst of base and Mega", so Fire attackers show up for Golisopod (Bug/Steel once Mega Evolved). Each such condition has a *Form* switch (Mega / Base) to calculate against the base form without changing the item.
+- **Analyse → Threats and OHKO.** The same fix: a most-used set holding its Mega Stone is calculated as the Mega (it was read as the worse of base and Mega, so Fire never counted against Golisopod). Each such threat has a Mega / Base switch; Teammate suggestions and benchmarks use the Mega too.
+- **Bring planner and Game day.** Their Pokémon holding a Mega Stone are planned against as the Mega (types included), each with a Mega / Base switch.
+- **Reverse search.** An answer holding its Mega Stone is tried as the Mega and as the base form separately, and the card says which form(s) meet the conditions (Open in Calc loads that form).
+
+## 0.27.0 — 2026-10-06
+
+### New
+- **Keyboard shortcuts.** Press `g` then `b`, `c`, `a`, `d`, `n`, `m`, `g`, `e`, `r` or `f` to go to Build, Calc, Analyse, Pokédex, Pokénav, Match log, Game day, Meta, Reverse search or Regulation diff; `/` opens the search and `?` lists them (also in Settings → Keyboard shortcuts). They stay out of the way while you type in a field or have a dialog open.
+- **Analyse → Threats.** The report remembers how many threats you chose and the field (weather, terrain, Trick Room) between visits, the table is a single Tab stop you move through with the arrow keys, and opening the calculator or optimiser from a cell offers a *Back to the Threat report* button. **Meta** remembers its tab and period too.
+- **Undo for small deletes.** Deleting a logged match, removing a benchmark or an optimiser goal, and resetting Pokénav progress now offer Undo in a toast instead of asking first (or, for a match, doing nothing). An Undo toast stays when other messages arrive.
+
+### Changed
+- **Build.** On a phone the stat calculator is open by default (it's half of building a set); fold it and it stays folded.
+- **Analyse.** The type matrices work from the keyboard and with a screen reader: every cell is a button with its full type name, and tapping it lists each member's multiplier. Game day's matchups use the same blue and orange as the Threat report and read out once in words.
+- **Pinch zoom is back.** The page can be zoomed again, which people with low vision need; form fields stay 16 px so iPhones don't zoom into them on their own.
+- **Colour palettes.** Every palette now darkens or lightens the green, amber, red and stat colours until they read on its surfaces; some palettes in the light theme were just under the contrast limit. A card inside a panel in the Sticker look no longer carries a second hard shadow.
+- **Dialogs and menus.** Closing a dialog gives focus back to where you were (it used to fall to the top of the page), and smooth scrolling is skipped when your device asks for reduced motion.
+- **Faster start.** The first load is about 13 KB smaller and the offline download about 0.6 MB smaller: the saved teams, import/export, save and settings dialogs load when first opened (and in the background when idle), and the Threat report no longer carries a second copy of the data.
+
+### Fixed
+- **Build.** The nature ＋/− buttons in the stat calculator were hard to read in the dark theme when active.
+- **Pokénav.** The page scrolled sideways on a phone; the game chips and tabs are now full-size touch targets, as are the Pokédex type filters, the Calc *Load* buttons and the CRIT chip.
+- **Settings → Sync.** When sync isn't set up on a deployment, the message now says which setting is missing (the database, or the Access settings) and which step in docs/SYNC.md fixes it.
+
 ## 0.26.0 — 2026-10-06
 
 ### New

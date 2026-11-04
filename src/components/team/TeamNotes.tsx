@@ -5,7 +5,7 @@ import { MAX_MATCHUP_NOTES, MAX_MATCHUP_TEXT, MAX_MATCHUP_TITLE } from '@/domain
 import { uid } from '@/domain/team';
 import type { MatchupNote, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
-import { Button, Input, Panel, TextArea } from '../ui/primitives';
+import { Button, Checkbox, Input, Panel, TextArea } from '../ui/primitives';
 
 const MAX_TEAM_NOTES = 5000;
 
@@ -60,17 +60,13 @@ export function TeamNotes({ team, dex }: { team: Team; dex: Dex }) {
                   {members.map((m) => {
                     const on = n.leads?.includes(m.uid) ?? false;
                     return (
-                      <label key={m.uid} className="flex items-center gap-1">
-                        <input
-                          type="checkbox"
-                          className="size-4 pointer-coarse:size-5"
-                          checked={on}
-                          disabled={!on && (n.leads?.length ?? 0) >= 2}
-                          onChange={(e) => {
-                            const leads = e.target.checked ? [...(n.leads ?? []), m.uid] : (n.leads ?? []).filter((u) => u !== m.uid);
-                            patch(n.id, { leads: leads.length ? leads : undefined });
-                          }}
-                        />
+                      <label key={m.uid} className="flex items-center gap-1 pointer-coarse:min-h-11">
+                        <Checkbox checked={on}
+ disabled={!on && (n.leads?.length ?? 0) >= 2}
+ onChange={(e) => {
+ const leads = e.target.checked ? [...(n.leads ?? []), m.uid] : (n.leads ?? []).filter((u) => u !== m.uid);
+ patch(n.id, { leads: leads.length ? leads : undefined });
+ }} />
                         {m.name}
                       </label>
                     );

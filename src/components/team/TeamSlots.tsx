@@ -185,7 +185,7 @@ export function SlotSummary({ index, set, dex, format, errors = 0, hideBudget }:
           ))}
           {cap > 0 && (
             <span
-              className={cn('ml-auto shrink-0 font-mono text-[11px] tabular-nums', used === cap ? 'text-good' : used > cap ? 'text-bad' : 'text-muted')}
+              className={cn('ml-auto shrink-0 font-mono text-2xs tabular-nums', used === cap ? 'text-good' : used > cap ? 'text-bad' : 'text-muted')}
               title={`${used} of ${cap} ${sys.kind === 'champions-sp' ? 'Stat Points' : 'EVs'} used`}
             >
               {used}/{cap}

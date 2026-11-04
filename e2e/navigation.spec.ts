@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
+import { destinationFor, parseChangelog } from '../src/domain/changelog';
 import { SAMPLE_TEAM, expectNoA11yViolations, importTeam, openApp, setTheme } from './helpers';
 
 const isPhone = (page: import('@playwright/test').Page) => (page.viewportSize()?.width ?? 1280) < 640;
@@ -76,7 +78,44 @@ test('Settings → Navigation: choose the bar’s destinations, and Reset restor
   expect((await nav(page).getByRole('button').allInnerTexts()).map((t) => t.trim())).not.toContain('Meta');
 });
 
+test('#account opens Settings → Account over the current screen, and the address goes back to that screen', async ({ page }) => {
+  await openApp(page, '#calc');
+  await page.evaluate(() => {
+    location.hash = '#account';
+  });
+  const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
+  await expect(dialog.getByRole('region', { name: 'Account' })).toBeVisible();
+  await expect(page).toHaveURL(/#calc$/);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Calc');
+});
+
+test('#friends opens Settings → Friends', async ({ page }) => {
+  await page.goto('/#friends');
+  await expect(page.getByRole('dialog', { name: 'Settings & credits' }).getByRole('region', { name: /Friends/ })).toBeVisible();
+});
+
 test.describe('command palette', () => {
+  test('finds Friends and opens Settings there', async ({ page }) => {
+    await openApp(page);
+    await page.getByRole('button', { name: 'Search (Ctrl K)' }).click();
+    const box = page.getByRole('combobox', { name: /Search screens/ });
+    await box.fill('friends');
+    await expect(page.getByRole('option', { name: /Friends/ }).first()).toBeVisible();
+    await box.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Settings & credits' }).getByRole('region', { name: /Friends/ })).toBeVisible();
+  });
+
+  test('finds Account and opens Settings there', async ({ page }) => {
+    await openApp(page);
+    await page.getByRole('button', { name: 'Search (Ctrl K)' }).click();
+    const box = page.getByRole('combobox', { name: /Search screens/ });
+    await box.fill('log in');
+    await expect(page.getByRole('option', { name: /Account/ })).toBeVisible();
+    await box.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Settings & credits' }).getByRole('region', { name: 'Account' })).toBeVisible();
+  });
+
   test('finds a screen by name and opens it with Enter', async ({ page }) => {
     await openApp(page);
     await page.getByRole('button', { name: 'Search (Ctrl K)' }).click();
@@ -121,15 +160,23 @@ test.describe("What's new", () => {
   const seen = (version: string) => ({ cookies: [], origins: [{ origin: 'http://localhost:4173', localStorage: [{ name: 'ptb:prefs:v1', value: JSON.stringify({ state: { lastSeenVersion: version }, version: 1 }) }] }] });
 
   test.describe('after an update', () => {
-    test.use({ storageState: seen('0.22.0') });
+    // Behind the newest by at least two releases, read from the changelog (a fixed version falls out of the sheet's window as releases
+    // pile up), and far enough back that the sheet includes a release with a bold title that names a screen (that is what gets a Try it link).
+    const releases = parseChangelog(readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'));
+    const versions = releases.map((r) => r.version);
+    const firstWithTryIt = releases.findIndex((r) => r.sections.some((s) => s.items.some((i) => destinationFor(i.title))));
+    test.use({ storageState: seen(versions[Math.max(2, firstWithTryIt + 1)]) });
     test('lists what came since, offers Try it, and is not shown again once dismissed', async ({ page }) => {
       await openApp(page);
       const sheet = page.getByRole('dialog', { name: 'What’s new' });
       await expect(sheet).toBeVisible();
-      await expect(sheet.getByRole('region', { name: 'Version 0.23.0' })).toBeVisible();
-      await expect(sheet.getByRole('region', { name: 'Version 0.22.0' })).toHaveCount(0);
-      await sheet.getByRole('link', { name: 'Try it: Team overview' }).first().click();
-      await expect(page).toHaveURL(/#analyse\/overview$/);
+      await expect(sheet.getByRole('region', { name: `Version ${versions[0]}` })).toBeVisible();
+      await expect(sheet.getByRole('region', { name: `Version ${versions[1]}` })).toBeVisible();
+      await expect(sheet.getByRole('region', { name: `Version ${versions[Math.max(2, firstWithTryIt + 1)]}` })).toHaveCount(0);
+      const tryIt = sheet.getByRole('link', { name: /^Try it: / }).first();
+      const href = (await tryIt.getAttribute('href')) ?? '';
+      expect(href).toMatch(/^#/);
+      await tryIt.click();
       await expect(sheet).toHaveCount(0);
       await page.reload();
       await expect(page.getByRole('heading', { level: 1 })).toBeAttached();
@@ -174,3 +221,53 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoA11yViolations(page);
   });
 }
+
+test('closing a dialog gives focus back to where it was, not to the top of the page', async ({ page }) => {
+  await openApp(page);
+  // Let the first render settle (the nav is rebuilt once the data has loaded), so the button we focus is the one that stays.
+  await page.waitForLoadState('networkidle');
+  const bar = nav(page);
+  const activeName = () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.getAttribute('aria-label') ?? (document.activeElement as HTMLElement | null)?.textContent?.trim() ?? '');
+  // The command palette, opened from the keyboard.
+  const calc = bar.getByRole('button', { name: 'Calc', exact: true });
+  await calc.focus();
+  await page.keyboard.press('Control+k');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(calc).toBeFocused();
+  // Settings, opened from a menu whose item is gone by the time the dialog closes.
+  const more = bar.getByRole('button', { name: 'More' });
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Settings & credits' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(await activeName()).not.toBe('');
+  await expect(more).toBeFocused();
+});
+
+test('single-key shortcuts: g then a letter goes to a screen, / searches, ? lists them, typing is left alone', async ({ page }) => {
+  test.skip(isPhone(page), 'keyboard shortcuts');
+  await openApp(page);
+  await page.keyboard.press('g');
+  await page.keyboard.press('d');
+  await expect(page).toHaveURL(/#dex$/);
+  await page.keyboard.press('g');
+  await page.keyboard.press('c');
+  await expect(page).toHaveURL(/#calc$/);
+
+  await page.keyboard.press('?');
+  const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await expect(help).toBeVisible();
+  await expect(help.getByText('Go to Pokédex')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(help).toHaveCount(0);
+
+  await page.keyboard.press('/');
+  await expect(page.getByRole('combobox', { name: /Search screens/ })).toBeVisible();
+  // Typing "gd" into the search box must not navigate.
+  await page.keyboard.type('gd');
+  await expect(page).toHaveURL(/#calc$/);
+  await page.keyboard.press('Escape');
+});

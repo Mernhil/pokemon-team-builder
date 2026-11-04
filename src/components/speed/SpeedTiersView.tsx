@@ -96,6 +96,7 @@ export function SpeedTiersView({ dex, format, team }: { dex: Dex; format: Format
     if (!focusId) return;
     const row = ladder.find((r) => !r.mine && r.speciesId === focusId);
     if (row) {
+      // oxlint-disable-next-line react/set-state-in-effect -- reacts to a one-shot hand-off or a changed input, which is what this effect is for
       setOpen(row.key);
       requestAnimationFrame(() => document.getElementById(`speed-row-${row.key}`)?.scrollIntoView({ block: 'center' }));
       clearFocus();

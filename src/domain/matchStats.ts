@@ -48,7 +48,7 @@ export function toRate(matches: Pick<Match, 'result'>[]): Rate {
 // ---------------------------------------------------------------------------
 
 /** What a team id means for grouping: its folder (`groupId` or itself) and its variation label. */
-export interface TeamInfo {
+interface TeamInfo {
   name: string;
   groupId: string;
   variationLabel?: string;

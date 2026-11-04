@@ -9,8 +9,8 @@ import { compareTeams, teamChoices, type SetChange, type SetDiff } from '@/domai
 import type { Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
-import { DefenseMatrix } from '../analysis/DefenseMatrix';
-import { OffenseMatrix } from '../analysis/OffenseMatrix';
+import { DefenseMatrix } from '../teamcheck/DefenseMatrix';
+import { OffenseMatrix } from '../teamcheck/OffenseMatrix';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
 import { Button, Chip, EmptyState, LoadingState, Notice, Panel, Select } from '../ui/primitives';

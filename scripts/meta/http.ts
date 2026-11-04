@@ -3,7 +3,7 @@
  * 429/5xx with backoff, and a small concurrency pool so a few thousand replay requests don't hammer
  * anyone's server.
  */
-export const USER_AGENT = 'pokemon-team-builder meta build (+https://github.com/Mernhil/pokemon-team-builder)';
+const USER_AGENT = 'pokemon-team-builder meta build (+https://github.com/Mernhil/pokemon-team-builder)';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

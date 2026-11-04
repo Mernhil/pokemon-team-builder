@@ -7,7 +7,7 @@ import { useCalcStore } from '@/store/calcStore';
 import { useRunStore } from '@/store/runStore';
 import { useTeamStore } from '@/store/teamStore';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, Panel, Select, TypeBadge } from '../ui/primitives';
+import { Button, Checkbox, Chip, Panel, Select, TypeBadge } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useAtlasCtx } from '../atlas/context';
 
@@ -168,7 +168,7 @@ export function RunBoss({ run, milestones, next }: { run: Run; milestones: Miles
             return (
               <li key={m.id}>
                 <label className={cn('flex min-h-9 items-center gap-2 text-sm pointer-coarse:min-h-11', next?.id === m.id && 'font-semibold')}>
-                  <input type="checkbox" className="size-4 accent-[var(--color-accent)] pointer-coarse:size-5" checked={done} onChange={() => toggle(m.id)} aria-label={`${m.label} beaten`} />
+                  <Checkbox checked={done} onChange={() => toggle(m.id)} aria-label={`${m.label} beaten`} />
                   <span className={cn('min-w-0 flex-1 truncate', done && 'text-muted line-through')}>
                     {m.label}
                     {m.region && <span className="text-muted"> · {m.region}</span>}

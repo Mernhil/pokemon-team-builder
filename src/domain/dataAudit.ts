@@ -14,7 +14,7 @@ export interface Difference {
 }
 
 export const DIFF_AREAS = ['species', 'items', 'moves', 'learnsets', 'stats', 'abilities', 'types', 'megastones'] as const;
-export type DiffArea = (typeof DIFF_AREAS)[number];
+type DiffArea = (typeof DIFF_AREAS)[number];
 
 /** Items present on one side only (both sorted). */
 export function diffSets(ours: Iterable<string>, theirs: Iterable<string>): { onlyOurs: string[]; onlyTheirs: string[] } {
@@ -89,7 +89,7 @@ export function diffMegaStone(item: string, ours: Record<string, string> | undef
 // ---- the allowlist -------------------------------------------------------------------------
 
 /** One known, intentional difference. `id` may end in `*` to cover a family (e.g. `learnset-extra:foo:*`). */
-export const AllowlistEntrySchema = z.object({
+const AllowlistEntrySchema = z.object({
   id: z.string().min(3).max(200).regex(/^[a-z-]+:[A-Za-z0-9:*-]*$/, 'id looks like area:regulation-or-species[:thing] (an ability slot may be H or S), optional trailing *'),
   reason: z.string().trim().min(10).max(400),
 });

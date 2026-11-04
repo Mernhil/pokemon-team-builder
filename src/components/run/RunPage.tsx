@@ -3,7 +3,7 @@ import { Flag, Plus, Skull, Swords, Trash2, Users } from 'lucide-react';
 import { wildByLocation } from '@/domain/atlas';
 import { capWarnings, defaultRules, hasMilestones, milestones, summarize, type Run } from '@/domain/runs';
 import { useActiveRun, useRunStore } from '@/store/runStore';
-import { Button, Chip, EmptyState, Input, Notice, Panel, Select, Tabs } from '../ui/primitives';
+import { Button, Checkbox, Chip, ConfirmInline, EmptyState, Input, Notice, Panel, Select, Tabs } from '../ui/primitives';
 import { useAtlasCtx } from '../atlas/context';
 import { RunBoss } from './RunBoss';
 import { RunEncounters } from './RunEncounters';
@@ -136,15 +136,7 @@ function RunSwitcher({ run, runIds, onNew }: { run: Run; runIds: string[]; onNew
         <Plus size={14} aria-hidden /> New run
       </Button>
       {confirm ? (
-        <span className="flex items-center gap-1.5" role="alert">
-          <span className="text-sm">Delete “{run.name}”?</span>
-          <Button size="sm" variant="danger" onClick={() => (deleteRun(run.id), setConfirm(false))}>
-            Delete
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setConfirm(false)}>
-            Keep
-          </Button>
-        </span>
+        <ConfirmInline question={<>Delete “{run.name}”?</>} onConfirm={() => (deleteRun(run.id), setConfirm(false))} onKeep={() => setConfirm(false)} />
       ) : (
         <Button size="icon" variant="ghost" aria-label={`Delete ${run.name}`} className="hover:text-bad" onClick={() => setConfirm(true)}>
           <Trash2 size={15} aria-hidden />
@@ -175,7 +167,7 @@ function NewRun({ gameName, onDone, first }: { gameName: string; onDone: () => v
         <Input value={name} maxLength={60} placeholder={`${game.shortName} run`} onChange={(e) => setName(e.target.value)} />
       </label>
       <label className="flex min-h-9 items-center gap-2 text-sm pointer-coarse:min-h-11">
-        <input type="checkbox" checked={nuzlocke} onChange={(e) => setNuzlocke(e.target.checked)} className="size-4 accent-[var(--color-accent)] pointer-coarse:size-5" />
+        <Checkbox checked={nuzlocke} onChange={(e) => setNuzlocke(e.target.checked)} />
         <span>
           <b>Nuzlocke rules</b> <span className="text-muted">(first encounter per area, dupes clause, shiny clause, soft level caps; change any of it under Rules)</span>
         </span>

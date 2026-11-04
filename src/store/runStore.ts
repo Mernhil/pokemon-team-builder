@@ -21,7 +21,7 @@ export interface RunState {
 }
 
 /** v0 (never released, a flat list of runs under `runs`) → v1 (a record by id plus `order` and `active`). */
-export function migrateRunState(persisted: unknown, version: number): RunState {
+function migrateRunState(persisted: unknown, version: number): RunState {
   const p = (persisted ?? {}) as Partial<RunState> & { runs?: unknown };
   if (version < 1 && Array.isArray(p.runs)) {
     const runs: Record<string, unknown> = {};
@@ -35,7 +35,7 @@ export function migrateRunState(persisted: unknown, version: number): RunState {
 }
 
 /** Whatever was stored, loaded through the sanitiser: never a broken run, a dangling `active`, or an order that misses a run. */
-export function mergeRunState(persisted: unknown, current: RunState): RunState {
+function mergeRunState(persisted: unknown, current: RunState): RunState {
   const p = (persisted ?? {}) as Partial<RunState>;
   const runs: Record<string, Run> = {};
   for (const raw of Object.values(p.runs && typeof p.runs === 'object' ? p.runs : {})) {

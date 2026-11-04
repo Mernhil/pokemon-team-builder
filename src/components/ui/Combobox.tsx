@@ -2,7 +2,7 @@ import { useId, useMemo, useRef, useState, type ReactNode, type Ref } from 'reac
 import * as Dialog from '@radix-ui/react-dialog';
 import { ChevronDown, Search, Star, X } from 'lucide-react';
 import { rankSearch } from '@/domain/pickerOrder';
-import { buttonClass, cn } from './styles';
+import { buttonClass, cn, overlayClass } from './styles';
 import { useIsPhone } from './useMedia';
 
 export interface ComboOption {
@@ -134,7 +134,7 @@ function OptionList({
           {sec.label && (
             <div
               id={`${listId}-${sec.id}`}
-              className="sticky top-0 z-10 -mx-1 bg-surface/95 px-3 pt-1.5 pb-1 text-[11px] font-semibold tracking-wider text-muted uppercase backdrop-blur"
+              className="sticky top-0 z-10 -mx-1 bg-surface/95 px-3 pt-1.5 pb-1 text-2xs font-semibold tracking-wider text-muted uppercase backdrop-blur"
             >
               {sec.label}
             </div>
@@ -342,9 +342,9 @@ function SheetCombobox({ value, onChange, placeholder, allowClear, className, in
           {!(allowClear && value) && <ChevronDown size={16} className="absolute right-3 text-muted" aria-hidden />}
         </Dialog.Trigger>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/55" />
+          <Dialog.Overlay className={overlayClass} />
           <Dialog.Content
-            className="fixed inset-x-0 bottom-0 z-50 flex h-[88dvh] flex-col rounded-t-2xl border border-border bg-surface pb-[env(safe-area-inset-bottom)] text-fg shadow-2xl"
+            className="ui-sheet fixed inset-x-0 bottom-0 z-50 flex h-[88dvh] flex-col rounded-t-2xl border border-border bg-surface pb-[env(safe-area-inset-bottom)] text-fg shadow-2xl"
             onOpenAutoFocus={(e) => {
               // Focus the search box (on iOS this also brings up the keyboard, since it follows a tap).
               e.preventDefault();

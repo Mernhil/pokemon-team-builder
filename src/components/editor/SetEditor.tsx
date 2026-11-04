@@ -1,5 +1,5 @@
-import { lazy, Suspense, type ComponentProps } from 'react';
-import { Info, Sparkles, Trash2 } from 'lucide-react';
+import { lazy, Suspense, useState, type ComponentProps } from 'react';
+import { Crosshair, Info, Sparkles, Trash2 } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
 import { ABILITY_INTERACTIONS, ITEM_INTERACTIONS } from '@/domain/mechanics';
@@ -8,13 +8,14 @@ import { createSet } from '@/domain/team';
 import type { FormatRules, PokemonSet, TeraType } from '@/domain/types';
 import type { Issue } from '@/domain/validation';
 import { useSlotBattle, useTeamStore } from '@/store/teamStore';
+import { usePrefsStore } from '@/store/prefsStore';
 import { Combobox } from '../ui/Combobox';
 import { GenBadge } from '../ui/GenBadge';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Sprite } from '../ui/Sprite';
-import { Button, Chip, Disclosure, Field, Input, Panel, Select, TypeBadge } from '../ui/primitives';
+import { Button, Chip, Disclosure, Field, Input, Panel, Select, Skeleton, TypeBadge } from '../ui/primitives';
 import { useIsPhone } from '../ui/useMedia';
 import { typeGradient } from '../ui/styles';
 import { AdvancedDetails } from './AdvancedDetails';
@@ -29,6 +30,8 @@ import { mergeBenchmarks } from '@/domain/benchmarks';
 
 // The meta data behind the recommendations loads on first use, outside the first-load bundle.
 const RecommendedPanel = lazy(() => import('./RecommendedPanel').then((m) => ({ default: m.RecommendedPanel })));
+// The damage engine behind "what does this move knock out?" is just as heavy: only fetched when the button is pressed.
+const MoveReachDialog = lazy(() => import('./MoveReachDialog').then((m) => ({ default: m.MoveReachDialog })));
 const RecommendedItemsInfo = lazy(() => import('./RecommendedPanel').then((m) => ({ default: m.RecommendedItemsInfo })));
 
 interface Props {
@@ -50,8 +53,12 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
   const champions = format.statSystem.kind === 'champions-sp';
 
   const isPhone = useIsPhone();
+  const statCalcOpen = usePrefsStore((s) => s.statCalcOpen);
+  const setStatCalcOpen = usePrefsStore((s) => s.setStatCalcOpen);
   const itemPicker = useItemPicker(dex, format, set?.speciesId);
   const movePicker = useMovePicker(dex, format, set);
+  // The move whose reach is open (what it one-shots and two-shots).
+  const [reachMove, setReachMove] = useState<string | null>(null);
 
   if (!set) {
     return (
@@ -272,7 +279,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
       </Panel>
 
       {format.datasetId === 'champions' && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<Skeleton className="h-24" />}>
           <RecommendedPanel dex={dex} format={format} set={set} onApply={(patch) => updateSet(slot, patch)} />
         </Suspense>
       )}
@@ -313,6 +320,11 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
                     <TypeBadge type={mv.type} size="xs" />
                   </MoveTooltip>
                 )}
+                {mv && mv.category !== 'Status' && champions && (
+                  <Button size="icon" variant="ghost" aria-label={`What ${mv.name} knocks out`} title="What this move knocks out" onClick={() => setReachMove(mv.id)}>
+                    <Crosshair size={15} aria-hidden />
+                  </Button>
+                )}
               </div>
             );
           })}
@@ -345,7 +357,7 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
           />
         );
         return isPhone ? (
-          <Disclosure title={title} summary={summary}>
+          <Disclosure title={title} summary={summary} open={statCalcOpen} onOpenChange={setStatCalcOpen}>
             <p className="mb-2 text-xs text-muted">{note}</p>
             {body}
           </Disclosure>
@@ -365,6 +377,12 @@ export function SetEditor({ teamId, slot, set, dex, format, issues }: Props) {
       <SetNotes set={set} onChange={(notes) => updateSet(slot, { notes })} />
 
       <AdvancedDetails set={set} species={species} dex={dex} format={format} />
+
+      {reachMove && (
+        <Suspense fallback={null}>
+          <MoveReachDialog dex={dex} format={format} set={set} moveId={reachMove} onClose={() => setReachMove(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }

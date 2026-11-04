@@ -31,6 +31,7 @@ import {
 } from '../src/domain/dataAudit.ts';
 import { learnsetFor, type AnyDex } from './lib/champions-learnsets.ts';
 import { loadShowdownMod } from './lib/showdown-mods.ts';
+import { toID } from '../src/domain/id.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CHECKOUT = resolve(ROOT, '.cache/showdown-master');
@@ -76,7 +77,6 @@ function checkoutUpstream(): string {
 }
 
 const isLegal = (x: { exists: boolean; isNonstandard?: string | null; tier?: string }) => x.exists && !x.isNonstandard && x.tier !== 'Illegal';
-const toID = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 /** Which upstream mod describes which of our regulations: the newest is `champions`, older ones `championsreg<letters>`. */
 function upstreamModFor(regId: string, newest: string, available: Set<string>): string | undefined {

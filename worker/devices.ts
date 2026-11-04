@@ -6,7 +6,7 @@
 import { CODE_TTL_MS, MAX_DEVICES, MAX_LIVE_CODES, MAX_REDEEMS_PER_WINDOW, REDEEM_WINDOW_MS, generateCode, type DeviceInfo } from '../src/domain/pairing';
 import type { D1Like } from './types';
 
-export async function sha256Hex(text: string): Promise<string> {
+async function sha256Hex(text: string): Promise<string> {
   const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }

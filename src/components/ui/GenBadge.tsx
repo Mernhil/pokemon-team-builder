@@ -17,7 +17,7 @@ export function GenBadge({ gen, label, size = 'sm', className }: { gen: number; 
       <span
         className={cn(
           'inline-flex items-center justify-center font-bold tracking-tight',
-          size === 'xs' ? 'h-4 min-w-[1.35rem] px-1 text-[10px]' : 'h-5 min-w-[1.75rem] px-1.5 text-[11px]',
+          size === 'xs' ? 'h-4 min-w-[1.35rem] px-1 text-3xs' : 'h-5 min-w-[1.75rem] px-1.5 text-2xs',
         )}
         style={{
           background: fill,

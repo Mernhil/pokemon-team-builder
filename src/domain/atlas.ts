@@ -16,7 +16,8 @@ import type { AtlasFile, AtlasLocation, AtlasMon, AtlasTrainer } from './atlasTy
 // Trainer teams → Showdown text (Load into Builder, Damage Calc)
 // ---------------------------------------------------------------------------
 
-const cap = (s: string) => s.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+/** "adamant" → "Adamant", "mr mime" → "Mr Mime". */
+export const cap = (s: string) => s.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 
 /** The team as Showdown text, written by the builder's own exporter so every generation's conventions (DVs, abilities, natures) hold. */
 export function trainerToShowdown(t: AtlasTrainer, dex: Dex, format: FormatRules): string {

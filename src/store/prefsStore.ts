@@ -7,7 +7,7 @@ import { PICKER_ORDER, pushRecent, type PickerKey, type PickerPrefs } from '@/do
 
 export type ListMode = 'grouped' | 'az';
 /** Sticker: thick outlines and hard shadows. Classic: the original soft style. */
-export type Look = 'sticker' | 'classic';
+type Look = 'sticker' | 'classic';
 
 /** Sticker outline strength in % (how far the outlines sit from the background towards the text colour) and page brightness in %. */
 export const OUTLINE_RANGE = { min: 10, max: 100, default: 65 } as const;
@@ -33,6 +33,8 @@ interface PrefsState {
   look: Look;
   outline: number;
   brightness: number;
+  /** Phones: is the stat calculator open in the builder? Open by default (it is half of building a set); a person who folds it keeps it folded. */
+  statCalcOpen: boolean;
 
   addRecent: (key: PickerKey, id: string) => void;
   toggleFavorite: (key: PickerKey, id: string) => void;
@@ -46,6 +48,7 @@ interface PrefsState {
   setLook: (l: Look) => void;
   setOutline: (n: number) => void;
   setBrightness: (n: number) => void;
+  setStatCalcOpen: (open: boolean) => void;
 }
 
 const KEYS: PickerKey[] = ['items', 'moves', 'species', 'natures'];
@@ -76,6 +79,7 @@ export const usePrefsStore = create<PrefsState>()(
       look: 'sticker',
       outline: OUTLINE_RANGE.default,
       brightness: BRIGHTNESS_RANGE.default,
+      statCalcOpen: true,
 
       addRecent: (key, id) =>
         set((s) => ({
@@ -96,12 +100,13 @@ export const usePrefsStore = create<PrefsState>()(
       setLook: (look) => set({ look }),
       setOutline: (n) => set({ outline: clampNum(n, OUTLINE_RANGE) }),
       setBrightness: (n) => set({ brightness: clampNum(n, BRIGHTNESS_RANGE) }),
+      setStatCalcOpen: (statCalcOpen) => set({ statCalcOpen }),
     }),
     {
       name: 'ptb:prefs:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies, nav: s.nav, lastSeenVersion: s.lastSeenVersion, palette: s.palette, look: s.look, outline: s.outline, brightness: s.brightness }),
+      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies, nav: s.nav, lastSeenVersion: s.lastSeenVersion, palette: s.palette, look: s.look, outline: s.outline, brightness: s.brightness, statCalcOpen: s.statCalcOpen }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PrefsState>;
         const mode = (v: unknown): ListMode | undefined => (v === 'az' || v === 'grouped' ? v : undefined);
@@ -115,6 +120,7 @@ export const usePrefsStore = create<PrefsState>()(
           look: p.look === 'classic' ? 'classic' : 'sticker',
           outline: clampNum(p.outline, OUTLINE_RANGE),
           brightness: clampNum(p.brightness, BRIGHTNESS_RANGE),
+          statCalcOpen: p.statCalcOpen !== false,
           showUnavailableSpecies: typeof p.showUnavailableSpecies === 'boolean' ? p.showUnavailableSpecies : current.showUnavailableSpecies,
           nav: sanitizeNav(p.nav),
           lastSeenVersion: typeof p.lastSeenVersion === 'string' && /^\d{1,5}\.\d{1,5}\.\d{1,5}$/.test(p.lastSeenVersion) ? p.lastSeenVersion : undefined,

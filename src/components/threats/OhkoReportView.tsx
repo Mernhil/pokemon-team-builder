@@ -13,6 +13,7 @@ import { ChipRow, Toggle } from '../ui/chips';
 import { Sprite } from '../ui/Sprite';
 import { Chip, EmptyState, Help, LoadingState, Notice, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
+import { FormSwitch } from '../ui/FormSwitch';
 import { useThreatReport } from './useThreatReport';
 
 const champRegs = REGULATION_MANIFEST.regulations.filter((r) => r.game === 'champions');
@@ -28,7 +29,9 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
   const [count, setCount] = useState<number>(30);
   const [possible, setPossible] = useState(true);
   const [field, setField] = useState<FieldConditions>({ gameType: 'Doubles', weather: '', terrain: '', trickRoom: false, gravity: false });
-  const { picked, loading, threats, members, rows, done, error } = useThreatReport({ dex, format, team, count, field });
+  const [baseForms, setBaseForms] = useState<ReadonlySet<string>>(new Set());
+  const setForm = (id: string, base: boolean) => setBaseForms((s) => { const n = new Set(s); if (base) n.add(id); else n.delete(id); return n; });
+  const { picked, loading, threats, members, rows, done, error } = useThreatReport({ dex, format, team, count, field, baseForms });
   const by = mode === 'by';
   const Icon = by ? Skull : Crosshair;
   const title = by ? 'Can be OHKO’d by' : 'Can OHKO';
@@ -129,6 +132,22 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
           <p role="status" className="text-xs text-muted">
             {done ? `${calculated} Pokémon calculated against ${members.length} of yours.` : `Calculating… ${calculated} of ${threats.length}`}
           </p>
+          {threats.some((t) => dex.megaFor(t.speciesId, t.set.itemId)) && (
+            <details className="rounded-lg border border-border bg-surface-2/40 p-2 text-sm">
+              <summary className="cursor-pointer text-xs font-semibold text-muted hover:text-fg">
+                Mega Stone holders are calculated as their Mega{baseForms.size ? ` (${baseForms.size} switched to Base)` : ''}. Change forms
+              </summary>
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                {threats.filter((t) => dex.megaFor(t.speciesId, t.set.itemId)).map((t) => (
+                  <li key={t.speciesId} className="flex items-center gap-2">
+                    <Sprite speciesId={t.speciesId} name={dex.species(t.speciesId)?.name} types={dex.species(t.speciesId)?.types} set={format.spriteSet} size={24} />
+                    <b>{dex.species(t.speciesId)?.name ?? t.speciesId}</b>
+                    <FormSwitch dex={dex} speciesId={t.speciesId} itemId={t.set.itemId} base={baseForms.has(t.speciesId)} onChange={(b) => setForm(t.speciesId, b)} />
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           <ul className="grid gap-3 lg:grid-cols-2" aria-label={title}>
             {members.map((m, j) => {
               const sp = dex.species(m.set.speciesId);
@@ -195,7 +214,7 @@ export function OhkoReportView({ dex, format, team, mode, onMode }: { dex: Dex; 
             })}
           </ul>
           <Help label="How to read this list">
-            “OHKO” means every damage roll knocks out from full HP; “Possible” only some rolls. {by ? 'The Pokémon is read at its better forme and your Mega Stone holders at their worse one.' : 'Your Mega Stone holders are read at their worse forme, theirs at their better one.'} Calculated
+            “OHKO” means every damage roll knocks out from full HP; “Possible” only some rolls. {by ? 'The Pokémon is read as its Mega when it holds the stone (switch it to Base above) and your Mega Stone holders at their worse forme.' : 'Your Mega Stone holders are read at their worse forme; theirs are read as their Mega when they hold the stone (switch to Base above).'} Calculated
             with the Damage Calc on each Pokémon’s most-used set, under the conditions above. Tap a row to open it there.
           </Help>
         </>

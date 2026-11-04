@@ -202,7 +202,7 @@ export interface MoveOrderContext {
 const raisesUser = (b?: MoveBoosts) => !!b && Object.values(b).some((v) => (v ?? 0) > 0);
 
 /** Status moves that raise the user's own stats (Swords Dance, Calm Mind, Shell Smash…). */
-export const isSetupMove = (m: Move): boolean =>
+const isSetupMove = (m: Move): boolean =>
   m.category === 'Status' && ((m.target === 'self' && raisesUser(m.boosts)) || raisesUser(m.self?.boosts));
 
 export function moveGroupOf(m: Move, stabTypes: readonly string[]): string {

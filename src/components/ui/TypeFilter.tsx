@@ -29,7 +29,7 @@ export function TypeFilter<T extends MoveType>({
         aria-pressed={!value}
         onClick={() => onChange(null)}
         className={cn(
-          'inline-flex h-5 shrink-0 items-center rounded-md border px-1.5 text-[11px] font-semibold uppercase tracking-wide pointer-coarse:h-8',
+          'inline-flex h-5 shrink-0 items-center rounded-md border px-1.5 text-2xs font-semibold uppercase tracking-wide pointer-coarse:h-11',
           !value ? 'border-accent bg-accent/15 text-fg' : 'border-border text-muted hover:text-fg',
         )}
       >
@@ -43,7 +43,7 @@ export function TypeFilter<T extends MoveType>({
           aria-label={`${type} ${noun}`}
           onClick={() => onChange(value === type ? null : type)}
           className={cn(
-            'inline-flex shrink-0 items-center rounded-md border p-0.5 transition-opacity pointer-coarse:p-1.5',
+            'inline-flex shrink-0 items-center rounded-md border p-0.5 transition-opacity pointer-coarse:px-1.5 pointer-coarse:py-3.5',
             value === type ? 'border-accent ring-1 ring-accent' : value ? 'border-transparent opacity-50 hover:opacity-100' : 'border-transparent hover:opacity-80',
           )}
         >

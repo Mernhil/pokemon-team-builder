@@ -26,6 +26,10 @@ describe.each(Object.entries(THEMES))('%s theme meets WCAG AA', (_name, t) => {
     expect(contrastRatio(t['accent-fg'], t.accent)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('text-bg on the bad fill (the active + nature button) reaches 4.5:1', () => {
+    expect(contrastRatio(t.bg, t.bad)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('uses no pure black or white page background', () => {
     expect(t.bg).not.toMatch(/^#(000000|ffffff)$/);
     expect(t.surface).not.toMatch(/^#(000000|ffffff)$/);

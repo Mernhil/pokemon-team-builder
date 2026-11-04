@@ -103,3 +103,12 @@ test('Nemesis links open the Damage Calc, Speed tiers and Threat report on that 
   await expect(page).toHaveURL(/#analyse\/threats$/);
   await expect(page.locator('[data-threat="kingambit"]').locator('visible=true').first()).toBeVisible();
 });
+
+test('Match log: deleting a match can be undone', async ({ page }) => {
+  await openApp(page, '#matches');
+  await page.getByRole('button', { name: 'Log your first match' }).click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Log your first match' })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Delete', exact: true })).toBeVisible();
+});

@@ -8,7 +8,7 @@ import type { MetaEntry, MetaSnapshot } from './meta';
 import { metaSet, type MetaSet } from './metaSets';
 import type { FormatRules } from './types';
 
-export interface Share {
+interface Share {
   id: string;
   name: string;
   /** % of this Pokémon's sets that use it. */

@@ -9,7 +9,7 @@ import { STAT_LABELS, type FormatRules, type Pokemon, type PokemonSet } from '@/
 import { gameInfo } from '@/domain/games';
 import { useCalcStore } from '@/store/calcStore';
 import { defaultSlotBattle, useSlotBattle, useTeamStore } from '@/store/teamStore';
-import { FieldControls, ModChip, SideControls, Toggle } from '../battle/Controls';
+import { FieldControls, ModChip, SideControls, Toggle } from '../conditions/Controls';
 import { ItemSprite } from '../ui/ItemSprite';
 import { MoveTooltip } from '../ui/MoveTooltip';
 import { Button, Panel, TypeBadge } from '../ui/primitives';
@@ -134,7 +134,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
           <div className="space-y-4">
             <div>
               <div className="mb-1.5 flex items-baseline justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">In-battle stats · {forme.name}</span>
+                <span className="text-2xs font-semibold uppercase tracking-wider text-muted">In-battle stats · {forme.name}</span>
                 <span className="flex items-center gap-1">
                   <ItemSprite itemId={set.itemId} name={result.item} size={16} />
                   {result.types.map((t) => (
@@ -145,7 +145,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-wider text-muted">
+                    <tr className="text-left text-3xs uppercase tracking-wider text-muted">
                       <th className="py-1 font-semibold">Stat</th>
                       <th className="text-right font-semibold">Lv {format.level.fixed ?? set.level}</th>
                       <th className="text-center font-semibold">Stage</th>
@@ -179,7 +179,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
             </div>
 
             <div>
-              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
+              <div className="mb-1.5 text-2xs font-semibold uppercase tracking-wider text-muted">
                 Move power{state.crit && ' · critical hits'}
               </div>
               {result.moves.length === 0 ? (
@@ -209,7 +209,7 @@ function AdvancedDetailsPanel({ set, species, dex, format }: Props) {
                           {m.mods.map((x, i) => (
                             <ModChip key={i} label={x.label} factor={x.factor} />
                           ))}
-                          {m.note && <span className="text-[10px] text-muted">{m.note}</span>}
+                          {m.note && <span className="text-3xs text-muted">{m.note}</span>}
                         </div>
                       )}
                     </li>
@@ -259,7 +259,7 @@ function StatRow({ stat, line }: { stat: 'atk' | 'def' | 'spa' | 'spd' | 'spe'; 
 function Bulk({ label, value, mods }: { label: string; value: number; mods: { label: string; factor: number }[] }) {
   return (
     <div className="rounded-lg bg-surface-2 px-2.5 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</div>
+      <div className="text-3xs font-semibold uppercase tracking-wider text-muted">{label}</div>
       <div className="font-mono text-base font-bold tabular-nums">{value.toLocaleString()}</div>
       {mods.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-1">
@@ -268,7 +268,7 @@ function Bulk({ label, value, mods }: { label: string; value: number; mods: { la
           ))}
         </div>
       )}
-      <div className="text-[10px] text-muted">HP × {label.startsWith('Phys') ? 'Def' : 'SpD'} ÷ damage taken</div>
+      <div className="text-3xs text-muted">HP × {label.startsWith('Phys') ? 'Def' : 'SpD'} ÷ damage taken</div>
     </div>
   );
 }

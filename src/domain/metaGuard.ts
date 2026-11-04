@@ -1,7 +1,7 @@
 import { metaSourceKind, parseMetaFile, type MetaFile, type MetaSnapshot } from './meta.ts';
 
 /** A regulation may shrink to no less than this share of its previous entries. */
-export const MIN_ENTRY_SHARE = 0.5;
+const MIN_ENTRY_SHARE = 0.5;
 /** The in-game data may trail the mirror's newest snapshot by at most this many days. */
 export const MAX_MIRROR_LAG_DAYS = 2;
 

@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { formatMechanics } from '@/domain/games';
+import { itemStatBoost } from '@/domain/itemStats';
 import { calcStats, spreadKey, sumStats } from '@/domain/stats';
 import { STAT_IDS, STAT_LABELS, type FormatRules, type PokemonSet, type StatId } from '@/domain/types';
 import { STAT_COLOR_VAR, TYPE_BADGE } from '../ui/color';
@@ -27,7 +28,7 @@ const ABBR: Record<string, string> = {
 function TypeDot({ type }: { type: Parameters<typeof TypeBadge>[0]['type'] }) {
   const { fill, text } = TYPE_BADGE[type];
   return (
-    <span className="inline-flex h-4 min-w-5 shrink-0 items-center justify-center rounded-full px-0.5 text-[8px] leading-none font-bold" style={{ background: fill, color: text }} title={type} role="img" aria-label={type}>
+    <span className="inline-flex h-4 min-w-5 shrink-0 items-center justify-center rounded-full px-0.5 text-3xs leading-none font-bold" style={{ background: fill, color: text }} title={type} role="img" aria-label={type}>
       {ABBR[type] ?? type.slice(0, 2)}
     </span>
   );
@@ -48,6 +49,7 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
   const spread = set[key];
   const stats = calcStats(form.baseStats, set, format, nature);
   const item = dex.item(set.itemId);
+  const boost = mech.heldItems ? itemStatBoost(set.itemId, stats) : undefined;
   // A Mega's own ability while Megas are shown (the set's if the data has none).
   const ability = dex.ability((showMega && mega ? Object.values(mega.abilities)[0] : undefined) ?? set.abilityId);
   const unit = key === 'sp' ? 'SP' : 'EVs';
@@ -59,13 +61,13 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30" aria-hidden />
         <Sprite speciesId={form.id} name={form.name} types={form.types} set={format.spriteSet} size={32} className="relative shrink-0 drop-shadow-[0_2px_3px_rgb(0_0_0/0.45)]" />
         <div className="relative min-w-0 flex-1 text-white">
-          <h3 className="truncate text-[13px] leading-tight font-bold drop-shadow sm:text-sm">{nick ?? form.name}</h3>
+          <h3 className="truncate text-sm leading-tight font-bold drop-shadow">{nick ?? form.name}</h3>
           <div className="mt-0.5 flex items-center gap-1">
             {form.types.map((t) => (
               <TypeDot key={t} type={t} />
             ))}
             {mega && (
-              <span className="ml-0.5 inline-flex items-center gap-0.5 text-[9px] font-bold uppercase" title={showMega ? `${mega.name} (Mega)` : `Holds ${item?.name}: can Mega Evolve`}>
+              <span className="ml-0.5 inline-flex items-center gap-0.5 text-3xs font-bold uppercase" title={showMega ? `${mega.name} (Mega)` : `Holds ${item?.name}: can Mega Evolve`}>
                 <Sparkles size={9} aria-hidden /> {showMega ? 'Mega' : <span className="sr-only">Can Mega Evolve</span>}
               </span>
             )}
@@ -74,7 +76,7 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
       </header>
 
       {view === 'moves' ? (
-        <div className="space-y-1 p-1.5 text-[11px] leading-tight sm:p-2 sm:text-xs">
+        <div className="space-y-1 p-1.5 text-2xs leading-tight sm:p-2 sm:text-xs">
           <dl className="space-y-0.5">
             {mech.abilities && (
               <div className="flex items-center gap-1.5" title={ability?.shortDesc}>
@@ -110,7 +112,7 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
                       <TypeDot type={mv.type} />
                       <span className="min-w-0 flex-1 truncate">{mv.name}</span>
                       <Icon size={11} className="hidden shrink-0 text-muted sm:block" aria-label={mv.category} />
-                      <span className="hidden w-7 shrink-0 text-right font-mono text-[10px] text-muted sm:block">{mv.basePower || '—'}</span>
+                      <span className="hidden w-7 shrink-0 text-right font-mono text-3xs text-muted sm:block">{mv.basePower || '—'}</span>
                     </span>
                   </MoveTooltip>
                 </li>
@@ -121,7 +123,7 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
         </div>
       ) : (
         <div className="p-1.5 sm:p-2">
-          <table className="w-full text-[11px] sm:text-xs">
+          <table className="w-full text-2xs sm:text-xs">
             <caption className="sr-only">
               Finished stats{showMega && mega ? ` of ${mega.name}` : ''} and {unit}
             </caption>
@@ -138,10 +140,20 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
                         </span>
                       )}
                     </th>
-                    <td className="w-8 py-px text-right font-mono font-bold tabular-nums">{stats[s]}</td>
+                    <td className="w-8 py-px text-right font-mono font-bold tabular-nums">
+                      {boost?.stat === s ? (
+                        <span className="text-good" title={`${stats[s]} base, ${boost.value} with ${boost.label}`}>
+                          {boost.value}
+                          <span className="sr-only"> with {boost.label}, {stats[s]} without</span>
+                        </span>
+                      ) : (
+                        stats[s]
+                      )}
+                    </td>
                     <td className="px-1.5 py-px">
-                      <span className="block h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden>
-                        <span className="block h-full rounded-full" style={{ width: `${Math.min(100, (stats[s] / BAR_MAX) * 100)}%`, background: STAT_COLOR_VAR[s] }} />
+                      <span className="relative block h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+                        {boost?.stat === s && <span className="absolute inset-y-0 left-0 rounded-full bg-good" style={{ width: `${Math.min(100, (boost.value / BAR_MAX) * 100)}%` }} />}
+                        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (stats[s] / BAR_MAX) * 100)}%`, background: STAT_COLOR_VAR[s] }} />
                       </span>
                     </td>
                     <td className="w-5 py-px text-right font-mono text-muted tabular-nums" title={`${spread[s]} ${unit}`}>
@@ -152,7 +164,7 @@ export function SetCard({ dex, format, set, view, mega: showMega }: { dex: Dex; 
               })}
             </tbody>
           </table>
-          <p className="mt-0.5 hidden text-right text-[10px] text-muted sm:block">{sumStats(spread)} {unit} used</p>
+          <p className="mt-0.5 hidden text-right text-3xs text-muted sm:block">{sumStats(spread)} {unit} used</p>
           {set.benchmarks?.length ? (
             <div className="mt-1.5 border-t border-border pt-1.5">
               <BenchmarkList dex={dex} format={format} set={set} />

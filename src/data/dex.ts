@@ -9,11 +9,8 @@ import type {
 } from '@/domain/types';
 import { STAT_IDS, TYPE_NAMES } from '@/domain/types';
 
-/** Showdown-style id: lowercase alphanumerics only. */
-export const toID = (s: unknown): string =>
-  String(s ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '');
+import { toID } from '@/domain/id';
+export { toID };
 
 /**
  * Read-only query layer over a Dataset. One instance per loaded dataset; regulation-aware

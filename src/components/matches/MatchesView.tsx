@@ -14,7 +14,7 @@ import { Sprite } from '../ui/Sprite';
 import { MatchForm } from './MatchForm';
 import { MatchStats } from './MatchStats';
 import { MatchupBuilder } from './MatchupBuilder';
-import { Button, EmptyState, Panel, Select, Tabs } from '../ui/primitives';
+import { Button, Checkbox, EmptyState, Panel, Select, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
 /** A friend's match, read only: the result, the event, what they faced and their notes. */
@@ -166,8 +166,8 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
                 ))}
               </Select>
             )}
-            <label className="flex min-h-9 items-center gap-2 text-sm">
-              <input type="checkbox" checked={lossOnly} onChange={(e) => setLossOnly(e.target.checked)} className="size-4 accent-[var(--color-accent)]" />
+            <label className="flex min-min-h-9 items-center gap-2 text-sm pointer-coarse:min-h-11">
+              <Checkbox checked={lossOnly} onChange={(e) => setLossOnly(e.target.checked)} />
               Losses only
             </label>
             <div className="ml-auto flex gap-1.5">
@@ -208,7 +208,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
                         <span className={cn('shrink-0 text-xs font-bold', m.result === 'win' ? 'text-good' : 'text-bad')}>{m.result === 'win' ? 'W' : 'L'}</span>
                         <span className="font-mono text-xs text-muted">{m.date}</span>
                         <span className="min-w-0 flex-1 truncate">{m.eventName || (m.opponentTeam[0] ? (dex.species(m.opponentTeam[0].speciesId)?.name ?? '') : 'Untitled')}</span>
-                        {'owner' in m && <span className="shrink-0 rounded-full bg-surface-2 px-1.5 text-[10px] font-semibold text-muted">{nameOf(m.owner, names)}</span>}
+                        {'owner' in m && <span className="shrink-0 rounded-full bg-surface-2 px-1.5 text-3xs font-semibold text-muted">{nameOf(m.owner, names)}</span>}
                       </button>
                       {m.opponentTeam.length > 0 && (
                         <Button size="icon-sm" variant="ghost" aria-label="Send their first Pokémon to the damage calculator" title="Send to damage calculator" onClick={() => sendThreatToCalc(m)}>

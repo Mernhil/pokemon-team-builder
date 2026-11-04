@@ -87,7 +87,7 @@ async function enableSync(page: Page) {
   await page.getByRole('menuitem', { name: /Settings/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings & credits' });
   await dialog.getByRole('checkbox', { name: 'Sync with my account' }).check();
-  await expect(dialog.getByRole('status').filter({ hasText: /Last sync: / })).toBeVisible();
+  await expect(dialog.getByRole('status').filter({ hasText: /Last synced / })).toBeVisible();
   return dialog;
 }
 
@@ -146,6 +146,7 @@ test('Sharing a team needs sync: the share button is there once sync is on, and 
   });
   // sharing is only offered once sync is on
   const before = await openSavedTeams(page);
+  await expect(before).toBeVisible();
   await expect(before.getByRole('button', { name: /^Share / })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await enableSync(page);

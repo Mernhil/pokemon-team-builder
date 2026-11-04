@@ -34,11 +34,11 @@ interface Gen2Config {
   note: string;
 }
 
-export const CRYSTAL: Gen2Config = {
+const CRYSTAL: Gen2Config = {
   game: 'crystal', name: 'Pokémon Crystal', repo: 'pokecrystal', url: 'pret/pokecrystal', commit: 'e058e4f50b3bbf7377e036b81c25a72c54656c5c', dexGame: 'crystal', mapIds: ['johto-gsc', 'kanto-gsc'],
   note: 'Gold and Silver differ from Crystal (Kanto trainers, some gifts, the Battle Tower); those differences are not in this file.',
 };
-export const GOLD: Gen2Config = {
+const GOLD: Gen2Config = {
   game: 'gold', name: 'Pokémon Gold', repo: 'pokegold', url: 'pret/pokegold', commit: '62388c7204e5d13aa05b4231e220b6760584d1b5', dexGame: 'gold', mapIds: ['johto-gsc', 'kanto-gsc'],
   note: 'Silver uses this file too: the decompilation builds both from shared data (only version exclusives differ).',
 };

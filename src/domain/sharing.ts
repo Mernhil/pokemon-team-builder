@@ -48,7 +48,7 @@ export interface SharedChange {
 
 /** Changes older than this are not news (a new device's first sync would otherwise announce everything). */
 export const NEWS_WINDOW_MS = 7 * 24 * 3600 * 1000;
-export const MAX_NOTICES = 3;
+const MAX_NOTICES = 3;
 
 /**
  * The toasts for what the other person changed: one line per changed team (newest first, at most

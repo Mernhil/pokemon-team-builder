@@ -33,9 +33,9 @@ const firstLoad = entry.reduce((sum, f) => sum + gz(join(DIST, f)), 0);
 const assets = readdirSync(join(DIST, 'assets')).filter((f) => f.endsWith('.js') && !entry.includes(`assets/${f}`));
 const chunks = assets.map((f) => ({ f, size: gz(join(DIST, 'assets', f)) })).sort((a, b) => b.size - a.size);
 
-// The service worker's precache manifest lists every file with its revision; sum their sizes.
+// The service worker's precache manifest (injected into sw/sw.ts) lists every file with its revision; sum their sizes.
 const sw = readFileSync(join(DIST, 'sw.js'), 'utf8');
-const precached = [...new Set([...sw.matchAll(/url:"([^"]+)"/g)].map((m) => m[1]))];
+const precached = [...new Set([...sw.matchAll(/"?\burl"?:"([^"]+)"/g)].map((m) => m[1]))];
 const precache = precached.reduce((sum, url) => {
   try {
     return sum + statSync(join(DIST, url)).size;
@@ -53,7 +53,10 @@ let failed = false;
 for (const [label, size, limit, detail] of rows) {
   const ok = size <= limit;
   failed ||= !ok;
-  console.log(`${ok ? '✓' : '✗'} ${label}: ${fmt(size)} of ${fmt(limit)}  (${detail})`);
+  const used = Math.round((size / limit) * 100);
+  // Within 5% of the limit still passes, but say so: the next feature will not fit.
+  const mark = !ok ? '✗' : used >= 95 ? '!' : '✓';
+  console.log(`${mark} ${label}: ${fmt(size)} of ${fmt(limit)} (${used}%)  (${detail})`);
 }
 if (failed) {
   console.error('Bundle budget exceeded (scripts/check-bundle.mjs).');

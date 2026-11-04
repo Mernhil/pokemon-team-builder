@@ -37,6 +37,9 @@ export const controlClass = (invalid?: boolean, className?: string) =>
     className,
   );
 
+/** The dim backdrop behind every dialog and sheet (Modal, the picker sheet, the command palette). */
+export const overlayClass = 'fixed inset-0 z-50 bg-black/55';
+
 /** Two-type gradient (a Pokémon's colours), for hero tiles and avatars. */
 export const typeGradient = (types?: readonly (TeraType | undefined)[]) => {
   const a = types?.[0] ?? 'Normal';

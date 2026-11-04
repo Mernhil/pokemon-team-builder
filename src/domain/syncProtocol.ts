@@ -5,11 +5,11 @@
  */
 import { z } from 'zod';
 
-export const DOC_KINDS = ['team', 'match'] as const;
+const DOC_KINDS = ['team', 'match'] as const;
 export type DocKind = (typeof DOC_KINDS)[number];
 
 /** Same shape the sanitiser accepts for ids (what uid() produces). */
-export const DOC_ID = /^[A-Za-z0-9-]{1,64}$/;
+const DOC_ID = /^[A-Za-z0-9-]{1,64}$/;
 
 export const LIMITS = {
   /** One document's JSON, in characters. A full team with six sets is about 6 KB. */
@@ -23,7 +23,7 @@ export const LIMITS = {
 } as const;
 
 /** A document as the client sends it. A deleted one has no `json` (a tombstone). */
-export const PushDocSchema = z
+const PushDocSchema = z
   .object({
     id: z.string().regex(DOC_ID),
     kind: z.enum(DOC_KINDS),
@@ -71,15 +71,29 @@ export interface PushResponse {
 // Sharing
 // ---------------------------------------------------------------------------
 
-export const SHARE_ROLES = ['view', 'edit'] as const;
-export const SHARE_KINDS = ['team-group', 'matches'] as const;
+const SHARE_ROLES = ['view', 'edit'] as const;
+const SHARE_KINDS = ['team-group', 'matches'] as const;
 export const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+/** An account's id ("u_" and 12 base64url characters, worker/crypto.ts `randomId`). Case matters. */
+export const USER_ID_RE = /^u_[A-Za-z0-9_-]{12}$/;
+/** Who someone is, as stored: an e-mail in lower case, an account id exactly as it is. */
+export const normalizeIdentity = (who: string): string => (who.includes('@') && !who.startsWith('@') ? who.trim().toLowerCase() : who.trim());
+/** "@ash": an account by its username (as typed in the Share dialog). */
+export const USERNAME_TARGET_RE = /^@[A-Za-z0-9][A-Za-z0-9_.-]{2,19}$/;
+/** What the Share dialog accepts: an e-mail address or "@username". */
+export const isShareTarget = (to: string): boolean => EMAIL_RE.test(to) || USERNAME_TARGET_RE.test(to);
 export const MAX_SHARES = 50;
 
 export const ShareSchema = z.object({
   kind: z.enum(SHARE_KINDS),
   ref: z.string().regex(/^(\*|[A-Za-z0-9-]{1,64})$/),
-  grantee: z.string().max(254).regex(EMAIL_RE).transform((e) => e.trim().toLowerCase()),
+  /** Who: an e-mail address (a Cloudflare Access sign-in), or an account's id once accounts are on (docs/ACCOUNTS.md). */
+  grantee: z
+    .string()
+    .max(254)
+    .transform((e) => e.trim())
+    .pipe(z.string().refine((e) => EMAIL_RE.test(e) || USER_ID_RE.test(e) || USERNAME_TARGET_RE.test(e), 'not an e-mail address or an account'))
+    .transform(normalizeIdentity),
   role: z.enum(SHARE_ROLES),
 });
 export type ShareInput = z.infer<typeof ShareSchema>;

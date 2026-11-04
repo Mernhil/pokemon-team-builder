@@ -1,5 +1,6 @@
 import type { Dex } from '@/data/dex';
 import { exportChampionsText, exportTeamShowdown, formatReplicaCode } from './codecs';
+import { itemStatBoost } from './itemStats';
 import { calcStats } from './stats';
 import type { FormatRules, PokemonSet, Team } from './types';
 
@@ -10,7 +11,11 @@ export function speedOrder(team: Team, dex: Dex, format: FormatRules) {
     if (!set || !sp) return [];
     const nature = dex.nature(set.nature);
     const mega = format.capabilities.mega ? dex.megaFor(set.speciesId, set.itemId) : undefined;
-    const out = [{ id: sp.id, name: sp.name, types: sp.types, speed: calcStats(sp.baseStats, set, format, nature).spe, mega: false }];
+    const stats = calcStats(sp.baseStats, set, format, nature);
+    const scarf = itemStatBoost(set.itemId, stats);
+    const out: { id: string; name: string; types: typeof sp.types; speed: number; mega: boolean; withItem?: number }[] = [
+      { id: sp.id, name: sp.name, types: sp.types, speed: stats.spe, mega: false, ...(scarf?.stat === 'spe' ? { withItem: scarf.value } : {}) },
+    ];
     if (mega) out.push({ id: mega.id, name: mega.name, types: mega.types, speed: calcStats(mega.baseStats, set, format, nature).spe, mega: true });
     return out;
   });
@@ -18,7 +23,7 @@ export function speedOrder(team: Team, dex: Dex, format: FormatRules) {
 }
 
 /** "Lead Incineroar + Garchomp" for a matchup note, from the leads that are still on the team. */
-export function matchupLeads(team: Team, dex: Dex, leads: readonly string[] | undefined): string[] {
+function matchupLeads(team: Team, dex: Dex, leads: readonly string[] | undefined): string[] {
   return (leads ?? []).flatMap((uid) => {
     const s = team.slots.find((x): x is PokemonSet => !!x && x.uid === uid);
     return s ? [s.nickname || dex.species(s.speciesId)?.name || s.speciesId] : [];

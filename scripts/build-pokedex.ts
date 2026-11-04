@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pkhexEncounters, type PkhexEncounter } from './pkhex-encounters.js';
+import { toID } from '../src/domain/id.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, '..');
@@ -25,7 +26,6 @@ const OUT = resolve(ROOT, 'src/data/generated');
 const CACHE = resolve(ROOT, '.cache/pokeapi');
 const CSV_BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv';
 const EN = '9';
-const toID = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 const TABLES = [
   'versions', 'version_names', 'version_groups', 'pokedexes', 'pokedex_version_groups', 'pokemon_dex_numbers',
