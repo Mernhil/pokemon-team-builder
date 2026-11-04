@@ -24,7 +24,7 @@ Use the Tailwind theme utilities (`bg-surface`, `text-muted`, `border-border-str
 
 Anything tappable is at least 44 × 44 pt on a touch screen. The primitives do this with `pointer-coarse:` classes (`h-9` → `pointer-coarse:h-11`); a small visual control that must stay small (an icon button inside a row) uses the `hit` class, which enlarges the touch area without changing the look. Inputs are 16 px on phones so iOS doesn't zoom.
 
-Nothing may scroll the page sideways: a wide table sits in its own `overflow-x-auto` region with a label and `tabIndex={0}`. `e2e/views.spec.ts` fails if any main screen does.
+Nothing may scroll the page sideways, and no sheet's list may either (`Modal`'s body has `min-w-0 overflow-x-hidden`; a row of actions is `flex-wrap`, a card is `min-w-0`, a title `truncate`, a chip row wraps, a confirm (`ConfirmInline`) wraps; on phones the primary action of a card takes its own full-width row and the secondary ones are small buttons in one row, all 44 pt): a wide table sits in its own `overflow-x-auto` region with a label and `tabIndex={0}`. `e2e/views.spec.ts` fails if any main screen does, and `e2e/phone-layout.spec.ts` (iPhone project, `expectNoHorizontalOverflow` in `e2e/helpers.ts`) if Saved teams (a long name, two variations, a delete being confirmed), Share, Save, Import / Export, Settings, Team overview or the More destinations push anything past the screen edge.
 
 ## The two looks
 

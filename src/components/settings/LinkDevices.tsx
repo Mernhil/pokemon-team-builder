@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Copy, Link2, Unlink } from 'lucide-react';
 import { formatCode, parsePairingInput, type DeviceInfo } from '@/domain/pairing';
 import { useDeviceStore } from '@/sync/deviceStore';
-import { linkThisDevice, loadDevices, pairingLink, requestPairCode, revokeLinkedDevice, unlinkThisDevice } from '@/sync/pairing';
+import { linkThisDevice, linkThisPhone, loadDevices, pairingLink, requestPairCode, revokeLinkedDevice, unlinkThisDevice, unlinkThisPhone } from '@/sync/pairing';
 import { useSyncStore } from '@/sync/syncStore';
 import { syncNow } from '@/sync/runner';
 import { Button, Input, Label } from '../ui/primitives';
@@ -186,5 +186,75 @@ export function LinkThisDesktop() {
         </p>
       )}
     </form>
+  );
+}
+
+/**
+ * Settings → Sync on a phone: link it with a pairing code, so sync uses a device token and never needs the Cloudflare Access
+ * cookie. The installed iPhone app can't get that cookie (its cookie jar is separate from Safari's), so this is how it signs
+ * back in. The code is made on a device that is signed in: Safari on the same phone, or the website on a computer.
+ */
+export function LinkThisPhone({ expired }: { expired: boolean }) {
+  const token = useDeviceStore((d) => d.token);
+  const owner = useDeviceStore((d) => d.owner);
+  const deviceName = useSyncStore((s) => s.deviceName);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      // A pasted link brings its own server; only the code is used: this phone always links to the site it is running from.
+      await linkThisPhone(parsePairingInput(code)?.code ?? code, deviceName);
+      setCode('');
+      void syncNow();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (token) {
+    return (
+      <div className="space-y-2 rounded-lg border border-border p-3">
+        <p>
+          This phone is linked with a pairing code{owner ? <> (to <b>{owner}</b>)</> : null}. Sync no longer needs the Cloudflare sign-in, so it keeps working when that expires. You can unlink it here or from another device’s Settings → Sync.
+        </p>
+        <Button size="sm" variant="ghost" onClick={() => void unlinkThisPhone()}>
+          <Unlink size={14} aria-hidden /> Unlink this phone
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <details className="rounded-lg border border-border p-3" open={expired || undefined}>
+      <summary className="cursor-pointer font-semibold">Link this phone with a pairing code</summary>
+      <form
+        className="mt-2 space-y-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <p className="text-muted">
+          The installed phone app can’t share Safari’s Cloudflare sign-in, so it can’t sign in again once that expires. Linking it with a code fixes that for good. On a device that is signed in (Safari on this phone works, or the website on a computer): Settings → Sync → <b>Make a pairing code</b>. Then type the code here within 10 minutes.
+        </p>
+        <div className="space-y-1">
+          <Label>Pairing code</Label>
+          <Input aria-label="Pairing code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABCDE-FGHJK" autoComplete="off" autoCapitalize="characters" spellCheck={false} className="max-w-xs font-mono" />
+        </div>
+        <Button type="submit" variant="primary" disabled={busy || !code}>
+          {busy ? 'Linking…' : 'Link this phone'}
+        </Button>
+        {error && (
+          <p role="alert" className="text-bad">
+            {error}
+          </p>
+        )}
+      </form>
+    </details>
   );
 }

@@ -215,7 +215,7 @@ export function Panel({
  */
 export function ConfirmInline({ question, confirmLabel = 'Delete', keepLabel = 'Keep', onConfirm, onKeep, className }: { question?: ReactNode; confirmLabel?: string; keepLabel?: string; onConfirm: () => void; onKeep: () => void; className?: string }) {
   return (
-    <span role="alert" className={cn('flex shrink-0 items-center gap-1.5', className)}>
+    <span role="alert" className={cn('flex max-w-full flex-wrap items-center gap-1.5', className)}>
       {question && <span className="text-sm">{question}</span>}
       <Button size="sm" variant="danger" onClick={onConfirm}>
         {confirmLabel}

@@ -27,7 +27,7 @@ export function Modal({
         <Dialog.Content
           onCloseAutoFocus={returnFocus}
           className={cn(
-            'ui-sheet fixed z-50 flex flex-col border border-border bg-surface text-fg shadow-2xl',
+            'ui-sheet fixed z-50 flex min-w-0 max-w-full flex-col border border-border bg-surface text-fg shadow-2xl',
             'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-2xl pb-[env(safe-area-inset-bottom)]',
             'sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:max-h-[88dvh] sm:w-[calc(100vw-32px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:pb-0',
             wide ? 'sm:max-w-3xl' : 'sm:max-w-lg',
@@ -47,7 +47,8 @@ export function Modal({
               <X size={18} />
             </Dialog.Close>
           </header>
-          <div className="scrollbar-thin overflow-auto overscroll-contain px-5 pt-2 pb-5">{children}</div>
+          {/* min-w-0 + no horizontal scroll: a child wider than the sheet must wrap or truncate, never shift the whole list sideways (docs/UI.md). */}
+          <div className="scrollbar-thin min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-5 pt-2 pb-5">{children}</div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

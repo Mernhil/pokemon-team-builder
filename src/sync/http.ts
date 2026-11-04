@@ -1,4 +1,5 @@
-import { isDesktopApp, useDeviceStore } from './deviceStore';
+import { PHONE_EXPIRED_MESSAGE, SIGNIN_MESSAGE, accessSessionEnded, signedOutMessage } from '@/domain/accessSession';
+import { isDesktopApp, isPhoneLinked, isStandalone, useDeviceStore } from './deviceStore';
 import { useAccountStore } from './accountStore';
 
 /** Talking to the sync Worker from the browser: one fetch wrapper that turns every failure into a message the player can act on. */
@@ -19,22 +20,30 @@ export class SyncHttpError extends Error {
 export const RENEW_PATH = '/api/session/renew';
 
 /**
- * Signs in again from inside the installed app. A full navigation in the same window (never window.open: on iOS that
- * opens Safari, whose cookie the home-screen app can't see): Access logs in there, the cookie lands where the app can
- * use it, and the Worker sends the app back to `/`. The service worker leaves /api/* to the network (vite.config.ts).
+ * Signs in again in a browser tab: a full navigation in the same window, Access logs in there, and the Worker sends the
+ * browser back to `/` (the service worker leaves /api/* to the network, vite.config.ts). Only on a tab, on tap: the
+ * installed iPhone app has its own cookie jar and the login sheet iOS opens for a foreign page can end on a white page, so
+ * there it never navigates to the login; it links with a pairing code instead (`isStandalone`, docs/SYNC.md).
  */
 export function signInAgain(): void {
   window.location.href = RENEW_PATH;
 }
 
-export const SIGNIN_MESSAGE = 'Your sign-in has expired. Tap Sign in again.';
+export { PHONE_EXPIRED_MESSAGE, SIGNIN_MESSAGE };
 
 /**
  * The browser (web and phone app) talks to its own origin with its cookies: the account session when it is logged
- * in (the Worker looks at that first), else the Access cookie. The desktop app talks to its server under /api/device/
- * with its account session token, or, if it was linked with a pairing code and never logged in, that device token.
+ * in (the Worker looks at that first), else the Access cookie. A phone linked with a pairing code (and not logged in to
+ * an account) sends its device token to /api/device/ instead and never needs the cookie, which the installed iPhone app
+ * can't get (docs/SYNC.md). The desktop app talks to its server under /api/device/ with its account session token, or,
+ * if it was linked with a pairing code and never logged in, that device token.
  */
 function target(path: string): { url: string; init: RequestInit; viaAccount: boolean } {
+  if (!isDesktopApp() && !useAccountStore.getState().user && isPhoneLinked()) {
+    const { server, token } = useDeviceStore.getState();
+    // redirect: 'manual' as everywhere: if /api/device/* isn't a Bypass path in Access, that is a login redirect to report, not to follow.
+    return { url: `${server}${path.replace(/^\/api\//, '/api/device/')}`, init: { credentials: 'omit', redirect: 'manual', headers: { authorization: `Bearer ${token}` } }, viaAccount: false };
+  }
   if (!isDesktopApp()) return { url: path, init: { credentials: 'same-origin', redirect: 'manual' }, viaAccount: !!useAccountStore.getState().user };
   const account = useAccountStore.getState();
   const device = useDeviceStore.getState();
@@ -79,8 +88,9 @@ export async function request<T>(method: string, path: string, body?: unknown): 
     useAccountStore.getState().markExpired();
     throw new SyncHttpError(SIGNIN_MESSAGE, 'signin', 401);
   }
-  if (res.type === 'opaqueredirect' || res.status === 401 || res.status === 403) {
-    throw new SyncHttpError(isDesktopApp() ? 'This desktop app is signed out. Log in again in Settings → Account.' : SIGNIN_MESSAGE, 'signin', res.type === 'opaqueredirect' ? 0 : res.status);
+  if (accessSessionEnded(res)) {
+    // Status 0 = Access's redirect to its login (the banner then offers the right way back, src/components/shell/SyncStatus.tsx).
+    throw new SyncHttpError(signedOutMessage({ desktop: isDesktopApp(), linked: isPhoneLinked(), standalone: isStandalone() }), 'signin', res.type === 'opaqueredirect' || res.status < 400 ? 0 : res.status);
   }
   if (res.status === 409 && (res.headers.get('content-type') ?? '').includes('json')) {
     const body = (await res.clone().json().catch(() => ({}))) as { code?: string };
