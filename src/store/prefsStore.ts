@@ -35,6 +35,8 @@ interface PrefsState {
   brightness: number;
   /** Phones: is the stat calculator open in the builder? Open by default (it is half of building a set); a person who folds it keeps it folded. */
   statCalcOpen: boolean;
+  /** Saved teams: 'all', `made:<device id>` or `edited:<device id>` (remembered on this device; src/domain/deviceStamp.ts). */
+  teamsDeviceFilter: string;
 
   addRecent: (key: PickerKey, id: string) => void;
   toggleFavorite: (key: PickerKey, id: string) => void;
@@ -49,6 +51,7 @@ interface PrefsState {
   setOutline: (n: number) => void;
   setBrightness: (n: number) => void;
   setStatCalcOpen: (open: boolean) => void;
+  setTeamsDeviceFilter: (f: string) => void;
 }
 
 const KEYS: PickerKey[] = ['items', 'moves', 'species', 'natures'];
@@ -80,6 +83,7 @@ export const usePrefsStore = create<PrefsState>()(
       outline: OUTLINE_RANGE.default,
       brightness: BRIGHTNESS_RANGE.default,
       statCalcOpen: true,
+      teamsDeviceFilter: 'all',
 
       addRecent: (key, id) =>
         set((s) => ({
@@ -101,12 +105,13 @@ export const usePrefsStore = create<PrefsState>()(
       setOutline: (n) => set({ outline: clampNum(n, OUTLINE_RANGE) }),
       setBrightness: (n) => set({ brightness: clampNum(n, BRIGHTNESS_RANGE) }),
       setStatCalcOpen: (statCalcOpen) => set({ statCalcOpen }),
+      setTeamsDeviceFilter: (teamsDeviceFilter) => set({ teamsDeviceFilter }),
     }),
     {
       name: 'ptb:prefs:v1',
       version: 1,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies, nav: s.nav, lastSeenVersion: s.lastSeenVersion, palette: s.palette, look: s.look, outline: s.outline, brightness: s.brightness, statCalcOpen: s.statCalcOpen }),
+      partialize: (s) => ({ recent: s.recent, favorites: s.favorites, listMode: s.listMode, showUnavailableSpecies: s.showUnavailableSpecies, nav: s.nav, lastSeenVersion: s.lastSeenVersion, palette: s.palette, look: s.look, outline: s.outline, brightness: s.brightness, statCalcOpen: s.statCalcOpen, teamsDeviceFilter: s.teamsDeviceFilter }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<PrefsState>;
         const mode = (v: unknown): ListMode | undefined => (v === 'az' || v === 'grouped' ? v : undefined);
@@ -121,6 +126,7 @@ export const usePrefsStore = create<PrefsState>()(
           outline: clampNum(p.outline, OUTLINE_RANGE),
           brightness: clampNum(p.brightness, BRIGHTNESS_RANGE),
           statCalcOpen: p.statCalcOpen !== false,
+          teamsDeviceFilter: typeof p.teamsDeviceFilter === 'string' && /^(all|(made|edited):[ptcu][a-z0-9]{7})$/.test(p.teamsDeviceFilter) ? p.teamsDeviceFilter : 'all',
           showUnavailableSpecies: typeof p.showUnavailableSpecies === 'boolean' ? p.showUnavailableSpecies : current.showUnavailableSpecies,
           nav: sanitizeNav(p.nav),
           lastSeenVersion: typeof p.lastSeenVersion === 'string' && /^\d{1,5}\.\d{1,5}\.\d{1,5}$/.test(p.lastSeenVersion) ? p.lastSeenVersion : undefined,

@@ -2,6 +2,20 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.42.0 — 2026-11-05
+
+### New
+- **Saved teams show which device made and last edited them.** With sync on and teams from two or more devices, each saved team (and variation) has a chip such as *Made on Phone · edited on Desktop* with a phone / tablet / computer icon, a **Show** filter (*All teams / Made on … / Edited on …*, remembered on the device), and a *New from Desktop* mark on teams that arrived through sync until you open them. A device is recognised by a stable id, so renaming it updates its labels. Settings → Sync has **Label unlabelled teams as this device** for teams from before this version; it asks first, doesn't count as an edit and causes no conflict copies (docs/SYNC.md).
+
+### Changed
+- **Sync flushes unsent edits when the app goes to the background.** On a phone the 5-second wait before an edit is sent never runs if iOS freezes the app first. Now, when the app is hidden (or the page is closed) with unsent changes, it sends them at once with a keepalive request (the newest documents first, up to 60 KB; the rest on the next run). A saved "unsent edits" flag means an app that was killed before sending still pushes on its next start.
+- **Sync no longer hangs on a request that never answers.** Requests give up after 20 seconds (retried after 10 s, 30 s, 2 min), and a run that is still going after that is abandoned when the app comes back to the front, so "Sync now", foregrounding and the 3-minute tick start a fresh one. An abandoned run can't apply old results or save an older cursor.
+- **Sync diagnostics** (Settings → Sync) now show the unsent changes, the unsent-edits flag, the app version and the last background push; *Copy diagnostics* includes them (docs/SYNC.md says how to read it).
+
+### Fixed
+- **An edit made on a device whose clock ran behind could be lost.** An edit is now always stamped after the version it was made on, so it can't look older than what it edits. A delete only beats an edit when it is more than 2 minutes later (it was 5 seconds), and an edit that survives a delete is restamped so the server accepts it.
+- **A per-element overflow check.** A new end-to-end check looks at every element's box on phone-sized screens, not just the page width, so a button or chip running off the edge of a card is caught (docs/UI.md, *No overflow on phones*). Also fixed: the match log list and statistics filters, panel headers with several buttons, and tab bars at 320 px.
+
 ## 0.41.1 — 2026-11-05
 
 ### New

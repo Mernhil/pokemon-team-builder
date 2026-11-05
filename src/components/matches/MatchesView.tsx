@@ -194,7 +194,7 @@ export function MatchesView({ dex, format }: { dex: Dex; format: FormatRules }) 
               Record wins, losses and what your opponents brought. Win rates and the most common opponents appear here once you have a few.
             </EmptyState>
           ) : (
-            <div className="grid gap-3 lg:grid-cols-[300px_minmax(0,1fr)]">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[300px_minmax(0,1fr)]">
               <Panel as="aside" bodyClassName="scrollbar-thin max-h-[70dvh] space-y-0.5 overflow-y-auto p-1.5">
                 <ul aria-label="Logged matches">
                   {filtered.map((m) => (

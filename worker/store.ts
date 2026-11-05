@@ -1,3 +1,5 @@
+import { onlyAddsStamps } from '../src/domain/deviceStamp';
+import { sameContent } from '../src/domain/sync';
 import type { DocKind, RemoteDocument } from '../src/domain/syncProtocol';
 import type { D1Like } from './types';
 
@@ -46,6 +48,20 @@ export interface StoredDoc {
  * Returns the stored document's sequence number, or the server's newer version when this one is stale.
  */
 export async function pushDoc(db: D1Like, owner: string, d: StoredDoc): Promise<{ status: 'applied'; seq: number } | { status: 'stale'; doc: RemoteDocument }> {
+  const first = await write(db, owner, d, false);
+  if (first.status === 'applied') return first;
+  // The one exception to "strictly newer": the same version of a team with device labels added (Settings → Sync →
+  // Label unlabelled teams as this device). It changes no content and no `updatedAt`, so it can't win a conflict; it
+  // only gets a new sequence number so the other devices pull the labels.
+  const cur = first.doc;
+  if (d.kind === 'team' && !d.deleted && d.json !== null && !cur.deleted && cur.updatedAt === d.updatedAt && onlyAddsStamps(cur.json, JSON.parse(d.json), sameContent)) {
+    const second = await write(db, owner, d, true);
+    if (second.status === 'applied') return second;
+  }
+  return first;
+}
+
+async function write(db: D1Like, owner: string, d: StoredDoc, allowEqual: boolean): Promise<{ status: 'applied'; seq: number } | { status: 'stale'; doc: RemoteDocument }> {
   const [, written] = await db.batch<{ server_seq: number }>([
     db.prepare('INSERT INTO sync_seq (owner, value) VALUES (?1, 1) ON CONFLICT (owner) DO UPDATE SET value = value + 1').bind(owner),
     db
@@ -54,10 +70,10 @@ export async function pushDoc(db: D1Like, owner: string, d: StoredDoc): Promise<
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, (SELECT value FROM sync_seq WHERE owner = ?1), ?7)
          ON CONFLICT (owner, kind, id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at, deleted = excluded.deleted, server_seq = excluded.server_seq,
            group_id = COALESCE(excluded.group_id, documents.group_id)
-         WHERE excluded.updated_at > documents.updated_at
+         WHERE excluded.updated_at > documents.updated_at OR (?8 = 1 AND excluded.updated_at = documents.updated_at AND documents.deleted = 0)
          RETURNING server_seq`,
       )
-      .bind(owner, d.kind, d.id, d.json, d.updatedAt, d.deleted ? 1 : 0, d.groupId ?? null),
+      .bind(owner, d.kind, d.id, d.json, d.updatedAt, d.deleted ? 1 : 0, d.groupId ?? null, allowEqual ? 1 : 0),
   ]);
   const seq = written?.results?.[0]?.server_seq;
   if (typeof seq === 'number') return { status: 'applied', seq };
