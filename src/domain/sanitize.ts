@@ -1,4 +1,5 @@
 import { sanitizeBenchmarks } from './benchmarks';
+import { sanitizeStamp } from './deviceStamp';
 import type { LoggedMon, Match, MatchResult } from './matches';
 import { emptySlots, uid } from './team';
 import { STAT_IDS, type MatchupNote, type PokemonSet, type StatTable, type Team, type TeamSlots, type TeraType } from './types';
@@ -106,6 +107,8 @@ export function sanitizeTeam(v: unknown): Team | null {
     slotsByFormat: slotsByFormat && Object.keys(slotsByFormat).length ? slotsByFormat : undefined,
     createdAt: int(v.createdAt, 0, Number.MAX_SAFE_INTEGER, now),
     updatedAt: int(v.updatedAt, 0, Number.MAX_SAFE_INTEGER, now),
+    createdOn: sanitizeStamp(v.createdOn),
+    updatedOn: sanitizeStamp(v.updatedOn),
     groupId,
     variationLabel: str(v.variationLabel, MAX_NAME),
     shared: sanitizeShared(v.shared),

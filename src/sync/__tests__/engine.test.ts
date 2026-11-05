@@ -54,8 +54,10 @@ function device(env: ReturnType<typeof makeEnv>, name: string, email = 'me@examp
     },
     editTeam: (id: string, patch: Partial<Team>) => {
       const cur = docs.get(docKey('team', id))!;
-      const next = { ...(cur.json as Team), ...patch, updatedAt: clock };
-      docs.set(docKey('team', id), { ...cur, updatedAt: clock, json: next });
+      // As the stores stamp an edit (src/sync/local.ts): never at or before the version this device last synced.
+      const at = Math.max(clock, (state.known[docKey('team', id)]?.updatedAt ?? 0) + 1);
+      const next = { ...(cur.json as Team), ...patch, updatedAt: at };
+      docs.set(docKey('team', id), { ...cur, updatedAt: at, json: next });
     },
     addMatch: (notes = '') => {
       const m = { ...createMatch('2026-10-01'), notes, createdAt: clock, updatedAt: clock };
@@ -206,6 +208,45 @@ describe('two devices through the real Worker', () => {
     await laptop.sync();
     await phone.sync();
     for (const d of [phone, laptop]) expect(d.teams().map((x) => x.name).sort()).toEqual(['laptop', 'phone']);
+  });
+
+  it('clocks a minute apart: concurrent edits keep both versions, in either direction', async () => {
+    for (const skew of [-60_000, 60_000]) {
+      const env = makeEnv();
+      const phone = device(env, 'Phone');
+      const laptop = device(env, 'Laptop');
+      const t = phone.addTeam('base');
+      await phone.sync();
+      await laptop.sync();
+      phone.tick(30_000);
+      phone.editTeam(t.id, { name: 'phone' });
+      laptop.tick(30_000 + skew);
+      laptop.editTeam(t.id, { name: 'laptop' });
+      await phone.sync();
+      await laptop.sync();
+      await phone.sync();
+      for (const d of [phone, laptop]) expect(d.teams().map((x) => x.name).sort()).toEqual(['laptop', 'phone']);
+    }
+  });
+
+  it('clocks a minute apart: a delete does not throw away an edit made after it, in either direction', async () => {
+    for (const skew of [-60_000, 60_000]) {
+      const env = makeEnv();
+      const phone = device(env, 'Phone');
+      const laptop = device(env, 'Laptop');
+      const t = phone.addTeam('x');
+      await phone.sync();
+      await laptop.sync();
+      laptop.tick(10_000 + skew);
+      laptop.remove('team', t.id); // really first
+      phone.tick(40_000); // edited 30 s later by the real time, but the clocks disagree by a minute
+      phone.editTeam(t.id, { name: 'edited after' });
+      await laptop.sync();
+      await phone.sync();
+      await laptop.sync();
+      expect(phone.team(t.id)!.name).toBe('edited after');
+      expect(laptop.team(t.id)!.name).toBe('edited after');
+    }
   });
 
   it('delete versus edit: the edit wins when the delete is not clearly later', async () => {

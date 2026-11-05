@@ -13,7 +13,7 @@ import type { Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
 import { toast } from '@/store/toastStore';
 import { whileApplying } from './applying';
-import { syncOnce, type LocalStore, type SyncApi } from './engine';
+import { RunAbandoned, syncOnce, type LocalStore, type SyncApi } from './engine';
 import { request } from './http';
 import { useShareStore } from './shareStore';
 import { loadShares } from './sharesApi';
@@ -25,6 +25,8 @@ export interface SharedDeps {
   api?: { shares: () => Promise<unknown>; pull: () => Promise<SharedPullResponse>; push: (docs: (PushDoc & { owner: string })[]) => Promise<PushResponse> };
   deviceName: string;
   now?: () => number;
+  /** False once the run was abandoned: nothing more is written. */
+  isCurrent?: () => boolean;
 }
 
 const httpApi: NonNullable<SharedDeps['api']> = {
@@ -34,7 +36,7 @@ const httpApi: NonNullable<SharedDeps['api']> = {
 };
 
 /** A team the loser of a conflict becomes: my own, top level, named after where it came from. */
-const keepAsMine = (loser: Team, _winner: Team, deviceName: string, now: number): Team => cloneTeam(loser, `${loser.name} (${conflictLabel(deviceName, now).replace(/^Conflict copy /, 'conflict copy ')})`);
+const keepAsMine = (loser: Team, _winner: Team, deviceName: string, now: number): Team => cloneTeam(loser, `${loser.name} (${conflictLabel(deviceName, now).replace(/^Conflict copy /, 'conflict copy ')})`, { createdOn: loser.createdOn, updatedOn: loser.updatedOn });
 
 export async function syncShared(deps: SharedDeps): Promise<{ changes: SharedChange[] }> {
   const api = deps.api ?? httpApi;
@@ -95,7 +97,9 @@ export async function syncShared(deps: SharedDeps): Promise<{ changes: SharedCha
     deviceName: deps.deviceName,
     now,
     copyFor: keepAsMine,
+    isCurrent: deps.isCurrent,
   });
+  if (deps.isCurrent && !deps.isCurrent()) throw new RunAbandoned();
 
   // ---- Reconcile with what the server says is shared with me right now ----
   const docs = pulled?.docs ?? [];
@@ -134,7 +138,8 @@ export async function syncShared(deps: SharedDeps): Promise<{ changes: SharedCha
 }
 
 /** Runs sharing sync and announces what the other person changed. */
-export async function syncSharedWithNotices(deviceName: string): Promise<void> {
-  const { changes } = await syncShared({ deviceName });
+export async function syncSharedWithNotices(deviceName: string, isCurrent?: () => boolean): Promise<void> {
+  const { changes } = await syncShared({ deviceName, isCurrent });
+  if (isCurrent && !isCurrent()) return;
   for (const line of sharedNotices(changes, useShareStore.getState().names, Date.now())) toast(line);
 }

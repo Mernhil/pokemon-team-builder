@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getFormat } from '@/domain/formats';
-import { SKEW_MS, conflictCopy, conflictLabel, docKey, localChanges, resolveDocument, sameContent, type LocalDoc } from '@/domain/sync';
+import { DELETE_SKEW_MS, SKEW_MS, conflictCopy, conflictLabel, docKey, localChanges, resolveDocument, sameContent, type LocalDoc } from '@/domain/sync';
 import type { DocKind, RemoteDocument } from '@/domain/syncProtocol';
 import { createSet, createTeam } from '@/domain/team';
 import type { Dex } from '@/data/dex';
@@ -62,8 +62,11 @@ describe('delete versus edit', () => {
   });
 
   it('deleted there, edited here: the edit survives unless the delete is clearly later', () => {
-    // Edit at +20s, delete at +30s: more than the skew later, so the delete wins.
-    expect(resolveDocument({ local: local(T0 + 20_000), remote: deleted(T0 + 30_000), base: base(T0), now: NOW })).toEqual({ action: 'delete-local' });
+    // Edit at +20s, delete a good while later than the clock margin: the delete wins.
+    expect(resolveDocument({ local: local(T0 + 20_000), remote: deleted(T0 + 20_000 + DELETE_SKEW_MS + 1), base: base(T0), now: NOW + DELETE_SKEW_MS })).toEqual({ action: 'delete-local' });
+    // Delete 10 s or even a minute after the edit: two clocks a minute apart could have it the other way round, so the edit stays.
+    expect(resolveDocument({ local: local(T0 + 20_000), remote: deleted(T0 + 30_000), base: base(T0), now: NOW })).toEqual({ action: 'push-local' });
+    expect(resolveDocument({ local: local(T0 + 20_000), remote: deleted(T0 + 80_000), base: base(T0), now: NOW })).toEqual({ action: 'push-local' });
     // Delete only 3s after the edit: clocks could be off, keep the edit.
     expect(resolveDocument({ local: local(T0 + 20_000), remote: deleted(T0 + 23_000), base: base(T0), now: NOW })).toEqual({ action: 'push-local' });
     // Delete before the edit: the edit wins.
@@ -73,7 +76,8 @@ describe('delete versus edit', () => {
   it('deleted here, edited there: the edit wins unless this delete is clearly later', () => {
     // No local copy but it was synced before: deleted here at "now".
     expect(resolveDocument({ remote: remote(NOW - 2_000), base: base(T0), now: NOW })).toEqual({ action: 'apply-remote' });
-    expect(resolveDocument({ remote: remote(NOW - SKEW_MS - 1_000), base: base(T0), now: NOW })).toEqual({ action: 'push-local' });
+    expect(resolveDocument({ remote: remote(NOW - 60_000), base: base(T0), now: NOW })).toEqual({ action: 'apply-remote' }); // a minute: clocks may differ by that
+    expect(resolveDocument({ remote: remote(NOW), base: base(T0), now: NOW + DELETE_SKEW_MS + 1_000 })).toEqual({ action: 'push-local' });
   });
 
   it('deleted on both sides is nothing to do', () => {
