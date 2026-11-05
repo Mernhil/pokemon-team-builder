@@ -5,14 +5,14 @@
  */
 import type { FieldConditions } from './battle/conditions.ts';
 import { TREND_PERIODS, type TrendPeriod } from './metaHistory.ts';
-import { THREAT_COUNTS } from './threats.ts';
+import { THREAT_COUNTS, type ThreatField } from './threats.ts';
 
 export const META_TABS = ['usage', 'trends', 'teams'] as const;
 export type MetaTab = (typeof META_TABS)[number];
 
 export interface ViewPrefs {
   threatCount: number;
-  threatField: FieldConditions;
+  threatField: ThreatField;
   metaTab: MetaTab;
   metaPeriod: TrendPeriod;
 }
@@ -40,6 +40,9 @@ export function sanitizeView(raw: unknown): ViewPrefs {
       terrain: TERRAIN.includes(f.terrain as string) ? (f.terrain as FieldConditions['terrain']) : '',
       trickRoom: f.trickRoom === true,
       gravity: f.gravity === true,
+      ...(f.myTailwind === true ? { myTailwind: true } : {}),
+      ...(f.theirTailwind === true ? { theirTailwind: true } : {}),
+      ...(f.maxHits === true ? { maxHits: true } : {}),
     },
     metaTab: (META_TABS as readonly unknown[]).includes(r.metaTab) ? (r.metaTab as MetaTab) : d.metaTab,
     metaPeriod: (TREND_PERIODS as readonly unknown[]).includes(r.metaPeriod) ? (r.metaPeriod as TrendPeriod) : d.metaPeriod,

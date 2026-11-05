@@ -10,7 +10,7 @@
  * better one, so a threat is never understated.
  */
 import type { Dex } from '@/data/dex';
-import { calcMoves, calcSpeed, type FormResult, type MoveResult } from './battle/damage';
+import { calcMoves, calcSpeed, hitRange, type FormResult, type MoveResult } from './battle/damage';
 import { defaultSide, type FieldConditions } from './battle/conditions';
 import type { MegaMode } from './battle/conditions';
 import type { PokemonSet } from './types';
@@ -99,21 +99,41 @@ function best(moves: MoveSummary[], keepNone = false): MoveSummary | null {
   return top && (keepNone || top.kill !== 'none') ? top : null;
 }
 
+/** The report's field: the shared conditions plus Tailwind on either side (a side condition in the calc, a toggle here). */
+export type ThreatField = FieldConditions & { myTailwind?: boolean; theirTailwind?: boolean; /** Multi-hit moves land every hit (best case) instead of the usual expected count. */ maxHits?: boolean };
+
+/** The shared part of a ThreatField, as the Damage Calc takes it. */
+export function sharedField(f: ThreatField): FieldConditions {
+  return { gameType: f.gameType, weather: f.weather, terrain: f.terrain, trickRoom: f.trickRoom, gravity: f.gravity };
+}
+
+/** Every multi-hit move of a set at its most hits, as the calculator's hit choices. */
+export function maxHitChoices(dex: Dex, set: PokemonSet): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const id of set.moves) {
+    const r = id ? hitRange(dex, id) : null;
+    if (r) out[id] = r[1];
+  }
+  return out;
+}
+
 /** One of my Pokémon against one threat, under a field. */
 export function computeCell(
   dex: Dex,
   mine: PokemonSet,
   threat: { set: PokemonSet; megaMode: MegaMode },
-  field: FieldConditions,
+  field: ThreatField,
   /** Force my Mega holder to one forme (the bring planner: only one Pokémon can Mega per battle). Default: both, read pessimistically. */
   mineMega?: 'base' | 'mega',
 ): ThreatCell {
   const myHasMega = !!dex.megaFor(mine.speciesId, mine.itemId);
-  const mySide = { set: mine, cond: { ...defaultSide(myHasMega), ...(mineMega ? { megaMode: mineMega } : {}) } };
-  const theirSide = { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode } };
+  const mySide = { set: mine, cond: { ...defaultSide(myHasMega), ...(mineMega ? { megaMode: mineMega } : {}), tailwind: !!field.myTailwind } };
+  const theirSide = { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode, tailwind: !!field.theirTailwind } };
 
-  const mineMoves = summarizeMoves(calcMoves(dex, mySide, theirSide, field), true);
-  const theirMoves = summarizeMoves(calcMoves(dex, theirSide, mySide, field), false);
+  const myHits = field.maxHits ? maxHitChoices(dex, mine) : {};
+  const theirHits = field.maxHits ? maxHitChoices(dex, threat.set) : {};
+  const mineMoves = summarizeMoves(calcMoves(dex, mySide, theirSide, field, [], myHits), true);
+  const theirMoves = summarizeMoves(calcMoves(dex, theirSide, mySide, field, [], theirHits), false);
   const myMoves = best(mineMoves);
   const theirBest = best(theirMoves);
 
@@ -135,12 +155,12 @@ export interface ThreatJob {
   formatId: string;
   members: { slot: number; set: PokemonSet }[];
   threats: { key: string; speciesId: string; usagePct?: number; usageRank?: number; set: PokemonSet; megaMode: MegaMode }[];
-  field: FieldConditions;
+  field: ThreatField;
 }
 
 /** What goes into a cell's result: everything that changes the numbers. */
 const setHash = (s: PokemonSet) => JSON.stringify([s.speciesId, s.abilityId, s.itemId, s.nature, s.level, s.sp, s.evs, s.ivs, s.moves]);
-const fieldHash = (f: FieldConditions) => `${f.gameType}|${f.weather}|${f.terrain}|${f.trickRoom}|${f.gravity}`;
+const fieldHash = (f: ThreatField) => `${f.gameType}|${f.weather}|${f.terrain}|${f.trickRoom}|${f.gravity}|${!!f.myTailwind}|${!!f.theirTailwind}|${!!f.maxHits}`;
 
 /** Memoised cells keyed by (my set, threat set, field). Lives as long as its owner (a worker, a hook). */
 export type ThreatCache = Map<string, ThreatCell>;
@@ -204,10 +224,13 @@ export function summarize(dex: Dex, job: ThreatJob, rows: ThreatCell[][]): Threa
       const mine = myOhko === 0 ? ' and none of yours OHKO it back' : `, while ${myOhko} of yours OHKO it back`;
       lines.push(`${name} OHKOs ${theirOhko} of your Pokémon${mine}.`);
     }
-    if (fastKo.length === 0) lines.push(`Nothing on your team outspeeds and 2HKOs ${name}.`);
+    // `first` already accounts for Trick Room, so in it "first" means slower.
+    const outspeeds = job.field.trickRoom ? 'moves before' : 'outspeeds';
+    if (fastKo.length === 0) lines.push(`Nothing on your team ${outspeeds} and 2HKOs ${name}.`);
     else if (theirOhko === 0) {
       const names = fastKo.map((c) => nameOf(dex, job.members[cells.indexOf(c)].set.speciesId));
-      lines.push(`${names.join(' and ')} ${plural(names.length, 'outspeeds', 'outspeed')} and 2HKO${names.length === 1 ? 's' : ''} ${name}.`);
+      const verb = job.field.trickRoom ? plural(names.length, 'moves before', 'move before') : plural(names.length, 'outspeeds', 'outspeed');
+      lines.push(`${names.join(' and ')} ${verb} and 2HKO${names.length === 1 ? 's' : ''} ${name}.`);
     }
     if (lines.length === 0) lines.push(`No clear problem: ${name} doesn't OHKO anything of yours.`);
 

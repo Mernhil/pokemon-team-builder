@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.41.1 — 2026-11-05
+
+### New
+- **Threat report: Tailwind and All hits.** The report has *Your Tailwind* and *Their Tailwind* toggles, and an *All hits* toggle that counts every hit of multi-hit moves (Population Bomb, Triple Axel…) instead of the usual expected number. Under Trick Room it now says a Pokémon "moves before" another instead of "outspeeds".
+- **Damage Calc: number of hits.** A multi-hit move has a hits chooser (1–5 where the move allows it), shows the hit count of the result, and counts Population Bomb and Triple Axel hits by accuracy, with Wide Lens, Skill Link and Loaded Dice.
+
 ## 0.41.0 — 2026-11-04
 
 ### New
