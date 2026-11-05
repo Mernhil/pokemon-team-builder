@@ -2,6 +2,12 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.41.0 — 2026-11-04
+
+### New
+- **Reverse search: start from an idea.** The empty screen now offers one-tap starting points instead of a bare prompt: Pokémon that one-shot the most-used Pokémon of the live meta, Pokémon that survive their strongest hits, and users of Fake Out, Trick Room, Tailwind or Wide Guard (only moves legal in the chosen regulation). A tap fills in the conditions; change anything afterwards.
+- **Outline strength and brightness.** Settings → Appearance has two sliders: how strong the Sticker outlines are (10–100, default 65) and the overall brightness (70–110, default 100). Both are remembered on this device.
+
 ## 0.40.2 — 2026-11-05
 
 ### New

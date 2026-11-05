@@ -11,7 +11,7 @@ async function addCondition(page: Page, kind: string, species: string) {
 
 test('Reverse search: every condition has to hold, and a match can be added to the team', async ({ page }) => {
   await openApp(page, '#reverse');
-  await expect(page.getByText('Nothing to search for yet')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start from an idea' })).toBeVisible();
 
   await addCondition(page, 'One-shots', 'Rillaboom');
   await expect(checked(page)).toBeVisible({ timeout: 30_000 });
@@ -38,6 +38,14 @@ test('Reverse search: every condition has to hold, and a match can be added to t
     await page.getByRole('button', { name: /^Add .* to team$/ }).first().click();
     await expect(page.getByText(/^Added .* to /)).toBeVisible();
   }
+});
+
+test('Reverse search: a starter idea fills in the conditions', async ({ page }) => {
+  await openApp(page, '#reverse');
+  await page.getByRole('button', { name: /Take down the top threats/ }).click();
+  await expect(page.getByRole('heading', { name: 'Start from an idea' })).toHaveCount(0);
+  await expect(checked(page)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: /^Remove: One-shots/ })).toHaveCount(3);
 });
 
 test('Reverse search: a required move narrows the answers to Pokémon that know it, with the other conditions', async ({ page }) => {
