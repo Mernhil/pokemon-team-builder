@@ -3,10 +3,10 @@ import type { Dex } from '@/data/dex';
 import { useMetaFor } from '@/data/useMeta';
 import { REGULATION_MANIFEST } from '@/domain/formats';
 import type { FieldConditions } from '@/domain/battle/conditions';
-import { metaSets, type MetaSet } from '@/domain/metaSets';
+import { everyThreat, topThreats, type ReportThreat } from '@/domain/reportThreats';
 import { pickSpeedSnapshot, type PickedSnapshot } from '@/domain/speedTiers';
 import { summarize, type ThreatCell, type ThreatJob, type ThreatSummary } from '@/domain/threats';
-import type { FormatRules, Team } from '@/domain/types';
+import type { FormatRules, PokemonSet, Team } from '@/domain/types';
 import { startThreatJob } from '@/workers/threatClient';
 
 const champRegIds = REGULATION_MANIFEST.regulations
@@ -21,7 +21,7 @@ export interface ThreatReport {
   picked?: PickedSnapshot;
   /** The meta data is still loading. */
   loading: boolean;
-  threats: MetaSet[];
+  threats: ReportThreat[];
   members: { slot: number; set: Team['slots'][number] & object }[];
   /** One entry per threat; undefined until that row has been calculated. */
   rows: (ThreatCell[] | undefined)[];
@@ -35,16 +35,20 @@ export interface ThreatReport {
  * Runs the Threat engine for a team in a Web Worker (see src/workers) and returns rows as they
  * arrive. Restarts, debounced, when the team, the field or the threat count changes.
  */
-export function useThreatReport({ dex, format, team, count, field, delay = 150, baseForms }: { dex: Dex; format: FormatRules; team: Team; count: number; field: FieldConditions; delay?: number; /** Species to calculate in their base form instead of their Mega. */ baseForms?: ReadonlySet<string> }): ThreatReport {
+export function useThreatReport({ dex, format, team, count, field, delay = 150, baseForms, all, builds }: { dex: Dex; format: FormatRules; team: Team; count: number; field: FieldConditions; delay?: number; /** Species to calculate in their base form instead of their Mega. */ baseForms?: ReadonlySet<string>; /** Every Pokémon the regulation allows (and the Mega variants), not just the `count` most used. */ all?: boolean; /** The player's own builds of opponents, by species id. */ builds?: Readonly<Record<string, PokemonSet>> }): ThreatReport {
   const metaFor = useMetaFor();
   const champions = format.datasetId === 'champions';
   const picked = useMemo(
     () => (champions && metaFor ? pickSpeedSnapshot(format.regulationId, champRegIds, metaFor) : undefined),
     [champions, format.regulationId, metaFor],
   );
-  const allThreats = useMemo(() => (picked ? metaSets(picked.snapshot, dex, format, count) : []), [picked, dex, format, count]);
+  const allThreats = useMemo(
+    () => (!picked ? [] : all ? everyThreat(dex, format, picked.snapshot, builds) : topThreats(dex, format, picked.snapshot, count, builds)),
+    [picked, dex, format, count, all, builds],
+  );
   const threats = useMemo(
-    () => (baseForms?.size ? allThreats.map((t) => (baseForms.has(t.speciesId) ? { ...t, megaMode: 'base' as const } : t)) : allThreats),
+    // A "with <Stone>" row is only there to be the Mega, so the base-form switch leaves it alone.
+    () => (baseForms?.size ? allThreats.map((t) => (baseForms.has(t.speciesId) && !t.withStone ? { ...t, megaMode: 'base' as const } : t)) : allThreats),
     [allThreats, baseForms],
   );
   const members = useMemo(() => team.slots.flatMap((set, slot) => (set ? [{ slot, set }] : [])), [team.slots]);
@@ -55,7 +59,7 @@ export function useThreatReport({ dex, format, team, count, field, delay = 150, 
             datasetId: format.datasetId,
             formatId: format.id,
             members,
-            threats: threats.map((t) => ({ key: t.speciesId, speciesId: t.speciesId, usagePct: t.usagePct, set: t.set, megaMode: t.megaMode })),
+            threats: threats.map((t) => ({ key: t.key, speciesId: t.speciesId, usagePct: t.usagePct, set: t.set, megaMode: t.megaMode })),
             field,
           }
         : undefined,

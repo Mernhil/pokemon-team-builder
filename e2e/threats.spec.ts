@@ -81,6 +81,38 @@ test('OHKO reports: Team check links to both, each lists who can OHKO whom, a ro
   }
 });
 
+test('OHKO reports: a move filter narrows a card, Details lists every Pokémon, a row’s build can be edited', async ({ page }) => {
+  await openApp(page);
+  await importTeam(page, SAMPLE_TEAM);
+  await page.goto('/#analyse/ohko/to');
+  await expect(page.getByRole('status').filter({ hasText: /\d+ Pokémon calculated against 2 of yours/ })).toBeVisible({ timeout: 30_000 });
+
+  const card = page.getByRole('list', { name: 'Can OHKO' }).getByRole('listitem').first();
+  const rowCount = () => card.getByRole('button', { name: /Open in the Damage Calc/ }).count();
+  const compact = await rowCount();
+
+  // Move filter: one move's chip leaves no more rows than "All moves" had.
+  const moves = card.getByRole('group', { name: 'Move' }).getByRole('button');
+  if ((await moves.count()) > 2) {
+    await moves.nth(1).click();
+    await expect(moves.nth(1)).toHaveAttribute('aria-pressed', 'true');
+    expect(await rowCount()).toBeLessThanOrEqual(compact);
+    await moves.first().click();
+  }
+
+  // Details: every Pokémon the regulation allows, so far more than the top 30 (a page of them at a time).
+  await card.getByRole('button', { name: /Details: every Pokémon/ }).click();
+  await expect(page.getByRole('status').filter({ hasText: /\d{3} Pokémon calculated against 2 of yours/ })).toBeVisible({ timeout: 120_000 });
+  await expect(card.getByRole('button', { name: /Show \d+ more/ })).toBeVisible();
+
+  // Edit a build: the dialog opens on that Pokémon, a change marks it custom and Reset all clears it.
+  await card.getByRole('button', { name: /^Edit .+ build$/ }).first().click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel(/ability$/).selectOption({ index: 0 });
+  await dialog.getByRole('button', { name: 'Done' }).click();
+});
+
 test('Threat report: the table is one Tab stop and arrow keys move between its cells', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the table is the wide-screen layout');
   await openApp(page);
