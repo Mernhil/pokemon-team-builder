@@ -199,3 +199,28 @@ test('A move\'s reach: one small button on a damaging move lists what it one-sho
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 });
+
+test('saving a build lists it once (no "Untitled Team" twin), and Save offers your other teams\' names', async ({ page }) => {
+  await openApp(page);
+  await buildIncineroar(page);
+  const save = page.getByRole('dialog', { name: 'Save team' });
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await save.getByRole('textbox', { name: 'Team name' }).fill('Rain Offense');
+  await save.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText('Saved “Rain Offense” to your teams.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Team actions' }).click();
+  await page.getByRole('menuitem', { name: 'Saved teams' }).click();
+  const saved = page.getByRole('dialog', { name: 'Saved teams' });
+  await expect(saved.getByRole('button', { name: 'Edit team Rain Offense' })).toHaveCount(1);
+  await expect(saved).not.toContainText('Untitled Team');
+  await page.keyboard.press('Escape');
+
+  // A second build: Save lists "Rain Offense" under the name field; one tap fills it and asks what to do with the clash.
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  const again = page.getByRole('dialog', { name: 'Save team' });
+  await again.getByRole('radio', { name: /Save as a separate team/ }).check();
+  await again.getByRole('textbox', { name: 'Team name' }).fill('');
+  await again.getByRole('group', { name: 'Your saved teams' }).getByRole('button', { name: 'Rain Offense' }).click();
+  await expect(again.getByRole('radio', { name: /Add as a variation of “Rain Offense”/ })).toBeChecked();
+});
