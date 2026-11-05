@@ -7,7 +7,7 @@ import { getFormat, regulationInfo } from '@/domain/formats';
 import { deviceDirectory, deviceText, hasSeveralDevices, matchesFilter, parseFilter, parseStamp, teamDevices, type Device, type DeviceKind } from '@/domain/deviceStamp';
 import { relevantRegulations, teamImpact, type TeamImpact } from '@/domain/regulationImpact';
 import { nameOf, sharedFolders } from '@/domain/sharing';
-import { teamVariations } from '@/domain/team';
+import { isHiddenDraft, teamVariations } from '@/domain/team';
 import type { SpriteSetId, Team } from '@/domain/types';
 import { usePrefsStore } from '@/store/prefsStore';
 import { useShowcaseStore } from '@/store/showcaseStore';
@@ -307,7 +307,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
       <ul className="min-w-0 space-y-3">
         {order.map((id) => {
           const t = teams[id];
-          if (!t || t.shared) return null;
+          if (!t || t.shared || isHiddenDraft(t, activeTeamId)) return null; // the builder's scratch draft is not a saved team
           const f = getFormat(t.formatId);
           const variations = teamVariations(teams, id);
           if (!matchesFilter(filter, [t, ...variations])) return null;

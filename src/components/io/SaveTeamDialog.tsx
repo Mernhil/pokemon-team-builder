@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { suggestTeamNames } from '@/domain/team';
 import { editingTeam, findTeamByName, isLocked, useTeamStore, type SaveMode } from '@/store/teamStore';
 import { Modal } from '../ui/Modal';
 import { Button, Field, Input } from '../ui/primitives';
@@ -43,6 +44,11 @@ function Body({ currentName, onSave, onClose }: { currentName: string; onSave: (
   // Another saved team with this name: ask what to do instead of piling up same-named copies.
   const clash = useTeamStore((s) => findTeamByName(s, name));
   const variations = useTeamStore((s) => (clash ? Object.values(s.teams).filter((t) => t.groupId === clash.id).length : 0));
+  // Your other saved teams, so a variation of one can be saved under its exact name without remembering it.
+  const teams = useTeamStore((s) => s.teams);
+  const order = useTeamStore((s) => s.order);
+  const activeTeamId = useTeamStore((s) => s.activeTeamId);
+  const suggestions = suggestTeamNames(teams, order, activeTeamId, name);
 
   const submit = () => {
     const trimmed = name.trim();
@@ -88,6 +94,20 @@ function Body({ currentName, onSave, onClose }: { currentName: string; onSave: (
           <Field label="Team name">
             <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} onFocus={(e) => e.target.select()} placeholder="Untitled Team" />
           </Field>
+        )}
+        {!(canUpdate && mode === 'update') && suggestions.length > 0 && (
+          <div className="space-y-1.5" role="group" aria-label="Your saved teams">
+            <p className="text-xs font-semibold text-muted">Add to one of your teams</p>
+            <ul className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+              {suggestions.map((n) => (
+                <li key={n}>
+                  <button type="button" className="hit rounded-full border border-border bg-surface-2 px-3 py-1 text-sm hover:border-accent" onClick={() => setName(n)}>
+                    {n}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
         {clash && (!canUpdate || mode === 'save') && (
           <fieldset className="space-y-2 rounded-lg border border-border p-3 text-sm">

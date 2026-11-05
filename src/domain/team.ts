@@ -15,6 +15,13 @@ export const DEFAULT_TEAM_NAME = 'Untitled Team';
 /** Whether a team is more than the scratch draft: named, a variation, or shared. Clearing one must not wipe it. */
 export const isSavedTeam = (t: Pick<Team, 'name' | 'groupId' | 'shared'>): boolean => t.name !== DEFAULT_TEAM_NAME || !!t.groupId || !!t.shared;
 
+/**
+ * An unnamed team that is not a save: the builder's open scratch draft, or an empty unnamed one (e.g. a draft another device synced).
+ * The saved-teams list leaves these out so a build never shows up twice, once as the team you saved and once as "Untitled Team".
+ */
+export const isHiddenDraft = (t: Pick<Team, 'id' | 'name' | 'groupId' | 'shared' | 'slots'>, activeTeamId: string): boolean =>
+  !isSavedTeam(t) && (t.id === activeTeamId || !t.slots.some(Boolean));
+
 export function createTeam(format: FormatRules, name = DEFAULT_TEAM_NAME, stamp?: string): Team {
   const now = Date.now();
   return {
@@ -112,4 +119,25 @@ export function enforceCapabilities(team: Team): Team {
     if (entries.some(([id, s]) => s !== slotsByFormat![id])) slotsByFormat = Object.fromEntries(entries);
   }
   return slots === team.slots && slotsByFormat === team.slotsByFormat ? team : { ...team, slots, slotsByFormat };
+}
+
+/**
+ * Names of the player's other top-level saved teams to offer under the name field: all of them while the field is empty or
+ * still the default, otherwise those containing what has been typed. The name already typed in full is left out (the
+ * "already exists" choice covers it).
+ */
+export function suggestTeamNames(teams: Record<string, Team>, order: string[], activeTeamId: string, typed: string): string[] {
+  const q = typed.trim().toLowerCase();
+  const all = q === '' || q === DEFAULT_TEAM_NAME.toLowerCase();
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of order) {
+    const t = teams[id];
+    if (!t || t.groupId || (!!t.shared && t.shared.role !== 'edit') || isHiddenDraft(t, activeTeamId)) continue;
+    const key = t.name.trim().toLowerCase();
+    if (!key || seen.has(key) || key === q) continue;
+    seen.add(key);
+    if (all || key.includes(q)) out.push(t.name);
+  }
+  return out;
 }

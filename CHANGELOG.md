@@ -2,6 +2,14 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.43.0 — 2026-11-05
+
+### New
+- **Save team suggests your other teams' names.** Under the name field, *Add to one of your teams* lists your saved teams (all of them while the name is empty or still *Untitled Team*, otherwise those containing what you typed). One tap fills the name and Save then asks whether to add the build as a variation or overwrite it, so a variation no longer needs the exact name remembered.
+
+### Fixed
+- **A saved team no longer appears twice in Saved teams.** The builder works on a scratch draft named *Untitled Team*; it was listed next to the team you had just saved. The open draft (and any empty unnamed team) is now left out of the list; a build that was left behind with Pokémon in it is still shown so nothing is lost.
+
 ## 0.42.0 — 2026-11-05
 
 ### New
