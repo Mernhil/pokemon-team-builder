@@ -7,7 +7,7 @@ import { defaultField, defaultSide } from '@/domain/battle/conditions';
 import { formatForRegulation, getFormat } from '@/domain/formats';
 import { metaSet, metaSets } from '@/domain/metaSets';
 import { parseMetaFile, type MetaEntry } from '@/domain/meta';
-import { classifyKill, computeCell, ohkoEntries, runThreatJob, runThreatRow, summarize, type ThreatJob } from '@/domain/threats';
+import { classifyKill, computeCell, moveChoices, ohkoEntries, runThreatJob, runThreatRow, summarize, type ThreatJob } from '@/domain/threats';
 import { createSet, createTeam } from '@/domain/team';
 import type { Dataset, PokemonSet } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
@@ -197,7 +197,7 @@ describe('report', () => {
 
 describe('ohkoEntries', () => {
   const move = (kill: 'ohko' | 'pohko' | '2hko') => ({ move: 'X', moveId: 'x', percent: [90, 110] as [number, number], kill, text: '' });
-  const cell = (mine: ReturnType<typeof move> | null, theirs: ReturnType<typeof move> | null) => ({ mine, theirs, first: 'them' as const, mySpeed: 1, theirSpeed: 2, verdict: 0 });
+  const cell = (mine: ReturnType<typeof move> | null, theirs: ReturnType<typeof move> | null) => ({ mine, theirs, mineMoves: mine ? [mine] : [], theirMoves: theirs ? [theirs] : [], first: 'them' as const, mySpeed: 1, theirSpeed: 2, verdict: 0 });
   const rows = [
     [cell(null, move('pohko'))], // 0: it possibly OHKOs me
     [cell(move('ohko'), move('2hko'))], // 1: I OHKO it
@@ -211,5 +211,45 @@ describe('ohkoEntries', () => {
 
   it('lists what a member can OHKO, leaving out 2HKOs and unfinished rows', () => {
     expect(ohkoEntries(rows, 0, 'to').map((e) => [e.threatIndex, e.kill])).toEqual([[1, 'ohko'], [2, 'pohko']]);
+  });
+
+  describe('per move', () => {
+    const mv = (moveId: string, kill: 'ohko' | 'pohko' | '2hko' | 'none', hi = 100) => ({ move: moveId, moveId, percent: [hi - 10, hi] as [number, number], kill, text: '' });
+    const multi = (mine: ReturnType<typeof mv>[]) => ({ mine: null, theirs: null, mineMoves: mine, theirMoves: [], first: 'me' as const, mySpeed: 2, theirSpeed: 1, verdict: 0 });
+    const grid = [
+      [multi([mv('overheat', 'ohko'), mv('energyball', '2hko', 60)])],
+      [multi([mv('overheat', '2hko', 70), mv('energyball', 'ohko')])],
+      [multi([mv('overheat', 'pohko', 105), mv('energyball', 'none', 0)])],
+    ];
+
+    it('narrows the list to one move, and judges each threat by that move alone', () => {
+      expect(ohkoEntries(grid, 0, 'to', { move: 'overheat' }).map((e) => [e.threatIndex, e.kill])).toEqual([[0, 'ohko'], [2, 'pohko']]);
+      expect(ohkoEntries(grid, 0, 'to', { move: 'energyball' }).map((e) => [e.threatIndex, e.move.moveId])).toEqual([[1, 'energyball']]);
+      expect(ohkoEntries(grid, 0, 'to', { move: 'overheat', possible: false }).map((e) => e.threatIndex)).toEqual([0]);
+    });
+
+    it('lists every threat that takes damage with `all`, best kill class first', () => {
+      const all = ohkoEntries(grid, 0, 'to', { all: true });
+      expect(all.map((e) => [e.threatIndex, e.kill])).toEqual([[0, 'ohko'], [1, 'ohko'], [2, 'pohko']]);
+      expect(ohkoEntries(grid, 0, 'to', { all: true, move: 'overheat' }).map((e) => [e.threatIndex, e.kill])).toEqual([[0, 'ohko'], [2, 'pohko'], [1, '2hko']]);
+    });
+
+    it('counts how many threats each move gets onto the list', () => {
+      expect(moveChoices(grid, 0, 'to').map((c) => [c.moveId, c.count])).toEqual([['overheat', 2], ['energyball', 1]]);
+      expect(moveChoices(grid, 0, 'to', { possible: false }).map((c) => [c.moveId, c.count])).toEqual([['energyball', 1], ['overheat', 1]]);
+      expect(moveChoices(grid, 0, 'to', { all: true }).map((c) => [c.moveId, c.count])).toEqual([['overheat', 3], ['energyball', 2]]);
+    });
+  });
+});
+
+describe('computeCell: every move', () => {
+  it('keeps each damaging move, and the best one is the strongest of them', () => {
+    const mine = mk('scovillain', { moves: ['overheat', 'energyball', 'protect', ''] as PokemonSet['moves'] });
+    const theirs = metaSets(Object.values(meta.regulations)[0], dex, fmt, 5)[0];
+    const cell = computeCell(dex, mine, theirs, defaultField());
+    expect(cell.mineMoves.map((m) => m.moveId)).toEqual(['overheat', 'energyball']);
+    const top = cell.mineMoves.reduce((a, b) => (b.percent[1] > a.percent[1] ? b : a));
+    if (cell.mine) expect(cell.mineMoves.map((m) => m.moveId)).toContain(cell.mine.moveId);
+    expect(top.percent[1]).toBeGreaterThanOrEqual(cell.mine?.percent[1] ?? 0);
   });
 });

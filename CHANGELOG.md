@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.40.2 — 2026-11-05
+
+### New
+- **OHKO report: filter by move, see every Pokémon, edit an opponent's build.** Analyse → OHKO can be narrowed to one move, lists the full Pokémon list under *Details*, and lets you change an opponent's build (item, spread, moves) to see how the knock-outs change.
+
 ## 0.40.1 — 2026-11-04
 
 ### Changed

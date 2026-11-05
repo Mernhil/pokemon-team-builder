@@ -3,7 +3,6 @@ import type { Dex } from '@/data/dex';
 import { useMetaFor } from '@/data/useMeta';
 import { defaultField } from '@/domain/battle/conditions';
 import { REGULATION_MANIFEST } from '@/domain/formats';
-import type { MetaSet } from '@/domain/metaSets';
 import { pickSpeedSnapshot } from '@/domain/speedTiers';
 import { TOP_N, applyThreatAnswers, problemThreats, shortlist, suggestCheap, threatJobFor, type ProblemThreat, type Suggestion } from '@/domain/teamSuggest';
 import type { ThreatCell } from '@/domain/threats';
@@ -49,7 +48,7 @@ export function useTeamSuggestions({ dex, format, team, includeAll }: { dex: Dex
   const field = useMemo(() => defaultField(), []);
   const report = useThreatReport({ dex, format, team, count: 20, field, delay: 300 });
   const problems = useMemo(() => (report.done ? problemThreats(report.threats.map((t) => t.speciesId), report.rows) : []), [report.done, report.threats, report.rows]);
-  const problemSets = useMemo(() => problems.flatMap((p) => report.threats.filter((t): t is MetaSet => t.speciesId === p.speciesId)), [problems, report.threats]);
+  const problemSets = useMemo(() => problems.flatMap((p) => report.threats.filter((t) => t.speciesId === p.speciesId)), [problems, report.threats]);
   const job = useMemo(() => threatJobFor(format, list, problemSets), [format, list, problemSets]);
 
   const [state, setState] = useState<{ job?: typeof job; rows: (ThreatCell[] | undefined)[]; done: boolean }>({ rows: [], done: false });

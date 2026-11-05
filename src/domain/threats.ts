@@ -46,7 +46,7 @@ export function classifyKill(koText: string, percent: [number, number]): Kill {
   return '3hko';
 }
 
-interface MoveSummary {
+export interface MoveSummary {
   move: string;
   moveId: string;
   /** Damage as % of the defender's max HP. */
@@ -61,6 +61,10 @@ export interface ThreatCell {
   mine: MoveSummary | null;
   /** Its best move against me. */
   theirs: MoveSummary | null;
+  /** Every damaging move of mine against it, in move order (what a per-move view reads). */
+  mineMoves: MoveSummary[];
+  /** Every damaging move of its against me. */
+  theirMoves: MoveSummary[];
   first: 'me' | 'them' | 'tie';
   mySpeed: number;
   theirSpeed: number;
@@ -75,21 +79,24 @@ function representative(forms: FormResult[], pessimistic: boolean): FormResult {
   return forms.reduce((a, b) => ((pessimistic ? b.percent[1] < a.percent[1] : b.percent[1] > a.percent[1]) ? b : a));
 }
 
-/** The strongest move of a result set: kill class first, then damage. */
-function best(results: MoveResult[], pessimistic: boolean): MoveSummary | null {
-  let top: (MoveSummary & { rank: number }) | null = null;
+/** One summary per damaging move, in move order. */
+function summarizeMoves(results: MoveResult[], pessimistic: boolean): MoveSummary[] {
+  const out: MoveSummary[] = [];
   for (const m of results) {
     if (m.category === 'Status' || m.forms.length === 0) continue;
     const f = representative(m.forms, pessimistic);
-    const kill = classifyKill(f.koText, f.percent);
-    const rank = RANK[kill];
-    if (!top || rank > top.rank || (rank === top.rank && f.percent[1] > top.percent[1])) {
-      top = { move: m.name, moveId: m.moveId, percent: f.percent, kill, text: f.koText || f.desc, rank };
-    }
+    out.push({ move: m.name, moveId: m.moveId, percent: f.percent, kill: classifyKill(f.koText, f.percent), text: f.koText || f.desc });
   }
-  if (!top || top.kill === 'none') return null;
-  const { rank: _rank, ...summary } = top;
-  return summary;
+  return out;
+}
+
+/** The strongest of some moves: kill class first, then damage. Null when none does any damage (unless `keepNone`). */
+function best(moves: MoveSummary[], keepNone = false): MoveSummary | null {
+  let top: MoveSummary | null = null;
+  for (const m of moves) {
+    if (!top || RANK[m.kill] > RANK[top.kill] || (RANK[m.kill] === RANK[top.kill] && m.percent[1] > top.percent[1])) top = m;
+  }
+  return top && (keepNone || top.kill !== 'none') ? top : null;
 }
 
 /** One of my Pokémon against one threat, under a field. */
@@ -105,16 +112,18 @@ export function computeCell(
   const mySide = { set: mine, cond: { ...defaultSide(myHasMega), ...(mineMega ? { megaMode: mineMega } : {}) } };
   const theirSide = { set: threat.set, cond: { ...defaultSide(threat.megaMode !== 'base'), megaMode: threat.megaMode } };
 
-  const myMoves = best(calcMoves(dex, mySide, theirSide, field), true);
-  const theirMoves = best(calcMoves(dex, theirSide, mySide, field), false);
+  const mineMoves = summarizeMoves(calcMoves(dex, mySide, theirSide, field), true);
+  const theirMoves = summarizeMoves(calcMoves(dex, theirSide, mySide, field), false);
+  const myMoves = best(mineMoves);
+  const theirBest = best(theirMoves);
 
   const mySpeed = Math.min(...calcSpeed(dex, mySide, field).map((r) => r.speed));
   const theirSpeed = Math.max(...calcSpeed(dex, theirSide, field).map((r) => r.speed));
   let first: ThreatCell['first'] = mySpeed === theirSpeed ? 'tie' : mySpeed > theirSpeed ? 'me' : 'them';
   if (field.trickRoom && first !== 'tie') first = first === 'me' ? 'them' : 'me';
 
-  const verdict = RANK[myMoves?.kill ?? 'none'] - RANK[theirMoves?.kill ?? 'none'] + (first === 'me' ? 0.5 : first === 'them' ? -0.5 : 0);
-  return { mine: myMoves, theirs: theirMoves, first, mySpeed, theirSpeed, verdict };
+  const verdict = RANK[myMoves?.kill ?? 'none'] - RANK[theirBest?.kill ?? 'none'] + (first === 'me' ? 0.5 : first === 'them' ? -0.5 : 0);
+  return { mine: myMoves, theirs: theirBest, mineMoves, theirMoves, first, mySpeed, theirSpeed, verdict };
 }
 
 // ---------------------------------------------------------------------------
@@ -218,24 +227,62 @@ export type OhkoMode = 'by' | 'to';
 export interface OhkoEntry {
   /** Index into the job's threats (and so into the usage order). */
   threatIndex: number;
-  /** 'ohko' is guaranteed (every roll); 'pohko' only some of the time. */
-  kill: 'ohko' | 'pohko';
-  /** The move doing it (the threat's for 'by', mine for 'to'). */
+  /** 'ohko' is guaranteed (every roll); 'pohko' only some of the time; the rest only in a full list. */
+  kill: Kill;
+  /** The move doing it (the threat's for 'by', mine for 'to'): the strongest, or the filtered one. */
   move: MoveSummary;
   first: ThreatCell['first'];
 }
 
+export interface OhkoOptions {
+  /** Only this move (an id): what it alone does, whoever's move it is. */
+  move?: string;
+  /** Every threat that takes damage, whatever the kill class, not just the OHKOs. */
+  all?: boolean;
+  /** Count "possible" OHKOs too (default). Ignored with `all`. */
+  possible?: boolean;
+}
+
+const movesOf = (cell: ThreatCell, mode: OhkoMode) => (mode === 'by' ? cell.theirMoves : cell.mineMoves);
+const qualifies = (kill: Kill, { all, possible = true }: OhkoOptions) => (all ? kill !== 'none' : kill === 'ohko' || (possible && kill === 'pohko'));
+
 /**
  * The threats that one member can be OHKO'd by (`mode: 'by'`, from the threat's best move) or can OHKO
  * (`'to'`, from the member's best move), guaranteed ones first, then possible ones, each in usage order.
+ * With `move` only that move counts; with `all` every threat that takes damage is listed, down to 3HKOs.
  * Rows still being calculated are skipped.
  */
-export function ohkoEntries(rows: (ThreatCell[] | undefined)[], memberIndex: number, mode: OhkoMode): OhkoEntry[] {
+export function ohkoEntries(rows: (ThreatCell[] | undefined)[], memberIndex: number, mode: OhkoMode, options: OhkoOptions = {}): OhkoEntry[] {
   const out: OhkoEntry[] = [];
   rows.forEach((cells, threatIndex) => {
     const cell = cells?.[memberIndex];
-    const move = cell && (mode === 'by' ? cell.theirs : cell.mine);
-    if (cell && move && (move.kill === 'ohko' || move.kill === 'pohko')) out.push({ threatIndex, kill: move.kill, move, first: cell.first });
+    if (!cell) return;
+    const moves = movesOf(cell, mode);
+    const move = best(options.move ? moves.filter((m) => m.moveId === options.move) : moves, !!options.all);
+    if (move && qualifies(move.kill, options)) out.push({ threatIndex, kill: move.kill, move, first: cell.first });
   });
   return out.sort((a, b) => RANK[b.kill] - RANK[a.kill] || a.threatIndex - b.threatIndex);
+}
+
+export interface MoveChoice {
+  moveId: string;
+  move: string;
+  /** How many threats this move gets onto the list. */
+  count: number;
+}
+
+/** The moves that put threats on one member's list (its own for 'to', the threats' for 'by'), the busiest first. */
+export function moveChoices(rows: (ThreatCell[] | undefined)[], memberIndex: number, mode: OhkoMode, options: Omit<OhkoOptions, 'move'> = {}): MoveChoice[] {
+  const counts = new Map<string, MoveChoice>();
+  for (const cells of rows) {
+    const cell = cells?.[memberIndex];
+    if (!cell) continue;
+    for (const m of movesOf(cell, mode)) {
+      if (!qualifies(m.kill, options)) continue;
+      const c = counts.get(m.moveId);
+      if (c) c.count++;
+      else counts.set(m.moveId, { moveId: m.moveId, move: m.move, count: 1 });
+    }
+  }
+  return [...counts.values()].sort((a, b) => b.count - a.count || a.move.localeCompare(b.move));
 }
