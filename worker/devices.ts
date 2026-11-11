@@ -4,16 +4,10 @@
  * that the Worker maps to the account that created the code.
  */
 import { CODE_TTL_MS, MAX_DEVICES, MAX_LIVE_CODES, MAX_REDEEMS_PER_WINDOW, REDEEM_WINDOW_MS, generateCode, type DeviceInfo } from '../src/domain/pairing';
+import { b64url, randomBytes, randomId, sha256Hex } from './crypto';
 import type { D1Like } from './types';
 
-async function sha256Hex(text: string): Promise<string> {
-  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const randomToken = () => `ptbd_${b64url(crypto.getRandomValues(new Uint8Array(32)))}`;
-const randomId = () => b64url(crypto.getRandomValues(new Uint8Array(9)));
+const randomToken = () => `ptbd_${b64url(randomBytes(32))}`;
 
 /** A new code for `owner`; the oldest live codes beyond the limit and every expired one are dropped. */
 export async function createPairCode(db: D1Like, owner: string, now: number): Promise<{ code: string; expiresAt: number }> {

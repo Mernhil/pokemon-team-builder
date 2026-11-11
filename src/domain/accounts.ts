@@ -14,7 +14,6 @@ export const SESSION_ABSOLUTE_MS = 365 * 24 * 3600_000;
 /** A request renews the session (and the cookie) at most this often, so most requests write nothing. */
 export const SESSION_RENEW_AFTER_MS = 24 * 3600_000;
 export const MAX_SESSIONS = 20;
-export const INVITE_DEFAULT_TTL_MS = 7 * 24 * 3600_000;
 export const RESET_TTL_MS = 24 * 3600_000;
 
 /** The slow key derivation runs on the device (see worker/password.ts): OWASP's number for PBKDF2-HMAC-SHA256. */

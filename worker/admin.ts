@@ -104,8 +104,8 @@ export const REFUSAL_TEXT: Record<AdminRefusal, string> = {
   disabled: 'That account is disabled: enable it first.',
 };
 
-/** Live admins other than `id` (disabled admins don't count: they can't sign in). */
-const otherAdmins = async (db: D1Like, id: string) => (await db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND disabled = 0 AND id <> ?").bind(id).first<{ n: number }>())?.n ?? 0;
+/** SQL condition (one parameter: the user id): a live admin other than that user exists (disabled admins don't count: they can't sign in). */
+const ANOTHER_ADMIN = "EXISTS (SELECT 1 FROM users o WHERE o.role = 'admin' AND o.disabled = 0 AND o.id <> ?)";
 const userRow = (db: D1Like, id: string) => db.prepare('SELECT id, role, disabled FROM users WHERE id = ?').bind(id).first<{ id: string; role: 'user' | 'admin'; disabled: number }>();
 
 /** Disables (and signs out everywhere) or enables an account. Never yourself, never the last admin. */
@@ -113,9 +113,13 @@ export async function setDisabled(db: D1Like, actor: string, id: string, disable
   const u = await userRow(db, id);
   if (!u) return 'not-found';
   if (id === actor) return 'self';
-  if (disabled && u.role === 'admin' && (await otherAdmins(db, id)) === 0) return 'last-admin';
+  if (disabled && u.role === 'admin') {
+    // One statement checks and updates, so two admins disabling each other at once can't leave none.
+    const done = await db.prepare(`UPDATE users SET disabled = 1 WHERE id = ? AND ${ANOTHER_ADMIN} RETURNING id`).bind(id, id).all();
+    if (!done.results.length) return 'last-admin';
+  }
   await db.batch([
-    db.prepare('UPDATE users SET disabled = ? WHERE id = ?').bind(disabled ? 1 : 0, id),
+    ...(disabled && u.role === 'admin' ? [] : [db.prepare('UPDATE users SET disabled = ? WHERE id = ?').bind(disabled ? 1 : 0, id)]),
     ...(disabled ? [db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(id), db.prepare('DELETE FROM reset_codes WHERE user_id = ?').bind(id)] : []),
     db.prepare('INSERT INTO events (at, actor, kind, target) VALUES (?, ?, ?, ?)').bind(now, actor, disabled ? 'user.disable' : 'user.enable', id),
   ]);
@@ -127,9 +131,13 @@ export async function setRole(db: D1Like, actor: string, id: string, role: 'user
   const u = await userRow(db, id);
   if (!u) return 'not-found';
   if (u.role === role) return null;
-  if (role === 'user' && (await otherAdmins(db, id)) === 0) return 'last-admin';
   if (role === 'admin' && u.disabled === 1) return 'disabled';
-  await db.batch([db.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, id), db.prepare('INSERT INTO events (at, actor, kind, target) VALUES (?, ?, ?, ?)').bind(now, actor, role === 'admin' ? 'user.promote' : 'user.demote', id)]);
+  if (role === 'user') {
+    // One statement checks and updates (see setDisabled).
+    const done = await db.prepare(`UPDATE users SET role = 'user' WHERE id = ? AND ${ANOTHER_ADMIN} RETURNING id`).bind(id, id).all();
+    if (!done.results.length) return 'last-admin';
+  }
+  await db.batch([...(role === 'admin' ? [db.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, id)] : []), db.prepare('INSERT INTO events (at, actor, kind, target) VALUES (?, ?, ?, ?)').bind(now, actor, role === 'admin' ? 'user.promote' : 'user.demote', id)]);
   return null;
 }
 

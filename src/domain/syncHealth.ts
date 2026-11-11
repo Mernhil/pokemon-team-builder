@@ -24,7 +24,8 @@ export interface HealthResponse {
 export function healthLine(h: HealthResponse): { ok: boolean; text: string } {
   if (!h.database) return { ok: false, text: 'Database not bound: sync cannot store anything (docs/SYNC.md steps 1–2).' };
   if (h.accounts && h.accounts.mode !== 'access' && !h.accounts.pepper) return { ok: false, text: 'PASSWORD_PEPPER not set on the Worker (docs/ACCOUNTS_MANUAL_STEPS.md).' };
-  const access = [!h.access.teamDomain && 'ACCESS_TEAM_DOMAIN', !h.access.audience && 'ACCESS_AUD'].filter(Boolean);
+  // With only the app's own accounts, Cloudflare Access is not in use and its settings are not needed.
+  const access = h.accounts?.mode === 'accounts' ? [] : [!h.access.teamDomain && 'ACCESS_TEAM_DOMAIN', !h.access.audience && 'ACCESS_AUD'].filter(Boolean);
   if (access.length) return { ok: false, text: `${access.join(' and ')} not set on the Worker (docs/SYNC.md step 5).` };
   if (h.migrations === null) return { ok: false, text: 'Could not read the database migrations.' };
   if (h.missing.length) return { ok: false, text: `Database migration missing: ${h.missing.map((m) => m.slice(0, 4)).join(', ')}` };

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   display_name  TEXT,
   role          TEXT    NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   disabled      INTEGER NOT NULL DEFAULT 0 CHECK (disabled IN (0, 1)),
-  pw_hash       TEXT    NOT NULL,                    -- pbkdf2-sha256$i=…$p=…$salt$hash
+  pw_hash       TEXT    NOT NULL,                    -- ckdf-pbkdf2-sha256$i=…$p=…$salt$hash
   pw_changed_at INTEGER NOT NULL,
   recovery_hash TEXT    NOT NULL,                    -- SHA-256 (hex) of the recovery code
   legacy_email  TEXT    UNIQUE,                      -- the Cloudflare Access e-mail this account claimed (docs/ACCOUNTS_PLAN.md section 9)

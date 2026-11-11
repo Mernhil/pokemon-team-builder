@@ -127,7 +127,7 @@ describe('sharing between accounts', () => {
     await call(env, 'PUT', '/api/me', { cookie: misty.cookie, body: { displayName: 'Misty W.' } });
     const t = team('Rain');
     await call(env, 'POST', '/api/sync', { cookie: ash.cookie, body: { docs: [doc(t)] } });
-    expect((await call(env, 'PUT', '/api/shares', { cookie: ash.cookie, body: { kind: 'team-group', ref: t.id, grantee: '@nobody', role: 'view' } })).status).toBe(400);
+    expect((await call(env, 'PUT', '/api/shares', { cookie: ash.cookie, body: { kind: 'team-group', ref: t.id, grantee: '@nobody', role: 'view' } })).status).toBe(403); // the same answer as for a non-friend
     // Only friends (step 6): not yet...
     expect((await call(env, 'PUT', '/api/shares', { cookie: ash.cookie, body: { kind: 'team-group', ref: t.id, grantee: '@misty', role: 'edit' } })).status).toBe(403);
     await call(env, 'POST', '/api/friends/request', { cookie: ash.cookie, body: { username: 'misty' } });

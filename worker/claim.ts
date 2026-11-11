@@ -18,6 +18,9 @@ export interface Sql {
 }
 
 const isOurs = '(SELECT legacy_email FROM users WHERE id = ?2) = ?1';
+// A claim that is already on record (not undone) must not run again: the first statement is refused for an account that
+// has a legacy_email, but `isOurs` is true for it, so every later statement needs this as well.
+const firstClaim = `${isOurs} AND NOT EXISTS (SELECT 1 FROM account_claims WHERE user_id = ?2 AND legacy_email = ?1 AND undone_at IS NULL)`;
 const fresh = `NOT EXISTS (SELECT 1 FROM documents WHERE owner = ?2) AND NOT EXISTS (SELECT 1 FROM sync_seq WHERE owner = ?2)
   AND NOT EXISTS (SELECT 1 FROM shares WHERE owner = ?2 OR grantee = ?2)`;
 
@@ -31,20 +34,22 @@ export function claimStatements(email: string, userId: string, now: number, acto
          display_name = COALESCE(display_name, (SELECT display_name FROM profiles WHERE email = ?1))
        WHERE id = ?2 AND legacy_email IS NULL AND ${fresh} RETURNING id`,
     ),
-    s(`UPDATE documents SET owner = ?2 WHERE owner = ?1 AND ${isOurs}`),
-    s(`UPDATE sync_seq SET owner = ?2 WHERE owner = ?1 AND ${isOurs}`),
-    s(`UPDATE shares SET owner = ?2 WHERE owner = ?1 AND ${isOurs}`),
-    s(`UPDATE shares SET grantee = ?2 WHERE grantee = ?1 AND ${isOurs}`),
+    s(`UPDATE documents SET owner = ?2 WHERE owner = ?1 AND ${firstClaim}`),
+    s(`UPDATE sync_seq SET owner = ?2 WHERE owner = ?1 AND ${firstClaim}`),
+    s(`UPDATE shares SET owner = ?2 WHERE owner = ?1 AND ${firstClaim}`),
+    s(`UPDATE shares SET grantee = ?2 WHERE grantee = ?1 AND ${firstClaim}`),
     // The desktop apps linked to the e-mail keep working, now for the account.
-    s(`UPDATE devices SET owner = ?2 WHERE owner = ?1 AND ${isOurs}`),
-    s(`UPDATE pair_codes SET owner = ?2 WHERE owner = ?1 AND ${isOurs}`),
+    s(`UPDATE devices SET owner = ?2 WHERE owner = ?1 AND ${firstClaim}`),
+    s(`UPDATE pair_codes SET owner = ?2 WHERE owner = ?1 AND ${firstClaim}`),
     // Accounts that share with each other are friends (sharing between accounts needs that).
     s(
       `INSERT OR IGNORE INTO friendships (a, b, state, requested_by, created_at, updated_at)
        SELECT MIN(owner, grantee), MAX(owner, grantee), 'accepted', owner, ?3, ?3 FROM shares
-       WHERE (owner = ?2 OR grantee = ?2) AND owner LIKE 'u!_%' ESCAPE '!' AND grantee LIKE 'u!_%' ESCAPE '!' AND owner <> grantee AND ${isOurs}`,
+       WHERE (owner = ?2 OR grantee = ?2) AND owner LIKE 'u!_%' ESCAPE '!' AND grantee LIKE 'u!_%' ESCAPE '!' AND owner <> grantee AND ${firstClaim}`,
       v.slice(0, 3),
     ),
+    // Before the account_claims row, whose existence is what stops a repeat.
+    s(`INSERT INTO events (at, actor, kind, target) SELECT ?3, ?4, 'account.claim', ?2 WHERE ${firstClaim}`, v),
     s(
       `INSERT INTO account_claims (user_id, legacy_email, at, docs, matches, shares, devices)
        SELECT ?2, ?1, ?3,
@@ -52,10 +57,9 @@ export function claimStatements(email: string, userId: string, now: number, acto
          (SELECT COUNT(*) FROM documents WHERE owner = ?2 AND kind = 'match' AND deleted = 0),
          (SELECT COUNT(*) FROM shares WHERE owner = ?2 OR grantee = ?2),
          (SELECT COUNT(*) FROM devices WHERE owner = ?2)
-       WHERE ${isOurs}`,
+       WHERE ${firstClaim}`,
       v.slice(0, 3),
     ),
-    s(`INSERT INTO events (at, actor, kind, target) SELECT ?3, ?4, 'account.claim', ?2 WHERE ${isOurs}`, v),
   ];
 }
 

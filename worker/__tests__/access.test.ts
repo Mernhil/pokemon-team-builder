@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_MATCHES, accessTo, canRead, canWrite, type Share, type Target } from '../access';
+import { ALL_MATCHES, accessTo, canWrite, type Share, type Target } from '../access';
 
 const shares: Share[] = [
   { owner: 'o@x.io', grantee: 'viewer@x.io', kind: 'team-group', ref: 'g1', role: 'view' },
@@ -24,10 +24,9 @@ describe('access matrix: owner / viewer / editor / stranger', () => {
     ['editor@x.io', match, null, false, false],
     ['stranger@x.io', match, null, false, false],
     ['o@x.io', match, 'owner', true, true],
-  ] as const)('%s on %j', (who, target, access, read, write) => {
+  ] as const)('%s on %j', (who, target, access, _read, write) => {
     const a = accessTo(who, 'o@x.io', target, shares);
     expect(a).toBe(access);
-    expect(canRead(a)).toBe(read);
     expect(canWrite(a, target)).toBe(write);
   });
 

@@ -102,11 +102,7 @@ const cookie = (token: string, maxAgeS: number) => `${SESSION_COOKIE}=${token}; 
 const clearCookie = () => `${SESSION_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0`;
 
 /** CSRF: the page that sent this is ours (or the desktop app's webview) and could set a custom header, which a cross-site form cannot. */
-function sameSiteProblem(c: Ctx): boolean {
-  const origin = c.request.headers.get('origin');
-  if (!origin || (origin !== c.url.origin && !deviceOrigins(c.env).has(origin))) return true;
-  return c.request.headers.get('x-ptb') !== '1';
-}
+const sameSiteProblem = (c: Ctx): boolean => crossSiteRequest(c.request, c.env, c.url);
 const fromDesktop = (c: Ctx): boolean => deviceOrigins(c.env).has(c.request.headers.get('origin') ?? '');
 
 /** The session behind a request: a bearer token (desktop) or the session cookie (web). Also used by the sync routes. */
@@ -597,9 +593,7 @@ export async function handleAuth(request: Request, env: Env, url: URL, deps: Aut
   if (auth.viaCookie && request.method !== 'GET' && sameSiteProblem(c)) return fail(403, 'request refused');
   if (route.admin && auth.session.user.role !== 'admin') return fail(403, 'Only an admin can do that.');
   const res = await route.handle(c, auth);
-  if (auth.viaCookie && auth.session.renewed && !res.headers.has('set-cookie')) {
-    const token = /(?:^|;\s*)__Host-ptb_session=([^;]+)/.exec(request.headers.get('cookie') ?? '')?.[1];
-    if (token) res.headers.append('set-cookie', cookie(token, Math.floor((auth.session.expiresAt - c.now) / 1000)));
-  }
+  const again = renewedCookie(auth, request, c.now);
+  if (again && !res.headers.has('set-cookie')) res.headers.append('set-cookie', again);
   return res;
 }
