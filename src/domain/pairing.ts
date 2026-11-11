@@ -3,10 +3,11 @@
  * pairing code; the desktop app trades it for a device token. Shared by the Worker and the app.
  */
 import { z } from 'zod';
-import { normalizeServer } from './accounts';
+import { CODE_ALPHABET, normalizeCode, normalizeServer } from './accounts';
 
-/** 32 symbols (no I or O, no 0 or 1), so a code read off a screen can't be mistyped as another. 10 symbols = 50 bits. */
-export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export { CODE_ALPHABET, normalizeCode };
+
+/** 10 symbols of the code alphabet (src/domain/accounts.ts) = 50 bits. */
 export const CODE_LENGTH = 10;
 export const CODE_TTL_MS = 10 * 60 * 1000;
 export const MAX_LIVE_CODES = 5;
@@ -17,8 +18,6 @@ export const MAX_REDEEMS_PER_WINDOW = 10;
 
 export const TOKEN_RE = /^ptbd_[A-Za-z0-9_-]{43}$/;
 
-/** Upper-cases and drops everything that is not a letter or digit (spaces, dashes). */
-export const normalizeCode = (input: string): string => input.toUpperCase().replace(/[^A-Z0-9]/g, '');
 export const isValidCode = (code: string): boolean => code.length === CODE_LENGTH && [...code].every((c) => CODE_ALPHABET.includes(c));
 /** "ABCDEFGHJK" → "ABCDE-FGHJK". */
 export const formatCode = (code: string): string => `${code.slice(0, 5)}-${code.slice(5)}`;

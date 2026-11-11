@@ -5,6 +5,7 @@ import { cloneTeam, createTeam } from '../../src/domain/team';
 import type { PullResponse, PushResponse, SharedPullResponse, SharesResponse } from '../../src/domain/syncProtocol';
 import type { Team } from '../../src/domain/types';
 import { handleApi } from '../api';
+import { sharedDocs } from '../shares';
 import { NOW, goodClaims, makeEnv, makeKey, signJwt, type TestKey } from './helpers';
 
 let key: TestKey;
@@ -207,5 +208,21 @@ describe('display names and the share list', () => {
     const { env, root } = await setup();
     for (let i = 0; i < 50; i++) expect((await share(env, { kind: 'team-group', ref: root.id, grantee: `p${i}@example.com`, role: 'view' })).status).toBe(200);
     expect((await share(env, { kind: 'team-group', ref: root.id, grantee: 'p50@example.com', role: 'view' })).status).toBe(400);
+  });
+});
+
+describe('the cap on GET /api/shared', () => {
+  it('says so when it cuts, cuts tombstones before live documents, and omits the flag otherwise', async () => {
+    const { env, root, variation } = await setup();
+    await share(env, { kind: 'team-group', ref: root.id, grantee: VIEWER, role: 'view' });
+    // The variation is deleted: a tombstone in the shared folder.
+    await call(env, 'POST', '/api/sync', OWNER, { docs: [{ id: variation.id, kind: 'team', updatedAt: NOW - 1000, deleted: true }] });
+    const all = await sharedDocs(env.DB, VIEWER, 10);
+    expect(all.truncated).toBe(false);
+    expect(all.docs).toHaveLength(2);
+    const cut = await sharedDocs(env.DB, VIEWER, 1);
+    expect(cut.truncated).toBe(true);
+    expect(cut.docs.map((d) => [d.id, d.deleted])).toEqual([[root.id, false]]);
+    expect((await shared(env, VIEWER)).body).not.toHaveProperty('truncated');
   });
 });

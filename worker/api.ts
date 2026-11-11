@@ -1,6 +1,7 @@
 /**
  * GET /api/sync?since=<seq> and POST /api/sync: the whole server side of cloud sync. Every request
- * is for one account, identified only by the e-mail in a verified Cloudflare Access JWT. Payloads
+ * is for one account, identified by a session of the app's own accounts (cookie or bearer token), by a device
+ * token, or by the e-mail in a verified Cloudflare Access JWT (an e-mail an account has claimed is that account). Payloads
  * are validated with the zod schemas in src/domain/syncProtocol.ts, and each document is run
  * through the same sanitisers the app loads its own data with before it is stored.
  */
@@ -37,11 +38,16 @@ import { deleteShare, groupOfTeam, isLiveRootTeam, namesFor, putShare, setDispla
 import { pullDocs, pushDoc, type StoredDoc } from './store';
 import type { Env } from './types';
 
+const NOT_A_FRIEND = 'You can only share with friends: add them in Settings → Friends first.';
+
 /** 501, naming which of the three settings the deployment lacks (the app turns it into a hint; docs/SYNC.md has the steps). */
 const notSetUp = (env: Env, needAccess: boolean) => {
   const missing = [!env.DB && 'DB', needAccess && !env.ACCESS_TEAM_DOMAIN && 'ACCESS_TEAM_DOMAIN', needAccess && !env.ACCESS_AUD && 'ACCESS_AUD'].filter(Boolean);
   return reply(501, { error: 'sync is not set up on this deployment', missing });
 };
+
+/** Most rows one GET /api/shared answers with (live documents first). */
+export const SHARED_CAP = 2000;
 
 /** A device whose clock is further ahead than this can't win every future conflict: its documents are refused. */
 export const MAX_FUTURE_MS = 10 * 60 * 1000;
@@ -51,7 +57,7 @@ const ROUTES: Record<string, string[]> = {
   '/api/shared': ['GET', 'POST'],
   '/api/shares': ['GET', 'PUT', 'DELETE'],
   '/api/profile': ['PUT'],
-  // Signed in with Access (the phone or the website): make a pairing code, see and revoke linked devices.
+  // Signed in (an account session, or Access): make a pairing code, see and revoke linked devices.
   '/api/pair': ['POST'],
   '/api/devices': ['GET', 'DELETE'],
   // Re-login inside the installed app: needs the Access login, then sends the browser back to the app.
@@ -103,6 +109,8 @@ export async function handleApi(request: Request, env: Env, deps: ApiDeps = {}):
   const route = ROUTES[url.pathname];
   if (!route) return fail(404, 'not found');
   if (!route.includes(request.method)) return fail(405, 'method not allowed');
+  // Re-login belongs to Access; with only the app's own accounts there is nothing to renew, and the app shows its own login.
+  if (url.pathname === '/api/session/renew' && env.AUTH_MODE === 'accounts') return new Response(null, { status: 302, headers: { location: '/', 'cache-control': 'no-store' } });
   const isHealth = url.pathname === '/api/health';
   // Renewing a session and the health report don't touch the database; health reports what is missing instead of refusing.
   const needsDb = url.pathname !== '/api/session/renew' && !isHealth;
@@ -216,7 +224,7 @@ async function handleDevice(request: Request, env: Env, url: URL, deps: ApiDeps)
   return handleAccount(request, env, sub, device.owner, now);
 }
 
-/** The routes that act for one account, however it was identified (Access JWT or device token). */
+/** The routes that act for one account, however it was identified (account session, Access JWT or device token). */
 async function handleAccount(request: Request, env: Env, path: string, owner: string, now: number): Promise<Response> {
   const url = new URL(request.url);
   if (path === '/api/pair') {
@@ -297,9 +305,10 @@ function prepareDoc(d: { id: string; kind: 'team' | 'match'; updatedAt: number; 
 async function handleShared(request: Request, env: Env, me: string, now: number): Promise<Response> {
   const db = env.DB!;
   if (request.method === 'GET') {
-    const docs = await sharedDocs(db, me, 2000);
+    const { docs, truncated } = await sharedDocs(db, me, SHARED_CAP);
     const names = await namesFor(db, docs.map((d) => d.owner));
-    return reply(200, { docs, names } satisfies SharedPullResponse);
+    // `truncated`: the cap was hit, so a shared team missing from `docs` is not proof that it is no longer shared.
+    return reply(200, { docs, names, ...(truncated ? { truncated: true } : {}) } satisfies SharedPullResponse & { truncated?: true });
   }
   const r = await readJson(request);
   if ('response' in r) return r.response;
@@ -355,11 +364,14 @@ async function handleShares(request: Request, env: Env, me: string, now: number)
     const parsed = ShareSchema.safeParse(r.body);
     if (!parsed.success) return fail(400, firstIssue(parsed.error));
     let s = parsed.data;
+    let byName = false;
     // "@name": an account, by its username.
     if (s.grantee.startsWith('@')) {
       const row = accountsEnabled(env) ? await db.prepare('SELECT id FROM users WHERE username_key = ? AND disabled = 0').bind(usernameKey(s.grantee.slice(1))).first<{ id: string }>() : null;
-      if (!row) return fail(400, 'No account has that username.');
+      // Same answer as for an existing non-friend, so this route can't be used to find out which usernames exist.
+      if (!row) return fail(403, NOT_A_FRIEND);
       s = { ...s, grantee: row.id };
+      byName = true;
     } else if (accountsEnabled(env) && s.grantee.includes('@')) {
       // An e-mail whose data an account has claimed is that account.
       const grantee = await ownerForEmail(db, s.grantee);
@@ -367,10 +379,13 @@ async function handleShares(request: Request, env: Env, me: string, now: number)
       s = { ...s, grantee };
     }
     if (s.grantee === me) return fail(400, "you can't share with yourself");
-    // Between accounts, only with a friend (Settings → Friends). People still on Access alone share as before.
-    if (accountsEnabled(env) && USER_ID_RE.test(me)) {
-      if (!USER_ID_RE.test(s.grantee)) return fail(400, 'Share with a friend: add them in Settings → Friends first.');
-      if (!(await areFriends(db, me, s.grantee))) return fail(403, 'You can only share with friends: add them in Settings → Friends first.');
+    // Sharing with an account needs an accepted friendship, however the caller signed in: an Access e-mail that no
+    // account has claimed has no friends, so it can't pick an account by @username. (Sharing to a claimed e-mail still
+    // reaches the account, so people still on Access alone can share with it as before the claim.)
+    if (accountsEnabled(env)) {
+      const toAccount = USER_ID_RE.test(s.grantee);
+      if (USER_ID_RE.test(me) && !toAccount) return fail(400, 'Share with a friend: add them in Settings → Friends first.');
+      if (toAccount && (USER_ID_RE.test(me) || byName) && !(USER_ID_RE.test(me) && (await areFriends(db, me, s.grantee)))) return fail(403, NOT_A_FRIEND);
     }
     if (s.kind === 'matches') {
       if (s.ref !== ALL_MATCHES) return fail(400, 'the match log is shared as a whole');

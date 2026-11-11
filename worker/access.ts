@@ -33,6 +33,5 @@ export function accessTo(requester: string, owner: string, target: Target, share
   return best;
 }
 
-export const canRead = (a: Access): boolean => a !== null;
 /** Writes: the owner anything; an editor teams of the shared folder; nobody else. */
 export const canWrite = (a: Access, target: Target): boolean => a === 'owner' || (a === 'edit' && target.kind === 'team');

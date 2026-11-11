@@ -1,14 +1,7 @@
 /** Invites: single-use, expiring codes an admin makes. Only the SHA-256 of the normalised code is stored, so a code is shown once. */
-import { INVITE_DEFAULT_TTL_MS, INVITE_LENGTH, formatCode, generateCode, isCode, normalizeCode } from '../src/domain/accounts';
+import { INVITE_LENGTH, isCode, normalizeCode } from '../src/domain/accounts';
 import { sha256Hex } from './crypto';
 import type { D1Like } from './types';
-
-export async function createInvite(db: D1Like, createdBy: string, note: string | null, now: number, ttlMs = INVITE_DEFAULT_TTL_MS): Promise<{ code: string; expiresAt: number }> {
-  const code = generateCode(INVITE_LENGTH);
-  const expiresAt = now + ttlMs;
-  await db.prepare('INSERT INTO invites (code_hash, created_by, note, created_at, expires_at) VALUES (?, ?, ?, ?, ?)').bind(await sha256Hex(code), createdBy, note, now, expiresAt).run();
-  return { code: formatCode(code), expiresAt };
-}
 
 /** The hash of what a person typed if it looks like an invite code, else null. */
 export async function inviteHash(typed: string): Promise<string | null> {

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { RESET_TTL_MS } from '../../src/domain/accounts';
+import { setDisabled as adminSetDisabled, setRole as adminSetRole } from '../admin';
 import { PW, accountEnv, call, cookieOf, firstAdmin, inviteAndSignup, keyFor, login, newKeyBody, type AccountEnv } from './accountHelpers';
 
 const events = async (env: AccountEnv) => (await env.DB.prepare('SELECT actor, kind, target FROM events ORDER BY id').all<{ actor: string; kind: string; target: string | null }>()).results;
@@ -223,5 +224,24 @@ describe('the desktop app', () => {
     const r = await call(env, 'POST', '/api/device/auth/login', { body: { username: 'ash', key: await keyFor(env, 'ash', PW), mode: 'token' }, origin: 'tauri://localhost' });
     expect(cookieOf(r)).toBeUndefined();
     expect((await call(env, 'GET', '/api/device/admin/users', { bearer: r.body.token, origin: 'tauri://localhost' })).status).toBe(200);
+  });
+});
+
+describe('the last admin, under a race', () => {
+  it('two admins demoting (or disabling) each other at once leave one admin', async () => {
+    for (const kind of ['role', 'disable']) {
+      const env = accountEnv();
+      const ash = await firstAdmin(env);
+      const misty = await inviteAndSignup(env, ash.cookie, 'misty');
+      await call(env, 'POST', '/api/admin/users/role', { cookie: ash.cookie, body: { id: misty.user.id, role: 'admin' } });
+      const act = (id: string) => {
+        const actor = id === ash.user.id ? misty.user.id : ash.user.id;
+        return kind === 'role' ? adminSetRole(env.DB, actor, id, 'user', 1) : adminSetDisabled(env.DB, actor, id, true, 1);
+      };
+      const results = await Promise.all([act(ash.user.id), act(misty.user.id)]);
+      expect(results.filter((r) => r === 'last-admin')).toHaveLength(1);
+      const live = env.DB.raw.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND disabled = 0").get() as { n: number };
+      expect(live.n).toBe(1);
+    }
   });
 });
