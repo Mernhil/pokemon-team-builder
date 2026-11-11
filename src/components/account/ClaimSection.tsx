@@ -9,7 +9,7 @@ import { PackageOpen } from 'lucide-react';
 import type { ClaimInfo } from '@/domain/accounts';
 import { claimOldData, loadClaim, skipClaim } from '@/sync/account';
 import { toast } from '@/store/toastStore';
-import { Button } from '../ui/primitives';
+import { Button, Notice } from '../ui/primitives';
 
 const messageOf = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -69,11 +69,7 @@ export function ClaimSection({ username }: { username: string }) {
           )}
         </>
       )}
-      {error && (
-        <p role="alert" className="font-semibold text-bad">
-          {error}
-        </p>
-      )}
+      {error && <Notice tone="bad">{error}</Notice>}
     </div>
   );
   if (info.state === 'skipped') {

@@ -5,7 +5,7 @@ import { ENCOUNTER_LABEL, areaStatus, encounterCheck, logEncounter, removeEncoun
 import { useRunStore } from '@/store/runStore';
 import { toast } from '@/store/toastStore';
 import { Sprite } from '../ui/Sprite';
-import { Button, Checkbox, Chip, Input, Panel, Select } from '../ui/primitives';
+import { Button, Checkbox, Chip, Input, LoadingState, Panel, Select } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useAtlasCtx } from '../atlas/context';
 
@@ -55,7 +55,7 @@ export function RunEncounters({ run, wild, loading }: { run: Run; wild: Map<stri
   return (
     <div className="space-y-3">
       <Input aria-label="Find a place or a Pokémon" placeholder="Find a place or a Pokémon…" value={filter} onChange={(e) => setFilter(e.target.value)} />
-      {loading && <p className="text-sm text-muted">Loading the encounter tables…</p>}
+      {loading && <LoadingState label="Loading the encounter tables…" className="p-3" />}
       <ul aria-label="Places" className="divide-y divide-border/60 rounded-xl border border-border">
         {places.map((id) => {
           const rows = speciesRows(wild.get(id) ?? []);

@@ -44,5 +44,22 @@ export const retryAfter = (rule: Rule, now: number): number => Math.max(1, Math.
 /** The client address from Cloudflare's header; an IPv6 address is reduced to its /64. Without the header (local development) everyone shares one key. */
 export function clientAddress(request: Request): string {
   const ip = request.headers.get('cf-connecting-ip')?.trim().toLowerCase() ?? 'unknown';
-  return ip.includes(':') ? ip.split(':').slice(0, 4).join(':') : ip;
+  return ip.includes(':') ? ipv6Prefix64(ip) : ip;
+}
+
+/** The first 64 bits of an IPv6 address as four 16-bit groups, `::` expanded ("2001:db8::abcd" → "2001:db8:0:0"). Anything unparseable is returned unchanged. */
+export function ipv6Prefix64(ip: string): string {
+  let text = ip.replace(/%.*$/, '');
+  // An embedded IPv4 tail ("::ffff:1.2.3.4") is two groups.
+  const v4 = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(text);
+  if (v4) text = text.slice(0, v4.index) + ((Number(v4[1]) << 8) | Number(v4[2])).toString(16) + ':' + ((Number(v4[3]) << 8) | Number(v4[4])).toString(16);
+  const halves = text.split('::');
+  if (halves.length > 2) return ip;
+  const head = halves[0] ? halves[0].split(':') : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 1 ? head.length !== 8 : missing < 1) return ip;
+  const groups = halves.length === 1 ? head : [...head, ...Array<string>(missing).fill('0'), ...tail];
+  if (!groups.every((g) => /^[0-9a-f]{1,4}$/.test(g))) return ip;
+  return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':');
 }

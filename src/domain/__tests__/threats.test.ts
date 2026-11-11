@@ -7,7 +7,7 @@ import { defaultField, defaultSide } from '@/domain/battle/conditions';
 import { formatForRegulation, getFormat } from '@/domain/formats';
 import { metaSet, metaSets } from '@/domain/metaSets';
 import { parseMetaFile, type MetaEntry } from '@/domain/meta';
-import { classifyKill, computeCell, moveChoices, ohkoEntries, runThreatJob, runThreatRow, summarize, type ThreatJob } from '@/domain/threats';
+import { classifyKill, computeCell, moveChoices, ohkoEntries, runThreatRow, summarize, type ThreatJob } from '@/domain/threats';
 import { createSet, createTeam } from '@/domain/team';
 import type { Dataset, PokemonSet } from '@/domain/types';
 import { validateTeam } from '@/domain/validation';
@@ -130,6 +130,21 @@ describe('computeCell', () => {
     expect(computeCell(dex, garchomp, threat, { ...defaultField(), trickRoom: true }).first).toBe('them');
   });
 
+  it('reads Speed as my worst case in both directions: slowest vs fastest, and under Trick Room fastest vs slowest', () => {
+    const zam = mk('alakazam', { itemId: 'alakazite', nature: 'Timid', moves: ['psychic', '', '', ''] });
+    const normal = computeCell(dex, zam, threat, defaultField());
+    const tr = computeCell(dex, zam, threat, { ...defaultField(), trickRoom: true });
+    // A Mega holder has two formes with different Speed: the base forme is the slow one without Trick Room...
+    expect(normal.mySpeed).toBeLessThan(tr.mySpeed);
+    // ...and the Mega forme (the faster one, so the one that moves last) under it.
+    const speeds = [calcSpeedOf('base'), calcSpeedOf('mega')];
+    expect(normal.mySpeed).toBe(Math.min(...speeds));
+    expect(tr.mySpeed).toBe(Math.max(...speeds));
+    function calcSpeedOf(mode: 'base' | 'mega') {
+      return computeCell(dex, zam, threat, defaultField(), mode).mySpeed;
+    }
+  });
+
   it('Tailwind doubles the Speed of whichever side has it', () => {
     const base = computeCell(dex, garchomp, threat, defaultField());
     expect(computeCell(dex, garchomp, threat, { ...defaultField(), myTailwind: true }).mySpeed).toBe(base.mySpeed * 2);
@@ -173,8 +188,9 @@ describe('report', () => {
   });
 
   it('a worker round trip (structured clone) gives identical results to the main thread', () => {
-    const direct = runThreatJob(dex, job, () => {});
-    const viaWire = runThreatJob(dex, structuredClone(job), () => {});
+    const run = (j: ThreatJob) => j.threats.map((_, i) => runThreatRow(dex, j, i));
+    const direct = run(job);
+    const viaWire = run(structuredClone(job));
     expect(JSON.parse(JSON.stringify(viaWire))).toEqual(JSON.parse(JSON.stringify(direct)));
   });
 
@@ -185,12 +201,6 @@ describe('report', () => {
     expect(runThreatRow(dex, job, 0, cache)[0]).toBe(first[0]);
     runThreatRow(dex, { ...job, field: { ...job.field, weather: 'Rain' } }, 0, cache);
     expect(cache.size).toBe(members.length * 2);
-  });
-
-  it('reports progressively, one row at a time', () => {
-    const seen: number[] = [];
-    runThreatJob(dex, job, (i) => seen.push(i));
-    expect(seen).toEqual(job.threats.map((_, i) => i));
   });
 });
 

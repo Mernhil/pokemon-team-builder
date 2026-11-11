@@ -46,7 +46,13 @@ interface SyncStoreState extends SyncState {
   markSeen: (id: string) => void;
   /** Queue labelled teams for a one-off push at their unchanged version. */
   force: (keys: string[]) => void;
-  saveState: (s: SyncState) => void;
+  /**
+   * A run saves its state. With `base` (what the run started from) the save is merged: when `forget()` ran meanwhile (the
+   * epoch changed) it is dropped, and a key queued by `force()` since the run started is kept in `forced`.
+   */
+  saveState: (s: SyncState, base?: { epoch: number; forced: string[] }) => void;
+  /** Bumped by `forget()`: a run that started before it must not write its old cursor and known back. Not persisted. */
+  epoch: number;
   begin: () => void;
   setDirty: (dirty: boolean) => void;
   succeed: (stats: SyncStats, stillDirty?: boolean) => void;
@@ -72,6 +78,7 @@ export const useSyncStore = create<SyncStoreState>()(
       dirty: false,
       deviceId: '',
       forced: [],
+      epoch: 0,
       unseen: [],
       setEnabled: (enabled) => set({ enabled, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, bannerDismissed: false }),
       setDeviceName: (deviceName) => set({ deviceName: deviceName.slice(0, 40) || randomName() }),
@@ -85,7 +92,13 @@ export const useSyncStore = create<SyncStoreState>()(
       markUnseen: (ids) => set((s) => (ids.length ? { unseen: [...new Set([...s.unseen, ...ids])].slice(-200) } : s)),
       markSeen: (id) => set((s) => (s.unseen.includes(id) ? { unseen: s.unseen.filter((x) => x !== id) } : s)),
       force: (keys) => set((s) => ({ forced: [...new Set([...s.forced, ...keys])] })),
-      saveState: ({ cursor, known, forced }) => set({ cursor, known, ...(forced ? { forced } : { forced: [] }) }),
+      saveState: ({ cursor, known, forced }, base) =>
+        set((s) => {
+          if (!base) return { cursor, known, forced: forced ?? [] };
+          if (base.epoch !== s.epoch) return s; // forgotten while the run was going
+          const answered = new Set(base.forced.filter((k) => !forced?.includes(k)));
+          return { cursor, known, forced: s.forced.filter((k) => !answered.has(k)) };
+        }),
       // The previous error stays visible while the next try runs, so a banner doesn't blink on every retry.
       begin: () => set({ status: 'syncing', lastAttemptAt: Date.now() }),
       setDirty: (dirty) => set({ dirty }),
@@ -94,7 +107,7 @@ export const useSyncStore = create<SyncStoreState>()(
       fail: (lastError, lastErrorKind = 'other', lastErrorStatus) =>
         set((s) => ({ status: 'idle', lastError, lastErrorKind, lastErrorStatus, bannerDismissed: lastErrorKind === 'signin' && s.lastErrorKind === 'signin' ? s.bannerDismissed : false })),
       dismissBanner: () => set({ bannerDismissed: true }),
-      forget: () => set({ dirty: false, forced: [], unseen: [], cursor: 0, known: {}, lastSyncAt: undefined, lastStats: undefined, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, lastAttemptAt: undefined, bannerDismissed: false }),
+      forget: () => set((s) => ({ epoch: s.epoch + 1, dirty: false, forced: [], unseen: [], cursor: 0, known: {}, lastSyncAt: undefined, lastStats: undefined, lastError: undefined, lastErrorKind: undefined, lastErrorStatus: undefined, lastAttemptAt: undefined, bannerDismissed: false })),
     }),
     {
       name: 'ptb:sync:v1',

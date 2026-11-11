@@ -71,7 +71,5 @@ export function createRunController<R>(deps: {
     /** Abandons the run in progress whatever its age (a flush is about to replace it). */
     abandon: abandonCurrent,
     running: () => current !== undefined,
-    /** How long the run in progress has been going, or undefined. */
-    age: () => (current ? now() - current.startedAt : undefined),
   };
 }

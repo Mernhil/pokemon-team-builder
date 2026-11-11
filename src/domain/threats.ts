@@ -137,8 +137,12 @@ export function computeCell(
   const myMoves = best(mineMoves);
   const theirBest = best(theirMoves);
 
-  const mySpeed = Math.min(...calcSpeed(dex, mySide, field).map((r) => r.speed));
-  const theirSpeed = Math.max(...calcSpeed(dex, theirSide, field).map((r) => r.speed));
+  // My worst case: without Trick Room my slowest forme against their fastest; under it the slower
+  // side moves first, so my worst case is my fastest forme against their slowest.
+  const mySpeeds = calcSpeed(dex, mySide, field).map((r) => r.speed);
+  const theirSpeeds = calcSpeed(dex, theirSide, field).map((r) => r.speed);
+  const mySpeed = field.trickRoom ? Math.max(...mySpeeds) : Math.min(...mySpeeds);
+  const theirSpeed = field.trickRoom ? Math.min(...theirSpeeds) : Math.max(...theirSpeeds);
   let first: ThreatCell['first'] = mySpeed === theirSpeed ? 'tie' : mySpeed > theirSpeed ? 'me' : 'them';
   if (field.trickRoom && first !== 'tie') first = first === 'me' ? 'them' : 'me';
 
@@ -177,15 +181,6 @@ export function runThreatRow(dex: Dex, job: ThreatJob, threatIndex: number, cach
       cache?.set(key, cell);
     }
     return cell;
-  });
-}
-
-/** Runs the whole job, handing each finished row to `onRow` (progressive results). */
-export function runThreatJob(dex: Dex, job: ThreatJob, onRow: (index: number, cells: ThreatCell[]) => void, cache?: ThreatCache): ThreatCell[][] {
-  return job.threats.map((_, i) => {
-    const cells = runThreatRow(dex, job, i, cache);
-    onRow(i, cells);
-    return cells;
   });
 }
 

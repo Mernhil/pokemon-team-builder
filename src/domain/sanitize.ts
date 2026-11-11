@@ -1,6 +1,7 @@
 import { sanitizeBenchmarks } from './benchmarks';
 import { sanitizeStamp } from './deviceStamp';
 import type { LoggedMon, Match, MatchResult } from './matches';
+import { normalizeIdentity } from './syncProtocol';
 import { emptySlots, uid } from './team';
 import { STAT_IDS, type MatchupNote, type PokemonSet, type StatTable, type Team, type TeamSlots, type TeraType } from './types';
 
@@ -118,8 +119,8 @@ export function sanitizeTeam(v: unknown): Team | null {
 function sanitizeShared(v: unknown): Team['shared'] {
   if (!isObj(v)) return undefined;
   const owner = str(v.owner, 254);
-  if (!owner || !owner.includes('@')) return undefined;
-  return { owner: owner.toLowerCase(), role: v.role === 'edit' ? 'edit' : 'view' };
+  if (!owner) return undefined;
+  return { owner: normalizeIdentity(owner), role: v.role === 'edit' ? 'edit' : 'view' };
 }
 
 function sanitizeLoggedMon(v: unknown): LoggedMon | null {

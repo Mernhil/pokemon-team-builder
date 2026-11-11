@@ -79,13 +79,13 @@ const controller = createRunController<RunResult>({
     const store = useSyncStore.getState();
     store.begin();
     try {
-      const { cursor, known, forced, deviceName } = store;
+      const { cursor, known, forced, deviceName, epoch } = store;
       const firstSync = cursor === 0 && Object.keys(known).length === 0;
       const { stats } = await syncOnce({
         store: storeAdapter,
         api: makeHttpApi(signal),
         state: { cursor, known, forced },
-        save: (s) => isCurrent() && useSyncStore.getState().saveState(s),
+        save: (s) => isCurrent() && useSyncStore.getState().saveState(s, { epoch, forced }),
         deviceName,
         isCurrent,
         flush: flush ? { maxBytes: KEEPALIVE_MAX_BYTES } : undefined,
@@ -121,6 +121,12 @@ const retrier = createRetrier({ run: () => controller.start() });
 
 /** Syncs now (or joins the run in progress) and restarts the retry schedule. Resolves when done. */
 export const syncNow = (): Promise<void> => retrier.trigger();
+
+/** Like `syncNow`, but a run already in flight may have missed what just changed (queued labels): go once more when it ends. */
+export function syncAgain(): Promise<void> {
+  if (controller.running()) again = true;
+  return syncNow();
+}
 
 let stopAuto: (() => void) | undefined;
 

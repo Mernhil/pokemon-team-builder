@@ -125,7 +125,7 @@ async function send<T>(method: string, url: string, init: RequestInit, viaAccoun
     useAccountStore.getState().markExpired();
     throw new SyncHttpError(SIGNIN_MESSAGE, 'signin', 401);
   }
-  if (accessSessionEnded(res)) {
+  if (accessSessionEnded({ type: res.type, status: res.status, redirected: res.redirected, url: res.url, json: (res.headers.get('content-type') ?? '').includes('json') })) {
     // Status 0 = Access's redirect to its login (the banner then offers the right way back, src/components/shell/SyncStatus.tsx).
     throw new SyncHttpError(signedOutMessage({ desktop: isDesktopApp(), linked: isPhoneLinked(), standalone: isStandalone() }), 'signin', res.type === 'opaqueredirect' || res.status < 400 ? 0 : res.status);
   }

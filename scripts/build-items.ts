@@ -22,6 +22,8 @@ import { fileURLToPath } from 'node:url';
 import { Dex } from '@pkmn/dex';
 import sharp from 'sharp';
 import * as drawn from './items/drawn.ts';
+import { cachedDownload } from './lib/download.ts';
+import { pool } from './lib/pool.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, '..');
@@ -69,45 +71,10 @@ async function loadPokeApiIdentifiers(): Promise<Map<string, string>> {
 const POKESPRITE = 'https://raw.githubusercontent.com/msikma/pokesprite/master/items';
 
 /** PokeAPI's sprite of an identifier ("life-orb"), or PokeSprite's ("pokesprite:key-item/dowsing-machine"). */
-async function fetchIcon(identifier: string): Promise<Buffer | null> {
+function fetchIcon(identifier: string): Promise<Buffer | null> {
   const ps = /^pokesprite:(.+)$/.exec(identifier)?.[1];
   const file = resolve(CACHE, ps ? `pokesprite-${ps.replace('/', '-')}.png` : `${identifier}.png`);
-  if (existsSync(file)) {
-    const buf = readFileSync(file);
-    return buf.length ? buf : null; // empty file = cached 404
-  }
-  mkdirSync(dirname(file), { recursive: true });
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const res = await fetch(ps ? `${POKESPRITE}/${ps}.png` : `${RAW}/${identifier}.png`);
-      if (res.status === 404) {
-        writeFileSync(file, '');
-        return null;
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const buf = Buffer.from(await res.arrayBuffer());
-      writeFileSync(file, buf);
-      return buf;
-    } catch (e) {
-      if (attempt === 2) throw e;
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-    }
-  }
-  return null;
-}
-
-async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let i = 0;
-  await Promise.all(
-    Array.from({ length: n }, async () => {
-      while (i < items.length) {
-        const k = i++;
-        out[k] = await fn(items[k]);
-      }
-    }),
-  );
-  return out;
+  return cachedDownload(file, ps ? `${POKESPRITE}/${ps}.png` : `${RAW}/${identifier}.png`);
 }
 
 async function main() {
@@ -115,21 +82,24 @@ async function main() {
   // Champions' items plus every bag item the Atlas databases list (src/data/generated/atlas-*.json).
   const ids = new Set<string>(Object.keys(data.items));
   const generated = resolve(ROOT, 'src/data/generated');
-  for (const f of readdirSync(generated).filter((f) => /^atlas-.*\.json$/.test(f)))
-    for (const id of Object.keys(JSON.parse(readFileSync(resolve(generated, f), 'utf8')).items ?? {})) if (id !== 'none') ids.add(id);
+  type AtlasItem = { name?: string; move?: string; moveType?: string };
+  const atlasItems: Record<string, AtlasItem>[] = readdirSync(generated)
+    .filter((f) => /^atlas-.*\.json$/.test(f))
+    .map((f) => JSON.parse(readFileSync(resolve(generated, f), 'utf8')).items ?? {});
+  for (const items of atlasItems) for (const id of Object.keys(items)) if (id !== 'none') ids.add(id);
   const itemIds: string[] = [...ids].sort();
   // TM / HM icons are per move type in PokeAPI's sprites (tm-fighting, hm-normal…).
   const machineIcon = new Map<string, string>();
-  for (const f of readdirSync(generated).filter((f) => /^atlas-.*\.json$/.test(f)))
-    for (const [id, it] of Object.entries<{ moveType?: string }>(JSON.parse(readFileSync(resolve(generated, f), 'utf8')).items ?? {}))
+  for (const items of atlasItems)
+    for (const [id, it] of Object.entries(items))
       if (it.moveType) machineIcon.set(id, `${id.startsWith('hm') ? 'hm' : 'tm'}-${it.moveType.toLowerCase()}`);
   const byStripped = await loadPokeApiIdentifiers();
   const placeholders: string[] = [];
 
   // What the atlases and the Champions data know about each item (name, TM/HM move, Mega Stone).
   const info = new Map<string, { name?: string; move?: string }>();
-  for (const f of readdirSync(generated).filter((f) => /^atlas-.*\.json$/.test(f)))
-    for (const [id, it] of Object.entries<{ name?: string; move?: string }>(JSON.parse(readFileSync(resolve(generated, f), 'utf8')).items ?? {})) info.set(id, { ...info.get(id), ...it });
+  for (const items of atlasItems)
+    for (const [id, it] of Object.entries(items)) info.set(id, { ...info.get(id), ...it });
   const gen9 = Dex.forGen(9);
   const typeOfMove = (move: string) => {
     const m = gen9.moves.get(move);

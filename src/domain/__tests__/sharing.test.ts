@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createMatch, type Match } from '../matches';
 import { localMetaFromMatches } from '../meta';
 import { sanitizeTeam } from '../sanitize';
-import { ago, isReadOnly, matchesForSource, nameOf, NEWS_WINDOW_MS, sharedFolders, sharedNotices, type SharedChange } from '../sharing';
+import { ago, matchesForSource, nameOf, NEWS_WINDOW_MS, sharedFolders, sharedNotices, type SharedChange } from '../sharing';
 import { getFormat } from '../formats';
 import { createTeam } from '../team';
 import type { Team } from '../types';
@@ -57,11 +57,6 @@ describe('notices', () => {
 describe('shared teams', () => {
   const fmt = getFormat('champions-vgc-reg-mc');
   const mk = (name: string, shared?: Team['shared'], groupId?: string, updatedAt = 1): Team => ({ ...createTeam(fmt, name), shared, groupId, updatedAt });
-  it('only a view share is read-only', () => {
-    expect(isReadOnly(mk('a', { owner: 'x@y.z', role: 'view' }))).toBe(true);
-    expect(isReadOnly(mk('a', { owner: 'x@y.z', role: 'edit' }))).toBe(false);
-    expect(isReadOnly(mk('a'))).toBe(false);
-  });
   it('groups shared teams into folders with their variations; my own teams are not listed', () => {
     const root = mk('Theirs', { owner: 'x@y.z', role: 'view' }, undefined, 5);
     const v = mk('Theirs', { owner: 'x@y.z', role: 'view' }, root.id, 9);
@@ -93,7 +88,8 @@ describe('the shared marker on a team', () => {
   it('survives loading, is cleaned up when malformed', () => {
     const t = { ...createTeam(fmt, 'T'), shared: { owner: 'A@B.C', role: 'edit' } };
     expect(sanitizeTeam(t)?.shared).toEqual({ owner: 'a@b.c', role: 'edit' });
-    expect(sanitizeTeam({ ...t, shared: { owner: 'nope', role: 'edit' } })?.shared).toBeUndefined();
+    expect(sanitizeTeam({ ...t, shared: { owner: 'u_AbC-d_9', role: 'edit' } })?.shared).toEqual({ owner: 'u_AbC-d_9', role: 'edit' }); // a user id: case kept
+    expect(sanitizeTeam({ ...t, shared: { owner: '', role: 'edit' } })?.shared).toBeUndefined();
     expect(sanitizeTeam({ ...t, shared: { owner: 'a@b.c', role: 'admin' } })?.shared?.role).toBe('view'); // unknown roles never get more rights
     expect(sanitizeTeam({ ...t, shared: 'x' })?.shared).toBeUndefined();
   });

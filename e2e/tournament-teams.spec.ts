@@ -12,7 +12,7 @@ test('Meta Teams tab: browse, filter, open a team, import it, compare, plan, pra
   await page.getByRole('tab', { name: 'Teams' }).click();
   const list = page.getByRole('list', { name: 'Tournament teams' });
   await expect(list.or(page.getByText(/No tournament teams for this regulation yet/))).toBeVisible({ timeout: 15_000 });
-  if (!(await list.isVisible())) return;
+  test.skip(!(await list.isVisible()), 'no tournament teams in the generated file for the default regulation');
 
   await expect(page.getByRole('link', { name: /Limitless/ }).first()).toBeVisible();
   const total = await list.getByRole('listitem').count();

@@ -9,7 +9,8 @@ import { toast } from '@/store/toastStore';
 import { REGULATION_MANIFEST, currentRegulation, formatForRegulation, regulationInfo } from '@/domain/formats';
 import { currentSeason, formatSeasonReset, seasonDaysLeft } from '@/domain/seasons';
 import type { FormatRules, Team } from '@/domain/types';
-import { useTeamStore } from '@/store/teamStore';
+import { editingTeam, useTeamStore } from '@/store/teamStore';
+import { isSavedTeam } from '@/domain/team';
 import { formatMechanics, gameInfo } from '@/domain/games';
 import { GEN_GAMES, genInfo } from '@/domain/generations';
 import { GenBadge } from '../ui/GenBadge';
@@ -86,6 +87,7 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
   const [showImpact, setShowImpact] = useState(false);
   const checklist = useChecklist();
   const addTeams = useTeamStore((st) => st.addTeams);
+  const editing = useTeamStore(editingTeam);
   const impact = useMemo(
     () => (outdated && live && dexState.status === 'ready' ? teamImpact(team, live.id, dexState.dex, changes) : undefined),
     [outdated, live, dexState, team, changes],
@@ -98,9 +100,13 @@ function ChampionsBanner({ team, format }: { team: Team; format: FormatRules }) 
     if (dexState.status !== 'ready') return;
     const r = copyTeamToRegulation(team, live.id, dexState.dex, changes);
     if (!r) return;
-    addTeams([r.team], true);
+    // The open team is usually the builder's scratch draft, which Saved teams hides: the copy belongs to the saved team it
+    // came from (or stands alone when there is none), never to the hidden draft, or it would vanish from the list.
+    const parent = isSavedTeam(team) ? team : editing;
+    const copy: Team = parent ? { ...r.team, name: parent.name, groupId: parent.groupId ?? parent.id } : { ...r.team, groupId: undefined, variationLabel: undefined };
+    addTeams([copy], true);
     // The builder opens a draft copy of the new variation: the checklist follows what's open.
-    useChecklist.getState().set(r.team.id, live.shortName, r.checklist);
+    useChecklist.getState().set(copy.id, live.shortName, r.checklist);
     useChecklist.getState().set(useTeamStore.getState().activeTeamId, live.shortName, r.checklist);
     toast(`Copied “${team.name}” to ${live.shortName} as a variation. The original is unchanged.`);
   };

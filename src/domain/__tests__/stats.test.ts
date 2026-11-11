@@ -4,7 +4,7 @@ import { Dex as PkmnDex } from '@pkmn/dex';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
 import { getFormat } from '@/domain/formats';
-import { calcStats, championsStat, gbStat, modernStat, setSpreadValue, spendBudget, spForTarget } from '@/domain/stats';
+import { calcStats, championsStat, gbStat, modernStat, setSpreadValue, spendBudget } from '@/domain/stats';
 import { STAT_IDS, emptyStats, type Dataset } from '@/domain/types';
 
 const dex = new Dex(data as unknown as Dataset);
@@ -71,10 +71,5 @@ describe('SP budget', () => {
     s = setSpreadValue(s, 'hp', 32, 66, 32);
     expect(s.hp).toBe(2); // only 2 SP left
     expect(spendBudget(champions.statSystem, s)).toMatchObject({ used: 66, remaining: 0, status: 'complete' });
-  });
-  it('finds minimum SP for a speed benchmark', () => {
-    // Jolly base 102 → outspeed a 168 target needs 31 SP (floor((102+31+20)*1.1)=168)
-    expect(spForTarget('spe', 102, 168, 32, dex.nature('Jolly'))).toBe(31);
-    expect(spForTarget('spe', 30, 200, 32)).toBeNull();
   });
 });

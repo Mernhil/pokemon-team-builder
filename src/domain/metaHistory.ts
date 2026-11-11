@@ -264,10 +264,6 @@ export function speciesSeries(entries: HistoryEntry[], speciesId: string, period
   return { kind: latest.k, points };
 }
 
-/** The species currently rising (or new in the top N) in a report, most gained first: the "rising threats" input. */
-export const risingSpecies = (report: TrendReport | null, limit = 8): string[] =>
-  report ? report.rows.filter((r) => r.status === 'rising' || r.status === 'new').slice(0, limit).map((r) => r.speciesId) : [];
-
 /** A rising Pokémon that beats several of the team's members, from the Threat report's rows. */
 export interface RisingThreat {
   speciesId: string;

@@ -14,13 +14,6 @@ export function currentSeason<T extends SeasonDates>(seasons: T[] = [], now: num
     .find((s) => Date.parse(s.start) <= now && now <= Date.parse(s.end));
 }
 
-/** The earliest season that starts after `now`. */
-export function nextSeason<T extends SeasonDates>(seasons: T[] = [], now: number = Date.now()): T | undefined {
-  return [...seasons]
-    .filter((s) => Date.parse(s.start) > now)
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0];
-}
-
 /** Whole days until the ladder resets, rounded up, never below 0. */
 export function seasonDaysLeft(season: SeasonDates, now: number = Date.now()): number {
   return Math.max(0, Math.ceil((Date.parse(season.end) - now) / DAY_MS));

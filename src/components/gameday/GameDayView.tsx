@@ -278,7 +278,7 @@ function TheirSix({ dex, format, g, top, recent, stoneOf, baseForms, onForm }: {
             <Sprite speciesId={id} name={dex.species(id)?.name} types={dex.species(id)?.types} set={format.spriteSet} size={28} />
             <span className="text-xs font-semibold">{dex.species(id)?.name ?? id}</span>
             <FormSwitch dex={dex} speciesId={id} itemId={stoneOf.get(id) ?? ''} base={baseForms.has(id)} onChange={(b) => onForm(id, b)} />
-            <button type="button" aria-label={`Remove ${dex.species(id)?.name ?? id}`} onClick={() => remove(id)} className="rounded-full p-1 text-muted hover:text-bad pointer-coarse:p-2.5">
+            <button type="button" aria-label={`Remove ${dex.species(id)?.name ?? id}`} onClick={() => remove(id)} className="hit rounded-full p-1 text-muted hover:text-bad">
               <X size={13} aria-hidden />
             </button>
           </li>
@@ -362,7 +362,7 @@ function RevealRow({ dex, format, id }: { dex: Dex; format: FormatRules; id: str
           {sp?.name ?? id}
           {shown && <span className="text-xs font-normal text-muted">showed {shown}</span>}
         </summary>
-        <Suspense fallback={null}>
+        <Suspense fallback={<LoadingState label="Loading…" className="p-3" />}>
           <LoggedMonDetails dex={dex} format={format} tera={false} mon={{ speciesId: id, ...reveal }} onChange={(m) => set(id, { itemId: m.itemId, abilityId: m.abilityId, moves: m.moves })} />
         </Suspense>
       </details>

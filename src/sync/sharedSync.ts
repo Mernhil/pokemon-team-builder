@@ -104,12 +104,15 @@ export async function syncShared(deps: SharedDeps): Promise<{ changes: SharedCha
   // ---- Reconcile with what the server says is shared with me right now ----
   const docs = pulled?.docs ?? [];
   const live = new Map(docs.filter((d) => d.kind === 'team' && !d.deleted).map((d) => [d.id, d]));
+  const truncated = pulled?.truncated === true;
   const stale: string[] = [];
   const retag: Team[] = [];
   for (const t of Object.values(teamStore.getState().teams)) {
     if (!t.shared) continue;
     const remote = live.get(t.id);
-    if (!remote) stale.push(t.id); // no longer shared with me (or deleted by its owner)
+    if (!remote) {
+      if (!truncated) stale.push(t.id); // no longer shared with me (or deleted by its owner); a truncated answer proves nothing
+    }
     else if (remote.owner !== t.shared.owner || remote.role !== t.shared.role) retag.push({ ...t, shared: { owner: remote.owner, role: remote.role } });
   }
   if (stale.length || retag.length) whileApplying(() => teamStore.getState().applySynced(retag, stale));

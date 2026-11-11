@@ -2,9 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { KDF_ITERATIONS, KDF_MIN_ITERATIONS, RECOVERY_LENGTH, THROTTLES, deriveKey, formatCode, generateCode, newSalt, passwordProblem, usernameProblem } from '../../src/domain/accounts';
 import { handleApi } from '../api';
 import { sha256Hex } from '../crypto';
-import { createInvite } from '../invites';
+import { makeInvite } from '../admin';
 import { fakeParams, paramsOf, storeKey, verifyKey } from '../password';
 import { NOW, makeEnv } from './helpers';
+
+/** An invite made the way the admin route makes it (7 days unless told otherwise). */
+const createInvite = (db: Env['DB'], by: string, note: string | null, now: number, ttlMs = 7 * 24 * 3600_000) => makeInvite(db, by, note ?? undefined, ttlMs, now);
 
 const PEPPER = 'test-pepper-0123456789abcdef0123456789';
 const ITER = KDF_MIN_ITERATIONS;

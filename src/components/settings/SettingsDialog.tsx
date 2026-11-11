@@ -7,12 +7,15 @@ import { useTeamStore } from '@/store/teamStore';
 import { PaletteSettings } from './PaletteSettings';
 import { UpdateCheckButton } from '../DesktopUpdater';
 import { Modal } from '../ui/Modal';
-import { Button, Label, Select, Tabs } from '../ui/primitives';
+import { Button, Label, LoadingState, Select, Tabs } from '../ui/primitives';
 
 // Cloud sync loads when Settings opens (its engine loads only once sync is on).
-const SyncSettings = lazy(() => import('./SyncSettings'));
-const AccountSettings = lazy(() => import('./AccountSettings'));
-const FriendsSettings = lazy(() => import('./FriendsSettings'));
+const loadSync = () => import('./SyncSettings');
+const loadAccount = () => import('./AccountSettings');
+const loadFriends = () => import('./FriendsSettings');
+const SyncSettings = lazy(loadSync);
+const AccountSettings = lazy(loadAccount);
+const FriendsSettings = lazy(loadFriends);
 
 /**
  * Settings & credits: appearance, where data lives, and who made the data and art the app uses.
@@ -30,8 +33,21 @@ export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, on
   // Opened from the sync banner, the header light, #account or the palette: land on that section rather than the top.
   useEffect(() => {
     if (!open || !section) return;
-    const id = setTimeout(() => document.getElementById(`set-${section}`)?.scrollIntoView({ block: 'start' }), 50);
-    return () => clearTimeout(id);
+    const go = () => document.getElementById(`set-${section}`)?.scrollIntoView({ block: 'start' });
+    const id = setTimeout(go, 50);
+    // Account, Friends and Sync load lazily and push the sections below them down when they appear: scroll again once they have.
+    let cancelled = false;
+    let id2: ReturnType<typeof setTimeout> | undefined;
+    void Promise.all([loadAccount(), loadFriends(), loadSync()])
+      .then(() => {
+        if (!cancelled) id2 = setTimeout(go, 60);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+      clearTimeout(id2);
+    };
   }, [open, section]);
 
   return (
@@ -74,7 +90,7 @@ export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, on
                 <Label>Brightness</Label>
                 <span className="font-mono tabular-nums">{brightness}%</span>
               </span>
-              <input type="range" min={BRIGHTNESS_RANGE.min} max={BRIGHTNESS_RANGE.max} step={5} value={brightness} aria-label="Brightness" onChange={(e) => setBrightness(Number(e.target.value))} className="palette-range w-full" style={{ background: 'linear-gradient(to right, #333, #eee)' }} />
+              <input type="range" min={BRIGHTNESS_RANGE.min} max={BRIGHTNESS_RANGE.max} step={5} value={brightness} aria-label="Brightness" onChange={(e) => setBrightness(Number(e.target.value))} className="palette-range w-full" style={{ background: 'linear-gradient(to right, var(--color-surface-2), var(--color-fg))' }} />
             </label>
             {(outline !== OUTLINE_RANGE.default || brightness !== BRIGHTNESS_RANGE.default) && (
               <Button size="sm" variant="ghost" onClick={() => { setOutline(OUTLINE_RANGE.default); setBrightness(BRIGHTNESS_RANGE.default); }}>
@@ -136,7 +152,7 @@ export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, on
           <h3 id="set-account">
             <Label>Account</Label>
           </h3>
-          <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+          <Suspense fallback={<LoadingState label="Loading…" className="p-4" />}>
             <AccountSettings />
           </Suspense>
         </section>
@@ -146,7 +162,7 @@ export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, on
             <Label>Friends</Label>
             <FriendsDot />
           </h3>
-          <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+          <Suspense fallback={<LoadingState label="Loading…" className="p-4" />}>
             <FriendsSettings />
           </Suspense>
         </section>
@@ -155,7 +171,7 @@ export function SettingsDialog({ open, onOpenChange, section, onOpenWhatsNew, on
           <h3 id="set-sync">
             <Label>Sync</Label>
           </h3>
-          <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+          <Suspense fallback={<LoadingState label="Loading…" className="p-4" />}>
             <SyncSettings />
           </Suspense>
         </section>

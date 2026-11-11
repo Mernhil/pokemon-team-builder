@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import { teamFromDecklist } from '../../src/domain/metaSources.ts';
 import { TT_DAYS, TT_MIN_PLAYERS, TT_TOP_N, parseStanding, selectTopCuts, type RawEvent, type RawStanding, type TournamentRegulation } from '../../src/domain/tournamentTeams.ts';
-import { API, MIN_LEGAL, MIN_MEGA, Tournament, headers, listTournaments, pinnedFormats } from './limitless.ts';
+import { API, MIN_LEGAL, MIN_MEGA, Tournament, games, headers, listTournaments, pinnedFormats } from './limitless.ts';
 import { HttpDenied, getJson, pool } from './http.ts';
 import type { Context, Regulation } from './context.ts';
 
@@ -26,8 +26,6 @@ interface Cache {
   version: 2;
   events: Record<string, CachedEvent>;
 }
-
-const games = (process.env.LIMITLESS_GAMES || 'VGC').split(',').map((s) => s.trim()).filter(Boolean);
 
 /** The regulation's recent top cuts; null when Limitless can't be read (the caller keeps the old data). */
 export async function tournamentTeamsFor(ctx: Context, reg: Regulation): Promise<TournamentRegulation | null> {

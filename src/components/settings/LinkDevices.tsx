@@ -5,6 +5,7 @@ import { useDeviceStore } from '@/sync/deviceStore';
 import { linkThisDevice, linkThisPhone, loadDevices, pairingLink, requestPairCode, revokeLinkedDevice, unlinkThisDevice, unlinkThisPhone } from '@/sync/pairing';
 import { useSyncStore } from '@/sync/syncStore';
 import { syncNow } from '@/sync/runner';
+import { ConfirmAction } from './ConfirmAction';
 import { Button, Input, Label } from '../ui/primitives';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -99,9 +100,9 @@ export function LinkDesktopFromHere() {
               <li key={d.id} className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{d.name}</span>
                 <span className="text-xs text-muted">last used {when(d.lastSeenAt)}</span>
-                <Button size="sm" variant="ghost" aria-label={`Unlink ${d.name}`} onClick={() => void remove(d.id)}>
+                <ConfirmAction ariaLabel={`Unlink ${d.name}`} question={`Unlink ${d.name}?`} confirmLabel="Unlink" onConfirm={() => void remove(d.id)}>
                   <Unlink size={14} aria-hidden /> Unlink
-                </Button>
+                </ConfirmAction>
               </li>
             ))}
           </ul>
@@ -148,9 +149,9 @@ export function LinkThisDesktop() {
         <p>
           Linked to <b>{device.owner}</b> at <span className="select-all">{device.server}</span>. You can unlink it here or from the phone app’s Settings → Sync.
         </p>
-        <Button size="sm" variant="ghost" onClick={() => void unlinkThisDevice()}>
+        <ConfirmAction question="Unlink this desktop app?" confirmLabel="Unlink" onConfirm={() => void unlinkThisDevice()}>
           <Unlink size={14} aria-hidden /> Unlink this desktop app
-        </Button>
+        </ConfirmAction>
       </div>
     );
   }
@@ -223,9 +224,9 @@ export function LinkThisPhone({ expired }: { expired: boolean }) {
         <p>
           This phone is linked with a pairing code{owner ? <> (to <b>{owner}</b>)</> : null}. Sync no longer needs the Cloudflare sign-in, so it keeps working when that expires. You can unlink it here or from another device’s Settings → Sync.
         </p>
-        <Button size="sm" variant="ghost" onClick={() => void unlinkThisPhone()}>
+        <ConfirmAction question="Unlink this phone?" confirmLabel="Unlink" onConfirm={() => void unlinkThisPhone()}>
           <Unlink size={14} aria-hidden /> Unlink this phone
-        </Button>
+        </ConfirmAction>
       </div>
     );
   }

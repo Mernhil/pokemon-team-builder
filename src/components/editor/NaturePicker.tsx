@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, Leaf } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { STAT_LABELS, type StatId } from '@/domain/types';
@@ -16,6 +16,10 @@ const GRID_STATS: StatId[] = ['atk', 'def', 'spa', 'spd', 'spe'];
 export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string; onChange: (name: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  /** Horizontal nudge that keeps the popup inside the viewport (phones). */
+  const [shift, setShift] = useState(0);
   const current = dex.nature(value);
   const neutral = !current?.plus && !current?.minus;
 
@@ -24,14 +28,50 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
     const onDown = (e: MouseEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    // Window + capture phase, so Escape closes only the popup and not a Radix dialog around it.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
     document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKey, true);
     };
   }, [open]);
+
+  // Move focus into the popup on open (the current nature, else the first button) and keep it inside the viewport.
+  useLayoutEffect(() => {
+    const pop = popRef.current;
+    if (!open || !pop) return;
+    setShift(0);
+    pop.style.marginLeft = '0px';
+    const r = pop.getBoundingClientRect();
+    const margin = 8;
+    let dx = Math.min(0, window.innerWidth - margin - r.right);
+    if (r.left + dx < margin) dx = margin - r.left;
+    setShift(dx);
+    (pop.querySelector<HTMLElement>('[aria-current="true"]') ?? pop.querySelector<HTMLElement>('button'))?.focus({ preventScroll: true });
+  }, [open]);
+
+  // Tab cycles inside the popup.
+  const trapTab = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Tab') return;
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button'));
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (!first || !last) return;
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   const natureAt = (plus: StatId, minus: StatId) => dex.natures.find((n) => n.plus === plus && n.minus === minus);
   const recent = usePickerPrefs('natures').recent.map((n) => dex.nature(n)).filter((n) => !!n);
@@ -39,11 +79,13 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
     usePrefsStore.getState().addRecent('natures', name);
     onChange(name);
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
@@ -66,7 +108,16 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
       </button>
 
       {open && (
-        <div className="absolute z-40 mt-1 rounded-lg border border-border bg-surface p-2.5 shadow-xl">
+        <div
+          ref={popRef}
+          role="group"
+          aria-label="Choose a nature"
+          style={{ marginLeft: shift }}
+          onKeyDown={trapTab}
+          // The picker sits inside a Field's <label>: without this a click on the popup's own padding would "click" the label's trigger and close it.
+          onClick={(e) => e.preventDefault()}
+          className="scrollbar-thin absolute left-0 z-40 mt-1 max-h-[70vh] max-w-[calc(100vw-1rem)] overflow-auto rounded-lg border border-border bg-surface p-2.5 shadow-xl"
+        >
           {recent.length > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-1" role="group" aria-label="Recent natures">
               <span className="mr-1 text-3xs font-semibold uppercase tracking-wider text-muted">Recent</span>
@@ -77,7 +128,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                   onClick={() => pick(n.name)}
                   aria-current={current?.name === n.name}
                   className={cn(
-                    'rounded-md border px-1.5 py-0.5 text-3xs font-semibold',
+                    'hit rounded-md border px-1.5 py-0.5 text-3xs font-semibold',
                     current?.name === n.name ? 'border-accent bg-accent/15' : 'border-border/60 hover:border-muted',
                   )}
                 >
@@ -96,7 +147,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
               <tr>
                 {/* Two leading spacer cells, matching the body's "lowers" label column (rowSpan from row 0) and each row's own stat-label column. */}
                 <th className="w-4 p-0" />
-                <th className="w-10 p-0" />
+                <th className="w-8 p-0" />
                 <th colSpan={GRID_STATS.length} className="pb-1 text-center text-3xs font-semibold uppercase tracking-wider text-good">
                   <span className="inline-flex items-center gap-0.5">
                     <ArrowUp size={10} aria-hidden /> raises
@@ -140,7 +191,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                             title="Neutral: no stat is raised or lowered"
                             aria-current={isCurrent}
                             className={cn(
-                              'flex h-9 w-12 items-center justify-center rounded-md border text-3xs text-muted',
+                              'flex h-9 w-12 items-center justify-center rounded-md border text-3xs text-muted pointer-coarse:h-11 pointer-coarse:w-11',
                               isCurrent ? 'border-accent bg-accent/15 text-fg' : 'border-border/60 hover:border-muted',
                             )}
                           >
@@ -160,7 +211,7 @@ export function NaturePicker({ dex, value, onChange }: { dex: Dex; value: string
                           title={`${n.name}: +${STAT_LABELS[plus]} −${STAT_LABELS[minus]}`}
                           aria-current={isCurrent}
                           className={cn(
-                            'flex h-9 w-12 items-center justify-center rounded-md border text-3xs font-semibold leading-tight',
+                            'flex h-9 w-12 items-center justify-center rounded-md border text-3xs font-semibold leading-tight pointer-coarse:h-11 pointer-coarse:w-11',
                             isCurrent ? 'border-accent bg-accent/15 text-fg' : 'border-border/60 hover:border-muted',
                           )}
                         >

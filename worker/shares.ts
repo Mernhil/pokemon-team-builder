@@ -75,18 +75,22 @@ interface SharedRow {
   role: Role;
 }
 
-/** Everything shared with `grantee` that currently exists (tombstones too, so deletions reach them). */
-export async function sharedDocs(db: D1Like, grantee: string, limit: number): Promise<SharedDocument[]> {
+/**
+ * Everything shared with `grantee` that currently exists (tombstones too, so deletions reach them). Live documents come
+ * first, so when there are more than `limit` rows it is tombstones that get cut, not teams; `truncated` says it happened
+ * (the app must not read a missing shared team as "no longer shared" then).
+ */
+export async function sharedDocs(db: D1Like, grantee: string, limit: number): Promise<{ docs: SharedDocument[]; truncated: boolean }> {
   const { results } = await db
     .prepare(
       `SELECT d.owner, d.id, d.kind, d.json, d.updated_at, d.deleted, d.server_seq, s.role
        FROM shares s JOIN documents d ON d.owner = s.owner
        WHERE s.grantee = ?1 AND ${LIVE} AND ((s.kind = 'team-group' AND d.kind = 'team' AND d.group_id = s.ref) OR (s.kind = 'matches' AND d.kind = 'match'))
-       ORDER BY d.owner, d.server_seq LIMIT ?2`,
+       ORDER BY d.deleted, d.owner, d.server_seq LIMIT ?2`,
     )
-    .bind(grantee, limit)
+    .bind(grantee, limit + 1)
     .all<SharedRow>();
-  return results.map((r) => ({
+  const docs = results.slice(0, limit).map((r) => ({
     id: r.id,
     kind: r.kind,
     updatedAt: r.updated_at,
@@ -96,4 +100,5 @@ export async function sharedDocs(db: D1Like, grantee: string, limit: number): Pr
     owner: r.owner,
     role: r.role,
   }));
+  return { docs, truncated: results.length > limit };
 }

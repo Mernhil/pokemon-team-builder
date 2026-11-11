@@ -5,11 +5,8 @@
  */
 import { chaosToSnapshot, type MetaSnapshot } from '../../src/domain/meta.ts';
 import { get } from './http.ts';
+import { CUTOFFS, SMOGON_STATS as STATS, liveDays } from './shared.ts';
 import type { Context, Regulation } from './context.ts';
-
-const STATS = 'https://www.smogon.com/stats/';
-/** Smogon's VGC cutoffs, best first. */
-const CUTOFFS = [1760, 1630, 1500, 0];
 
 /** Stats months on the index page, newest first ("2026-08", …; the -DLC variants are skipped). */
 export async function listMonths(): Promise<string[]> {
@@ -30,14 +27,6 @@ async function findChaos(ctx: Context, reg: Regulation, months: string[]) {
     }
   }
   return null;
-}
-
-/** Days of `month` (YYYY-MM) the regulation was live. */
-function liveDays(reg: Regulation, month: string): number {
-  const from = Math.max(Date.parse(`${month}-01T00:00:00Z`), Date.parse(reg.start));
-  const [y, m] = month.split('-').map(Number);
-  const to = Math.min(Date.UTC(y, m, 1), reg.end ? Date.parse(reg.end) : Infinity);
-  return Math.max(0, (to - from) / 86_400_000);
 }
 
 /**

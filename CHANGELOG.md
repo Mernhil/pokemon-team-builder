@@ -2,6 +2,23 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.43.1 — 2026-11-11
+
+### Fixed
+- **A team shared by another account stays view-only after a reload.** Its shared marker was dropped on load for account owners, so it became editable and was treated as your own.
+- **Edit team, reload, Save still offers “Update”.** The link between the build and the saved team now survives a reload, so Save no longer makes a second copy.
+- **“Copy to <regulation>” no longer loses the copy.** It was attached to the builder's hidden scratch draft, so the new variation never showed in Saved teams. It now joins the saved team you were editing.
+- **No more “2 EVs unallocated” on a normal max spread.** The standard 252/252/4 spread no longer carries a permanent warning.
+- **The threat report under Trick Room** now uses your worst case for a Mega Pokémon, as the report promises.
+- **Variation labels no longer repeat** after deleting one, and a variation whose parent is itself a variation is tidied up on load, sync and import. Editing an empty slot no longer marks the team as edited.
+- **Sync tells you what went wrong.** A refusal from the server (not a friend, account disabled, …) is shown as it is instead of “Your sign-in has expired”; labelling teams while a sync runs is no longer lost; shared folders no longer vanish when a friend's shared data is large; sharing by `@username` answers the same for unknown and non-friend names.
+- **A Showdown import with notes stays open** so you can read them. A failed Pokédex or Pokénav load shows Retry. The desktop update banner can be brought back after dismissing it. The Nature picker keeps focus, fits a phone and closes only when you mean it to. Escape while renaming a saved team no longer closes the dialog. Several small buttons now meet the 44 pt touch size.
+- **Worker:** the last admin can't be removed by two simultaneous requests, a repeat “Bring my teams from before” changes nothing, IPv6 addresses are limited by their /64, and `/api/session/renew` no longer ends on a JSON page when accounts are on.
+
+### Changed
+- **Stop sharing, Leave and Unlink ask first**, as the UI guide says.
+- **Tooling:** the data scripts work on Windows, a crash in the weekly data audit no longer opens a false “data differs” issue, the iPhone-size tests also run for service-worker and Worker changes, deploys pin the wrangler version, and unused code and duplicated helpers were removed.
+
 ## 0.43.0 — 2026-11-05
 
 ### New

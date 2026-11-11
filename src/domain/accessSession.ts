@@ -11,14 +11,18 @@ export interface ApiAnswer {
   redirected?: boolean;
   /** `Response.url`: after a followed redirect, the page that answered. */
   url?: string;
+  /** The answer is JSON: the Worker's own (its 403s carry a reason), not Access's HTML page. */
+  json?: boolean;
 }
 
 const ACCESS_HOST = /(^|\.)cloudflareaccess\.com$/i;
 
-/** True when this answer from /api/* is the end of the sign-in (Access's redirect or login page, or the Worker's own 401/403), not data. */
+/** True when this answer from /api/* is the end of the sign-in (Access's redirect or login page, or a 401 / a non-JSON 403), not data. */
 export function accessSessionEnded(a: ApiAnswer): boolean {
   if (a.type === 'opaqueredirect') return true;
-  if (a.status === 401 || a.status === 403) return true;
+  if (a.status === 401) return true;
+  // Access's 403 is a page; the Worker's own 403 is JSON with a reason the player should read (friends only, not yours, disabled, refused).
+  if (a.status === 403) return !a.json;
   if (a.status >= 300 && a.status < 400) return true;
   if (a.redirected && a.url) {
     try {

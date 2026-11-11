@@ -5,9 +5,6 @@
 import type { Match } from './matches';
 import type { Team } from './types';
 
-/** A team someone else shared read-only: it can be opened and copied, never changed. */
-export const isReadOnly = (t: Pick<Team, 'shared'> | undefined): boolean => !!t?.shared && t.shared.role !== 'edit';
-
 /** Whose matches a view or the meta fallback counts. */
 export type MatchSource = 'mine' | 'theirs' | 'both';
 export const MATCH_SOURCE_LABEL: Record<MatchSource, string> = { mine: 'Mine', theirs: 'Theirs', both: 'Both of us' };

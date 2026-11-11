@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FriendInfo } from '@/domain/accounts';
 import { loadFriends } from '@/sync/friends';
-import { Select } from '../ui/primitives';
+import { LoadingState, Notice, Select } from '../ui/primitives';
 
 /**
  * Who to share with, for someone signed in to an account: a pick from their friends (sharing is only between
@@ -20,8 +20,8 @@ export function FriendPicker({ value, onChange, exclude = [], label = 'Friend to
       alive = false;
     };
   }, []);
-  if (error) return <p className="min-w-0 flex-1 text-bad">{error}</p>;
-  if (!friends) return <p className="min-w-0 flex-1 text-muted">Loading friends…</p>;
+  if (error) return <Notice tone="bad" className="min-w-0 flex-1">{error}</Notice>;
+  if (!friends) return <LoadingState label="Loading friends…" className="min-w-0 flex-1 justify-start p-2" />;
   const open = friends.filter((f) => !exclude.includes(f.id));
   if (!open.length) return <p className="min-w-0 flex-1 text-muted">{friends.length ? 'Shared with every friend already.' : 'No friends yet: add them in Settings → Friends.'}</p>;
   return (

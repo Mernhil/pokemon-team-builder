@@ -134,7 +134,39 @@ const mine = () => {
   return { createdOn: s, updatedOn: s };
 };
 
-const firstTeam = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team', currentStamp());
+/** A blank, unnamed scratch draft stamped with this device: the builder's starting point (first run, after the last team goes). */
+const freshDraft = (): Team => createTeam(getFormat(DEFAULT_FORMAT_ID), DEFAULT_TEAM_NAME, currentStamp());
+
+const firstTeam = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team', currentStamp()); // the starter is a named, saved team (the app has always opened on one)
+
+/**
+ * Makes every variation's `groupId` point at a top-level team. A variation whose parent is itself a
+ * variation is re-pointed at the root; one whose chain dangles or loops becomes a top-level team.
+ */
+export function normaliseGroups(teams: Record<string, Team>): void {
+  for (const t of Object.values(teams)) {
+    if (!t.groupId) continue;
+    const seen = new Set<string>([t.id]);
+    let cur: Team | undefined = teams[t.groupId];
+    while (cur && cur.groupId && !seen.has(cur.id)) {
+      seen.add(cur.id);
+      cur = teams[cur.groupId];
+    }
+    // `cur` is the root, undefined (dangling) or a team already seen (a loop).
+    const root = cur && !cur.groupId && cur.id !== t.id ? cur.id : undefined;
+    if (root !== t.groupId) teams[t.id] = { ...t, groupId: root };
+  }
+}
+
+/** The next "Variation N" label for a folder: one past the highest existing number, so a deleted one is never reused by a sibling. */
+function nextVariationLabel(teams: Record<string, Team>, groupId: string): string {
+  let max = 1;
+  for (const t of Object.values(teams)) {
+    const m = t.groupId === groupId ? /^Variation (\d+)$/.exec(t.variationLabel ?? '') : null;
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `Variation ${max + 1}`;
+}
 
 /** Where the pre-v3 save is copied before the v3 migration rewrites it (see migrateTeamState). */
 export const TEAM_BACKUP_V2_KEY = 'ptb:v1:backup-v2';
@@ -178,9 +210,7 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
   if (ids.length === 0) return current;
   // A variation whose parent group didn't survive sanitising becomes a top-level group itself,
   // rather than silently disappearing from the saved-teams list.
-  for (const t of Object.values(teams)) {
-    if (t.groupId && !Object.hasOwn(teams, t.groupId)) t.groupId = undefined;
-  }
+  normaliseGroups(teams);
   // Battle state is keyed by set uid and never pruned when a set is removed: drop entries whose set
   // no longer exists (and anything malformed) so it doesn't grow in localStorage forever.
   const liveUids = new Set(Object.values(teams).flatMap((t) => t.slots.map((s) => s?.uid)));
@@ -226,6 +256,26 @@ export function mergeTeamState(persisted: unknown, current: TeamState): TeamStat
   };
 }
 
+/**
+ * After teams were removed or replaced under the builder: drops the Edit-team link when its team is
+ * gone, and makes sure the open team is a scratch draft, never a saved team the builder would edit in
+ * place (a draft copy takes its place, linked to it).
+ */
+function linkAfterChange(teams: Record<string, Team>, activeTeamId: string, order: string[], s: Pick<TeamState, 'editingFrom' | 'editingDraft' | 'activeTeamId'>): Partial<TeamState> {
+  let editingFrom = s.editingFrom && teams[s.editingFrom] ? s.editingFrom : null;
+  let editingDraft = editingFrom && s.editingDraft && teams[s.editingDraft] ? s.editingDraft : null;
+  const open = teams[activeTeamId];
+  // Only when the open team had to change (the one that was open is gone); a team the player picked stays as picked.
+  if (activeTeamId !== s.activeTeamId && open && isSavedTeam(open) && !isLocked(open)) {
+    const draft = cloneTeam(open, DEFAULT_TEAM_NAME, { createdOn: open.createdOn, updatedOn: open.updatedOn });
+    teams[draft.id] = draft;
+    editingFrom = open.id;
+    editingDraft = draft.id;
+    return { activeTeamId: draft.id, activeSlot: 0, order: [draft.id, ...order], editingFrom, editingDraft };
+  }
+  return { editingFrom, editingDraft };
+}
+
 export const useTeamStore = create<TeamState>()(
   persist(
     (set, get) => {
@@ -241,7 +291,9 @@ export const useTeamStore = create<TeamState>()(
             lockedNotice();
             return s;
           }
-          return { teams: { ...s.teams, [t.id]: { ...enforceCapabilities(fn(t)), updatedAt: editTime('team', t.id), updatedOn: currentStamp() } } };
+          const next = fn(t);
+          if (next === t) return s; // nothing changed: do not mark the team edited (or sync it)
+          return { teams: { ...s.teams, [t.id]: { ...enforceCapabilities(next), updatedAt: editTime('team', t.id), updatedOn: currentStamp() } } };
         });
       const mutateSlot = (id: string, i: number, fn: (p: PokemonSet) => PokemonSet) =>
         mutateTeam(id, (t) => {
@@ -345,7 +397,7 @@ export const useTeamStore = create<TeamState>()(
           const src = state.teams[state.activeTeamId];
           const target = targetId ? state.teams[targetId] : undefined;
           if (!src) return state.activeTeamId;
-          // Saving the open team under its own name: it is already stored (edits save as you go).
+          // Saving the open team under its own name: it is already stored (the build open in the builder is a scratch draft, so a saved team never changes by editing).
           if (mode === 'new' && src.name.trim().toLowerCase() === name.trim().toLowerCase() && isSavedTeam(src)) return src.id;
           if (!target || target.id === src.id || isLocked(target) || mode === 'new') return get().saveAsNew(name);
           const copy = cloneTeam(src, target.name, mine());
@@ -367,8 +419,7 @@ export const useTeamStore = create<TeamState>()(
             return target.id;
           }
           const groupId = target.groupId ?? target.id;
-          const siblings = Object.values(state.teams).filter((t) => t.groupId === groupId).length;
-          const v: Team = { ...copy, groupId, variationLabel: `Variation ${siblings + 2}`, shared: target.shared };
+          const v: Team = { ...copy, groupId, variationLabel: nextVariationLabel(state.teams, groupId), shared: target.shared };
           set((s) => ({ teams: { ...s.teams, [v.id]: v }, editingFrom: v.id, editingDraft: s.activeTeamId }));
           return v.id;
         },
@@ -380,9 +431,8 @@ export const useTeamStore = create<TeamState>()(
             return id;
           }
           const groupId = src.groupId ?? src.id;
-          const siblings = Object.values(get().teams).filter((t) => t.groupId === groupId).length;
           // A variation added to a folder shared with edit rights belongs to that folder (and syncs there).
-          const t = { ...cloneTeam(src, src.name, { groupId, variationLabel: `Variation ${siblings + 2}`, ...mine() }), shared: src.shared };
+          const t = { ...cloneTeam(src, src.name, { groupId, variationLabel: nextVariationLabel(get().teams, groupId), ...mine() }), shared: src.shared };
           set((s) => ({ teams: { ...s.teams, [t.id]: t } }));
           openForEdit(t.id);
           return t.id;
@@ -404,12 +454,12 @@ export const useTeamStore = create<TeamState>()(
             }
             let order = s.order.filter((x) => x !== id);
             if (order.length === 0) {
-              const t = createTeam(getFormat(DEFAULT_FORMAT_ID));
+              const t = freshDraft();
               teams[t.id] = t;
               order = [t.id];
             }
             const activeTeamId = teams[s.activeTeamId] ? s.activeTeamId : order[0];
-            return { teams, order, activeTeamId, activeSlot: 0 };
+            return { teams, order, activeTeamId, activeSlot: 0, ...linkAfterChange(teams, activeTeamId, order, s) };
           }),
         copySharedToMine: (id) => {
           const src = get().teams[id];
@@ -433,15 +483,15 @@ export const useTeamStore = create<TeamState>()(
             for (const id of deletes) delete teams[id];
             for (const t of upserts) teams[t.id] = enforceCapabilities(t);
             // A variation whose folder is gone becomes a folder itself, rather than vanishing.
-            for (const t of Object.values(teams)) if (t.groupId && !Object.hasOwn(teams, t.groupId)) teams[t.id] = { ...t, groupId: undefined };
+            normaliseGroups(teams);
             if (Object.keys(teams).length === 0) {
-              const fresh = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team');
+              const fresh = freshDraft();
               teams[fresh.id] = fresh;
             }
             const topLevel = Object.keys(teams).filter((id) => !teams[id].groupId);
             const order = [...s.order.filter((id) => topLevel.includes(id)), ...topLevel.filter((id) => !s.order.includes(id))];
             const activeTeamId = Object.hasOwn(teams, s.activeTeamId) ? s.activeTeamId : order[0];
-            return { teams, order, activeTeamId, activeSlot: activeTeamId === s.activeTeamId ? s.activeSlot : 0 };
+            return { teams, order, activeTeamId, activeSlot: activeTeamId === s.activeTeamId ? s.activeSlot : 0, ...linkAfterChange(teams, activeTeamId, order, s) };
           }),
         addTeams: (incoming, activate = true) => {
           let first: string | undefined;
@@ -469,6 +519,7 @@ export const useTeamStore = create<TeamState>()(
               ids.push(copy.id);
               if (!groupId) orderAdds.push(copy.id);
             }
+            normaliseGroups(teams);
             first = ids[0];
             return { teams, order: [...orderAdds, ...s.order.filter((x) => !orderAdds.includes(x))] };
           });
@@ -522,7 +573,7 @@ export const useTeamStore = create<TeamState>()(
       name: 'ptb:v1',
       version: 4,
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, editingFrom: s.editingFrom, theme: s.theme, view: s.view, battle: s.battle }),
+      partialize: (s) => ({ teams: s.teams, order: s.order, activeTeamId: s.activeTeamId, editingFrom: s.editingFrom, editingDraft: s.editingDraft, theme: s.theme, view: s.view, battle: s.battle }),
       migrate: migrateTeamState,
       merge: mergeTeamState,
     },

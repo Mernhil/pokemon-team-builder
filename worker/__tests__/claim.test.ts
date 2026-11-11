@@ -219,3 +219,45 @@ describe('unclaim (npm run admin -- unclaim)', () => {
     expect(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM account_claims').get()).toEqual({ n: 0 });
   });
 });
+
+describe('review fixes', () => {
+  it('a second claim by the same account changes nothing: no extra claim row, no extra event', async () => {
+    const env = accountEnv();
+    await legacyData(env);
+    const ash = await signup(env);
+    expect((await call(env, 'POST', '/api/claim', { cookie: ash.cookie, as: ME, body: {} })).status).toBe(200);
+    const count = (sql: string) => (env.DB.raw.prepare(sql).get() as { n: number }).n;
+    const before = [count('SELECT COUNT(*) AS n FROM account_claims'), count("SELECT COUNT(*) AS n FROM events WHERE kind = 'account.claim'")];
+    expect(before).toEqual([1, 1]);
+    expect((await call(env, 'POST', '/api/claim', { cookie: ash.cookie, as: ME, body: {} })).status).toBe(409);
+    expect([count('SELECT COUNT(*) AS n FROM account_claims'), count("SELECT COUNT(*) AS n FROM events WHERE kind = 'account.claim'")]).toEqual(before);
+    // The same through the SQL the script runs.
+    for (const q of claimStatements(ME, ash.id, NOW, 'cli')) env.DB.raw.exec(bindSql(q.sql, q.values));
+    expect([count('SELECT COUNT(*) AS n FROM account_claims'), count("SELECT COUNT(*) AS n FROM events WHERE kind = 'account.claim'")]).toEqual(before);
+  });
+
+  it('sharing to an account needs a friendship however the caller signed in, and an unknown name answers like a non-friend', async () => {
+    const env = accountEnv();
+    const ash = await signup(env, 'ash');
+    await call(env, 'POST', '/api/claim/skip', { cookie: ash.cookie, body: {} });
+    const inv = await call(env, 'POST', '/api/admin/invites', { cookie: ash.cookie, body: {} });
+    const r = await call(env, 'POST', '/api/auth/signup', { body: { invite: inv.body.code, username: 'misty', ...(await newKeyBody(PW)) } });
+    expect(r.status).toBe(200);
+    await call(env, 'POST', '/api/claim/skip', { cookie: cookieOf(r)!, body: {} });
+    const t = team('Rain');
+    expect((await call(env, 'POST', '/api/sync', { as: ME, body: { docs: [doc(t)] } })).status).toBe(200);
+    const body = { kind: 'team-group', ref: t.id, role: 'view' };
+    // An Access e-mail nobody has claimed has no friends: refused for an existing account, and the same for one that doesn't exist.
+    const toAccount = await call(env, 'PUT', '/api/shares', { as: ME, body: { ...body, grantee: '@misty' } });
+    const toNobody = await call(env, 'PUT', '/api/shares', { as: ME, body: { ...body, grantee: '@nobody-here' } });
+    expect(toAccount.status).toBe(403);
+    expect(toNobody.status).toBe(403);
+    expect(toNobody.body).toEqual(toAccount.body);
+    // An account that is not friends with the target gets that same answer.
+    const toNonFriend = await call(env, 'PUT', '/api/shares', { cookie: ash.cookie, body: { ...body, ref: 'x', grantee: '@misty' } });
+    const toUnknown = await call(env, 'PUT', '/api/shares', { cookie: ash.cookie, body: { ...body, ref: 'x', grantee: '@nobody-here' } });
+    expect(toNonFriend.status).toBe(403);
+    expect(toUnknown.body).toEqual(toNonFriend.body);
+    expect(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM shares').get()).toEqual({ n: 0 });
+  });
+});

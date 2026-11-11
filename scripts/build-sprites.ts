@@ -13,6 +13,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { Dex } from '@pkmn/dex';
+import { cachedDownload } from './lib/download.ts';
+import { pool } from './lib/pool.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, '..');
@@ -113,44 +115,8 @@ function pokeApiId(sp: { id: string; name: string; num: number; forme?: string }
 // Download (cached) + atlas packing
 // ---------------------------------------------------------------------------
 
-async function getSprite(path: string, id: number): Promise<Buffer | null> {
-  const file = resolve(CACHE, path, `${id}.png`);
-  if (existsSync(file)) {
-    const buf = readFileSync(file);
-    return buf.length ? buf : null; // empty file = cached 404
-  }
-  mkdirSync(dirname(file), { recursive: true });
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const res = await fetch(`${RAW}/${path}/${id}.png`);
-      if (res.status === 404) {
-        writeFileSync(file, '');
-        return null;
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const buf = Buffer.from(await res.arrayBuffer());
-      writeFileSync(file, buf);
-      return buf;
-    } catch (e) {
-      if (attempt === 2) throw e;
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-    }
-  }
-  return null;
-}
-
-async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let i = 0;
-  await Promise.all(
-    Array.from({ length: n }, async () => {
-      while (i < items.length) {
-        const k = i++;
-        out[k] = await fn(items[k]);
-      }
-    }),
-  );
-  return out;
+function getSprite(path: string, id: number): Promise<Buffer | null> {
+  return cachedDownload(resolve(CACHE, path, `${id}.png`), `${RAW}/${path}/${id}.png`);
 }
 
 type SpeciesLite = { id: string; name: string; num: number; forme?: string };

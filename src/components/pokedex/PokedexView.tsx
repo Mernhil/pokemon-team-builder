@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, BookOpen, ChevronRight, Search } from 'lucide-react';
 import { toID, type Dex } from '@/data/dex';
-import { usePokedexData } from '@/data/pokedex';
+import { usePokedexLoad } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
 import { REGULATION_MANIFEST, currentRegulation } from '@/domain/formats';
 import { BOOKS, bookForFormat, bookInfo, type DexBook } from '@/domain/games';
@@ -11,7 +11,7 @@ import { usePokedexStore } from '@/store/pokedexStore';
 import { ChipRow, Toggle } from '../ui/chips';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
-import { Button, Checkbox, EmptyState, LoadingState, Select } from '../ui/primitives';
+import { Button, Checkbox, EmptyState, LoadingState, Notice, Select } from '../ui/primitives';
 import { TypeFilter } from '../ui/TypeFilter';
 import { cn } from '../ui/styles';
 import { TYPE_COLORS } from '../ui/color';
@@ -30,7 +30,7 @@ export function PokedexView({ format }: { format: FormatRules }) {
   const book = stored ? bookInfo(stored) : bookForFormat(format);
   const { setBook } = usePokedexStore.getState();
   const dexState = useDex(book.id);
-  const data = usePokedexData(book.id);
+  const { data, failed, retry } = usePokedexLoad(book.id);
 
   return (
     <div className="space-y-3">
@@ -62,8 +62,13 @@ export function PokedexView({ format }: { format: FormatRules }) {
       </div>
       {dexState.status === 'ready' && data ? (
         <PokedexBody key={book.id} book={book} dex={dexState.dex} data={data.dex} learn={data.learn} format={format} />
+      ) : dexState.status === 'error' || failed ? (
+        <div className="space-y-3 p-6 text-center">
+          <Notice tone="bad">{dexState.status === 'error' ? dexState.error : `The ${book.region} Pokédex couldn’t load. You may be offline, or the app has been updated.`}</Notice>
+          {failed && <Button onClick={retry}>Retry</Button>}
+        </div>
       ) : (
-        dexState.status === 'error' ? <p role="alert" className="p-10 text-center text-sm text-bad">{dexState.error}</p> : <LoadingState label={`Loading the ${book.region} Pokédex…`} />
+        <LoadingState label={`Loading the ${book.region} Pokédex…`} />
       )}
     </div>
   );

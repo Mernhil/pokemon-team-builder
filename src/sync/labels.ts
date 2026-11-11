@@ -2,7 +2,7 @@ import { labelTeams, unlabelled } from '@/domain/deviceStamp';
 import { useTeamStore } from '@/store/teamStore';
 import { whileApplying } from './applying';
 import { currentStamp } from './local';
-import { syncNow } from './runner';
+import { syncAgain } from './runner';
 import { useSyncStore } from './syncStore';
 
 /**
@@ -21,6 +21,6 @@ export function labelUnlabelledAsThisDevice(): number {
   const sync = useSyncStore.getState();
   sync.force(labelled.map((t) => `team:${t.id}`));
   sync.setDirty(true);
-  void syncNow();
+  void syncAgain();
   return labelled.length;
 }

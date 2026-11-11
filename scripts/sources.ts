@@ -2,7 +2,7 @@
  * Upstream repositories the build scripts read from, pinned to a commit so rebuilds are reproducible.
  * Each is a blob-less shallow clone under .cache/; only the paths a script asks for are checked out.
  */
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -53,7 +53,7 @@ export function ensure(repo: keyof typeof REPOS, paths: string[]): string {
     }
     // Always ask git for the requested paths: a directory another script checked out in part (a single file of it)
     // exists but isn't complete, so "exists" can't mean "present". Files already there are rewritten with the same content.
-    if (paths.length) execSync(`git checkout ${commit} -- ${paths.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
+    if (paths.length) execFileSync('git', ['checkout', commit, '--', ...paths], { cwd: abs, stdio: 'inherit' });
     stamp();
     return abs;
   }
@@ -70,7 +70,7 @@ export function ensure(repo: keyof typeof REPOS, paths: string[]): string {
     }
   }
   const missing = paths.filter((p) => !existsSync(resolve(abs, p)));
-  if (missing.length) execSync(`git checkout ${ref} -- ${missing.map((p) => `'${p}'`).join(' ')}`, { cwd: abs, stdio: 'inherit' });
+  if (missing.length) execFileSync('git', ['checkout', ref, '--', ...missing], { cwd: abs, stdio: 'inherit' });
   stamp();
   return abs;
 }

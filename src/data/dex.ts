@@ -215,5 +215,3 @@ export function loadDex(datasetId: string): Promise<Dex> {
   }
   return p;
 }
-
-export const hasDataset = (datasetId: string) => datasetId in loaders;

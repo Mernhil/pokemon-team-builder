@@ -25,7 +25,7 @@ const MAX_PAGES = 20;
 export const MIN_LEGAL = 0.8;
 export const MIN_MEGA = 0.5;
 
-const games = (process.env.LIMITLESS_GAMES || 'VGC').split(',').map((s) => s.trim()).filter(Boolean);
+export const games = (process.env.LIMITLESS_GAMES || 'VGC').split(',').map((s) => s.trim()).filter(Boolean);
 export const pinnedFormats = new Set((process.env.LIMITLESS_FORMATS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
 export const headers: Record<string, string> = process.env.LIMITLESS_API_KEY ? { 'X-Access-Key': process.env.LIMITLESS_API_KEY } : {};
 
@@ -79,17 +79,19 @@ export async function tournamentsSnapshot(ctx: Context, reg: Regulation): Promis
     const hit = cache.tournaments[t.id];
     if (hit) return [t.id, hit];
     let teams: TeamRecord[] | null = null;
+    let ok = false;
     try {
       const standings = z.array(Standing).safeParse(await getJson(`${API}/tournaments/${t.id}/standings`, headers));
       if (standings.success) {
         const lists = standings.data.map((s) => teamFromDecklist(s.decklist, (name) => ctx.lookupSpecies(name))).filter((x): x is TeamRecord => !!x);
         teams = lists.length ? lists : null;
+        ok = true;
       }
     } catch (e) {
       console.log(`  Tournaments: ${t.name ?? t.id}: ${(e as Error).message}`);
     }
     const entry: CachedTournament = { date: t.date, format: t.format ?? '', name: t.name ?? t.id, teams };
-    if (t.date < settled) cache.tournaments[t.id] = entry;
+    if (ok && t.date < settled) cache.tournaments[t.id] = entry;
     return [t.id, entry];
   });
   ctx.writeCache('limitless.json', cache);

@@ -108,3 +108,23 @@ describe('GET /api/health', () => {
     expect(Object.keys(open.body).sort()).toEqual(['access', 'accounts', 'database', 'migrations', 'missing', 'time']);
   });
 });
+
+describe('GET /api/session/renew with only the app\'s own accounts', () => {
+  it('sends the browser back to the app (which shows its own login) instead of answering JSON', async () => {
+    for (const env of [{ ...makeEnv(), AUTH_MODE: 'accounts' }, { ...makeEnv(), AUTH_MODE: 'accounts', ACCESS_TEAM_DOMAIN: undefined, ACCESS_AUD: undefined }]) {
+      const res = await get(env, '/api/session/renew', null);
+      expect(res.status).toBe(302);
+      expect(res.headers.get('location')).toBe('/');
+      expect(res.headers.get('cache-control')).toBe('no-store');
+    }
+  });
+});
+
+describe('healthLine', () => {
+  const base: HealthResponse = { database: true, migrations: [...EXPECTED_MIGRATIONS], missing: [], access: { teamDomain: false, audience: false }, time: NOW };
+  it('does not ask for the Access settings when only the app\'s own accounts are used', () => {
+    expect(healthLine({ ...base, accounts: { mode: 'accounts', pepper: true, setupCode: false } })).toEqual({ ok: true, text: 'Server ready' });
+    expect(healthLine({ ...base, accounts: { mode: 'both', pepper: true, setupCode: false } }).ok).toBe(false);
+    expect(healthLine(base).ok).toBe(false);
+  });
+});

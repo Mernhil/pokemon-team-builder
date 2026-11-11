@@ -8,7 +8,8 @@ import { addShare, removeShare } from '@/sync/sharesApi';
 import { isSignedIn, useAccountStore } from '@/sync/accountStore';
 import { FriendPicker } from '../account/FriendPicker';
 import { Modal } from '../ui/Modal';
-import { Button, Input, Label, Select } from '../ui/primitives';
+import { ConfirmAction } from '../settings/ConfirmAction';
+import { Button, Input, Label, Notice, Select } from '../ui/primitives';
 
 /** Share a team with its variations with one other person, as "can view" or "can edit". */
 export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpenChange: (o: boolean) => void; team: Team }) {
@@ -47,7 +48,7 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title={`Share “${team.name}”`} description="They get this team and all its variations. Your other teams stay private.">
-      <div className="space-y-4 px-5 pb-5 text-sm">
+      <div className="space-y-4 text-sm">
         {mine.length > 0 && (
           <ul className="space-y-2" aria-label="Shared with">
             {mine.map((g: ShareInfo) => (
@@ -57,7 +58,7 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
                   {nameOf(g.grantee, names)}
                 </span>
                 <Select
-                  aria-label={`What ${g.grantee} can do`}
+                  aria-label={`What ${nameOf(g.grantee, names)} can do`}
                   value={g.role}
                   disabled={busy}
                   onChange={(e) => void run(() => addShare({ kind: 'team-group', ref: team.id, grantee: g.grantee, role: e.target.value as 'view' | 'edit' }))}
@@ -65,9 +66,9 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
                   <option value="view">Can view</option>
                   <option value="edit">Can edit</option>
                 </Select>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(() => removeShare({ kind: 'team-group', ref: team.id, grantee: g.grantee }))} aria-label={`Stop sharing with ${g.grantee}`}>
+                <ConfirmAction disabled={busy} ariaLabel={`Stop sharing with ${nameOf(g.grantee, names)}`} question={`Stop sharing with ${nameOf(g.grantee, names)}?`} confirmLabel="Stop sharing" onConfirm={() => void run(() => removeShare({ kind: 'team-group', ref: team.id, grantee: g.grantee }))}>
                   Stop sharing
-                </Button>
+                </ConfirmAction>
               </li>
             ))}
           </ul>
@@ -101,11 +102,7 @@ export function ShareDialog({ open, onOpenChange, team }: { open: boolean; onOpe
             team, the older change is kept as a copy. You can stop sharing any time.
           </p>
         </form>
-        {error && (
-          <p role="alert" className="rounded-lg border border-bad/40 bg-bad/8 p-2 text-bad">
-            {error}
-          </p>
-        )}
+        {error && <Notice tone="bad">{error}</Notice>}
       </div>
     </Modal>
   );
