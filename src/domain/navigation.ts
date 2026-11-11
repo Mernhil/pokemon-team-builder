@@ -6,7 +6,7 @@
  */
 import { VIEWS, type View } from './routes.ts';
 
-/** Every destination that can be in the bar (Settings and the Game day screen are not destinations). */
+/** Every destination that can be in the bar (Settings is not a destination; Game day is). */
 export type NavId = View;
 export const NAV_IDS: readonly NavId[] = VIEWS;
 

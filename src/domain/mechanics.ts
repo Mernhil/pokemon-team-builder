@@ -107,7 +107,7 @@ export function terrainInfo(id: Terrain): FieldEffectInfo | null {
           'Lasts 5 turns (8 with Terrain Extender); overwrites any other active terrain the instant it\'s set.',
         ],
         interactions: [
-          'Surge Surfer doubles Speed while this is up; Quark Drive activates its stat boost (whichever stat is highest, Speed if tied) for grounded holders without needing a Booster Energy.',
+          'Surge Surfer doubles Speed while this is up; Quark Drive activates its stat boost (whichever stat is highest; ties go Atk > Def > Sp. Atk > Sp. Def > Speed) for grounded holders without needing a Booster Energy.',
           'Only affects grounded Pokémon — Flying-types, Levitate and Air Balloon holders get no boost and can still be put to sleep normally.',
         ],
       };
@@ -185,8 +185,8 @@ export const ABILITY_INTERACTIONS: Record<string, string[]> = {
   leafguard: ['Blocks major status conditions and Yawn while Sun is active (also blocks Rest from working, since Rest needs to inflict Sleep on the user).'],
   harvest: ['Roughly doubles the odds of recycling a consumed Berry each turn while Sun is active (always some chance otherwise).'],
   forecast: ['Changes Castform\'s type to match the active weather: Fire in Sun, Water in Rain, Ice in Snow/Hail, Normal otherwise.'],
-  protosynthesis: ['Boosts the highest stat (Speed on a tie) while Sun is active, or once from a Booster Energy even without Sun; the boost stays until the Pokémon switches out.'],
-  quarkdrive: ['Boosts the highest stat (Speed on a tie) while Electric Terrain is active, or once from a Booster Energy even without the terrain; the boost stays until the Pokémon switches out.'],
+  protosynthesis: ['Boosts the highest stat (ties go Atk > Def > Sp. Atk > Sp. Def > Speed) while Sun is active, or once from a Booster Energy even without Sun; the boost stays until the Pokémon switches out.'],
+  quarkdrive: ['Boosts the highest stat (ties go Atk > Def > Sp. Atk > Sp. Def > Speed) while Electric Terrain is active, or once from a Booster Energy even without the terrain; the boost stays until the Pokémon switches out.'],
   grasspelt: ['Boosts Defense ×1.5 while Grassy Terrain is active.'],
   transistor: ['Boosts Electric-type move power ×1.3 — independent of terrain, listed here because it\'s commonly confused with Surge Surfer/Quark Drive.'],
   levitate: ['Grounds nothing — makes the holder immune to Ground-type moves and, because it\'s ungrounded, exempt from every terrain\'s effects (boosts, healing, status immunity and Earthquake reduction alike) unless Gravity or a grounding effect is active.'],

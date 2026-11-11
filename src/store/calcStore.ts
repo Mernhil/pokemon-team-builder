@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { safeStorage } from './storage';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from '@/domain/battle/conditions';
+import { sanitizeSet } from '@/domain/sanitize';
 import type { PokemonSet } from '@/domain/types';
 
 export interface CalcSide {
@@ -62,6 +63,41 @@ function migrateCalcState(persisted: unknown, version: number): CalcState {
 
 const emptySide = (): CalcSide => ({ set: null, cond: defaultSide(), crits: [false, false, false, false] });
 
+const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Deep-merges saved values over the defaults: a key keeps its saved value only when it has the default's type, so a field added later is never undefined. */
+function overlay<T extends object>(defaults: T, saved: unknown): T {
+  const out = { ...defaults } as Record<string, unknown>;
+  if (!isRecord(saved)) return out as T;
+  for (const [k, d] of Object.entries(defaults)) {
+    const v = saved[k];
+    if (isRecord(d)) out[k] = overlay(d, v);
+    else if (typeof v === typeof d && (typeof v !== 'number' || Number.isFinite(v))) out[k] = v;
+  }
+  return out as T;
+}
+
+function sanitizeSide(raw: unknown): CalcSide {
+  const base = emptySide();
+  if (!isRecord(raw)) return base;
+  const cond = overlay(base.cond, raw.cond);
+  if (isRecord(raw.cond) && (raw.cond.statForm === 'auto' || raw.cond.statForm === 'base' || raw.cond.statForm === 'alt')) cond.statForm = raw.cond.statForm;
+  const crits = Array.isArray(raw.crits) ? ([0, 1, 2, 3].map((i) => raw.crits instanceof Array && raw.crits[i] === true) as CalcSide['crits']) : base.crits;
+  const side: CalcSide = { set: sanitizeSet(raw.set), cond, crits };
+  if (isRecord(raw.hits)) {
+    const hits = Object.fromEntries(Object.entries(raw.hits).filter(([, n]) => typeof n === 'number' && Number.isFinite(n)));
+    if (Object.keys(hits).length) side.hits = hits as Record<string, number>;
+  }
+  if (isRecord(raw.origin) && typeof raw.origin.teamName === 'string' && typeof raw.origin.slot === 'number') side.origin = { teamName: raw.origin.teamName, slot: raw.origin.slot };
+  return side;
+}
+
+/** Saved state may be stale or corrupted: sanitise both sides and the field on load, over today's defaults. */
+export function mergeCalcState(persisted: unknown, current: CalcState): CalcState {
+  const p = isRecord(persisted) ? persisted : {};
+  return { ...current, attacker: sanitizeSide(p.attacker), defender: sanitizeSide(p.defender), field: overlay(defaultField(), p.field) };
+}
+
 
 export const useCalcStore = create<CalcState>()(
   persist(
@@ -77,6 +113,6 @@ export const useCalcStore = create<CalcState>()(
       setField: (patch) => set((s) => ({ field: { ...s.field, ...patch } })),
       swap: () => set((s) => ({ attacker: s.defender, defender: s.attacker })),
     }),
-    { name: 'ptb:calc:v1', version: 3, storage: createJSONStorage(() => safeStorage), migrate: migrateCalcState },
+    { name: 'ptb:calc:v1', version: 3, storage: createJSONStorage(() => safeStorage), migrate: migrateCalcState, merge: mergeCalcState },
   ),
 );

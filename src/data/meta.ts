@@ -18,8 +18,8 @@ function load(json: unknown, name: string): MetaFile | undefined {
   }
 }
 
-export const BAKED_META = load(generatedJson, 'generated/meta.json');
-export const MANUAL_META = load(manualJson, 'meta/manual.json');
+const BAKED_META = load(generatedJson, 'generated/meta.json');
+const MANUAL_META = load(manualJson, 'meta/manual.json');
 
 /**
  * Best snapshot for a regulation across a refreshed copy, the built-in automated file and the manual

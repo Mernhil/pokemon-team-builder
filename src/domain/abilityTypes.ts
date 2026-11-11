@@ -6,7 +6,7 @@
  * Calc and the Threat report get the same from @smogon/calc.
  */
 import type { Dex } from '@/data/dex';
-import { toID } from '@/data/dex';
+import { toID } from './id';
 import type { MoveType, PokemonSet, TypeName } from './types';
 
 /** Multiplier an ability puts on damage of a type, on top of the type chart (0 = immune). */
@@ -30,7 +30,7 @@ const DEFENSIVE: Record<string, Partial<Record<TypeName, number>>> = {
 };
 
 /** Abilities that turn Normal-type moves into another type (and Normalize turns every move Normal). */
-const CHANGES_NORMAL: Record<string, TypeName> = { pixilate: 'Fairy', aerilate: 'Flying', refrigerate: 'Ice', galvanize: 'Electric' };
+export const CHANGES_NORMAL: Record<string, TypeName> = { pixilate: 'Fairy', aerilate: 'Flying', refrigerate: 'Ice', galvanize: 'Electric', dragonize: 'Dragon' };
 
 /** Attacker abilities that ignore the target's ability. */
 const BREAKS_ABILITIES = new Set(['moldbreaker', 'teravolt', 'turboblaze']);

@@ -27,10 +27,6 @@ export interface MetaSet {
   dropped: string[];
 }
 
-/** A stable identity for a meta set (species + its spread), for caches and React keys. */
-export const metaSetKey = (m: Pick<MetaSet, 'speciesId' | 'set'>) =>
-  `${m.speciesId}:${m.set.nature}:${Object.values(m.set.sp).join('.')}:${m.set.itemId ?? ''}:${m.set.moves.join('.')}`;
-
 /**
  * The set for one meta entry in a format, or undefined when the species isn't legal there (or the
  * entry has no spread data to build a set from).

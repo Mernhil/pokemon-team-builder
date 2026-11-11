@@ -15,7 +15,7 @@ import type { Dex } from '@/data/dex';
 import { calcMoves, calcSpeed } from './battle/damage';
 import { defaultField, defaultSide, type FieldConditions, type SideConditions } from './battle/conditions';
 import { canOptimize, investRange, spreadKey } from './stats';
-import { STAT_IDS, STAT_LABELS, type FormatRules, type Nature, type PokemonSet, type StatId, type StatTable } from './types';
+import { STAT_IDS, type FormatRules, type Nature, type PokemonSet, type StatId, type StatTable } from './types';
 
 // ---------------------------------------------------------------------------
 // Goals and options
@@ -493,5 +493,3 @@ export function optimize(dex: Dex, format: FormatRules, set: PokemonSet, goals: 
   });
   return { spread, nature: sol.nature, natureChanged: sol.nature !== set.nature, goals: results, spent, cap: ctx.total, unspent: ctx.total - spent };
 }
-
-export const statLabel = (s: StatId) => STAT_LABELS[s];
