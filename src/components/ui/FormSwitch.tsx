@@ -14,7 +14,7 @@ export function FormSwitch({ dex, speciesId, itemId, base, onChange }: { dex: De
           role="radio"
           aria-checked={base === b}
           onClick={() => onChange(b)}
-          className={cn('px-1.5 py-0.5 pointer-coarse:px-2.5 pointer-coarse:py-1.5', base === b ? 'bg-accent text-accent-fg' : 'text-muted hover:text-fg')}
+          className={cn('px-1.5 py-0.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:px-2.5', base === b ? 'bg-accent text-accent-fg' : 'text-muted hover:text-fg')}
         >
           {b ? 'Base' : 'Mega'}
         </button>

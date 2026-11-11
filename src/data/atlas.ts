@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { AtlasFile } from '@/domain/atlas';
 
 /**
@@ -18,9 +18,10 @@ function loadAtlas(game: string): Promise<AtlasFile> {
   return p;
 }
 
-/** The atlas of a game; null while loading, `false` when it failed to load. */
-export function useAtlas(game: string): AtlasFile | null | false {
+/** The atlas of a game; null while loading, `false` when it failed to load (`retry` tries again: the failed load is not cached). */
+export function useAtlasLoad(game: string): { file: AtlasFile | null | false; retry: () => void } {
   const [state, setState] = useState<{ game: string; file: AtlasFile | false } | null>(null);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
     let alive = true;
     loadAtlas(game).then(
@@ -30,6 +31,14 @@ export function useAtlas(game: string): AtlasFile | null | false {
     return () => {
       alive = false;
     };
-  }, [game]);
-  return state && state.game === game ? state.file : null;
+  }, [game, tries]);
+  const retry = useCallback(() => {
+    setState(null);
+    setTries((n) => n + 1);
+  }, []);
+  return { file: state && state.game === game ? state.file : null, retry };
+}
+
+export function useAtlas(game: string): AtlasFile | null | false {
+  return useAtlasLoad(game).file;
 }

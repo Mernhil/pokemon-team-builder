@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Copy, LayoutGrid, Monitor, MonitorSmartphone, Pencil, Plus, Share2, Smartphone, Sparkles, Tablet, Trash2, Users } from 'lucide-react';
 import type { Dex } from '@/data/dex';
 import { useRegulationChanges } from '@/data/regulationChanges';
@@ -41,6 +41,22 @@ function InlineEditable({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const cancelled = useRef(false);
+
+  // Escape cancels the rename only. Radix listens for Escape on the document in the capture phase, so
+  // a React handler is too late: catch it on the window first and keep it from reaching the dialog.
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      cancelled.current = true;
+      setDraft(value);
+      setEditing(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [editing, value]);
 
   if (editing) {
     return (
@@ -52,17 +68,14 @@ function InlineEditable({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
           setEditing(false);
+          if (cancelled.current) return;
           const v = draft.trim();
           if (v && v !== value) onCommit(v);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur();
-          if (e.key === 'Escape') {
-            setDraft(value);
-            setEditing(false);
-          }
         }}
-        className={cn('h-6 min-w-0 rounded border border-accent bg-surface px-1 text-sm font-semibold outline-none', className)}
+        className={cn('h-6 min-w-0 pointer-coarse:h-11 rounded border border-accent bg-surface px-1 text-sm font-semibold outline-none', className)}
       />
     );
   }
@@ -70,10 +83,11 @@ function InlineEditable({
     <button
       type="button"
       aria-label={`Rename ${value || placeholder}`}
-      className={cn('group/name flex min-w-0 max-w-full items-center gap-1 text-left', className)}
+      className={cn('hit group/name flex min-w-0 max-w-full items-center gap-1 text-left', className)}
       onClick={(e) => {
         e.stopPropagation();
         setDraft(value);
+        cancelled.current = false;
         setEditing(true);
       }}
     >
@@ -260,7 +274,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
           <div className="flex flex-wrap items-center gap-2">
             <AlertTriangle size={16} className="shrink-0 text-warn" aria-hidden />
             <p className="min-w-0 flex-1 font-semibold">
-              {headline.broken.length} of your {Object.keys(teams).length === 1 ? 'team has' : 'teams have'} problems in {regulationInfo(headline.reg)?.shortName ?? headline.reg}
+              {headline.broken.length} of your {headline.broken.length === 1 ? 'team has' : 'teams have'} problems in {regulationInfo(headline.reg)?.shortName ?? headline.reg}
             </p>
             <Button size="sm" aria-expanded={showProblems} onClick={() => setShowProblems((v) => !v)}>
               {showProblems ? 'Hide details' : 'Show details'}
@@ -451,7 +465,7 @@ export function TeamsDialog({ open, onOpenChange, dex }: { open: boolean; onOpen
                     >
                       <Copy size={14} aria-hidden /> Make my own copy
                     </Button>
-                    <span className="text-xs text-muted">Updated {new Date(root.updatedAt).toLocaleString()}</span>
+                    <span className="text-xs text-muted">Updated {editedAt(root.updatedAt)}</span>
                   </div>
                 </li>
               );

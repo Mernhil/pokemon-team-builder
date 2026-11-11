@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Filter, Flag, Map as MapIcon, MapPin, Package, Search, ShoppingBag, Swords, Trophy, X } from 'lucide-react';
-import { useAtlas } from '@/data/atlas';
+import { useAtlasLoad } from '@/data/atlas';
 import { toID } from '@/data/dex';
 import { usePokedexData } from '@/data/pokedex';
 import { useDex } from '@/data/useDex';
@@ -16,7 +16,7 @@ import type { MapsFile } from '../pokedex/RegionMap';
 import { Modal } from '../ui/Modal';
 import { ItemSprite } from '../ui/ItemSprite';
 import { Sprite } from '../ui/Sprite';
-import { Chip, Input, LoadingState, Notice, Skeleton, Tabs } from '../ui/primitives';
+import { Button, Chip, Input, LoadingState, Notice, Skeleton, Tabs } from '../ui/primitives';
 import { cn } from '../ui/styles';
 import { useMedia } from '../ui/useMedia';
 import { AtlasMap } from './AtlasMap';
@@ -47,7 +47,7 @@ export function AtlasView() {
   const setPage = useAtlasStore((s) => s.setPage);
   const game = atlasGame(gameId);
   const page: AtlasPage = game.lite && (storedPage === 'items' || storedPage === 'trainers') ? 'map' : storedPage;
-  const file = useAtlas(game.file ?? game.id);
+  const { file, retry: retryAtlas } = useAtlasLoad(game.file ?? game.id);
   const format = getFormat(game.formatId);
   const dexState = useDex(format.datasetId);
   const pd = usePokedexData(game.book);
@@ -113,7 +113,10 @@ export function AtlasView() {
       </div>
 
       {file === false || dexState.status === 'error' ? (
-        <Notice tone="bad">The Pokénav for {game.name} couldn’t load.</Notice>
+        <div className="space-y-3">
+          <Notice tone="bad">The Pokénav for {game.name} couldn’t load.</Notice>
+          {file === false && <Button onClick={retryAtlas}>Retry</Button>}
+        </div>
       ) : !ctx ? (
         <LoadingState label={`Loading the ${game.shortName} Pokénav…`} />
       ) : (
