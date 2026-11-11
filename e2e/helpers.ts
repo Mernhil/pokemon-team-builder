@@ -196,7 +196,7 @@ Adamant Nature
 
 /** Name the build by saving it under that name (the header's Save button); the build itself stays open. */
 export async function renameTeam(page: Page, name: string) {
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^(Save|Update|Saved)$/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Save team' });
   await dialog.getByRole('textbox', { name: 'Team name' }).fill(name);
   await dialog.getByRole('button', { name: /^(Save|Update)$/ }).click();

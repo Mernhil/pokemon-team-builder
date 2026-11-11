@@ -9,6 +9,8 @@ import { isSavedTeam } from '@/domain/team';
 import { useTeamStore } from '@/store/teamStore';
 import { UpdateCheckButton } from '../DesktopUpdater';
 import { SyncStatus } from './SyncStatus';
+import { EditingStrip } from './EditingStrip';
+import { useDraftState } from './draftState';
 import { whenIdle } from '../ui/motion';
 import { TopNav } from './Navigation';
 import { GenBadge } from '../ui/GenBadge';
@@ -45,6 +47,7 @@ export function Header({ team, format, dex, onOpenSettings, onOpenSyncSettings, 
   const [justSaved, setJustSaved] = useState(false);
   const [ioOpen, setIoOpen] = useState(false);
   const liveRegId = currentRegulation()?.id;
+  const draft = useDraftState(team);
 
   const clearWithUndo = () => {
     // Edits save into the open team as you go, so wiping a saved or named team would wipe the saved one:
@@ -113,13 +116,13 @@ export function Header({ team, format, dex, onOpenSettings, onOpenSyncSettings, 
         </span>
         <TopNav onOpenSettings={onOpenSettings} />
 
-        {/* The team being edited and its format: inline from xl up, a second row below that. */}
-        <div className="order-last flex w-full min-w-0 items-center gap-2 xl:order-none xl:w-auto xl:flex-1">
+        {/* The team being edited, whether it differs from the saved one, and its format: inline from xl up, a second row below that. */}
+        <EditingStrip team={team} state={draft} onOpenTeams={() => setTeamsOpen(true)}>
           <span className="hidden sm:inline-flex">
             <FormatBadge format={format} />
           </span>
           {formatSelect}
-        </div>
+        </EditingStrip>
 
         <div className="ml-auto flex items-center gap-1.5">
           <button type="button" className={buttonClass('default', 'icon')} onClick={onOpenPalette} aria-label="Search (Ctrl K)" title="Search · Ctrl/⌘ K">
@@ -127,9 +130,9 @@ export function Header({ team, format, dex, onOpenSettings, onOpenSyncSettings, 
           </button>
           <SyncStatus onOpen={onOpenSyncSettings} />
           <UpdateCheckButton />
-          <Button variant="primary" onClick={() => setSaveOpen(true)}>
-            {justSaved ? <Check size={15} aria-hidden /> : <Save size={15} aria-hidden />}
-            {justSaved ? 'Saved' : 'Save'}
+          <Button variant={draft.kind === 'clean' && !justSaved ? 'default' : 'primary'} onClick={() => setSaveOpen(true)}>
+            {justSaved || draft.kind === 'clean' ? <Check size={15} aria-hidden /> : <Save size={15} aria-hidden />}
+            {justSaved || draft.kind === 'clean' ? 'Saved' : draft.kind === 'dirty' ? 'Update' : 'Save'}
           </Button>
           <Menu
             label="Team actions"

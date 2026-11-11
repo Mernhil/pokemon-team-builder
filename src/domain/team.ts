@@ -141,3 +141,40 @@ export function suggestTeamNames(teams: Record<string, Team>, order: string[], a
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Is the open draft different from the saved team it came from?
+// ---------------------------------------------------------------------------
+
+/** JSON with sorted keys and no undefined values, so two equal objects always give the same text. */
+function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((v) => stable(v === undefined ? null : v)).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stable(v)}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+/**
+ * What Save writes into a saved team, without the ids that differ between a draft and its copy: the roster (by
+ * position, so a reorder counts), the format, the notes and the matchup notes (their leads as slot positions).
+ */
+function contentOf(t: Team): string {
+  const slotOf = new Map<string, number>();
+  t.slots.forEach((s, i) => s && slotOf.set(s.uid, i));
+  return stable({
+    formatId: t.formatId,
+    notes: t.notes || undefined,
+    replicaCode: t.replicaCode || undefined,
+    slots: t.slots.map((s) => (s ? { ...s, uid: undefined } : null)),
+    matchupNotes: t.matchupNotes?.length
+      ? t.matchupNotes.map((n) => ({ ...n, id: undefined, leads: n.leads?.map((l) => slotOf.get(l) ?? -1) }))
+      : undefined,
+  });
+}
+
+/** True when the open draft holds something the saved team it came from does not (what Update would write). */
+export const isDirty = (draft: Team, saved: Team): boolean => contentOf(draft) !== contentOf(saved);
