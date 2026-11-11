@@ -7,6 +7,7 @@ Releases before 0.7.0 are described on the GitHub Releases page and in the git h
 ### Fixed
 - **A team shared by another account stays view-only after a reload.** Its shared marker was dropped on load for account owners, so it became editable and was treated as your own.
 - **Edit team, reload, Save still offers “Update”.** The link between the build and the saved team now survives a reload, so Save no longer makes a second copy.
+- **“Copy to <regulation>” no longer loses the copy.** It was attached to the builder's hidden scratch draft, so the new variation never showed in Saved teams. It now joins the saved team you were editing.
 - **No more “2 EVs unallocated” on a normal max spread.** The standard 252/252/4 spread no longer carries a permanent warning.
 - **The threat report under Trick Room** now uses your worst case for a Mega Pokémon, as the report promises.
 - **Variation labels no longer repeat** after deleting one, and a variation whose parent is itself a variation is tidied up on load, sync and import. Editing an empty slot no longer marks the team as edited.
