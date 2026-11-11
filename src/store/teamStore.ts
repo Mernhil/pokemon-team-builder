@@ -137,7 +137,7 @@ const mine = () => {
 /** A blank, unnamed scratch draft stamped with this device: the builder's starting point (first run, after the last team goes). */
 const freshDraft = (): Team => createTeam(getFormat(DEFAULT_FORMAT_ID), DEFAULT_TEAM_NAME, currentStamp());
 
-const firstTeam = freshDraft();
+const firstTeam = createTeam(getFormat(DEFAULT_FORMAT_ID), 'My Champions Team', currentStamp()); // the starter is a named, saved team (the app has always opened on one)
 
 /**
  * Makes every variation's `groupId` point at a top-level team. A variation whose parent is itself a
