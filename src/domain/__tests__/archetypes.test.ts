@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import data from '@/data/generated/champions.json';
 import { Dex } from '@/data/dex';
-import { ARCHETYPE_RULES, bestArchetype, detectArchetypes, type ArchetypeMon } from '@/domain/archetypes';
+import { ARCHETYPE_RULES, detectArchetypes, type ArchetypeMon } from '@/domain/archetypes';
 import { getFormat } from '@/domain/formats';
 import { ARCHETYPE_PRESETS } from '@/domain/matches';
 import type { Dataset } from '@/domain/types';
@@ -77,12 +77,12 @@ describe('Trick Room and Tailwind', () => {
 describe('offensive and defensive profiles', () => {
   it('Hyper Offense: fast, frail attackers', () => {
     const d = tagsOf([mon('sneasler', 'unburden', attack), mon('talonflame', 'galewings', attack), mon('gengar', 'cursedbody', ['shadowball', 'sludgebomb', 'focusblast', 'protect']), mon('hydreigon', 'levitate', ['darkpulse', 'dracometeor', 'flamethrower', 'protect']), mon('lucario', 'justified', ['closecombat', 'meteormash', 'extremespeed', 'protect']), mon('mimikyu', 'disguise', ['playrough', 'shadowclaw', 'woodhammer', 'protect'])]);
-    expect(bestArchetype(d)).toBe('Hyper Offense');
+    expect(d.tags[0]?.tag).toBe('Hyper Offense');
   });
 
   it('Bulky Offense: bulky attackers that are not fast', () => {
     const d = tagsOf([mon('kingambit', 'defiant', ['suckerpunch', 'ironhead', 'kowtowcleave', 'protect']), mon('incineroar', 'intimidate', ['fakeout', 'flareblitz', 'knockoff', 'partingshot']), mon('rillaboom', 'grassysurge', ['grassyglide', 'woodhammer', 'fakeout', 'uturn']), mon('kommoo', 'bulletproof', ['clangingscales', 'closecombat', 'protect', 'poisonjab']), mon('dragonite', 'multiscale', ['extremespeed', 'outrage', 'protect', 'earthquake']), mon('clefable', 'unaware', ['moonblast', 'protect', 'followme', 'helpinghand'])]);
-    expect(bestArchetype(d)).toBe('Bulky Offense');
+    expect(d.tags[0]?.tag).toBe('Bulky Offense');
   });
 
   it('Stall only when it clearly is one', () => {

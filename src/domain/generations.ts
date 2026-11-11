@@ -24,9 +24,6 @@ export const GENERATIONS: GenerationInfo[] = [
 
 export const genInfo = (gen: number): GenerationInfo => GENERATIONS[Math.max(1, Math.min(9, gen)) - 1];
 
-/** Generation that introduced a National Dex number (ignores later formes). */
-export const genOfDexNum = (num: number): number => GENERATIONS.find((g) => num <= g.lastDexNum)?.gen ?? 9;
-
 /** What a generation's battles had. Champions uses Gen 9 mechanics. */
 export interface Mechanics {
   gen: number;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import manifest from '@/data/generated/regulations.json';
-import { currentSeason, formatSeasonReset, nextSeason, seasonDaysLeft } from '@/domain/seasons';
+import { currentSeason, formatSeasonReset, seasonDaysLeft } from '@/domain/seasons';
 import type { RankedSeason } from '@/domain/types';
 
 const seasons = manifest.seasons as RankedSeason[];
@@ -30,11 +30,6 @@ describe('ranked seasons', () => {
     expect(seasonDaysLeft(m7, at('2026-10-17T10:00:00Z'))).toBe(18);
     expect(seasonDaysLeft(m7, at('2026-11-03T12:00:00Z'))).toBe(1);
     expect(seasonDaysLeft(m7, at('2026-11-05T00:00:00Z'))).toBe(0);
-  });
-
-  it('nextSeason finds the earliest one that has not started', () => {
-    expect(nextSeason(seasons, at('2026-09-20T00:00:00Z'))?.id).toBe('M-7');
-    expect(nextSeason(seasons, at('2026-10-07T02:00:00Z'))).toBeUndefined();
   });
 
   it('formats the reset in the viewer timezone, across the 25 Oct DST change', () => {

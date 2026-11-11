@@ -6,7 +6,8 @@
  * damage calculator), so Speed matches the calculator exactly (see tests). Every applied
  * modifier is returned with a label so the UI can explain the result.
  */
-import { toID } from '@/data/dex';
+import { toID } from '../id';
+import { CHANGES_NORMAL } from '../abilityTypes';
 import type { Move, MoveType, Pokemon, StatTable, TypeName } from '../types';
 import type { BoostStat, FieldConditions, SideConditions } from './conditions';
 
@@ -97,9 +98,6 @@ const TYPE_ITEMS: Record<string, TypeName> = {
   blackbelt: 'Fighting', poisonbarb: 'Poison', softsand: 'Ground', sharpbeak: 'Flying', twistedspoon: 'Psychic',
   silverpowder: 'Bug', hardstone: 'Rock', spelltag: 'Ghost', dragonfang: 'Dragon', blackglasses: 'Dark',
   metalcoat: 'Steel', fairyfeather: 'Fairy', silkscarf: 'Normal',
-};
-const ATE: Record<string, TypeName> = {
-  aerilate: 'Flying', pixilate: 'Fairy', refrigerate: 'Ice', galvanize: 'Electric', dragonize: 'Dragon',
 };
 const SLOW_ITEMS = new Set(['ironball', 'machobrace', 'powerweight', 'powerbracer', 'powerbelt', 'powerlens', 'powerband', 'poweranklet']);
 const WEATHER_SPEED: Record<string, string> = { chlorophyll: 'Sun', swiftswim: 'Rain', sandrush: 'Sand', slushrush: 'Snow' };
@@ -306,8 +304,8 @@ function movePower(m: Move, c: PowerCtx): MovePower {
   let type = m.type as TypeName;
 
   // -ate abilities: Normal moves change type and gain 1.2×
-  if (ATE[c.ab] && type === 'Normal') {
-    type = ATE[c.ab];
+  if (CHANGES_NORMAL[c.ab] && type === 'Normal') {
+    type = CHANGES_NORMAL[c.ab];
     bpMods.push({ label: `${c.abilityName} (→ ${type})`, factor: 1.2 });
   }
   if (c.ab === 'liquidvoice' && m.flags.sound) type = 'Water';
@@ -402,6 +400,3 @@ function movePower(m: Move, c: PowerCtx): MovePower {
     note,
   };
 }
-
-/** Apply a critical hit to a power breakdown (1.5×; ignores negative attack stages). */
-export const CRIT: Mod = { label: 'Critical hit', factor: 1.5 };

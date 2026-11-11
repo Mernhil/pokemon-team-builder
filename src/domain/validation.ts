@@ -134,7 +134,9 @@ export function validateTeam(team: Team, format: FormatRules, dex: Dex): Issue[]
       const unit = sys.kind === 'champions-sp' ? 'SP' : 'EVs';
       const total = sumStats(spread);
       if (total > sys.totalCap) push('error', 'spread-over', `Exceeded ${sys.totalCap} ${unit} Cap (${total}/${sys.totalCap}).`);
-      else if (total < sys.totalCap)
+      // Only worth a warning when another stat point could still be bought: 4 EVs make one point, so the
+      // standard 252/252/4 (508 of 510) is fully spent; a Champions SP is one point each.
+      else if (sys.totalCap - total >= (sys.kind === 'modern-ev' ? 4 : 1))
         push('warning', 'spread-under', `${sys.totalCap - total} ${unit} unallocated (${total}/${sys.totalCap}).`);
       for (const k of STAT_IDS) {
         if (spread[k] > sys.perStatCap)

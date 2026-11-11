@@ -41,7 +41,11 @@ describe('teamStore.applySynced', () => {
     const [id] = useTeamStore.getState().order;
     const other = team('Other');
     useTeamStore.getState().applySynced([other], [id]);
-    expect(useTeamStore.getState().activeTeamId).toBe(other.id);
+    // the builder never lands on a saved team: it opens a draft copy of it, linked back
+    const open = useTeamStore.getState();
+    expect(open.teams[open.activeTeamId].name).toBe('Untitled Team');
+    expect(open.editingFrom).toBe(other.id);
+    expect(open.editingDraft).toBe(open.activeTeamId);
     expect(useTeamStore.getState().activeSlot).toBe(0);
     useTeamStore.getState().applySynced([], [other.id]);
     const s = useTeamStore.getState();

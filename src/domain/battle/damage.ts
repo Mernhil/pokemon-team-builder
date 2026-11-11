@@ -223,7 +223,7 @@ export function calcMoves(
     if (!mv) return;
     const crit = !!crits[i];
     const multiaccuracy = !!(gen.moves.get(moveId as never) as { multiaccuracy?: boolean } | undefined)?.multiaccuracy;
-    let move = new CalcMove(gen, mv.name, { isCrit: crit });
+    let move!: CalcMove; // set in the loop below (every Pokémon has at least one forme)
     const forms: FormResult[] = [];
     for (const af of attackerForms) {
       for (const df of defenderForms) {

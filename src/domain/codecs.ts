@@ -1,4 +1,5 @@
-import { toID, type Dex } from '@/data/dex';
+import type { Dex } from '@/data/dex';
+import { toID } from './id';
 import type { Benchmark } from './benchmarks';
 import { formatMechanics } from './games';
 import { calcStats, evToStatExp, statExpToEV } from './stats';

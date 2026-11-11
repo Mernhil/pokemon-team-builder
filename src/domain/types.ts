@@ -226,10 +226,6 @@ type StatPoints = StatTable;
 type EVSpread = StatTable;
 /** Individual Values: 0–31. */
 type IVSpread = StatTable;
-/** Gen 1–2 Determinant Values: 0–15 (HP DV is derived from the others). */
-export type DVSpread = Omit<StatTable, 'hp'> & { hp?: never };
-/** Gen 1–2 Stat Experience: 0–65535 per stat. */
-export type StatExpSpread = StatTable;
 
 // ---------------------------------------------------------------------------
 // Format rules

@@ -210,6 +210,3 @@ export function detectArchetypes(mons: readonly ArchetypeMon[], dex: Dex, format
   found.sort((a, b) => b.confidence - a.confidence || ARCHETYPE_PRESETS.indexOf(a.tag) - ARCHETYPE_PRESETS.indexOf(b.tag));
   return { tags: found.filter((t) => t.confidence >= R.minConfidence), weak: found.filter((t) => t.confidence < R.minConfidence), fromMeta };
 }
-
-/** The best tag's name, or undefined: what a form would suggest. */
-export const bestArchetype = (d: Detection): ArchetypePreset | undefined => d.tags[0]?.tag;

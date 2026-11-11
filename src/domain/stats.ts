@@ -202,23 +202,6 @@ export function setSpreadValue(
   return { ...spread, [stat]: v };
 }
 
-/**
- * Smallest SP investment that reaches a target stat value (Champions). Returns null if the
- * target is unreachable within the per-stat cap.
- */
-export function spForTarget(
-  statId: StatId,
-  base: number,
-  target: number,
-  perStatCap: number,
-  nature?: Nature,
-): number | null {
-  for (let sp = 0; sp <= perStatCap; sp++) {
-    if (championsStat(statId, base, sp, nature) >= target) return sp;
-  }
-  return null;
-}
-
 // ---------------------------------------------------------------------------
 // Generic "invest to reach a target" (Champions SP, EVs, Stat Exp)
 // ---------------------------------------------------------------------------
