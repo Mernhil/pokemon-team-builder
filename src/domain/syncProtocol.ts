@@ -127,6 +127,8 @@ export interface SharedDocument extends RemoteDocument {
 export interface SharedPullResponse {
   docs: SharedDocument[];
   names: Record<string, string>;
+  /** The Worker cut the answer at its row cap: a shared team missing from it may still be shared. Absent/false otherwise. */
+  truncated?: boolean;
 }
 
 export const SharedPushBodySchema = z.object({

@@ -123,6 +123,7 @@ test('The phone/web app makes a pairing code and lists and unlinks desktop apps'
   await dialog.getByRole('button', { name: 'Make a pairing code' }).click();
   await expect(dialog.getByText('ABCDE-FGHJK')).toBeVisible();
   await dialog.getByRole('button', { name: 'Unlink My laptop' }).click();
+  await dialog.getByRole('button', { name: 'Unlink', exact: true }).click();
   await expect(dialog.getByText('My laptop')).toHaveCount(0);
 });
 

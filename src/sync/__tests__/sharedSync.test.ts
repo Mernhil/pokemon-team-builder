@@ -66,6 +66,30 @@ beforeEach(() => {
   useTeamStore.setState({ teams: { [own.id]: own }, order: [own.id], activeTeamId: own.id });
 });
 
+describe('a truncated answer', () => {
+  it('does not remove shared teams that are missing from it, and a complete answer still does', async () => {
+    const { root } = ownerFolder();
+    await ownerPush([asDoc(root)]);
+    await shareWithMe(root.id, 'view');
+    await syncMe();
+    expect(sharedCopies()).toHaveLength(1);
+    const run = (truncated?: boolean) =>
+      syncShared({
+        deviceName: 'Phone',
+        now: () => clock,
+        api: {
+          shares: async () => undefined,
+          pull: async () => ({ docs: [], names: {}, ...(truncated === undefined ? {} : { truncated }) }),
+          push: async () => ({ results: [] }),
+        },
+      });
+    await run(true);
+    expect(sharedCopies()).toHaveLength(1);
+    await run(); // field absent: the answer is complete
+    expect(sharedCopies()).toHaveLength(0);
+  });
+});
+
 describe('receiving a shared folder', () => {
   it('arrives marked as the owner’s, read-only for a viewer, and my own teams are untouched', async () => {
     const { root, variation } = ownerFolder();

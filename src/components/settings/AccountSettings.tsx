@@ -15,7 +15,7 @@ import { useNow } from '@/sync/useNow';
 import { toast } from '@/store/toastStore';
 import { LoginForm, RecoverForm, RecoveryCodeCard, SignupForm, TextField } from '../account/AccountForms';
 import { ClaimSection } from '../account/ClaimSection';
-import { Button, Checkbox, Chip, Tabs } from '../ui/primitives';
+import { Button, Checkbox, Chip, LoadingState, Tabs } from '../ui/primitives';
 
 // Admins only: loads when an admin opens Settings → Account.
 const AdminSettings = lazy(() => import('./AdminSettings'));
@@ -129,7 +129,7 @@ function SignedIn({ onRecoveryCode }: { onRecoveryCode: (code: string) => void }
       <DisplayName />
       <Devices />
       {user.role === 'admin' && (
-        <Suspense fallback={<p className="text-muted">Loading…</p>}>
+        <Suspense fallback={<LoadingState label="Loading…" className="p-4" />}>
           <AdminSettings />
         </Suspense>
       )}

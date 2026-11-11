@@ -10,6 +10,7 @@ describe('accessSessionEnded', () => {
     expect(accessSessionEnded({ status: 307 })).toBe(true);
     expect(accessSessionEnded({ status: 401 })).toBe(true);
     expect(accessSessionEnded({ status: 403 })).toBe(true);
+    expect(accessSessionEnded({ status: 403, json: false })).toBe(true);
   });
   it('is true when a followed redirect ended on the Access login page, and only then', () => {
     expect(accessSessionEnded({ status: 200, redirected: true, url: 'https://myteam.cloudflareaccess.com/cdn-cgi/access/login/app?kid=1' })).toBe(true);
@@ -19,6 +20,7 @@ describe('accessSessionEnded', () => {
   });
   it('is false for data and for ordinary failures', () => {
     expect(accessSessionEnded({ type: 'basic', status: 200 })).toBe(false);
+    expect(accessSessionEnded({ status: 403, json: true })).toBe(false); // the Worker's own refusal, with its reason
     expect(accessSessionEnded({ status: 404 })).toBe(false);
     expect(accessSessionEnded({ status: 429 })).toBe(false);
     expect(accessSessionEnded({ status: 500 })).toBe(false);

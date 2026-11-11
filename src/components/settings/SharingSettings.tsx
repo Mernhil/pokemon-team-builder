@@ -6,7 +6,8 @@ import { FriendPicker } from '../account/FriendPicker';
 import { useTeamStore } from '@/store/teamStore';
 import { useShareStore } from '@/sync/shareStore';
 import { addShare, loadShares, removeShare, saveDisplayName } from '@/sync/sharesApi';
-import { Button, Input, Label } from '../ui/primitives';
+import { ConfirmAction } from './ConfirmAction';
+import { Button, Input, Label, Notice } from '../ui/primitives';
 
 /** Settings → Sync → Sharing: my display name, who sees my match log, and what others have shared with me. */
 export default function SharingSettings() {
@@ -71,9 +72,9 @@ export default function SharingSettings() {
                 <span className="min-w-0 flex-1 truncate" title={g.grantee}>
                   {nameOf(g.grantee, names)} can see my matches
                 </span>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(() => removeShare({ kind: 'matches', ref: '*', grantee: g.grantee }))}>
+                <ConfirmAction disabled={busy} ariaLabel={`Stop sharing my matches with ${nameOf(g.grantee, names)}`} question="Stop sharing?" confirmLabel="Stop sharing" onConfirm={() => void run(() => removeShare({ kind: 'matches', ref: '*', grantee: g.grantee }))}>
                   Stop sharing
-                </Button>
+                </ConfirmAction>
               </li>
             ))}
           </ul>
@@ -114,19 +115,15 @@ export default function SharingSettings() {
                 <span className="min-w-0 flex-1 truncate" title={r.owner}>
                   {r.kind === 'matches' ? `${nameOf(r.owner, names)}'s match log` : `${teamName(r.ref)} from ${nameOf(r.owner, names)}`} · {r.role === 'edit' ? 'can edit' : 'view only'}
                 </span>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(() => removeShare({ kind: r.kind, ref: r.ref, grantee: me?.email ?? '', owner: r.owner }))}>
+                <ConfirmAction disabled={busy} ariaLabel={`Leave ${r.kind === 'matches' ? `${nameOf(r.owner, names)}'s match log` : teamName(r.ref)}`} question="Leave this share?" confirmLabel="Leave" onConfirm={() => void run(() => removeShare({ kind: r.kind, ref: r.ref, grantee: me?.email ?? '', owner: r.owner }))}>
                   Leave
-                </Button>
+                </ConfirmAction>
               </li>
             ))}
           </ul>
         </div>
       )}
-      {error && (
-        <p role="alert" className="rounded-lg border border-bad/40 bg-bad/8 p-2 text-sm text-bad">
-          {error}
-        </p>
-      )}
+      {error && <Notice tone="bad">{error}</Notice>}
     </div>
   );
 }
