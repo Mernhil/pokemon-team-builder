@@ -13,9 +13,9 @@ import { parseMetaFile, type MetaFile } from '../src/domain/meta.ts';
 import { ingameDate } from '../src/domain/metaSources.ts';
 import { MAX_MIRROR_LAG_DAYS, metaUpdateProblems, mirrorLagDays, newestIngameDate } from '../src/domain/metaGuard.ts';
 import { getJson } from './meta/http.ts';
+import { INGAME_BASE as BASE } from './meta/shared.ts';
 
 const PATH = 'src/data/generated/meta.json';
-const BASE = (process.env.INGAME_DATA_BASE || 'https://raw.githubusercontent.com/Gheist23/pokemonbattledata/main/data/meta').replace(/\/$/, '');
 
 const current = JSON.parse(readFileSync(PATH, 'utf8')) as unknown;
 

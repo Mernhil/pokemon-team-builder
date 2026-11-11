@@ -20,7 +20,7 @@ function seedLog() {
 async function openSeeded(page: Page) {
   await page.addInitScript((log) => localStorage.setItem('ptb:matches:v1', log), seedLog());
   await openApp(page, '#matches');
-  await expect(page.getByRole('heading', { name: /Overall: 1-6/ }).or(page.getByRole('heading', { name: /Overall:/ }))).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Overall: 2-5/ })).toBeVisible();
 }
 
 test('Match log: tap sprites to cycle not brought → brought → lead, within the doubles limits', async ({ page }) => {

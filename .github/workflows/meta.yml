@@ -110,7 +110,7 @@ jobs:
           branch="meta/update"
           git switch -C "$branch"
           git push --force origin "$branch"
-          body="Automated update of \`src/data/generated/meta.json\` by \`npm run meta\` (Smogon usage statistics; provisional numbers from tournament team lists, Showdown replays or the previous regulation where Smogon has no month yet — see the run log for which source each regulation uses). Typecheck and tests passed with the new data. Merging redeploys the web app."
+          body="Automated update of \`src/data/generated/meta.json\`, \`meta-history.json\` and \`tournament-teams.json\` by \`npm run meta\` (Smogon usage statistics; provisional numbers from tournament team lists, Showdown replays or the previous regulation where Smogon has no month yet — see the run log for which source each regulation uses). Typecheck and tests passed with the new data. Merging redeploys the web app."
           gh pr view "$branch" --json number >/dev/null 2>&1 \
             || gh pr create --base "$DEFAULT_BRANCH" --head "$branch" --title "Meta data update ($(date -u +%Y-%m-%d))" --body "$body"
 

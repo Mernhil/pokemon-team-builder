@@ -10,15 +10,11 @@ import { chaosToSnapshot } from '../../src/domain/meta.ts';
 import { ingameToSnapshot } from '../../src/domain/metaSources.ts';
 import { appendHistory, hasDate, ingameIndexDates, snapshotToHistoryEntry, type MetaHistory } from '../../src/domain/metaHistory.ts';
 import { get, getJson } from './http.ts';
-import type { Context, Regulation } from './context.ts';
+import { CUTOFFS, INGAME_BASE as BASE, SMOGON_STATS as STATS, liveDays, regulationOn } from './shared.ts';
+import type { Context } from './context.ts';
 
-const BASE = (process.env.INGAME_DATA_BASE || 'https://raw.githubusercontent.com/Gheist23/pokemonbattledata/main/data/meta').replace(/\/$/, '');
 const PAGE = 'https://github.com/Gheist23/pokemonbattledata';
-const STATS = 'https://www.smogon.com/stats/';
-const CUTOFFS = [1760, 1630, 1500, 0];
 const MIN_LEGAL = 0.98;
-
-const regulationOn = (ctx: Context, iso: string) => ctx.regulations.find((r) => r.start.slice(0, 10) <= iso && (!r.end || iso <= r.end.slice(0, 10)));
 
 /** Adds the mirror's dated Doubles snapshots the history lacks. Returns how many were added. */
 export async function addIngameHistory(ctx: Context, history: MetaHistory): Promise<number> {
@@ -43,12 +39,6 @@ export async function addIngameHistory(ctx: Context, history: MetaHistory): Prom
   return added;
 }
 
-const liveDays = (reg: Regulation, month: string) => {
-  const from = Math.max(Date.parse(`${month}-01T00:00:00Z`), Date.parse(reg.start));
-  const [y, m] = month.split('-').map(Number);
-  const to = Math.min(Date.UTC(y, m, 1), reg.end ? Date.parse(reg.end) : Infinity);
-  return Math.max(0, (to - from) / 86_400_000);
-};
 const lastDay = (month: string) => {
   const [y, m] = month.split('-').map(Number);
   return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);

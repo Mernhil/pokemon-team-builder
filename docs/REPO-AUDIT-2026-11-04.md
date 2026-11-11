@@ -1,4 +1,4 @@
-﻿# Repo audit, 2026-11-04
+# Repo audit, 2026-11-04
 
 Read-only audit of `Mernhil/pokemon-team-builder` (public). Everything below comes from git (`git fetch --all --prune`, default branch pulled to `0cd4314`, v0.39.3), the public GitHub API and a fresh clone, not from CLAUDE.md or the October roadmap files. Where they disagree, this file records what was found. Nothing was deleted, merged, closed or changed; the only change is this file.
 

@@ -75,10 +75,9 @@ test('OHKO reports: Team check links to both, each lists who can OHKO whom, a ro
   await expect(page).toHaveURL(/#analyse\/ohko\/to$/);
   await expect(page.getByRole('status').filter({ hasText: /\d+ Pokémon calculated against 2 of yours/ })).toBeVisible({ timeout: 30_000 });
   const rows = page.getByRole('button', { name: /Open in the Damage Calc/ }).locator('visible=true');
-  if (await rows.count()) {
-    await rows.first().click();
-    await expect(page).toHaveURL(/#calc$/);
-  }
+  await expect(rows.first()).toBeVisible();
+  await rows.first().click();
+  await expect(page).toHaveURL(/#calc$/);
 });
 
 test('OHKO reports: a move filter narrows a card, Details lists every Pokémon, a row’s build can be edited', async ({ page }) => {

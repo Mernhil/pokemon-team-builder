@@ -28,4 +28,4 @@ edit('package.json', /("version":\s*")[^"]+(")/, `$1${version}$2`);
 edit('package-lock.json', /^(\{\r?\n\s*"name": "pokemon-team-builder",\r?\n\s*"version": ")[^"]+(")/, `$1${version}$2`);
 edit('package-lock.json', /("packages": \{\r?\n\s*"": \{\r?\n\s*"name": "pokemon-team-builder",\r?\n\s*"version": ")[^"]+(")/, `$1${version}$2`);
 
-console.log(`Version set to ${version}. Commit it, then publish a GitHub release tagged v${version}.`);
+console.log(`Version set to ${version}. Commit it with a CHANGELOG section and merge: desktop-release.yml tags v${version} and publishes by itself.`);

@@ -16,9 +16,9 @@ import { z } from 'zod';
 import type { MetaSnapshot } from '../../src/domain/meta.ts';
 import { ingameDate, ingameToSnapshot } from '../../src/domain/metaSources.ts';
 import { getJson } from './http.ts';
+import { INGAME_BASE as BASE, regulationOn } from './shared.ts';
 import type { Context } from './context.ts';
 
-const BASE = (process.env.INGAME_DATA_BASE || 'https://raw.githubusercontent.com/Gheist23/pokemonbattledata/main/data/meta').replace(/\/$/, '');
 const PAGE = 'https://github.com/Gheist23/pokemonbattledata';
 const FORMAT = 'Doubles';
 const MIN_DAYS = 3;
@@ -47,7 +47,7 @@ export async function ingameSnapshot(ctx: Context): Promise<MetaSnapshot | null>
     return null;
   }
   const iso = ingameDate(date);
-  const reg = ctx.regulations.find((r) => r.start.slice(0, 10) <= iso && (!r.end || iso <= r.end.slice(0, 10)));
+  const reg = regulationOn(ctx, iso);
   if (!reg) {
     console.log(`In-game data: no Champions regulation was live on ${iso}.`);
     return null;
