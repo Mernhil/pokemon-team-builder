@@ -18,8 +18,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, '../src/data/generated');
 
-// Minimal local shapes of what this reads/writes — kept in sync by hand with domain/pokedex.ts and
-// the champions dataset, the way the other build scripts (which don't import from src/) do, since
+// the champions dataset (some other build scripts do import from src/domain; these shapes are kept local
+// because src/ compiles under a different module-resolution mode than scripts/).
 // src/ compiles under a different module-resolution mode than scripts/.
 interface PokedexEntry {
   heightm?: number;

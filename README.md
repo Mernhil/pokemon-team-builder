@@ -20,7 +20,7 @@ npm run maps          # Area maps: in-game maps from the pret disassemblies + sr
 npm run atlas         # Atlas databases per game (locations, items, NPCs, shops, every trainer's team) from the pret decompilations; needs `npm run data`, `pokedex` and `maps` first
 npm run sprites       # rebuild sprite atlases in public/sprites/ (PokeAPI)
 npm run reg:status    # regulation calendar: live set, end date, announced sets
-npm run icons         # re-render the home-screen icons in public/icons/ from favicon.svg
+npm run icons         # re-render the home-screen icons in public/icons/ from src-assets/logo-source.png
 ```
 
 **On a phone:** every push to the default branch is deployed (privately, behind a login) as an installable, offline-capable web app that updates itself — see [docs/IPHONE_APP.md](docs/IPHONE_APP.md).

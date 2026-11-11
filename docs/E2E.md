@@ -2,10 +2,11 @@
 
 Playwright tests in `e2e/` run against the **production build** served by `vite preview` (not the dev
 server), once on desktop Chromium (1280×800) and once on an iPhone 14 WebKit device. Every test starts
-with empty localStorage and with the service worker blocked. They cover the builder (species, item,
+with empty localStorage apart from one preference (`lastSeenVersion`, so the What's new sheet stays
+closed; `playwright.config.ts`) and with the service worker blocked. They cover the builder (species, item,
 ability, nature, moves, the SP cap), save + reload, Showdown export/import, Team check, Damage Calc
 (including Base/Mega/Both), Meta, the match log, the Pokédex Area tab, Pokénav, the theme toggle, and
-axe-core (WCAG 2.0/2.1 A + AA) on every main view in light and dark (in the default Sticker look and palette; other looks and palettes are covered by unit tests only), and a check that no main screen scrolls the page sideways.
+axe-core (WCAG 2.0/2.1 A + AA) on every main view in light and dark (in the default Sticker look and palette; the Classic look, the Graphite palette and the most vivid palette are checked too, in both themes, in `e2e/a11y.spec.ts`), and a check that no main screen scrolls the page sideways.
 
 ## Run
 

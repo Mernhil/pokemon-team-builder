@@ -127,7 +127,7 @@ test('a request that never answers does not block sync: it fails after the timeo
   await show(phone.page);
   await phone.page.clock.fastForward(25_000);
   const dot = phone.page.getByRole('button', { name: /Sync status/ });
-  await expect(dot).toHaveAttribute('aria-label', /not synced recently|sync problem/i, { timeout: 10_000 }).catch(() => {});
+  await expect(dot).toHaveAttribute('aria-label', /not synced recently|sync problem/i, { timeout: 10_000 });
   await expect.poll(async () => (await syncState(phone.page)).lastSyncAt ?? 0).toBe(last); // nothing claimed as synced
   server.hang = false;
   await show(phone.page);

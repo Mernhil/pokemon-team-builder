@@ -71,6 +71,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          # Full history so every tag is fetched: a depth-1 fetch may bring only the tags on the fetched commit,
+          # and a missing tag here would re-release the current version.
+          fetch-depth: 0
           fetch-tags: true
 
       - name: Is there a release to make?

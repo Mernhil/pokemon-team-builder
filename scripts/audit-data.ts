@@ -12,7 +12,7 @@
  * Upstream's mods: `champions` is the newest regulation, `championsreg<x>` an older one on top of
  * it (Scripts.inherit). A regulation with no upstream mod (Reg M-A today) can't be compared and is
  * listed as such. Learnsets are compared against the newest regulation only: our dataset keeps one
- * list per species, built from the @pkmn/mods `champions` mod.
+ * list per species, built from the pinned Showdown checkout (scripts/lib/showdown-mods.ts).
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -199,4 +199,10 @@ function report(o: { commit: string; summary: AuditSummary[]; notes: string[]; r
   return `${lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd()}\n`;
 }
 
-await main();
+// Exit 1 means "real differences" (--strict); any crash exits 2 so CI can tell the two apart.
+try {
+  await main();
+} catch (e) {
+  console.error(e);
+  process.exit(2);
+}

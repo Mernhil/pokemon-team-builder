@@ -42,15 +42,23 @@ jobs:
         run: |
           set +e
           npm run data:audit -- --strict
-          echo "clean=$([ $? -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          # 0 = clean, 1 = real differences, anything else = the audit crashed (see the next step)
+          echo "clean=$([ $code -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
       - name: Open, update or close the issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           CLEAN: ${{ steps.audit.outputs.clean }}
+          CODE: ${{ steps.audit.outputs.code }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          if [ "$CODE" != "0" ] && [ "$CODE" != "1" ]; then
+            echo "::error::The audit crashed (exit code $CODE), so there is no result to report. See the previous step's log: $RUN_URL"
+            exit 1
+          fi
           title="Champions data differs from Showdown"
           number=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
           if [ "$CLEAN" = "true" ]; then

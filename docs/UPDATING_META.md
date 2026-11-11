@@ -21,7 +21,7 @@ One snapshot per regulation: the best source available, in this order (`metaSour
 | 7 | **Provisional:** the previous regulation's numbers, carried over | `carryover` | `carryOverSnapshot` |
 | 8 | The player's own logged matches | `matches` | automatic, on the device |
 
-All but 3 and 8 end up in `src/data/generated/meta.json`, built by `npm run meta` / the daily
+All but 3 and 8 end up in `src/data/generated/meta.json`, built by `npm run meta` / the twice-daily
 GitHub Action. A refreshed copy (the Meta tab's **Check for newer data**, web app only) is the deployed
 site's own `meta/latest.json` — the same file — validated before use and kept on the device. If it
 fails for any reason, the built-in data stays on screen.
