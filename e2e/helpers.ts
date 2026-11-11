@@ -88,7 +88,8 @@ export async function importTeam(page: Page, text: string) {
   await dialog.getByRole('textbox', { name: 'Text to import' }).fill(text);
   await dialog.getByRole('button', { name: 'Import', exact: true }).click();
   // A clean import closes the dialog by itself; one with notes stays open so they can be read.
-  await expect(dialog.getByRole('alert').or(dialog.getByRole('status'))).toBeVisible();
+  // (Wait for either: the dialog is gone, or it shows notes. Waiting for a notice alone races a clean import that closes at once.)
+  await expect.poll(async () => (await dialog.count()) === 0 || (await dialog.getByRole('alert').count()) > 0 || (await dialog.getByRole('status').count()) > 0).toBe(true);
   if (await dialog.getByRole('alert').count()) await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 }
