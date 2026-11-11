@@ -38,7 +38,8 @@ const useUpdater = create<UpdaterState>()((set, get) => ({
   check: async (manual) => {
     const { status } = get();
     if (status === 'checking' || status === 'installing') return;
-    set({ status: 'checking', manual, error: null });
+    // An explicit click brings a dismissed offer back.
+    set((s) => ({ status: 'checking', manual, error: null, dismissedVersion: manual ? null : s.dismissedVersion }));
     try {
       const { check } = await import('@tauri-apps/plugin-updater');
       const update = await check();
@@ -125,9 +126,9 @@ export function DesktopUpdater() {
           Retry
         </Button>
       )}
-      <button type="button" aria-label="Dismiss" className="shrink-0 text-muted hover:text-fg" onClick={dismiss}>
+      <Button size="icon-sm" variant="ghost" aria-label="Dismiss" onClick={dismiss}>
         <X size={14} />
-      </button>
+      </Button>
     </div>
   );
 }

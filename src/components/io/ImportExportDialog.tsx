@@ -15,7 +15,7 @@ import { teamVariations } from '@/domain/team';
 import type { FormatRules, Team } from '@/domain/types';
 import { useTeamStore } from '@/store/teamStore';
 import { Modal } from '../ui/Modal';
-import { Button, Field, Input, Tabs } from '../ui/primitives';
+import { Button, Field, Input, Tabs, TextArea } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
 type Tab = 'champions' | 'showdown' | 'share' | 'json' | 'import';
@@ -49,9 +49,8 @@ export function ImportExportDialog({
   const order = useTeamStore((s) => s.order);
   const { updateTeam } = useTeamStore.getState();
 
-  // The dialog stays mounted while closed; don't re-serialise the team on every edit.
+  // Only the open tab is serialised (Header mounts this dialog only while it is open).
   const text = useMemo(() => {
-    if (!open) return '';
     switch (tab) {
       case 'champions':
         return exportChampionsText(team, dex, format);
@@ -66,7 +65,7 @@ export function ImportExportDialog({
       default:
         return '';
     }
-  }, [open, tab, team, dex, format, allTeams, order]);
+  }, [tab, team, dex, format, allTeams, order]);
 
   const copy = async () => {
     try {
@@ -105,15 +104,13 @@ export function ImportExportDialog({
               minted by the game's servers, so they can be stored on a team but not generated here.)
             </p>
           )}
-          <textarea
+          <TextArea
             readOnly
             aria-label={`${TABS.find((t) => t.id === tab)?.label} export`}
             value={text}
+            rows={tab === 'share' ? 4 : 14}
             onFocus={(e) => e.target.select()}
-            className={cn(
-              'scrollbar-thin h-72 w-full resize-none rounded-lg border border-border-strong/60 bg-surface-2 p-3 font-mono text-sm leading-relaxed outline-none sm:text-xs',
-              tab === 'share' && 'h-28 break-all',
-            )}
+            className={cn('scrollbar-thin font-mono leading-relaxed', tab === 'share' && 'break-all')}
           />
           <div className="flex justify-end gap-2">
             <Button variant="primary" onClick={copy}>
@@ -151,8 +148,9 @@ function ImportPane({ dex, format, onDone }: { dex: Dex; format: FormatRules; on
         if (!team.slots.some(Boolean)) throw new Error(warnings[0] ?? 'No Pokémon found in the pasted text.');
         addTeams([team]);
         setMsg({ kind: warnings.length ? 'err' : 'ok', text: warnings.length ? `Imported with notes: ${warnings.join(' ')}` : 'Showdown team imported.' });
+        // A clean import closes itself; one with notes stays open so they can be read.
+        if (!warnings.length) setTimeout(onDone, 600);
       }
-      if (!src.startsWith('{')) setTimeout(onDone, 600);
     } catch (e) {
       setMsg({ kind: 'err', text: (e as Error).message || 'Could not read that input.' });
     }
@@ -164,12 +162,13 @@ function ImportPane({ dex, format, onDone }: { dex: Dex; format: FormatRules; on
         Paste a <b>Showdown export</b>, a <b>share code</b> (PTB1.…) or a <b>JSON backup</b>. Imported teams are added as new
         teams — nothing is overwritten.
       </p>
-      <textarea
+      <TextArea
         aria-label="Text to import"
         value={text}
+        rows={12}
         onChange={(e) => setText(e.target.value)}
         placeholder={'Garchomp @ Garchompite\nAbility: Rough Skin\nEVs: 2 HP / 32 Atk / 32 Spe\nJolly Nature\n- Earthquake\n…'}
-        className="scrollbar-thin h-64 w-full resize-none rounded-lg border border-border-strong/60 bg-surface-2 p-3 font-mono text-base outline-none focus:border-accent sm:text-xs"
+        className="scrollbar-thin font-mono"
       />
       {msg && (
         <p role={msg.kind === 'ok' ? 'status' : 'alert'} className={cn('text-sm', msg.kind === 'ok' ? 'text-good' : 'text-warn')}>

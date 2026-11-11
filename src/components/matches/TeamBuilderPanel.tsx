@@ -10,7 +10,7 @@ import { useTeamStore } from '@/store/teamStore';
 import { ValidationPanel } from '../teamcheck/ValidationPanel';
 import { SetEditor } from '../editor/SetEditor';
 import { TeamSlots } from '../team/TeamSlots';
-import { Button, Panel, Select } from '../ui/primitives';
+import { Button, LoadingState, Panel, Select } from '../ui/primitives';
 
 /**
  * One full team builder (species, item, ability, moves, spread — everything the Builder tab has),
@@ -70,8 +70,10 @@ export function TeamBuilderPanel({
       >
         {!team ? (
           <p className="p-6 text-center text-sm text-muted">Pick a saved team above, or start a new one.</p>
+        ) : dexState.status === 'error' ? (
+          <p role="alert" className="p-6 text-center text-sm text-bad">{dexState.error}</p>
         ) : dexState.status !== 'ready' ? (
-          <p className="p-6 text-center text-sm text-muted">{dexState.status === 'error' ? dexState.error : 'Loading…'}</p>
+          <LoadingState label="Loading…" className="p-6" />
         ) : (
           <PanelBody team={team} activeSlot={Math.min(activeSlot, 5)} setActiveSlot={setActiveSlot} dex={dexState.dex} format={format!} />
         )}

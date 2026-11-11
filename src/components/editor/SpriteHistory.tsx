@@ -4,6 +4,7 @@ import { SPRITE_SETS, loadSpriteSheet } from '@/data/sprites';
 import type { Pokemon, SpriteSetId } from '@/domain/types';
 import { GenBadge } from '../ui/GenBadge';
 import { Sprite } from '../ui/Sprite';
+import { LoadingState } from '../ui/primitives';
 import { cn } from '../ui/styles';
 
 /**
@@ -40,7 +41,7 @@ export function SpriteHistory({ species }: { species: Pokemon }) {
       </button>
       {open && (
         <div className="scrollbar-thin mt-2 flex gap-2 overflow-x-auto pb-1">
-          {available === null && <span className="text-xs text-muted">Loading sprite sets…</span>}
+          {available === null && <LoadingState label="Loading sprite sets…" className="p-2 text-xs" />}
           {available?.map((id) => {
             const meta = SPRITE_SETS.find((s) => s.id === id)!;
             return (

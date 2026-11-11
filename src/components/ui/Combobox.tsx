@@ -2,7 +2,7 @@ import { useId, useMemo, useRef, useState, type ReactNode, type Ref } from 'reac
 import * as Dialog from '@radix-ui/react-dialog';
 import { ChevronDown, Search, Star, X } from 'lucide-react';
 import { rankSearch } from '@/domain/pickerOrder';
-import { buttonClass, cn, overlayClass } from './styles';
+import { buttonClass, cn, controlClass, overlayClass } from './styles';
 import { useIsPhone } from './useMedia';
 
 export interface ComboOption {
@@ -232,12 +232,7 @@ function PopoverCombobox({ value, onChange, placeholder, allowClear, className, 
         aria-activedescendant={open && rows[hi] ? `${listId}-o${hi}` : undefined}
         aria-label={rest['aria-label']}
         title={onToggleFavorite ? 'Alt+F: add or remove the highlighted entry from Favorites' : undefined}
-        className={cn(
-          'h-9 w-full rounded-lg border bg-surface-2 px-2.5 pr-8 text-sm outline-none placeholder:text-muted pointer-coarse:h-11',
-          'focus:border-accent focus:ring-2 focus:ring-accent/25',
-          icon && !open && value && 'pl-8',
-          invalid ? 'border-bad' : 'border-border-strong/60',
-        )}
+        className={controlClass(invalid, cn('pr-8', icon && !open && value && 'pl-8'))}
         placeholder={selected ? selected.label : placeholder}
         value={open ? query : (selected?.label ?? '')}
         onFocus={openList}

@@ -16,7 +16,7 @@ import { Toaster } from './components/ui/Toaster';
 import { ErrorBoundary } from './components/ErrorBoundary';
 // Starts remembering where focus was, so a dialog opened later (they load on demand) can give it back.
 import './components/ui/returnFocus';
-import { LoadingState } from './components/ui/primitives';
+import { LoadingState, Notice } from './components/ui/primitives';
 import { buttonClass, cn } from './components/ui/styles';
 
 import { Header } from './components/shell/Header';
@@ -220,7 +220,7 @@ export default function App() {
       else root.style.removeProperty(`--color-${name}`);
     }
     // Browser UI (Android address bar, iOS Safari tab bar) matches the header.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tokens?.surface ?? (theme === 'dark' ? '#1c1f26' : '#fcfbf8'));
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tokens?.surface ?? (getComputedStyle(root).getPropertyValue('--color-surface').trim() || '#ffffff'));
   }, [theme, palette, look, outline, brightness]);
 
   const dex = dexState.status === 'ready' ? dexState.dex : undefined;
@@ -232,7 +232,7 @@ export default function App() {
   else if (view === 'gameday') content = <Suspense fallback={loading('Loading Game day…')}><GameDayView /></Suspense>;
   else if (view === 'analyse') content = <Suspense fallback={loading('Loading analysis…')}><AnalyseView /></Suspense>;
   else if (view === 'regdiff') content = <Suspense fallback={loading('Loading regulation diff…')}><RegulationDiffView /></Suspense>;
-  else if (!dex) content = dexState.status === 'error' ? <p className="p-10 text-center text-sm text-bad" role="alert">{dexState.error}</p> : loading('Loading Pokédex data…');
+  else if (!dex) content = dexState.status === 'error' ? <Notice tone="bad" className="m-4">{dexState.error}</Notice> : loading('Loading Pokédex data…');
   else if (view === 'calc') content = <Suspense fallback={loading('Loading damage calculator…')}><DamageCalcView dex={dex} format={format} team={team} /></Suspense>;
   else if (view === 'matches') content = <Suspense fallback={loading('Loading match log…')}><MatchesView dex={dex} format={format} /></Suspense>;
   else if (view === 'meta') content = <Suspense fallback={loading('Loading meta data…')}><MetaView dex={dex} format={format} /></Suspense>;

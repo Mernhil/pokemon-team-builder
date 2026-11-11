@@ -74,15 +74,15 @@ function Body({ currentName, onSave, onClose }: { currentName: string; onSave: (
         {canUpdate && (
           <fieldset className="space-y-2 rounded-lg border border-border p-3 text-sm">
             <legend className="px-1 text-xs font-semibold text-muted">This build came from a saved team</legend>
-            <label className="flex cursor-pointer items-start gap-2">
-              <input type="radio" name="save-target" className="mt-1" checked={mode === 'update'} onChange={() => setMode('update')} />
+            <label className="flex min-h-9 cursor-pointer items-start gap-2 pointer-coarse:min-h-11 pointer-coarse:items-center">
+              <input type="radio" name="save-target" className="mt-1 size-4 shrink-0 accent-[var(--color-accent)] pointer-coarse:mt-0 pointer-coarse:size-5" checked={mode === 'update'} onChange={() => setMode('update')} />
               <span>
                 <span className="font-medium">Update “{editingLabel}”</span>
                 <span className="block text-xs text-muted">Replaces its six Pokémon with this build.</span>
               </span>
             </label>
-            <label className="flex cursor-pointer items-start gap-2">
-              <input type="radio" name="save-target" className="mt-1" checked={mode === 'save'} onChange={() => setMode('save')} />
+            <label className="flex min-h-9 cursor-pointer items-start gap-2 pointer-coarse:min-h-11 pointer-coarse:items-center">
+              <input type="radio" name="save-target" className="mt-1 size-4 shrink-0 accent-[var(--color-accent)] pointer-coarse:mt-0 pointer-coarse:size-5" checked={mode === 'save'} onChange={() => setMode('save')} />
               <span>
                 <span className="font-medium">Save as a separate team</span>
                 <span className="block text-xs text-muted">“{editingLabel}” stays as it is.</span>
@@ -112,15 +112,15 @@ function Body({ currentName, onSave, onClose }: { currentName: string; onSave: (
         {clash && (!canUpdate || mode === 'save') && (
           <fieldset className="space-y-2 rounded-lg border border-border p-3 text-sm">
             <legend className="px-1 text-xs font-semibold text-muted">“{clash.name}” already exists. What should Save do?</legend>
-            <label className="flex cursor-pointer items-start gap-2">
-              <input type="radio" name="save-mode" className="mt-1" checked={choice === 'variation'} onChange={() => setChoice('variation')} />
+            <label className="flex min-h-9 cursor-pointer items-start gap-2 pointer-coarse:min-h-11 pointer-coarse:items-center">
+              <input type="radio" name="save-mode" className="mt-1 size-4 shrink-0 accent-[var(--color-accent)] pointer-coarse:mt-0 pointer-coarse:size-5" checked={choice === 'variation'} onChange={() => setChoice('variation')} />
               <span>
                 <span className="font-medium">Add as a variation of “{clash.name}”</span>
                 <span className="block text-xs text-muted">Keeps the original{variations ? ` and its ${variations} variation${variations === 1 ? '' : 's'}` : ''}; this build is added to its folder.</span>
               </span>
             </label>
-            <label className="flex cursor-pointer items-start gap-2">
-              <input type="radio" name="save-mode" className="mt-1" checked={choice === 'overwrite'} onChange={() => setChoice('overwrite')} />
+            <label className="flex min-h-9 cursor-pointer items-start gap-2 pointer-coarse:min-h-11 pointer-coarse:items-center">
+              <input type="radio" name="save-mode" className="mt-1 size-4 shrink-0 accent-[var(--color-accent)] pointer-coarse:mt-0 pointer-coarse:size-5" checked={choice === 'overwrite'} onChange={() => setChoice('overwrite')} />
               <span>
                 <span className="font-medium">Overwrite “{clash.name}”</span>
                 <span className="block text-xs text-muted">Replaces its six Pokémon with this build. The old roster is not kept.</span>
