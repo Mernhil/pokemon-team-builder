@@ -2,6 +2,11 @@
 
 Releases before 0.7.0 are described on the GitHub Releases page and in the git history.
 
+## 0.44.0 — 2026-11-11
+
+### New
+- **The builder shows which team you are on.** Under the header, a team switcher names the saved team you are editing (or says *New team*), with *Unsaved changes* next to it when the build differs from the saved one. Its menu lists your recent teams, *Saved teams…* and *New team*. The header button reads **Update** when there is something to save, **Saved ✓** when there is not, and **Save** for a new team.
+
 ## 0.43.1 — 2026-11-11
 
 ### Fixed

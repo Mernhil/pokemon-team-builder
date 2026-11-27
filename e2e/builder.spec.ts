@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { SAMPLE_TEAM, expectPicked, importTeam, openApp, openStatCalculator, pickOption } from './helpers';
+import { SAMPLE_TEAM, expectNoHorizontalOverflow, expectPicked, importTeam, openApp, openStatCalculator, pickOption } from './helpers';
 
 
 /** Slot 1 filled the way a player would: species, item, ability, nature, four moves, SP in two stats. */
@@ -80,7 +80,7 @@ test('Showdown export → clear → import restores the same set', async ({ page
 test('a saved team survives a reload', async ({ page }) => {
   await openApp(page);
   await buildIncineroar(page);
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^(Save|Update|Saved)$/ }).click();
   await page.getByRole('dialog').getByRole('textbox', { name: 'Team name' }).fill('E2E team');
   await page.getByRole('dialog').getByRole('button', { name: /^Save/ }).click();
   await expect(page.getByText(/Saved “.*” to your teams/)).toBeVisible();
@@ -97,7 +97,7 @@ test('saving under a name that is taken asks: add a variation, or overwrite', as
   await openApp(page);
   await buildIncineroar(page);
   const save = async (name: string) => {
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.getByRole('button', { name: /^(Save|Update|Saved)$/ }).click();
     const separate = page.getByRole('dialog', { name: 'Save team' }).getByRole('radio', { name: /Save as a separate team/ });
     if (await separate.count()) await separate.check(); // a build saved into a team offers to update it
     await page.getByRole('dialog', { name: 'Save team' }).getByRole('textbox', { name: 'Team name' }).fill(name);
@@ -126,7 +126,7 @@ test('saving under a name that is taken asks: add a variation, or overwrite', as
 test('saved teams are only changed by Edit team + Save: the build stays a separate draft', async ({ page }) => {
   await openApp(page);
   await buildIncineroar(page);
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^(Save|Update|Saved)$/ }).click();
   await page.getByRole('dialog', { name: 'Save team' }).getByRole('textbox', { name: 'Team name' }).fill('Keep');
   await page.getByRole('dialog', { name: 'Save team' }).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText('Saved “Keep” to your teams.')).toBeVisible();
@@ -143,7 +143,7 @@ test('saved teams are only changed by Edit team + Save: the build stays a separa
   await saved.getByRole('button', { name: 'Edit team Keep' }).click();
   await expect(saved).toBeHidden();
   await expectBuilt(page);
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^(Save|Update|Saved)$/ }).click();
   await expect(page.getByRole('dialog', { name: 'Save team' }).getByRole('radio', { name: /Update “Keep”/ })).toBeChecked();
 });
 
@@ -204,7 +204,7 @@ test('saving a build lists it once (no "Untitled Team" twin), and Save offers yo
   await openApp(page);
   await buildIncineroar(page);
   const save = page.getByRole('dialog', { name: 'Save team' });
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^(Save|Update|Saved)$/ }).click();
   await save.getByRole('textbox', { name: 'Team name' }).fill('Rain Offense');
   await save.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText('Saved “Rain Offense” to your teams.')).toBeVisible();
@@ -217,10 +217,48 @@ test('saving a build lists it once (no "Untitled Team" twin), and Save offers yo
   await page.keyboard.press('Escape');
 
   // A second build: Save lists "Rain Offense" under the name field; one tap fills it and asks what to do with the clash.
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^(Save|Update|Saved)$/ }).click();
   const again = page.getByRole('dialog', { name: 'Save team' });
   await again.getByRole('radio', { name: /Save as a separate team/ }).check();
   await again.getByRole('textbox', { name: 'Team name' }).fill('');
   await again.getByRole('group', { name: 'Your saved teams' }).getByRole('button', { name: 'Rain Offense' }).click();
   await expect(again.getByRole('radio', { name: /Add as a variation of “Rain Offense”/ })).toBeChecked();
+});
+
+test('the editing strip says which team you are on and whether it has unsaved changes', async ({ page }) => {
+  await openApp(page);
+  const strip = page.getByRole('button', { name: 'Switch team' });
+  await expect(strip).toContainText('New team');
+
+  await buildIncineroar(page);
+  await expect(strip).toContainText('Not saved');
+  const long = 'A very long team name that keeps going and going well past the edge of a small phone screen ok';
+  const headerButton = page.getByRole('button', { name: /^(Save|Update|Saved)$/ });
+  await headerButton.click();
+  const save = page.getByRole('dialog', { name: 'Save team' });
+  await save.getByRole('textbox', { name: 'Team name' }).fill(long);
+  await save.getByRole('button', { name: 'Save', exact: true }).click();
+
+  // Saved: the strip names the team, the button is the quiet "Saved".
+  await expect(strip).toContainText('A very long team name');
+  await expect(strip).not.toContainText('Unsaved');
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible({ timeout: 5000 });
+  await expectNoHorizontalOverflow(page);
+
+  // An edit makes it "Unsaved changes" and the button becomes Update.
+  await pickOption(page, 'Held item', 'Leftovers');
+  await expect(strip).toContainText('Unsaved changes');
+  await expect(page.getByRole('button', { name: 'Update', exact: true })).toBeVisible();
+
+  // Update writes it back: clean again.
+  await page.getByRole('button', { name: 'Update', exact: true }).click();
+  await save.getByRole('button', { name: 'Update', exact: true }).click();
+  await expect(strip).not.toContainText('Unsaved');
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible({ timeout: 5000 });
+
+  // The switcher lists the team and opens Saved teams.
+  await strip.click();
+  await expect(page.getByRole('menuitem', { name: long })).toBeVisible();
+  await page.getByRole('menuitem', { name: 'Saved teams…' }).click();
+  await expect(page.getByRole('dialog', { name: 'Saved teams' })).toBeVisible();
 });

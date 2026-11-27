@@ -78,7 +78,7 @@ test('the dialogs and sheets behind the menus fit the screen', async ({ page }) 
   await page.keyboard.press('Escape');
 
   // Save team, Import / Export (every tab)
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^(Save|Update|Saved)$/ }).click();
   await expect(page.getByRole('dialog', { name: 'Save team' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.keyboard.press('Escape');
